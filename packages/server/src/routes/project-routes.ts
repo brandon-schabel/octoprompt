@@ -207,7 +207,9 @@ const getProjectFilesRoute = createRoute({
   request: {
     params: ProjectIdParamsSchema,
     query: z.object({
-      includeAllVersions: z.coerce.boolean().optional().default(false)
+      includeAllVersions: z.coerce.boolean().optional().default(false),
+      limit: z.coerce.number().int().positive().optional().describe('Maximum number of files to return'),
+      offset: z.coerce.number().int().nonnegative().optional().default(0).describe('Number of files to skip')
     })
   },
   responses: {
@@ -227,7 +229,11 @@ const getProjectFilesMetadataRoute = createRoute({
   tags: ['Projects', 'Files'],
   summary: 'Get project files metadata without content (for performance)',
   request: {
-    params: ProjectIdParamsSchema
+    params: ProjectIdParamsSchema,
+    query: z.object({
+      limit: z.coerce.number().int().positive().optional().describe('Maximum number of files to return'),
+      offset: z.coerce.number().int().nonnegative().optional().default(0).describe('Number of files to skip')
+    })
   },
   responses: {
     200: {
@@ -589,12 +595,12 @@ export const projectRoutes = new OpenAPIHono()
 
   .openapi(getProjectFilesRoute, async (c) => {
     const { projectId } = c.req.valid('param')
-    const query = c.req.valid('query')
+    const { limit, offset } = c.req.valid('query')
     const project = await projectService.getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    const files = await projectService.getProjectFiles(projectId)
+    const files = await projectService.getProjectFiles(projectId, { limit, offset })
     const payload = {
       success: true,
       data: files ?? []
@@ -604,11 +610,12 @@ export const projectRoutes = new OpenAPIHono()
 
   .openapi(getProjectFilesMetadataRoute, async (c) => {
     const { projectId } = c.req.valid('param')
+    const { limit, offset } = c.req.valid('query')
     const project = await projectService.getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    const files = await projectService.getProjectFiles(projectId)
+    const files = await projectService.getProjectFiles(projectId, { limit, offset })
     // Remove content from files for performance
     const filesWithoutContent = files?.map(({ content, ...fileMetadata }) => fileMetadata) ?? []
     const payload = {

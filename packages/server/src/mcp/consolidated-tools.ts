@@ -1,5 +1,7 @@
 import { z } from '@hono/zod-openapi'
 import type { MCPToolDefinition, MCPToolResponse } from './tools-registry'
+import { MCPError, MCPErrorCode, createMCPError, formatMCPErrorResponse } from './mcp-errors'
+import { executeTransaction, createTransactionStep } from './mcp-transaction'
 import {
   listProjects,
   getProjectById,
@@ -39,6 +41,16 @@ import {
   autoGenerateTasksFromOverview,
   suggestFilesForTicket,
   listTicketsWithTaskCount,
+  searchTickets,
+  filterTasks,
+  batchCreateTickets,
+  batchUpdateTickets,
+  batchDeleteTickets,
+  batchCreateTasks,
+  batchUpdateTasks,
+  batchDeleteTasks,
+  batchMoveTasks,
+  syncProject,
   // Git operations
   getProjectGitStatus,
   stageFiles,
@@ -76,7 +88,14 @@ import {
   blame,
   clean,
   getConfig,
-  setConfig
+  setConfig,
+  bulkDeleteProjectFiles,
+  // Active tab functionality
+  getOrCreateDefaultActiveTab,
+  getActiveTab,
+  setActiveTab,
+  clearActiveTab,
+  fileSearchService
 } from '@octoprompt/services'
 import type {
   CreateProjectBody,
@@ -90,23 +109,8 @@ import type {
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
 
-// Error codes for consistent error handling
-export enum MCPErrorCode {
-  MISSING_REQUIRED_PARAM = 'MISSING_REQUIRED_PARAM',
-  INVALID_PARAM_VALUE = 'INVALID_PARAM_VALUE',
-  SERVICE_ERROR = 'SERVICE_ERROR',
-  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
-  PROJECT_NOT_FOUND = 'PROJECT_NOT_FOUND',
-  UNKNOWN_ACTION = 'UNKNOWN_ACTION'
-}
-
-// Helper function to create consistent error messages
-function createMCPError(code: MCPErrorCode, message: string, details?: any): Error {
-  const error = new Error(`[${code}] ${message}`)
-  ;(error as any).code = code
-  ;(error as any).details = details
-  return error
-}
+// Re-export error codes for backward compatibility
+export { MCPErrorCode } from './mcp-errors'
 
 // Helper function to validate required parameters
 function validateRequiredParam<T>(
@@ -117,10 +121,15 @@ function validateRequiredParam<T>(
 ): T {
   if (value === undefined || value === null) {
     const exampleText = example ? `\nExample: { "${paramName}": ${example} }` : ''
-    throw createMCPError(MCPErrorCode.MISSING_REQUIRED_PARAM, `${paramName} is required${exampleText}`, {
-      parameter: paramName,
-      type: paramType
-    })
+    throw createMCPError(
+      MCPErrorCode.MISSING_REQUIRED_PARAM,
+      `${paramName} is required${exampleText}`,
+      {
+        parameter: paramName,
+        value: value,
+        validationErrors: { [paramName]: `Required ${paramType} is missing` }
+      }
+    )
   }
   return value
 }
@@ -130,11 +139,16 @@ function validateDataField<T>(data: any, fieldName: string, fieldType: string = 
   const value = data?.[fieldName]
   if (value === undefined || value === null) {
     const exampleText = example ? `\nExample: { "data": { "${fieldName}": ${example} } }` : ''
-    throw createMCPError(MCPErrorCode.MISSING_REQUIRED_PARAM, `${fieldName} is required in data${exampleText}`, {
-      field: fieldName,
-      type: fieldType,
-      providedData: data
-    })
+    throw createMCPError(
+      MCPErrorCode.MISSING_REQUIRED_PARAM,
+      `${fieldName} is required in data${exampleText}`,
+      {
+        parameter: `data.${fieldName}`,
+        value: value,
+        validationErrors: { [fieldName]: `Required ${fieldType} is missing from data object` },
+        relatedResources: [`data.${fieldName}`]
+      }
+    )
   }
   return value as T
 }
@@ -154,7 +168,12 @@ export enum ProjectManagerAction {
   GET_SELECTED_FILES = 'get_selected_files',
   UPDATE_SELECTED_FILES = 'update_selected_files',
   CLEAR_SELECTED_FILES = 'clear_selected_files',
-  GET_SELECTION_CONTEXT = 'get_selection_context'
+  GET_SELECTION_CONTEXT = 'get_selection_context',
+  SEARCH = 'search',
+  FAST_SEARCH_FILES = 'fast_search_files',
+  CREATE_FILE = 'create_file',
+  GET_FILE_CONTENT_PARTIAL = 'get_file_content_partial',
+  DELETE_FILE = 'delete_file'
 }
 
 export enum PromptManagerAction {
@@ -178,7 +197,11 @@ export enum TicketManagerAction {
   LIST_WITH_TASK_COUNT = 'list_with_task_count',
   SUGGEST_TASKS = 'suggest_tasks',
   AUTO_GENERATE_TASKS = 'auto_generate_tasks',
-  SUGGEST_FILES = 'suggest_files'
+  SUGGEST_FILES = 'suggest_files',
+  SEARCH = 'search',
+  BATCH_CREATE = 'batch_create',
+  BATCH_UPDATE = 'batch_update',
+  BATCH_DELETE = 'batch_delete'
 }
 
 export enum TaskManagerAction {
@@ -186,7 +209,16 @@ export enum TaskManagerAction {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
-  REORDER = 'reorder'
+  REORDER = 'reorder',
+  SUGGEST_FILES = 'suggest_files',
+  UPDATE_CONTEXT = 'update_context',
+  GET_WITH_CONTEXT = 'get_with_context',
+  ANALYZE_COMPLEXITY = 'analyze_complexity',
+  FILTER = 'filter',
+  BATCH_CREATE = 'batch_create',
+  BATCH_UPDATE = 'batch_update',
+  BATCH_DELETE = 'batch_delete',
+  BATCH_MOVE = 'batch_move'
 }
 
 export enum AIAssistantAction {
@@ -234,6 +266,12 @@ export enum GitManagerAction {
   CONFIG_SET = 'config_set'
 }
 
+export enum TabManagerAction {
+  GET_ACTIVE = 'get_active',
+  SET_ACTIVE = 'set_active',
+  CLEAR_ACTIVE = 'clear_active'
+}
+
 // Consolidated tool schemas
 const ProjectManagerSchema = z.object({
   action: z.enum([
@@ -250,7 +288,11 @@ const ProjectManagerSchema = z.object({
     ProjectManagerAction.GET_SELECTED_FILES,
     ProjectManagerAction.UPDATE_SELECTED_FILES,
     ProjectManagerAction.CLEAR_SELECTED_FILES,
-    ProjectManagerAction.GET_SELECTION_CONTEXT
+    ProjectManagerAction.GET_SELECTION_CONTEXT,
+    ProjectManagerAction.SEARCH,
+    ProjectManagerAction.CREATE_FILE,
+    ProjectManagerAction.GET_FILE_CONTENT_PARTIAL,
+    ProjectManagerAction.DELETE_FILE
   ]),
   projectId: z.number().optional(),
   data: z.any().optional()
@@ -282,7 +324,11 @@ const TicketManagerSchema = z.object({
     TicketManagerAction.LIST_WITH_TASK_COUNT,
     TicketManagerAction.SUGGEST_TASKS,
     TicketManagerAction.AUTO_GENERATE_TASKS,
-    TicketManagerAction.SUGGEST_FILES
+    TicketManagerAction.SUGGEST_FILES,
+    TicketManagerAction.SEARCH,
+    TicketManagerAction.BATCH_CREATE,
+    TicketManagerAction.BATCH_UPDATE,
+    TicketManagerAction.BATCH_DELETE
   ]),
   projectId: z.number().optional(),
   data: z.any().optional()
@@ -294,7 +340,16 @@ const TaskManagerSchema = z.object({
     TaskManagerAction.CREATE,
     TaskManagerAction.UPDATE,
     TaskManagerAction.DELETE,
-    TaskManagerAction.REORDER
+    TaskManagerAction.REORDER,
+    TaskManagerAction.SUGGEST_FILES,
+    TaskManagerAction.UPDATE_CONTEXT,
+    TaskManagerAction.GET_WITH_CONTEXT,
+    TaskManagerAction.ANALYZE_COMPLEXITY,
+    TaskManagerAction.FILTER,
+    TaskManagerAction.BATCH_CREATE,
+    TaskManagerAction.BATCH_UPDATE,
+    TaskManagerAction.BATCH_DELETE,
+    TaskManagerAction.BATCH_MOVE
   ]),
   ticketId: z.number().optional(),
   data: z.any().optional()
@@ -350,12 +405,22 @@ const GitManagerSchema = z.object({
   data: z.any().optional()
 })
 
+const TabManagerSchema = z.object({
+  action: z.enum([
+    TabManagerAction.GET_ACTIVE,
+    TabManagerAction.SET_ACTIVE,
+    TabManagerAction.CLEAR_ACTIVE
+  ]),
+  projectId: z.number(),
+  data: z.any().optional()
+})
+
 // Consolidated tool definitions
 export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'project_manager',
     description:
-      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete, get_summary, browse_files, get_file_content, update_file_content, suggest_files',
+      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, browse_files, get_file_content, update_file_content, suggest_files, search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial',
     inputSchema: {
       type: 'object',
       properties: {
@@ -371,7 +436,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         data: {
           type: 'object',
           description:
-            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }'
+            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For update_selected_files: { fileIds: [123, 456], tabId: 1 (optional, defaults to 0), promptIds: [789] (optional), userPrompt: "text" (optional) }. For delete_file: { path: "src/file.ts" }. For fast_search_files: { query: "search term", searchType: "semantic" | "exact" | "fuzzy" | "regex" (default: "semantic"), fileTypes: ["ts", "js"], limit: 20, includeContext: false, scoringMethod: "relevance" | "recency" | "frequency" }'
         }
       },
       required: ['action']
@@ -420,14 +485,32 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
           }
 
           case ProjectManagerAction.DELETE: {
+            // WARNING: This action deletes the ENTIRE PROJECT, not just a file!
+            // Use DELETE_FILE to delete individual files
             const validProjectId = validateRequiredParam(projectId, 'projectId', 'number')
+            
+            // Add extra validation to prevent accidental deletion
+            if (!data || !data.confirmDelete) {
+              throw createMCPError(
+                MCPErrorCode.VALIDATION_FAILED,
+                'Project deletion requires explicit confirmation',
+                {
+                  parameter: 'data.confirmDelete',
+                  validationErrors: {
+                    confirmDelete: 'Must be set to true to confirm project deletion'
+                  },
+                  relatedResources: [`project:${validProjectId}`]
+                }
+              )
+            }
+            
             const success = await deleteProject(validProjectId)
             return {
               content: [
                 {
                   type: 'text',
                   text: success
-                    ? `Project ${validProjectId} deleted successfully`
+                    ? `⚠️ ENTIRE PROJECT ${validProjectId} has been permanently deleted`
                     : `Failed to delete project ${validProjectId}`
                 }
               ]
@@ -594,7 +677,13 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
           case ProjectManagerAction.GET_SELECTED_FILES: {
             const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-            const tabId = data?.tabId as number | undefined
+            let tabId = data?.tabId as number | undefined
+            
+            // If no tabId provided, use the active tab
+            if (tabId === undefined) {
+              tabId = await getOrCreateDefaultActiveTab(validProjectId)
+            }
+            
             const selectedFiles = await getSelectedFiles(validProjectId, tabId)
             if (!selectedFiles) {
               return {
@@ -618,7 +707,13 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
           case ProjectManagerAction.UPDATE_SELECTED_FILES: {
             const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-            const tabId = validateDataField<number>(data, 'tabId', 'number', '1')
+            let tabId = data?.tabId as number | undefined
+            
+            // If no tabId provided, use the active tab
+            if (tabId === undefined) {
+              tabId = await getOrCreateDefaultActiveTab(validProjectId)
+            }
+            
             const fileIds = validateDataField<number[]>(data, 'fileIds', 'array', '[123, 456]')
             const promptIds = data?.promptIds as number[] | undefined
             const userPrompt = data?.userPrompt as string | undefined
@@ -636,7 +731,14 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
           case ProjectManagerAction.CLEAR_SELECTED_FILES: {
             const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-            const tabId = data?.tabId as number | undefined
+            let tabId = data?.tabId as number | undefined
+            
+            // If no tabId provided and we want to clear a specific tab (not all),
+            // use the active tab
+            if (tabId === undefined) {
+              tabId = await getOrCreateDefaultActiveTab(validProjectId)
+            }
+            
             await clearSelectedFiles(validProjectId, tabId)
             return {
               content: [
@@ -650,7 +752,13 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
           case ProjectManagerAction.GET_SELECTION_CONTEXT: {
             const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-            const tabId = data?.tabId as number | undefined
+            let tabId = data?.tabId as number | undefined
+            
+            // If no tabId provided, use the active tab
+            if (tabId === undefined) {
+              tabId = await getOrCreateDefaultActiveTab(validProjectId)
+            }
+            
             const context = await getSelectionContext(validProjectId, tabId)
             if (!context) {
               return {
@@ -678,6 +786,386 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             }
           }
 
+          case ProjectManagerAction.SEARCH: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const query = validateDataField<string>(data, 'query', 'string', '"authentication" or "login"')
+            const searchIn = (data?.searchIn as 'path' | 'content' | 'both') || 'both'
+            const caseSensitive = (data?.caseSensitive as boolean) || false
+
+            const project = await getProjectById(validProjectId)
+            const files = await getProjectFiles(validProjectId)
+            if (!files) {
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to retrieve project files', {
+                projectId: validProjectId
+              })
+            }
+
+            const results: { path: string; matches: string[] }[] = []
+            const queryLower = caseSensitive ? query : query.toLowerCase()
+
+            for (const file of files) {
+              let matches: string[] = []
+              
+              // Search in path
+              if (searchIn === 'path' || searchIn === 'both') {
+                const filePath = caseSensitive ? file.path : file.path.toLowerCase()
+                if (filePath.includes(queryLower)) {
+                  matches.push(`Path match: ${file.path}`)
+                }
+              }
+
+              // Search in content
+              if (searchIn === 'content' || searchIn === 'both') {
+                if (file.content) {
+                  const content = caseSensitive ? file.content : file.content.toLowerCase()
+                  if (content.includes(queryLower)) {
+                    // Find line numbers with matches
+                    const lines = file.content.split('\n')
+                    const matchingLines: string[] = []
+                    lines.forEach((line, index) => {
+                      const lineToSearch = caseSensitive ? line : line.toLowerCase()
+                      if (lineToSearch.includes(queryLower)) {
+                        matchingLines.push(`  Line ${index + 1}: ${line.trim()}`)
+                      }
+                    })
+                    if (matchingLines.length > 0) {
+                      matches.push(`Content matches:\n${matchingLines.slice(0, 5).join('\n')}${matchingLines.length > 5 ? `\n  ... and ${matchingLines.length - 5} more matches` : ''}`)
+                    }
+                  }
+                }
+              }
+
+              if (matches.length > 0) {
+                results.push({ path: file.path, matches })
+              }
+            }
+
+            let resultText = `Search results for "${query}" in project ${project.name}:\n`
+            resultText += `Search mode: ${searchIn}, Case sensitive: ${caseSensitive}\n\n`
+            
+            if (results.length === 0) {
+              resultText += 'No matches found.'
+            } else {
+              resultText += `Found ${results.length} files with matches:\n\n`
+              for (const result of results.slice(0, 20)) {
+                resultText += `📄 ${result.path}\n${result.matches.join('\n')}\n\n`
+              }
+              if (results.length > 20) {
+                resultText += `... and ${results.length - 20} more files`
+              }
+            }
+
+            return {
+              content: [{ type: 'text', text: resultText }]
+            }
+          }
+
+          case ProjectManagerAction.FAST_SEARCH_FILES: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const query = validateDataField<string>(data, 'query', 'string', '"authentication" or "login"')
+            
+            // Optional parameters with defaults
+            const searchType = (data?.searchType as 'exact' | 'fuzzy' | 'semantic' | 'regex') || 'semantic'
+            const fileTypes = data?.fileTypes as string[] | undefined
+            const limit = (data?.limit as number) || 20
+            const includeContext = (data?.includeContext as boolean) || false
+            const scoringMethod = (data?.scoringMethod as 'relevance' | 'recency' | 'frequency') || 'relevance'
+            
+            // Perform fast search
+            const searchResults = await fileSearchService.search(validProjectId, {
+              query,
+              searchType,
+              fileTypes,
+              limit,
+              includeContext,
+              scoringMethod
+            })
+            
+            // Format results
+            let resultText = `🔍 Fast ${searchType} search for "${query}" in project ${validProjectId}\n`
+            resultText += `Found ${searchResults.stats.totalResults} results in ${searchResults.stats.searchTime}ms`
+            resultText += searchResults.stats.cached ? ' (cached)\n\n' : '\n\n'
+            
+            if (searchResults.results.length === 0) {
+              resultText += 'No matches found.'
+            } else {
+              for (const result of searchResults.results) {
+                resultText += `📄 ${result.file.path} (score: ${result.score.toFixed(2)})\n`
+                
+                if (result.snippet) {
+                  resultText += `  Preview: ${result.snippet}\n`
+                }
+                
+                if (result.keywords && result.keywords.length > 0) {
+                  resultText += `  Keywords: ${result.keywords.join(', ')}\n`
+                }
+                
+                if (result.matches.length > 0) {
+                  resultText += `  Matches:\n`
+                  for (const match of result.matches.slice(0, 3)) {
+                    resultText += `    Line ${match.line}: ${match.text}\n`
+                  }
+                  if (result.matches.length > 3) {
+                    resultText += `    ... and ${result.matches.length - 3} more matches\n`
+                  }
+                }
+                
+                resultText += '\n'
+              }
+              
+              if (searchResults.stats.totalResults > limit) {
+                resultText += `Showing top ${limit} of ${searchResults.stats.totalResults} total results.\n`
+              }
+              
+              resultText += `\nIndex coverage: ${searchResults.stats.indexCoverage}%`
+            }
+            
+            return {
+              content: [{ type: 'text', text: resultText }]
+            }
+          }
+
+          case ProjectManagerAction.CREATE_FILE: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const filePath = validateDataField<string>(data, 'path', 'string', '"src/new-file.ts"')
+            const content = validateDataField<string>(data, 'content', 'string', '"// New file content"')
+
+            // Validate path doesn't contain dangerous patterns
+            if (filePath.includes('..') || path.isAbsolute(filePath)) {
+              throw createMCPError(
+                MCPErrorCode.PATH_TRAVERSAL_DENIED,
+                'Invalid file path - must be relative and within project directory',
+                {
+                  parameter: 'path',
+                  value: filePath,
+                  validationErrors: { path: 'Path must be relative and cannot contain ".."' }
+                }
+              )
+            }
+
+            const project = await getProjectById(validProjectId)
+            const fullPath = path.join(project.path, filePath)
+            
+            // Create transaction for file creation
+            const transaction = await executeTransaction([
+              createTransactionStep(
+                'validate-project-files',
+                async () => {
+                  const files = await getProjectFiles(validProjectId)
+                  if (!files) {
+                    throw createMCPError(
+                      MCPErrorCode.SERVICE_ERROR,
+                      'Failed to retrieve project files',
+                      { relatedResources: [`project:${validProjectId}`] }
+                    )
+                  }
+                  
+                  // Check if file already exists
+                  const existingFile = files.find((f) => f.path === filePath)
+                  if (existingFile) {
+                    throw createMCPError(
+                      MCPErrorCode.RESOURCE_ALREADY_EXISTS,
+                      `File already exists: ${filePath}`,
+                      {
+                        parameter: 'path',
+                        value: filePath,
+                        relatedResources: [`file:${existingFile.id}`]
+                      }
+                    )
+                  }
+                  
+                  return { files, projectPath: project.path }
+                }
+              ),
+              createTransactionStep(
+                'create-directory',
+                async () => {
+                  const dir = path.dirname(fullPath)
+                  await fs.mkdir(dir, { recursive: true })
+                  return dir
+                },
+                async (createdDir) => {
+                  // No rollback needed for directory creation
+                  // It's safe to leave empty directories
+                }
+              ),
+              createTransactionStep(
+                'write-file',
+                async () => {
+                  await fs.writeFile(fullPath, content, 'utf-8')
+                  return fullPath
+                },
+                async (writtenPath) => {
+                  // Rollback: delete the file if it was created
+                  try {
+                    await fs.unlink(writtenPath)
+                    console.log(`Rolled back file creation: ${writtenPath}`)
+                  } catch (error) {
+                    console.error(`Failed to rollback file creation: ${writtenPath}`, error)
+                  }
+                },
+                { retryable: true, maxRetries: 2 }
+              ),
+              createTransactionStep(
+                'sync-project',
+                async () => {
+                  const { created } = await syncProject(project)
+                  return { created, filePath, fullPath }
+                },
+                undefined, // No rollback for sync
+                { retryable: true, maxRetries: 3 }
+              )
+            ])
+            
+            if (!transaction.success) {
+              const firstError = Array.from(transaction.errors.values())[0]
+              throw firstError instanceof MCPError ? firstError : MCPError.fromError(firstError, {
+                tool: 'project_manager',
+                action: ProjectManagerAction.CREATE_FILE,
+                parameter: 'path',
+                value: filePath
+              })
+            }
+            
+            const syncResult = transaction.results.get('sync-project') as any
+            return {
+              content: [{
+                type: 'text',
+                text: `File created successfully: ${filePath}\nFull path: ${fullPath}\nSynced ${syncResult?.created || 0} new files to project.`
+              }]
+            }
+          }
+
+          case ProjectManagerAction.GET_FILE_CONTENT_PARTIAL: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const filePath = validateDataField<string>(data, 'path', 'string', '"src/index.ts"')
+            const startLine = validateDataField<number>(data, 'startLine', 'number', '1')
+            const endLine = validateDataField<number>(data, 'endLine', 'number', '50')
+
+            if (startLine < 1) {
+              throw createMCPError(MCPErrorCode.INVALID_PARAM_VALUE, 'startLine must be >= 1', {
+                startLine,
+                hint: 'Line numbers start at 1'
+              })
+            }
+
+            if (endLine < startLine) {
+              throw createMCPError(MCPErrorCode.INVALID_PARAM_VALUE, 'endLine must be >= startLine', {
+                startLine,
+                endLine
+              })
+            }
+
+            const project = await getProjectById(validProjectId)
+            const files = await getProjectFiles(validProjectId)
+            if (!files) {
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to retrieve project files', {
+                projectId: validProjectId
+              })
+            }
+
+            const file = files.find((f) => f.path === filePath)
+            if (!file) {
+              const availablePaths = files.slice(0, 5).map((f) => f.path)
+              throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, {
+                requestedPath: filePath,
+                availableFiles: availablePaths,
+                totalFiles: files.length,
+                hint: 'Use browse_files action to explore available files'
+              })
+            }
+
+            if (!file.content) {
+              return {
+                content: [{ type: 'text', text: `File ${filePath} has no content.` }]
+              }
+            }
+
+            const lines = file.content.split('\n')
+            const totalLines = lines.length
+            
+            // Adjust endLine if it exceeds total lines
+            const actualEndLine = Math.min(endLine, totalLines)
+            
+            // Extract the requested lines (convert to 0-based index)
+            const requestedLines = lines.slice(startLine - 1, actualEndLine)
+            
+            let resultText = `File: ${filePath}\n`
+            resultText += `Lines ${startLine}-${actualEndLine} of ${totalLines}:\n`
+            resultText += '```\n'
+            
+            // Add line numbers
+            requestedLines.forEach((line, index) => {
+              const lineNumber = startLine + index
+              resultText += `${lineNumber.toString().padStart(4, ' ')}│ ${line}\n`
+            })
+            
+            resultText += '```'
+            
+            if (actualEndLine < endLine) {
+              resultText += `\nNote: File only has ${totalLines} lines (requested up to line ${endLine})`
+            }
+
+            return {
+              content: [{ type: 'text', text: resultText }]
+            }
+          }
+
+          case ProjectManagerAction.DELETE_FILE: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const filePath = validateDataField<string>(data, 'path', 'string', '"src/file-to-delete.ts"')
+
+            const project = await getProjectById(validProjectId)
+            const files = await getProjectFiles(validProjectId)
+            if (!files) {
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to retrieve project files', {
+                projectId: validProjectId
+              })
+            }
+
+            const file = files.find((f) => f.path === filePath)
+            if (!file) {
+              const availablePaths = files.slice(0, 5).map((f) => f.path)
+              throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, {
+                requestedPath: filePath,
+                availableFiles: availablePaths,
+                totalFiles: files.length,
+                hint: 'Use browse_files action to explore available files'
+              })
+            }
+
+            // Delete the file from the project database
+            const { deletedCount } = await bulkDeleteProjectFiles(validProjectId, [file.id])
+            
+            if (deletedCount === 0) {
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to delete file', {
+                filePath,
+                fileId: file.id
+              })
+            }
+
+            // Clean up file references in tickets
+            const { removeDeletedFileIdsFromTickets } = await import('@octoprompt/services')
+            await removeDeletedFileIdsFromTickets(validProjectId, [file.id])
+
+            // Clean up file references in selected files
+            const { removeDeletedFileIdsFromSelectedFiles } = await import('@octoprompt/services')
+            await removeDeletedFileIdsFromSelectedFiles(validProjectId, [file.id])
+
+            // Delete the file from disk
+            const fullPath = path.join(project.path, filePath)
+            try {
+              await fs.unlink(fullPath)
+            } catch (error) {
+              // Log but don't fail if file doesn't exist on disk
+              console.warn(`File not found on disk during deletion: ${fullPath}`)
+            }
+
+            return {
+              content: [{ type: 'text', text: `File ${filePath} deleted successfully from project ${validProjectId}` }]
+            }
+          }
+
           default:
             throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
               action,
@@ -685,31 +1173,14 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             })
         }
       } catch (error) {
-        // Check if it's our custom MCP error with details
-        if (error instanceof Error && (error as any).code) {
-          const mcpError = error as any
-          return {
-            content: [
-              {
-                type: 'text',
-                text:
-                  error.message + (mcpError.details ? `\nDetails: ${JSON.stringify(mcpError.details, null, 2)}` : '')
-              }
-            ],
-            isError: true
-          }
-        }
-
-        // Generic error handling
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`
-            }
-          ],
-          isError: true
-        }
+        // Convert to MCPError if not already
+        const mcpError = error instanceof MCPError ? error : MCPError.fromError(error, {
+          tool: 'project_manager',
+          action: args.action
+        })
+        
+        // Return formatted error response with recovery suggestions
+        return formatMCPErrorResponse(mcpError)
       }
     }
   },
@@ -734,7 +1205,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         data: {
           type: 'object',
           description:
-            'Action-specific data. For get/update/delete: { promptId: 123 }. For create: { name: "My Prompt", content: "Prompt text" }. For add_to_project: { promptId: 123 }'
+            'Action-specific data. For get/update/delete: { promptId: 123 }. For create: { name: "My Prompt", content: "Prompt text" }. For add_to_project: { promptId: 123 }. For suggest_prompts: { userInput: "help me with authentication", limit: 5 (optional) }'
         }
       },
       required: ['action']
@@ -773,6 +1244,23 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
               '"Review this code for best practices..."'
             )
             const prompt = await createPrompt(createData)
+            
+            // Auto-associate with project if projectId is provided
+            if (projectId) {
+              try {
+                await addPromptToProject(prompt.id, projectId)
+                return {
+                  content: [{ type: 'text', text: `Prompt created and associated with project ${projectId}: ${prompt.name} (ID: ${prompt.id})` }]
+                }
+              } catch (error) {
+                // If association fails, still return success for prompt creation
+                console.warn(`Created prompt but failed to associate with project ${projectId}:`, error)
+                return {
+                  content: [{ type: 'text', text: `Prompt created successfully: ${prompt.name} (ID: ${prompt.id})\nNote: Failed to associate with project ${projectId}` }]
+                }
+              }
+            }
+            
             return {
               content: [{ type: 'text', text: `Prompt created successfully: ${prompt.name} (ID: ${prompt.id})` }]
             }
@@ -837,10 +1325,57 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
           case PromptManagerAction.SUGGEST_PROMPTS: {
             const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            
+            // Enhanced validation for userInput
+            if (!data || !data.userInput) {
+              throw new Error('userInput is required in data field. Example: { "userInput": "help me with authentication" }')
+            }
+            
             const userInput = validateDataField<string>(data, 'userInput', 'string', '"help me with authentication"')
+            
+            // Additional check for empty/whitespace input
+            if (!userInput || userInput.trim().length === 0) {
+              throw new Error('userInput cannot be empty. Please provide a meaningful query.')
+            }
+            
             const limit = (data?.limit as number) || 5
 
+            // First try to get project-specific prompts
             const suggestedPrompts = await suggestPrompts(validProjectId, userInput, limit)
+            
+            // If no project-specific prompts found, check if there are any prompts at all
+            if (suggestedPrompts.length === 0) {
+              const projectPrompts = await listPromptsByProject(validProjectId)
+              const allPrompts = await listAllPrompts()
+              
+              if (projectPrompts.length === 0 && allPrompts.length > 0) {
+                // No prompts associated with this project, but prompts exist
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: `No prompts are currently associated with project ${validProjectId}.\n\n` +
+                            `There are ${allPrompts.length} prompts available in the system.\n` +
+                            `To use them with this project, first add them using the 'add_to_project' action.\n\n` +
+                            `Example: { "action": "add_to_project", "projectId": ${validProjectId}, "data": { "promptId": <id> } }`
+                    }
+                  ]
+                }
+              } else if (allPrompts.length === 0) {
+                // No prompts exist at all
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'No prompts exist in the system yet.\n\n' +
+                            'Create prompts using the "create" action:\n' +
+                            `Example: { "action": "create", "data": { "name": "My Prompt", "content": "Prompt content here" } }`
+                    }
+                  ]
+                }
+              }
+            }
+            
             const promptList = suggestedPrompts
               .map((p) => `${p.id}: ${p.name}\n   ${p.content.substring(0, 150)}${p.content.length > 150 ? '...' : ''}`)
               .join('\n\n')
@@ -852,25 +1387,27 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
                   text:
                     suggestedPrompts.length > 0
                       ? `Suggested prompts for "${userInput}":\n\n${promptList}`
-                      : 'No prompts found matching your input'
+                      : `No prompts found matching your input "${userInput}" in project ${validProjectId}`
                 }
               ]
             }
           }
 
           default:
-            throw new Error(`Unknown action: ${action}`)
+            throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+              action,
+              validActions: Object.values(PromptManagerAction)
+            })
         }
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`
-            }
-          ],
-          isError: true
-        }
+        // Convert to MCPError if not already
+        const mcpError = error instanceof MCPError ? error : MCPError.fromError(error, {
+          tool: 'prompt_manager',
+          action: args.action
+        })
+        
+        // Return formatted error response with recovery suggestions
+        return formatMCPErrorResponse(mcpError)
       }
     }
   },
@@ -878,7 +1415,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'ticket_manager',
     description:
-      'Manage tickets and ticket-related operations. Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files',
+      'Manage tickets and ticket-related operations. Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files, search, batch_create, batch_update, batch_delete',
     inputSchema: {
       type: 'object',
       properties: {
@@ -894,7 +1431,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         data: {
           type: 'object',
           description:
-            'Action-specific data. For get/update/delete: { ticketId: 456 }. For create: { title: "Fix bug", overview: "Description", priority: "high", status: "open" }'
+            'Action-specific data. For get/update/delete: { ticketId: 456 }. For create: { title: "Fix bug", overview: "Description", priority: "high", status: "open" }. For search: { query: "login", status: "open", priority: ["high", "normal"], limit: 10 }. For batch_create: { tickets: [{title: "Task 1"}, {title: "Task 2"}] }. For batch_update: { updates: [{ticketId: 456, data: {status: "closed"}}] }. For batch_delete: { ticketIds: [456, 789] }'
         }
       },
       required: ['action']
@@ -937,15 +1474,20 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
           case TicketManagerAction.CREATE: {
             const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            
+            // Validate required fields FIRST
+            const title = validateDataField<string>(data, 'title', 'string', '"Fix login bug"')
+            
+            // Then create the data object with validated values
             const createData: CreateTicketBody = {
               projectId: validProjectId,
-              title: data.title || '',
+              title: title, // Now guaranteed to be non-empty
               overview: data.overview || '',
               status: data.status || 'open',
               priority: data.priority || 'normal',
               suggestedFileIds: data.suggestedFileIds
             }
-            const title = validateDataField<string>(data, 'title', 'string', '"Fix login bug"')
+            
             const ticket = await createTicket(createData)
             return {
               content: [{ type: 'text', text: `Ticket created successfully: ${ticket.title} (ID: ${ticket.id})` }]
@@ -1020,27 +1562,134 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               ]
             }
           }
+          
+          case TicketManagerAction.SEARCH: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const searchOptions = data || {}
+            
+            try {
+              const result = await searchTickets(validProjectId, searchOptions)
+              
+              if (result.tickets.length === 0) {
+                throw createMCPError(MCPErrorCode.NO_SEARCH_RESULTS, 'No tickets found matching your search criteria', {
+                  searchOptions
+                })
+              }
+              
+              const ticketList = result.tickets
+                .map((t) => `${t.id}: [${t.status}/${t.priority}] ${t.title}`)
+                .join('\n')
+              
+              return {
+                content: [{
+                  type: 'text',
+                  text: `Found ${result.total} tickets (showing ${result.tickets.length}):\n${ticketList}`
+                }]
+              }
+            } catch (error) {
+              if (error instanceof MCPError) throw error
+              throw createMCPError(MCPErrorCode.SEARCH_FAILED, 'Search operation failed', {
+                searchOptions,
+                originalError: error
+              })
+            }
+          }
+          
+          case TicketManagerAction.BATCH_CREATE: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const tickets = validateDataField<any[]>(data, 'tickets', 'array', '[{title: "Task 1"}, {title: "Task 2"}]')
+            
+            if (tickets.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${tickets.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchCreateTickets(validProjectId, tickets)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch create completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- ${JSON.stringify(f.item)}: ${f.error}`).join('\n')}` : '')
+              }]
+            }
+          }
+          
+          case TicketManagerAction.BATCH_UPDATE: {
+            const updates = validateDataField<any[]>(data, 'updates', 'array', '[{ticketId: 456, data: {status: "closed"}}]')
+            
+            if (updates.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${updates.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchUpdateTickets(updates)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch update completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- Ticket ${f.item.ticketId}: ${f.error}`).join('\n')}` : '')
+              }]
+            }
+          }
+          
+          case TicketManagerAction.BATCH_DELETE: {
+            const ticketIds = validateDataField<number[]>(data, 'ticketIds', 'array', '[456, 789]')
+            
+            if (ticketIds.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${ticketIds.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchDeleteTickets(ticketIds)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch delete completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failed IDs: ${result.failed.map(f => f.item).join(', ')}` : '')
+              }]
+            }
+          }
 
           default:
-            throw new Error(`Unknown action: ${action}`)
+            throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+              action,
+              validActions: Object.values(TicketManagerAction)
+            })
         }
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`
-            }
-          ],
-          isError: true
-        }
+        // Convert to MCPError if not already
+        const mcpError = error instanceof MCPError ? error : MCPError.fromError(error, {
+          tool: 'ticket_manager',
+          action: args.action
+        })
+        
+        // Return formatted error response with recovery suggestions
+        return formatMCPErrorResponse(mcpError)
       }
     }
   },
 
   {
     name: 'task_manager',
-    description: 'Manage tasks within tickets. Actions: list, create, update, delete, reorder',
+    description: 'Manage tasks within tickets. Actions: list, create, update, delete, reorder, suggest_files, update_context, get_with_context, analyze_complexity, filter, batch_create, batch_update, batch_delete, batch_move',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1056,7 +1705,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         data: {
           type: 'object',
           description:
-            'Action-specific data. For create: { content: "Task description" }. For update: { taskId: 789, done: true, content: "Updated text" }. For reorder: { tasks: [{ taskId: 789, orderIndex: 0 }] }'
+            'Action-specific data. For create: { content: "Task description", description: "Detailed steps", suggestedFileIds: ["123"], estimatedHours: 4, tags: ["frontend"] }. For update: { taskId: 789, done: true, content: "Updated text", description: "New description" }. For filter: { projectId: 1750564533014, status: "pending", tags: ["backend"], query: "auth" }. For batch_create: { tasks: [{content: "Task 1"}, {content: "Task 2"}] }. For batch_update: { updates: [{ticketId: 456, taskId: 789, data: {done: true}}] }. For batch_delete: { deletes: [{ticketId: 456, taskId: 789}] }. For batch_move: { moves: [{taskId: 789, fromTicketId: 456, toTicketId: 123}] }'
         }
       },
       required: ['action', 'ticketId']
@@ -1079,7 +1728,16 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
           case TaskManagerAction.CREATE: {
             const content = validateDataField<string>(data, 'content', 'string', '"Implement login validation"')
-            const task = await createTask(validTicketId, content)
+            // Support enhanced task creation
+            const taskData = {
+              content,
+              description: data.description,
+              suggestedFileIds: data.suggestedFileIds,
+              estimatedHours: data.estimatedHours,
+              dependencies: data.dependencies,
+              tags: data.tags
+            }
+            const task = await createTask(validTicketId, taskData)
             return {
               content: [{ type: 'text', text: `Task created successfully: ${task.content} (ID: ${task.id})` }]
             }
@@ -1089,7 +1747,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
             const updateData: UpdateTaskBody = {}
             if (data.content !== undefined) updateData.content = data.content
+            if (data.description !== undefined) updateData.description = data.description
+            if (data.suggestedFileIds !== undefined) updateData.suggestedFileIds = data.suggestedFileIds
             if (data.done !== undefined) updateData.done = data.done
+            if (data.estimatedHours !== undefined) updateData.estimatedHours = data.estimatedHours
+            if (data.dependencies !== undefined) updateData.dependencies = data.dependencies
+            if (data.tags !== undefined) updateData.tags = data.tags
             const task = await updateTask(validTicketId, taskId, updateData)
             return {
               content: [{ type: 'text', text: `Task updated successfully: ${task.content} (ID: ${taskId})` }]
@@ -1115,6 +1778,195 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             const taskList = reorderedTasks.map((t) => `${t.id}: ${t.content} (order: ${t.orderIndex})`).join('\n')
             return {
               content: [{ type: 'text', text: `Tasks reordered successfully:\n${taskList}` }]
+            }
+          }
+          
+          case TaskManagerAction.SUGGEST_FILES: {
+            const { suggestFilesForTask } = await import('@octoprompt/services')
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const context = data.context as string | undefined
+            const suggestedFiles = await suggestFilesForTask(taskId, context)
+            return {
+              content: [{
+                type: 'text',
+                text: suggestedFiles.length > 0 
+                  ? `Suggested files for task: ${suggestedFiles.join(', ')}`
+                  : 'No files suggested for this task'
+              }]
+            }
+          }
+          
+          case TaskManagerAction.UPDATE_CONTEXT: {
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const updateData: UpdateTaskBody = {
+              description: data.description,
+              suggestedFileIds: data.suggestedFileIds,
+              estimatedHours: data.estimatedHours,
+              tags: data.tags
+            }
+            const task = await updateTask(validTicketId, taskId, updateData)
+            return {
+              content: [{
+                type: 'text',
+                text: `Task context updated: ${task.content} (Est: ${task.estimatedHours || 'N/A'} hours)`
+              }]
+            }
+          }
+          
+          case TaskManagerAction.GET_WITH_CONTEXT: {
+            const { getTaskWithContext } = await import('@octoprompt/services')
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const taskWithContext = await getTaskWithContext(taskId)
+            const contextInfo = {
+              task: taskWithContext.content,
+              description: taskWithContext.description,
+              estimatedHours: taskWithContext.estimatedHours,
+              tags: taskWithContext.tags,
+              fileCount: taskWithContext.suggestedFileIds?.length || 0,
+              files: taskWithContext.files
+            }
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify(contextInfo, null, 2)
+              }]
+            }
+          }
+          
+          case TaskManagerAction.ANALYZE_COMPLEXITY: {
+            const { analyzeTaskComplexity } = await import('@octoprompt/services')
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const analysis = await analyzeTaskComplexity(taskId)
+            return {
+              content: [{
+                type: 'text',
+                text: `Task Complexity Analysis:
+- Complexity: ${analysis.complexity}
+- Estimated Hours: ${analysis.estimatedHours}
+- Required Skills: ${analysis.requiredSkills.join(', ')}
+- Suggested Approach: ${analysis.suggestedApproach}`
+              }]
+            }
+          }
+          
+          case TaskManagerAction.FILTER: {
+            const projectId = validateRequiredParam(data?.projectId, 'projectId', 'number', '1750564533014')
+            const filterOptions = data || {}
+            
+            const result = await filterTasks(projectId, filterOptions)
+            
+            if (result.tasks.length === 0) {
+              throw createMCPError(MCPErrorCode.NO_SEARCH_RESULTS, 'No tasks found matching your filter criteria', {
+                filterOptions
+              })
+            }
+            
+            const taskList = result.tasks
+              .map((t) => `${t.id}: [${t.done ? 'x' : ' '}] ${t.content} (${t.ticketTitle}) ${t.estimatedHours ? `- ${t.estimatedHours}h` : ''}`)
+              .join('\n')
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Found ${result.total} tasks (showing ${result.tasks.length}):\n${taskList}`
+              }]
+            }
+          }
+          
+          case TaskManagerAction.BATCH_CREATE: {
+            const validTicketId = validateRequiredParam(ticketId, 'ticketId', 'number', '456')
+            const tasks = validateDataField<any[]>(data, 'tasks', 'array', '[{content: "Task 1"}, {content: "Task 2"}]')
+            
+            if (tasks.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${tasks.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchCreateTasks(validTicketId, tasks)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch create completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- ${f.item.content}: ${f.error}`).join('\n')}` : '')
+              }]
+            }
+          }
+          
+          case TaskManagerAction.BATCH_UPDATE: {
+            const updates = validateDataField<any[]>(data, 'updates', 'array', '[{ticketId: 456, taskId: 789, data: {done: true}}]')
+            
+            if (updates.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${updates.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchUpdateTasks(updates)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch update completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- Task ${f.item.taskId}: ${f.error}`).join('\n')}` : '')
+              }]
+            }
+          }
+          
+          case TaskManagerAction.BATCH_DELETE: {
+            const deletes = validateDataField<any[]>(data, 'deletes', 'array', '[{ticketId: 456, taskId: 789}]')
+            
+            if (deletes.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${deletes.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchDeleteTasks(deletes)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch delete completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failed task IDs: ${result.failed.map(f => f.item.taskId).join(', ')}` : '')
+              }]
+            }
+          }
+          
+          case TaskManagerAction.BATCH_MOVE: {
+            const moves = validateDataField<any[]>(data, 'moves', 'array', '[{taskId: 789, fromTicketId: 456, toTicketId: 123}]')
+            
+            if (moves.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${moves.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchMoveTasks(moves)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch move completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- Task ${f.item.taskId}: ${f.error}`).join('\n')}` : '')
+              }]
             }
           }
 
@@ -1529,6 +2381,108 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           ],
           isError: true
         }
+      }
+    }
+  },
+
+  {
+    name: 'tab_manager',
+    description: 'Manage active tabs for projects. Actions: get_active, set_active, clear_active',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(TabManagerAction)
+        },
+        projectId: {
+          type: 'number',
+          description: 'The project ID (required for all actions). Example: 1750564533014'
+        },
+        data: {
+          type: 'object',
+          description: 'Action-specific data. For set_active: { tabId: 0, clientId: "optional-client-id" }'
+        }
+      },
+      required: ['action', 'projectId']
+    },
+    handler: async (args: z.infer<typeof TabManagerSchema>): Promise<MCPToolResponse> => {
+      try {
+        const { action, projectId, data } = args
+
+        switch (action) {
+          case TabManagerAction.GET_ACTIVE: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const clientId = data?.clientId as string | undefined
+            
+            const activeTab = await getActiveTab(validProjectId, clientId)
+            
+            if (!activeTab) {
+              return {
+                content: [{ type: 'text', text: `No active tab set for project ${validProjectId}` }]
+              }
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Active tab for project ${validProjectId}:\n` +
+                      `Tab ID: ${activeTab.data.activeTabId}\n` +
+                      `Last updated: ${new Date(activeTab.data.lastUpdated).toISOString()}\n` +
+                      `Client ID: ${activeTab.data.clientId || 'not set'}`
+              }]
+            }
+          }
+
+          case TabManagerAction.SET_ACTIVE: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const tabId = validateDataField<number>(data, 'tabId', 'number', '0')
+            const clientId = data?.clientId as string | undefined
+            
+            const activeTab = await setActiveTab(validProjectId, tabId, clientId)
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Successfully set active tab for project ${validProjectId}:\n` +
+                      `Tab ID: ${activeTab.data.activeTabId}\n` +
+                      `Client ID: ${activeTab.data.clientId || 'not set'}`
+              }]
+            }
+          }
+
+          case TabManagerAction.CLEAR_ACTIVE: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const clientId = data?.clientId as string | undefined
+            
+            const success = await clearActiveTab(validProjectId, clientId)
+            
+            return {
+              content: [{
+                type: 'text',
+                text: success 
+                  ? `Active tab cleared for project ${validProjectId}`
+                  : `No active tab found to clear for project ${validProjectId}`
+              }]
+            }
+          }
+
+          default:
+            throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+              action,
+              validActions: Object.values(TabManagerAction)
+            })
+        }
+      } catch (error) {
+        // Convert to MCPError if not already
+        const mcpError = error instanceof MCPError ? error : MCPError.fromError(error, {
+          tool: 'tab_manager',
+          action: args.action
+        })
+        
+        // Return formatted error response with recovery suggestions
+        return formatMCPErrorResponse(mcpError)
       }
     }
   }

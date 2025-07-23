@@ -3,6 +3,7 @@ import { filesConfig } from '../configs/files.config'
 import { modelsConfig } from '../configs/models.config'
 import { providersConfig } from '../configs/providers.config'
 import { serverConfig } from '../configs/server.config'
+import { rateLimitConfig } from '../configs/rate-limit.config'
 import { globalConfigSchema } from '../schemas/config.schemas'
 import type { GlobalConfig } from '../types'
 
@@ -20,7 +21,8 @@ class ConfigLoader {
       server: serverConfig,
       models: modelsConfig,
       providers: providersConfig,
-      files: filesConfig
+      files: filesConfig,
+      rateLimit: rateLimitConfig
     }
 
     // Validate the configuration
@@ -107,3 +109,4 @@ export const getServerConfig = () => getConfig('server')
 export const getModelsConfig = () => getConfig('models')
 export const getProvidersConfig = () => getConfig('providers')
 export const getFilesConfig = () => getConfig('files')
+export const getRateLimitConfig = () => getConfig('rateLimit')

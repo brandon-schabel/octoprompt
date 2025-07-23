@@ -25,10 +25,12 @@ import { useNavigate } from '@tanstack/react-router'
 import { TicketWithTasks } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
+import { TicketListEmptyState } from './ticket-list-empty-state'
 
 interface TicketListPanelProps {
   projectTabId: number
   onSelectTicket?: (ticket: TicketWithTasks) => void
+  onCreateTicket?: () => void
 }
 
 function snippet(text: string, max = 80): string {
@@ -49,7 +51,7 @@ const PRIORITY_COLORS = {
   high: 'bg-red-500/10 text-red-700 dark:text-red-400'
 } as const
 
-export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
+export function TicketListPanel({ projectTabId, onSelectTicket, onCreateTicket }: TicketListPanelProps) {
   const navigate = useNavigate()
   const updateProjectTabState = useUpdateProjectTabState(projectTabId)
   const tabState = useProjectTabById(projectTabId)
@@ -236,7 +238,16 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
         {isLoading && <p className='text-sm text-muted-foreground'>Loading tickets...</p>}
         {error && <p className='text-sm text-red-500'>Error loading tickets</p>}
         {!isLoading && !error && sorted.length === 0 && (
-          <p className='text-sm text-muted-foreground'>No tickets found.</p>
+          <TicketListEmptyState
+            hasFilters={!!ticketSearch || ticketStatus !== 'all'}
+            onCreateTicket={onCreateTicket || (() => {})}
+            filterStatus={ticketStatus}
+            searchTerm={ticketSearch}
+            onClearFilters={() => {
+              setTicketSearch('')
+              setTicketStatusFilter('all')
+            }}
+          />
         )}
 
         <div className='space-y-2'>

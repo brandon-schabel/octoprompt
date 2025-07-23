@@ -852,6 +852,10 @@ const getCommitLogRoute = createRoute({
         .string()
         .optional()
         .transform((val) => (val ? parseInt(val, 10) : undefined)),
+      offset: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : undefined)),
       branch: z.string().optional(),
       file: z.string().optional()
     })
@@ -889,9 +893,11 @@ const getCommitLogRoute = createRoute({
 gitRoutes.openapi(getCommitLogRoute, async (c) => {
   try {
     const { projectId } = c.req.valid('param')
-    const { limit, skip, branch, file } = c.req.valid('query')
+    const { limit, skip, offset, branch, file } = c.req.valid('query')
 
-    const logs = await gitService.getCommitLog(projectId, { limit, skip, branch, file })
+    // Use either skip or offset (offset takes precedence if both are provided)
+    const skipCount = offset !== undefined ? offset : skip
+    const logs = await gitService.getCommitLog(projectId, { limit, skip: skipCount, offset, branch, file })
 
     return c.json({
       success: true,

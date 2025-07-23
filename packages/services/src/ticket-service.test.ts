@@ -275,16 +275,31 @@ describe('Ticket Service', () => {
       status: 'open',
       priority: 'normal'
     })
-    const task1 = await createTask(t.id, 'First')
+    const task1 = await createTask(t.id, { content: 'First' })
     expect(task1.id).toBeDefined()
     expect(task1.orderIndex).toBe(0)
+    expect(task1.content).toBe('First')
+    expect(task1.description).toBe('')
+    expect(task1.suggestedFileIds).toEqual([])
+    expect(task1.tags).toEqual([])
+    expect(task1.done).toBe(false)
 
-    const task2 = await createTask(t.id, 'Second')
+    const task2 = await createTask(t.id, { 
+      content: 'Second',
+      description: 'Detailed description',
+      suggestedFileIds: ['file1', 'file2'],
+      estimatedHours: 4,
+      tags: ['frontend', 'urgent']
+    })
     expect(task2.orderIndex).toBe(1)
+    expect(task2.description).toBe('Detailed description')
+    expect(task2.suggestedFileIds).toEqual(['file1', 'file2'])
+    expect(task2.estimatedHours).toBe(4)
+    expect(task2.tags).toEqual(['frontend', 'urgent'])
   })
 
   test('createTask throws if ticket not found', async () => {
-    await expect(createTask(99999, 'Nope')).rejects.toThrow(expect.objectContaining({ code: 'TICKET_NOT_FOUND' }))
+    await expect(createTask(99999, { content: 'Nope' })).rejects.toThrow(expect.objectContaining({ code: 'TICKET_NOT_FOUND' }))
   })
 
   test('getTasks returns tasks sorted by orderIndex', async () => {
@@ -295,12 +310,17 @@ describe('Ticket Service', () => {
       status: 'open',
       priority: 'normal'
     })
-    const taskA = await createTask(t.id, 'A')
-    const taskB = await createTask(t.id, 'B')
+    const taskA = await createTask(t.id, { content: 'A' })
+    const taskB = await createTask(t.id, { content: 'B' })
     const tasks = await getTasks(t.id)
     expect(tasks.length).toBe(2)
     expect(tasks[0].id).toBe(taskA.id)
     expect(tasks[1].id).toBe(taskB.id)
+    // Verify all fields are returned
+    expect(tasks[0].content).toBe('A')
+    expect(tasks[0].description).toBe('')
+    expect(tasks[0].suggestedFileIds).toEqual([])
+    expect(tasks[0].tags).toEqual([])
   })
 
   test('updateTask modifies content/done, returns null if not found', async () => {
@@ -311,12 +331,19 @@ describe('Ticket Service', () => {
       status: 'open',
       priority: 'normal'
     })
-    const task = await createTask(t.id, 'OldContent')
+    const task = await createTask(t.id, { content: 'OldContent' })
 
-    await updateTask(t.id, task.id, { content: 'NewContent', done: true })
+    await updateTask(t.id, task.id, { 
+      content: 'NewContent', 
+      done: true,
+      description: 'Updated description',
+      tags: ['completed']
+    })
     const all = await getTasks(t.id)
     expect(all[0].content).toBe('NewContent')
     expect(all[0].done).toBe(true)
+    expect(all[0].description).toBe('Updated description')
+    expect(all[0].tags).toEqual(['completed'])
 
     await expect(updateTask(t.id, 99999, { done: false })).rejects.toThrow(
       expect.objectContaining({ code: 'TASK_NOT_FOUND_FOR_TICKET' })
@@ -331,8 +358,8 @@ describe('Ticket Service', () => {
       status: 'open',
       priority: 'normal'
     })
-    const task = await createTask(t.id, 'ToDel')
-    await expect(deleteTask(t.id, task.id)).resolves.toBeUndefined()
+    const task = await createTask(t.id, { content: 'ToDel' })
+    await deleteTask(t.id, task.id)
 
     const tasksAfterDelete = await getTasks(t.id)
     expect(tasksAfterDelete.find((tk: any) => tk.id === task.id)).toBeUndefined()
@@ -350,8 +377,8 @@ describe('Ticket Service', () => {
       status: 'open',
       priority: 'normal'
     })
-    const ta = await createTask(t.id, 'A')
-    const tb = await createTask(t.id, 'B')
+    const ta = await createTask(t.id, { content: 'A' })
+    const tb = await createTask(t.id, { content: 'B' })
 
     await reorderTasks(t.id, [
       { taskId: ta.id, orderIndex: 2 },
@@ -397,9 +424,9 @@ describe('Ticket Service', () => {
     })
 
     // tk1 -> 2 tasks, tk2 -> 1 task
-    await createTask(tk1.id, 'T1A')
-    await createTask(tk1.id, 'T1B')
-    await createTask(tk2.id, 'T2A')
+    await createTask(tk1.id, { content: 'T1A' })
+    await createTask(tk1.id, { content: 'T1B' })
+    await createTask(tk2.id, { content: 'T2A' })
 
     const results = await listTicketsWithTaskCount(projId)
     expect(results.length).toBe(2)
@@ -426,9 +453,9 @@ describe('Ticket Service', () => {
       status: 'open',
       priority: 'normal'
     })
-    await createTask(t1.id, 'One')
-    await createTask(t1.id, 'Two')
-    await createTask(t2.id, 'Other')
+    await createTask(t1.id, { content: 'One' })
+    await createTask(t1.id, { content: 'Two' })
+    await createTask(t2.id, { content: 'Other' })
 
     const map = await getTasksForTickets([t1.id, t2.id])
     expect(Object.keys(map).length).toBe(2)
@@ -451,8 +478,8 @@ describe('Ticket Service', () => {
       status: 'open',
       priority: 'normal'
     })
-    await createTask(t1.id, 'TaskA')
-    await createTask(t1.id, 'TaskB')
+    await createTask(t1.id, { content: 'TaskA' })
+    await createTask(t1.id, { content: 'TaskB' })
 
     const found = await listTicketsWithTasks(12345678920)
     expect(found.length).toBe(2)

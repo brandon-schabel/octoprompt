@@ -249,7 +249,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       capabilities: serverCapabilities,
       serverInfo: {
         name: 'octoprompt-mcp',
-        version: '0.7.1'
+        version: '0.7.2'
       },
       _meta: { sessionId } // Include session ID for client reference
     }
@@ -445,19 +445,44 @@ async function handleResourcesList(
   try {
     const mcpResources = []
 
-    // Add built-in OctoPrompt resources
+    // Add global resources (available without projectId)
+    try {
+      const { listProjects } = await import('@octoprompt/services')
+      const projects = await listProjects()
+
+      // Add all projects resource
+      mcpResources.push({
+        uri: 'octoprompt://projects',
+        name: 'All Projects',
+        description: 'List of all available projects in OctoPrompt',
+        mimeType: 'application/json'
+      })
+
+      // Add resources for each project
+      for (const project of projects) {
+        mcpResources.push({
+          uri: `octoprompt://projects/${project.id}/summary`,
+          name: `${project.name} Summary`,
+          description: `Compact summary of project "${project.name}"`,
+          mimeType: 'text/plain'
+        })
+
+        mcpResources.push({
+          uri: `octoprompt://projects/${project.id}/files`,
+          name: `${project.name} Files`,
+          description: `List of files in project "${project.name}"`,
+          mimeType: 'application/json'
+        })
+      }
+    } catch (error) {
+      console.warn('[MCP] Could not load global resources:', error)
+    }
+
+    // Add project-specific resources if projectId is provided
     if (projectId) {
       try {
         const project = await getProjectById(parseInt(projectId))
         const files = await getProjectFiles(parseInt(projectId))
-
-        // Add project summary resource
-        mcpResources.push({
-          uri: `octoprompt://projects/${projectId}/summary`,
-          name: 'Project Summary',
-          description: `Summary of project "${project.name}"`,
-          mimeType: 'text/plain'
-        })
 
         // Add file suggestion resource
         mcpResources.push({
@@ -592,26 +617,35 @@ async function handleResourcesRead(
 
     // Handle built-in OctoPrompt resources
     if (uri.startsWith('octoprompt://')) {
-      if (!projectId) {
+      const urlParts = uri.replace('octoprompt://', '').split('/')
+
+      // Handle global projects list
+      if (uri === 'octoprompt://projects') {
+        const { listProjects } = await import('@octoprompt/services')
+        const projects = await listProjects()
         return {
           jsonrpc: '2.0',
           id,
-          error: {
-            ...JSON_RPC_ERRORS.INVALID_PARAMS,
-            message: 'Project ID is required for OctoPrompt resource access'
+          result: {
+            contents: [
+              {
+                uri,
+                mimeType: 'application/json',
+                text: JSON.stringify(projects, null, 2)
+              }
+            ]
           }
         }
       }
 
-      const urlParts = uri.replace('octoprompt://', '').split('/')
+      // Handle project-specific resources
+      if (urlParts[0] === 'projects' && urlParts[1]) {
+        const resourceProjectId = urlParts[1]
 
-      if (urlParts[0] === 'projects' && urlParts[1] === projectId) {
         if (urlParts[2] === 'summary') {
-          // Project summary resource
-          const project = await getProjectById(parseInt(projectId))
-          const files = await getProjectFiles(parseInt(projectId))
-          const fileCount = files?.length || 0
-          const summary = `Project: ${project.name}\nPath: ${project.path}\nFiles: ${fileCount}\nCreated: ${new Date(project.created).toLocaleString()}`
+          // Project summary resource - use compact summary
+          const { getProjectCompactSummary } = await import('@octoprompt/services')
+          const summary = await getProjectCompactSummary(parseInt(resourceProjectId))
 
           return {
             jsonrpc: '2.0',
@@ -622,6 +656,22 @@ async function handleResourcesRead(
                   uri,
                   mimeType: 'text/plain',
                   text: summary
+                }
+              ]
+            }
+          }
+        } else if (urlParts[2] === 'files' && !urlParts[3]) {
+          // Project files list
+          const files = await getProjectFiles(parseInt(resourceProjectId))
+          return {
+            jsonrpc: '2.0',
+            id,
+            result: {
+              contents: [
+                {
+                  uri,
+                  mimeType: 'application/json',
+                  text: JSON.stringify(files || [], null, 2)
                 }
               ]
             }

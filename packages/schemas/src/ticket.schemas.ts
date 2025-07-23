@@ -16,14 +16,19 @@ export const TicketSchema = z
   })
   .openapi('Ticket')
 
-// Task schema
+// Enhanced Task schema
 export const TicketTaskSchema = z
   .object({
     id: unixTSSchemaSpec,
     ticketId: unixTSSchemaSpec,
-    content: z.string().min(1),
+    content: z.string().min(1), // Keep as task title/summary
+    description: z.string().default(''), // NEW: Detailed task breakdown
+    suggestedFileIds: z.array(z.string()).default([]), // NEW: File associations
     done: z.boolean().default(false),
     orderIndex: z.number().min(0),
+    estimatedHours: z.number().optional(), // NEW: Time estimation
+    dependencies: z.array(unixTSSchemaSpec).default([]), // NEW: Task dependencies
+    tags: z.array(z.string()).default([]), // NEW: Tags for categorization
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })
@@ -53,14 +58,24 @@ export const UpdateTicketBodySchema = z
 
 export const CreateTaskBodySchema = z
   .object({
-    content: z.string().min(1)
+    content: z.string().min(1),
+    description: z.string().optional(),
+    suggestedFileIds: z.array(z.string()).optional(),
+    estimatedHours: z.number().optional(),
+    dependencies: z.array(unixTSSchemaSpec).optional(),
+    tags: z.array(z.string()).optional()
   })
   .openapi('CreateTaskBody')
 
 export const UpdateTaskBodySchema = z
   .object({
     content: z.string().min(1).optional(),
-    done: z.boolean().optional()
+    description: z.string().optional(),
+    suggestedFileIds: z.array(z.string()).optional(),
+    done: z.boolean().optional(),
+    estimatedHours: z.number().optional(),
+    dependencies: z.array(unixTSSchemaSpec).optional(),
+    tags: z.array(z.string()).optional()
   })
   .openapi('UpdateTaskBody')
 
@@ -82,6 +97,9 @@ export const TaskSuggestionsSchema = z
       z.object({
         title: z.string(),
         description: z.string().optional(),
+        suggestedFileIds: z.array(z.string()).default([]), // NEW: Direct file IDs
+        estimatedHours: z.number().optional(), // NEW
+        tags: z.array(z.string()).default([]), // NEW
         files: z
           .array(
             z.object({
@@ -89,7 +107,7 @@ export const TaskSuggestionsSchema = z
               fileName: z.string()
             })
           )
-          .optional()
+          .optional() // Keep for backward compatibility
       })
     )
   })

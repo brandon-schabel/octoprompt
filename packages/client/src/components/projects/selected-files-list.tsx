@@ -7,6 +7,7 @@ import { FormatTokenCount } from '../format-token-count'
 import { forwardRef, useRef, useState, useImperativeHandle, KeyboardEvent, useMemo, useCallback } from 'react'
 import { Input } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
+import { ScrollArea } from '@ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,7 +50,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     })
     const projectTab = useProjectTabById(projectTabId)
 
-    const { selectedProjectId = -1 } = projectTab || {}
+    const { selectedProjectId } = projectTab
 
     const projectFileMap = useProjectFileMap(selectedProjectId)
 
@@ -237,10 +238,6 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 <li>
                   Press <kbd className='px-1 rounded bg-muted'>Enter</kbd> or{' '}
                   <kbd className='px-1 rounded bg-muted'>Space</kbd> to select
-                </li>
-                <li>
-                  Undo with <kbd className='px-1 rounded bg-muted'>{formatShortcut('mod+z')}</kbd>, Redo with{' '}
-                  <kbd className='px-1 rounded bg-muted'>{formatShortcut('mod+shift+z')}</kbd>
                 </li>
               </ul>
             </div>
@@ -436,8 +433,9 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
             </DropdownMenu>
           </div>
 
-          <div className='flex-1 min-h-0'>
-            {filteredFileIds.map((fileId, index) => {
+          <ScrollArea className='flex-1 min-h-0'>
+            <div className='pr-3'>
+              {filteredFileIds.map((fileId, index) => {
               const file = projectFileMap.get(fileId)
               if (!file) return null
               const shortcutNumber = index + 1
@@ -523,7 +521,8 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 </div>
               )
             })}
-          </div>
+            </div>
+          </ScrollArea>
         </div>
       </>
     )

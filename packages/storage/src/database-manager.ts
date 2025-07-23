@@ -200,6 +200,13 @@ export class DatabaseManager {
 
     // Create indexes
     this.createIndexes()
+    
+    // Run migrations asynchronously to not block startup
+    import('./migrations/run-migrations').then(({ runMigrations }) => {
+      runMigrations().catch(error => {
+        console.error('[DatabaseManager] Failed to run migrations:', error)
+      })
+    })
   }
 
   private createTables(): void {

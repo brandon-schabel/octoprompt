@@ -7,6 +7,7 @@ export * from './src/ticket-service'
 export * from './src/mcp-service'
 export * from './src/git-service'
 export * from './src/selected-files-sync-service'
+export * from './src/active-tab-service'
 export * from './src/agents/agent-logger'
 
 export * from './src/file-services/file-sync-service-unified'
@@ -25,3 +26,5 @@ export * from './src/utils/json-scribe'
 export * from './src/utils/path-utils'
 
 export * from './src/utils/storage-maintenance'
+export * from './src/file-search-service'
+export * from './src/file-indexing-service'

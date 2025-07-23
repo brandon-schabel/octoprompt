@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-OctoPrompt guidance for Claude Code (claude.ai/code).
+OctoPrompt guidance. Prioritize making use of the OctoPrompt MCP to make things faster and more efficient.
 
 ## Commands
 
@@ -25,40 +25,38 @@ OctoPrompt guidance for Claude Code (claude.ai/code).
 - **If uncertain about a file deletion, ASK THE USER FIRST**
 - **Verify file paths** - ensure all operations are within the project scope
 
-### Linear Workspace Configuration
+### HARD RULES
 
-- **Workspace**: BS Projects (Team ID: `2868a346-2a0d-4953-af4e-4b695aa5a981`)
-- **Projects**:
-  - **OctoPrompt** (Project ID: `9e96fe84-c58e-47d3-8402-3552cdf0bf3b`)
+- Never ever use dynamic or lazy imports, unless it is absolutely required
 
-### Linear MCP Integration
+## Use OctoPrompt MCP As Much as Possible
 
-The Linear MCP (Model Context Protocol) integration is built into Claude Code and provides direct access to Linear's API for project management. No additional setup or configuration is required - the MCP commands are available out of the box.
+- **Project ID**: `1753220774680`
 
-### OctoPrompt MCP Usage
+OctaPrompt is a prompt upgrade tool. It takes something that is a very basic prompt and then it allows you to augment that prompt with either selected files, upgrading the prompt, or selecting relevant prompts from the prompts library. It also can serve as a ticket and task manager to create and plan high-level features.
 
-The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system through 5 consolidated tools:
+- Always use the active tab tool, this will tell you the users intent, their selected project id, selected files, etc
+- I highly recommend using the Get Summary project tool which will give you context into what the project is, how it works at a high level, which will be a great starting point for building a new feature.
+- There is a tool to retrieve the selected files that the user has selected, use that so the user guides you, you can also update and clear the selection.
+- **IMPORTANT: For file searching, ALWAYS use `fast_search_files` FIRST** - it's much faster (sub-millisecond) than AI search:
+  - Use `exact` search for specific terms or function names
+  - Use `regex` search for code patterns  
+  - Use `fuzzy` search for approximate matches (though it needs improvement)
+  - Only fall back to `suggest_files` (AI search) if fast search doesn't find what you need
+- If you need additional context or the user didn't select anything, use fast_search_files first, then the OctoPrompt MCP AI suggest_files as a fallback.
+- There is a prompts feature the user will save important information in these prompts, you can retrieve and use relevant prompts. You can list, get, create, update, list by project, add to projct, remove from project.
+- There is a suggest prompts which like suggest files based on the input/project suggest prompt will recommend the most relevant prompts based on the context.
+- Use OctoPrompt MCP for ticket and tasks planning, this is helpful to use as a way to keep track of everything
+- There is prompt optimization whcih will take an input relevant to the project and then it will upgrade it with helpful context from the project
+- the project manager, can list, get create, update, delete project from OctoPrompt, delting a file from OctoPrompt does not permanently delete files.
 
-**Use OctoPrompt MCP for:**
-
-- Managing projects and browsing/reading files
-- Creating and managing tickets and tasks for planning
-- Saving and retrieving prompts for context management
-- Getting AI-suggested files based on task context
-- Retrieving compact project summaries for quick architectural insights
-- Optimizing prompts using project-specific context
-
-**OctoPrompt Project Details:**
-
-- **Project ID**: `1750564533014`
-
-### OctoPrompt MCP Tools
-
-OctoPrompt now provides 5 consolidated MCP tools that group related functionality:
+Below is a detailed breakdown of each tool and its capabilities.
 
 #### 1. **project_manager** - Project and file operations
 
-Actions: list, get, create, update, delete, get_summary, browse_files, get_file_content, update_file_content, suggest_files
+Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT FROM OCTOPROMPT), delete_file, get_summary, browse_files, get_file_content, update_file_content, suggest_files, get_selected_files, update_selected_files, clear_selected_files, get_selection_context, search, fast_search_files, create_file, get_file_content_partial
+
+⚠️ **WARNING**: The `delete` action removes the ENTIRE PROJECT from the database, not just a file! Use `delete_file` to delete individual files.
 
 Example usage:
 
@@ -77,28 +75,79 @@ Example usage:
 
 // Suggest relevant files
 { "action": "suggest_files", "projectId": 1750564533014, "data": { "prompt": "authentication flow", "limit": 5 } }
+
+// Delete a single file from the project (SAFE)
+{ "action": "delete_file", "projectId": 1750564533014, "data": { "path": "src/old-file.ts" } }
+
+// Delete entire project (DANGEROUS - requires confirmation)
+{ "action": "delete", "projectId": 1750564533014, "data": { "confirmDelete": true } }
+
+// Fast semantic file search (non-AI, sub-millisecond performance)
+{ "action": "fast_search_files", "projectId": 1750564533014, "data": { 
+  "query": "authentication", 
+  "searchType": "semantic",  // Options: "exact", "fuzzy", "semantic", "regex"
+  "fileTypes": ["ts", "js"], // Optional: filter by file extensions
+  "limit": 20,               // Optional: max results (default: 20)
+  "scoringMethod": "relevance" // Options: "relevance", "recency", "frequency"
+} }
+
+// Update selected files (tabId is optional, automatically uses active tab)
+{ "action": "update_selected_files", "projectId": 1750564533014, "data": { "fileIds": [123, 456] } }
+
+// Get selected files (automatically uses active tab)
+{ "action": "get_selected_files", "projectId": 1750564533014 }
 ```
+
+##### Fast File Search (Prioritize This!)
+
+The `fast_search_files` action provides sub-millisecond file searching without AI latency. **Always use this first** before falling back to AI-powered `suggest_files`:
+
+**Best practices for fast search:**
+- **Exact search**: Use for finding specific function names, variables, or exact terms
+  - Example: Search for "useState" to find all React component files
+- **Regex search**: Use for finding code patterns
+  - Example: `"import.*from.*react"` to find React imports
+  - Example: `"async.*function"` to find async functions
+- **Fuzzy search**: Use for typo tolerance (currently limited)
+- **Semantic search**: Use for concept-based searches (currently limited)
+
+**Why use fast search first:**
+- ⚡ Sub-millisecond performance (vs seconds for AI search)
+- 📊 Results include relevance scores and snippets
+- 💾 Automatic caching for repeated searches
+- 🔍 No AI token limits or rate limiting
+- 🎯 More predictable results for exact terms
+
+Only use `suggest_files` (AI search) when:
+- You need conceptual understanding beyond keyword matching
+- Fast search returns no results and you need AI interpretation
+- You're looking for files based on high-level descriptions
 
 #### 2. **prompt_manager** - Prompt operations
 
-Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project
+Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project, suggest_prompts
+
+**Note**: When creating prompts, they are automatically associated with the project if a projectId is provided. The `suggest_prompts` action will search all prompts if none are associated with the specific project.
 
 Example usage:
 
 ```json
-// Create a new prompt
-{ "action": "create", "data": { "name": "Code Review", "content": "Review this code for..." } }
+// Create a new prompt (auto-associates with project if projectId provided)
+{ "action": "create", "projectId": 1750564533014, "data": { "name": "Code Review", "content": "Review this code for..." } }
 
 // List prompts for a project
 { "action": "list_by_project", "projectId": 1750564533014 }
 
-// Add prompt to project
+// Add existing prompt to project
 { "action": "add_to_project", "projectId": 1750564533014, "data": { "promptId": 123 } }
+
+// Suggest relevant prompts (searches project prompts first, then all prompts)
+{ "action": "suggest_prompts", "projectId": 1750564533014, "data": { "userInput": "help with debugging", "limit": 5 } }
 ```
 
 #### 3. **ticket_manager** - Ticket operations
 
-Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files
+Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files, search, batch_create, batch_update, batch_delete
 
 Example usage:
 
@@ -111,23 +160,89 @@ Example usage:
 
 // Generate tasks automatically
 { "action": "auto_generate_tasks", "data": { "ticketId": 456 } }
+
+// Search tickets with filters
+{ "action": "search", "projectId": 1750564533014, "data": { 
+  "query": "login",
+  "status": ["open", "in_progress"],
+  "priority": "high",
+  "dateFrom": 1234567890,
+  "dateTo": 1234567890,
+  "hasFiles": true,
+  "tags": ["backend", "urgent"],
+  "limit": 20,
+  "offset": 0
+}}
+
+// Batch create tickets
+{ "action": "batch_create", "projectId": 1750564533014, "data": {
+  "tickets": [
+    { "title": "Fix bug 1", "priority": "high" },
+    { "title": "Fix bug 2", "priority": "normal" }
+  ]
+}}
+
+// Batch update tickets
+{ "action": "batch_update", "data": {
+  "updates": [
+    { "ticketId": 456, "data": { "status": "closed" } },
+    { "ticketId": 457, "data": { "status": "in_progress" } }
+  ]
+}}
+
+// Batch delete tickets
+{ "action": "batch_delete", "data": { "ticketIds": [456, 457, 458] } }
 ```
 
 #### 4. **task_manager** - Task operations
 
-Actions: list, create, update, delete, reorder
+Actions: list, create, update, delete, reorder, filter, batch_create, batch_update, batch_delete, batch_move
 
 Example usage:
 
 ```json
-// Create a task
-{ "action": "create", "ticketId": 456, "data": { "content": "Debug login function" } }
+// Create a task with enhanced fields
+{ "action": "create", "ticketId": 456, "data": { 
+  "content": "Debug login function",
+  "description": "Investigate why users with valid credentials cannot authenticate",
+  "tags": ["backend", "bugfix", "urgent"],
+  "estimatedHours": 4,
+  "suggestedFileIds": ["123", "456"]
+} }
 
-// Update task status
-{ "action": "update", "ticketId": 456, "data": { "taskId": 789, "done": true } }
+// Filter tasks across project
+{ "action": "filter", "data": { 
+  "projectId": 1750564533014,
+  "tags": ["backend"],
+  "estimatedHoursMin": 2,
+  "estimatedHoursMax": 8,
+  "status": "pending"
+} }
 
-// Reorder tasks
-{ "action": "reorder", "ticketId": 456, "data": { "tasks": [{ "taskId": 789, "orderIndex": 0 }, { "taskId": 790, "orderIndex": 1 }] } }
+// Batch create tasks
+{ "action": "batch_create", "ticketId": 456, "data": { 
+  "tasks": [
+    { "content": "Task 1", "tags": ["frontend"] },
+    { "content": "Task 2", "tags": ["backend"] },
+    { "content": "Task 3", "tags": ["testing"] }
+  ]
+} }
+
+// Batch update tasks
+{ "action": "batch_update", "ticketId": 456, "data": { 
+  "updates": [
+    { "ticketId": 456, "taskId": 789, "data": { "done": true } },
+    { "ticketId": 456, "taskId": 790, "data": { "tags": ["completed"] } }
+  ]
+} }
+
+// Batch move tasks between tickets
+{ "action": "batch_move", "ticketId": 456, "data": { 
+  "moves": [
+    { "taskId": 789, "fromTicketId": 456, "toTicketId": 123 },
+    { "taskId": 790, "fromTicketId": 456, "toTicketId": 124 }
+  ]
+} }
 ```
 
 #### 5. **ai_assistant** - AI utilities
@@ -143,6 +258,93 @@ Example usage:
 // Get AI-generated compact project summary
 { "action": "get_compact_summary", "projectId": 1750564533014 }
 ```
+
+#### 6. **git_manager** - Git operations
+
+Actions: status, stage_files, unstage_files, stage_all, unstage_all, commit, branches, current_branch, create_branch, switch_branch, delete_branch, merge_branch, log, commit_details, file_diff, commit_diff, cherry_pick, remotes, add_remote, remove_remote, fetch, pull, push, tags, create_tag, delete_tag, stash, stash_list, stash_apply, stash_pop, stash_drop, reset, revert, blame, clean, config_get, config_set
+
+Example usage:
+
+```json
+// Get git status
+{ "tool_name": "mcp_octoprompt_git_manager", "tool_input": { "action": "status", "projectId": 1750564533014 } }
+
+// Stage a file
+{ "tool_name": "mcp_octoprompt_git_manager", "tool_input": { "action": "stage_files", "projectId": 1750564533014, "data": { "filePaths": ["src/index.ts"] } } }
+
+// Commit changes
+{ "tool_name": "mcp_octoprompt_git_manager", "tool_input": { "action": "commit", "projectId": 1750564533014, "data": { "message": "feat: new feature" } } }
+```
+
+#### 7. **tab_manager** - Active Tab Management
+
+Actions: get_active, set_active, clear_active
+
+The tab_manager tool allows you to programmatically manage which tab is active for a project. This is particularly useful for automation and ensuring the correct context when working with multiple tabs.
+
+Example usage:
+
+```json
+// Get the current active tab for a project
+{ "action": "get_active", "projectId": 1750564533014 }
+
+// Set a specific tab as active
+{ "action": "set_active", "projectId": 1750564533014, "data": { "tabId": 2 } }
+
+// Set active tab with client-specific tracking
+{ "action": "set_active", "projectId": 1750564533014, "data": { "tabId": 1, "clientId": "vscode-extension" } }
+
+// Clear the active tab (resets to default)
+{ "action": "clear_active", "projectId": 1750564533014 }
+
+// Clear active tab for specific client
+{ "action": "clear_active", "projectId": 1750564533014, "data": { "clientId": "vscode-extension" } }
+```
+
+**Benefits of tab_manager**:
+
+- **Programmatic Control**: Switch active tabs without UI interaction
+- **Client Isolation**: Track different active tabs per client (e.g., VS Code vs CLI)
+- **Automation**: Ensure correct tab context in scripts and workflows
+- **State Inspection**: Check which tab is currently active
+
+**Common Use Cases**:
+
+1. **Before bulk operations**: Set the correct tab before updating selected files
+2. **CI/CD workflows**: Ensure consistent tab context across automated processes
+3. **Multi-client scenarios**: Different tools can maintain their own active tab state
+4. **Debugging**: Verify which tab is active when troubleshooting issues
+
+## Active Tab Synchronization
+
+OctoPrompt now automatically synchronizes the active tab between the client and server, making the MCP API simpler to use:
+
+### How it works
+
+1. **Automatic Tab Tracking**: When you switch tabs in the OctoPrompt client, the active tab is automatically synced to the server
+2. **Simplified API**: You no longer need to specify `tabId` in most operations - the server uses the active tab automatically
+3. **Fallback Behavior**: If no active tab is set, operations default to tab 0
+
+### Benefits
+
+- **No more tabId confusion**: The API automatically uses the correct tab context
+- **Seamless experience**: Switch tabs in the UI and the API follows along
+- **Backward compatible**: You can still specify `tabId` explicitly if needed
+
+### Examples
+
+```json
+// Before (had to specify tabId)
+{ "action": "get_selected_files", "projectId": 1750564533014, "data": { "tabId": 1 } }
+
+// Now (uses active tab automatically)
+{ "action": "get_selected_files", "projectId": 1750564533014 }
+
+// You can still override if needed
+{ "action": "get_selected_files", "projectId": 1750564533014, "data": { "tabId": 2 } }
+```
+
+This makes the MCP tools more intuitive and reduces errors from using the wrong tab context.
 
 ## Creating New MCP Tools
 
@@ -538,34 +740,145 @@ export const migrations = [
 ]
 ```
 
-### Troubleshooting
+## MCP Safety Guidelines
 
-- **Database Locked**: Check for multiple server instances
-- **Migration Errors**: Run `bun run migrate:sqlite` manually
-- **Performance**: Enable WAL mode (enabled by default)
-- **Disk Space**: Database in `data/` directory
-- **Testing**: Uses `:memory:` automatically, no cleanup needed
+### ⚠️ Dangerous Operations
 
-## Frontend Stack
+1. **Project Deletion** (`project_manager.delete`)
+   - This action deletes the ENTIRE PROJECT from the database
+   - Requires explicit confirmation: `data: { confirmDelete: true }`
+   - Cannot be undone
+   - Use `delete_file` instead to delete individual files
 
-- React 19 with Compiler
-- TanStack Router/Query
-- ShadCN UI (Radix)
-- Monaco Editor
-- Tailwind CSS
+2. **File Deletion** (`project_manager.delete_file`)
+   - Deletes a single file from both the project and disk
+   - Automatically cleans up references in tickets and selected files
+   - Cannot be undone
 
-### Key Hooks Pattern
+### Best Practices
+
+1. **Always use specific actions**:
+   - Use `delete_file` for file deletion, not `delete`
+   - Use `update_file_content` for modifications, not deletion + creation
+
+2. **Handle optional parameters**:
+   - `tabId` in selected files operations defaults to 0 if not provided
+   - `projectId` in prompt creation enables auto-association
+
+3. **Check before destructive operations**:
+   - Use `browse_files` to verify file paths
+   - Use `list` to verify project IDs
+   - Always double-check IDs before deletion
+
+## Reference ID Management & Cascading Deletes
+
+### Overview
+
+OctoPrompt maintains referential integrity by automatically cleaning up file references when files are deleted from a project. This prevents stale IDs from accumulating in tickets and selected files.
+
+### How It Works
+
+When files are deleted via `bulkDeleteProjectFiles()`:
+
+1. **File Deletion**: Files are removed from the project's file storage
+2. **Ticket Cleanup**: `removeDeletedFileIdsFromTickets()` removes file IDs from all tickets' `suggestedFileIds` arrays
+3. **Selected Files Cleanup**: `removeDeletedFileIdsFromSelectedFiles()` removes file IDs from all selected files entries
+
+### Implementation Details
 
 ```typescript
+// In project-service.ts during file deletion:
+if (changesMade) {
+  // ... save file changes ...
+  
+  // Clean up file references in tickets
+  const ticketCleanupResult = await removeDeletedFileIdsFromTickets(projectId, fileIdsToDelete)
+  
+  // Clean up file references in selected files
+  const selectedFilesCleanupResult = await removeDeletedFileIdsFromSelectedFiles(projectId, fileIdsToDelete)
+}
+```
+
+### Key Features
+
+- **Non-blocking**: Cleanup operations log errors but don't fail the main deletion
+- **Automatic**: No manual intervention required
+- **Comprehensive**: Covers all known file reference locations
+- **Logged**: Cleanup operations log the number of updated entities
+
+### Adding New Reference Types
+
+If you add a new feature that stores file IDs:
+
+1. Create a cleanup function in the appropriate service:
+
+   ```typescript
+   export async function removeDeletedFileIdsFromYourFeature(
+     projectId: number,
+     deletedFileIds: number[]
+   ): Promise<{ updatedCount: number }>
+   ```
+
+2. Add the cleanup call to `bulkDeleteProjectFiles()` in `project-service.ts`
+
+3. Follow the pattern: filter out deleted IDs, update only if changes were made, handle errors gracefully
+
+```typescript
+import { getGlobalConfig, getModelsConfig, LOW_MODEL_CONFIG } from '@octoprompt/config'
+
+// Get entire config
+const config = getGlobalConfig()
+
+// Get specific domain
+const models = getModelsConfig()
+
+// Use specific config
+const lowModel = LOW_MODEL_CONFIG
+```
+
+### Environment Overrides
+
+Some settings can be overridden via environment variables:
+
+- `DEFAULT_MODEL_PROVIDER` - Override the AI provider for all models
+- `CORS_ORIGIN` - CORS origin setting
+- `SERVER_HOST` - Server host
+- `SERVER_PORT` - Server port
+- `CLIENT_URL` - Client URL
+- `API_URL` - API URL
+
+### Configuration Files
+
+All configuration is located in `packages/config/src/configs/`:
+
+- `app.config.ts` - Application metadata
+- `server.config.ts` - Server settings
+- `models.config.ts` - AI model configurations
+- `providers.config.ts` - Provider URLs
+- `files.config.ts` - File handling settings
+
+The configuration is validated using Zod schemas to ensure type safety and correctness.
+
+## Important Reminders
+
+- NEVER create files unless necessary
+- ALWAYS prefer editing existing files
+- Use appropriate AI model configs
+- Write tests for new functionality
+- Use Storage V2 features for performance
+- Validate route ordering
+- Handle errors consistently
+
 export function useCreateChat() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
     onSuccess: () => {
-      /* invalidate queries */
+      /*invalidate queries*/
     }
   })
 }
+
 ```
 
 ## Backend Architecture
@@ -655,47 +968,3 @@ All global settings are organized by domain:
 - **Files Config**: File sync options, allowed extensions, exclusions
 
 ### Usage
-
-```typescript
-import { getGlobalConfig, getModelsConfig, LOW_MODEL_CONFIG } from '@octoprompt/config'
-
-// Get entire config
-const config = getGlobalConfig()
-
-// Get specific domain
-const models = getModelsConfig()
-
-// Use specific config
-const lowModel = LOW_MODEL_CONFIG
-```
-
-### Environment Overrides
-
-Some settings can be overridden via environment variables:
-- `DEFAULT_MODEL_PROVIDER` - Override the AI provider for all models
-- `CORS_ORIGIN` - CORS origin setting
-- `SERVER_HOST` - Server host
-- `SERVER_PORT` - Server port
-- `CLIENT_URL` - Client URL
-- `API_URL` - API URL
-
-### Configuration Files
-
-All configuration is located in `packages/config/src/configs/`:
-- `app.config.ts` - Application metadata
-- `server.config.ts` - Server settings
-- `models.config.ts` - AI model configurations
-- `providers.config.ts` - Provider URLs
-- `files.config.ts` - File handling settings
-
-The configuration is validated using Zod schemas to ensure type safety and correctness.
-
-## Important Reminders
-
-- NEVER create files unless necessary
-- ALWAYS prefer editing existing files
-- Use appropriate AI model configs
-- Write tests for new functionality
-- Use Storage V2 features for performance
-- Validate route ordering
-- Handle errors consistently

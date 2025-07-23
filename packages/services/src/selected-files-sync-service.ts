@@ -187,3 +187,46 @@ export async function getSelectionContext(
     )
   }
 }
+
+/**
+ * Removes deleted file IDs from all selected files entries for a project.
+ * This should be called after files are deleted from a project to maintain referential integrity.
+ */
+export async function removeDeletedFileIdsFromSelectedFiles(
+  projectId: number,
+  deletedFileIds: number[]
+): Promise<{ updatedEntries: number }> {
+  try {
+    const allSelectedFiles = await getAllSelectedFilesForProject(projectId)
+    let updatedCount = 0
+
+    for (const selectedFile of allSelectedFiles) {
+      if (selectedFile.data.fileIds && selectedFile.data.fileIds.length > 0) {
+        const originalLength = selectedFile.data.fileIds.length
+        const updatedFileIds = selectedFile.data.fileIds.filter(
+          (fileId) => !deletedFileIds.includes(fileId)
+        )
+
+        if (updatedFileIds.length < originalLength) {
+          await updateSelectedFiles(
+            selectedFile.data.projectId,
+            selectedFile.data.tabId || 0,
+            updatedFileIds,
+            selectedFile.data.promptIds || [],
+            selectedFile.data.userPrompt || ''
+          )
+          updatedCount++
+        }
+      }
+    }
+
+    return { updatedEntries: updatedCount }
+  } catch (error) {
+    console.error(
+      `Failed to remove deleted file IDs from selected files in project ${projectId}:`,
+      error
+    )
+    // Don't throw - this is a cleanup operation that shouldn't fail the main operation
+    return { updatedEntries: 0 }
+  }
+}

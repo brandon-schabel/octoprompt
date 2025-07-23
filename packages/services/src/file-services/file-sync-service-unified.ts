@@ -16,7 +16,8 @@ import {
   bulkUpdateProjectFiles,
   bulkDeleteProjectFiles,
   type FileSyncData, // Interface from project-service
-  listProjects
+  listProjects,
+  fileIndexingService
 } from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
 import { summarizeSingleFile } from '@octoprompt/services'
@@ -489,6 +490,42 @@ export async function syncFileSet(
       deletedCount = deleteResult.deletedCount
     }
     // console.log(`[FileSync] SyncFileSet results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped: ${skippedCount}`);
+    
+    // Index new and updated files in the background
+    if (createdCount > 0 || updatedCount > 0) {
+      const filesToIndex = [...filesToCreate, ...filesToUpdate.map(u => u.data)]
+      
+      // Run indexing asynchronously to not block the sync operation
+      setTimeout(async () => {
+        try {
+          const existingFiles = await getProjectFiles(project.id)
+          const projectFiles = filesToIndex.map(fileData => {
+            const existing = existingFiles.find(f => f.path === fileData.path)
+            return existing || { ...fileData, id: Date.now(), projectId: project.id } as any
+          })
+          
+          const indexResult = await fileIndexingService.indexFiles(projectFiles)
+          console.log(`[FileSync] Background indexing completed - Indexed: ${indexResult.indexed}, Skipped: ${indexResult.skipped}, Failed: ${indexResult.failed}`)
+        } catch (error) {
+          console.error('[FileSync] Background indexing failed:', error)
+        }
+      }, 1000) // Delay by 1 second to let the main operation complete
+    }
+    
+    // Remove deleted files from index
+    if (deletedCount > 0) {
+      setTimeout(async () => {
+        try {
+          for (const fileId of fileIdsToDelete) {
+            await fileIndexingService.removeFileFromIndex(fileId)
+          }
+          console.log(`[FileSync] Removed ${fileIdsToDelete.length} files from search index`)
+        } catch (error) {
+          console.error('[FileSync] Failed to remove files from index:', error)
+        }
+      }, 1000)
+    }
+    
     return { created: createdCount, updated: updatedCount, deleted: deletedCount, skipped: skippedCount }
   } catch (error) {
     console.error(`[FileSync] Error during DB batch operations for project ${project.id}:`, error)

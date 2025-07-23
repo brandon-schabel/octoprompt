@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
@@ -60,6 +60,7 @@
     "ai": "^4.3.16",
     "fast-xml-parser": "^5.2.4",
     "hono": "^4.7.11",
+    "hono-rate-limiter": "^0.4.2",
     "ignore": "^7.0.5",
     "ollama-ai-provider": "^1.2.0",
     "openai": "^4.104.0",

@@ -44,9 +44,9 @@ mcpRoutes.use('*', async (c, next) => {
     params: c.req.param(),
     query: c.req.query()
   })
-  
+
   await next()
-  
+
   const duration = Date.now() - start
   console.log('[MCP Debug] Response:', {
     status: c.res.status,
@@ -1273,7 +1273,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
             },
             clientInfo: {
               name: 'octoprompt-tester',
-              version: '0.7.1'
+              version: '0.7.2'
             }
           }
         }),
@@ -1517,7 +1517,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             },
             clientInfo: {
               name: 'octoprompt-tester',
-              version: '0.7.1'
+              version: '0.7.2'
             }
           },
           example: {
@@ -1527,7 +1527,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             params: {
               protocolVersion: '2024-11-05',
               capabilities: { tools: true, resources: true },
-              clientInfo: { name: 'octoprompt-tester', version: '0.7.1' }
+              clientInfo: { name: 'octoprompt-tester', version: '0.7.2' }
             }
           }
         },

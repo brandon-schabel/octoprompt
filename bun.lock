@@ -24,6 +24,7 @@
         "ai": "^4.3.16",
         "fast-xml-parser": "^5.2.4",
         "hono": "^4.7.11",
+        "hono-rate-limiter": "^0.4.2",
         "ignore": "^7.0.5",
         "ollama-ai-provider": "^1.2.0",
         "openai": "^4.104.0",
@@ -46,7 +47,7 @@
     },
     "packages/api-client": {
       "name": "@octoprompt/api-client",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -56,7 +57,7 @@
     },
     "packages/client": {
       "name": "client",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "@ai-sdk/react": "^1.2.9",
         "@dnd-kit/core": "^6.3.1",
@@ -149,7 +150,6 @@
       "name": "@octoprompt/config",
       "version": "1.0.0",
       "dependencies": {
-        "@octoprompt/schemas": "workspace:*",
         "zod": "^3.23.8",
       },
       "devDependencies": {
@@ -159,7 +159,7 @@
     },
     "packages/mcp-client": {
       "name": "@octoprompt/mcp-client",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^0.5.0",
       },
@@ -172,7 +172,7 @@
     },
     "packages/schemas": {
       "name": "@octoprompt/schemas",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "@octoprompt/config": "workspace:*",
       },
@@ -185,7 +185,7 @@
     },
     "packages/server": {
       "name": "octoprompt",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^0.5.0",
         "@octoprompt/config": "workspace:*",
@@ -193,7 +193,7 @@
     },
     "packages/services": {
       "name": "@octoprompt/services",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "dependencies": {
         "@octoprompt/config": "workspace:*",
       },
@@ -206,11 +206,11 @@
     },
     "packages/shared": {
       "name": "@octoprompt/shared",
-      "version": "0.7.0",
+      "version": "0.7.1",
     },
     "packages/storage": {
       "name": "@octoprompt/storage",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -1219,6 +1219,8 @@
     "highlightjs-vue": ["highlightjs-vue@1.0.0", "", {}, "sha512-PDEfEF102G23vHmPhLyPboFCD+BkMGu+GuJe2d9/eH4FsCwvgBpnc9n0pGE+ffKdph38s6foEZiEjdgHdzp+IA=="],
 
     "hono": ["hono@4.7.11", "", {}, "sha512-rv0JMwC0KALbbmwJDEnxvQCeJh+xbS3KEWW5PC9cMJ08Ur9xgatI0HmtgYZfOdOSOeYsp5LO2cOhdI8cLEbDEQ=="],
+
+    "hono-rate-limiter": ["hono-rate-limiter@0.4.2", "", { "peerDependencies": { "hono": "^4.1.1" } }, "sha512-AAtFqgADyrmbDijcRTT/HJfwqfvhalya2Zo+MgfdrMPas3zSMD8SU03cv+ZsYwRU1swv7zgVt0shwN059yzhjw=="],
 
     "html-url-attributes": ["html-url-attributes@3.0.1", "", {}, "sha512-ol6UPyBWqsrO6EJySPz2O7ZSr856WDrEzM5zMqp+FJJLGMW35cLYmmZnl0vztAZxRUoNZJFTCohfjuIJ8I4QBQ=="],
 

@@ -93,16 +93,38 @@ function registerResources(server: Server) {
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     try {
       const projects = await listProjects()
+      const resources: Resource[] = []
 
-      const resources: Resource[] = projects.map((project) => ({
-        uri: `octoprompt://project/${project.id}/structure`,
-        name: `${project.name} Structure`,
-        description: `File structure and organization of ${project.name}`,
-        mimeType: 'text/plain'
-      }))
+      // Add a general projects list resource
+      resources.push({
+        uri: 'octoprompt://projects',
+        name: 'All Projects',
+        description: 'List of all available projects in OctoPrompt',
+        mimeType: 'application/json'
+      })
+
+      // Add individual project resources
+      for (const project of projects) {
+        // Project summary resource
+        resources.push({
+          uri: `octoprompt://project/${project.id}/summary`,
+          name: `${project.name} Summary`,
+          description: `Compact summary of ${project.name} project structure and content`,
+          mimeType: 'text/plain'
+        })
+
+        // Project files resource
+        resources.push({
+          uri: `octoprompt://project/${project.id}/files`,
+          name: `${project.name} Files`,
+          description: `List of files in ${project.name} project`,
+          mimeType: 'application/json'
+        })
+      }
 
       return { resources }
     } catch (error) {
+      console.error('[MCP] Error listing resources:', error)
       return { resources: [] }
     }
   })
@@ -111,24 +133,56 @@ function registerResources(server: Server) {
     const { uri } = request.params
 
     try {
-      // Parse the URI
-      const match = uri.match(/^octoprompt:\/\/project\/(\d+)\/structure$/)
-      if (!match) {
-        throw new Error('Invalid resource URI')
+      // Handle projects list
+      if (uri === 'octoprompt://projects') {
+        const projects = await listProjects()
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'application/json',
+              text: JSON.stringify(projects, null, 2)
+            }
+          ]
+        } as ReadResourceResult
       }
 
-      const projectId = parseInt(match[1], 10)
-      const summary = await getProjectCompactSummary(projectId)
+      // Handle project summary
+      const summaryMatch = uri.match(/^octoprompt:\/\/project\/(\d+)\/summary$/)
+      if (summaryMatch) {
+        const projectId = parseInt(summaryMatch[1], 10)
+        const summary = await getProjectCompactSummary(projectId)
 
-      return {
-        contents: [
-          {
-            uri,
-            mimeType: 'text/plain',
-            text: summary
-          }
-        ]
-      } as ReadResourceResult
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'text/plain',
+              text: summary
+            }
+          ]
+        } as ReadResourceResult
+      }
+
+      // Handle project files list
+      const filesMatch = uri.match(/^octoprompt:\/\/project\/(\d+)\/files$/)
+      if (filesMatch) {
+        const projectId = parseInt(filesMatch[1], 10)
+        const { getProjectFiles } = await import('@octoprompt/services')
+        const files = await getProjectFiles(projectId)
+
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'application/json',
+              text: JSON.stringify(files || [], null, 2)
+            }
+          ]
+        } as ReadResourceResult
+      }
+
+      throw new Error(`Invalid resource URI: ${uri}`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       throw new Error(`Failed to read resource: ${errorMessage}`)

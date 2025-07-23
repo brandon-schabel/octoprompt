@@ -3,6 +3,26 @@ import { getProjectFiles } from '../project-service'
 import { generateSingleText } from '../gen-ai-services'
 import { LOW_MODEL_CONFIG } from '@octoprompt/config'
 
+// Cache for project summaries with TTL
+interface CachedSummary {
+  content: string
+  timestamp: number
+}
+
+const projectSummaryCache = new Map<string, CachedSummary>()
+const SUMMARY_CACHE_TTL = 5 * 60 * 1000 // 5 minutes in milliseconds
+
+// Helper function to get cache key
+function getSummaryCacheKey(projectId: number, type: 'full' | 'compact'): string {
+  return `${projectId}:${type}`
+}
+
+// Helper function to invalidate cache for a project
+export function invalidateProjectSummaryCache(projectId: number): void {
+  projectSummaryCache.delete(getSummaryCacheKey(projectId, 'full'))
+  projectSummaryCache.delete(getSummaryCacheKey(projectId, 'compact'))
+}
+
 export const getSafeAllProjectFiles = async (projectId: number) => {
   const allFiles = await getProjectFiles(projectId)
   if (!allFiles) {
@@ -15,13 +35,36 @@ export const getSafeAllProjectFiles = async (projectId: number) => {
 }
 
 export const getFullProjectSummary = async (projectId: number) => {
+  const cacheKey = getSummaryCacheKey(projectId, 'full')
+  const cached = projectSummaryCache.get(cacheKey)
+  
+  // Check if cached summary is still valid
+  if (cached && Date.now() - cached.timestamp < SUMMARY_CACHE_TTL) {
+    return cached.content
+  }
+  
   // Get all project files for project summary
   const latestFiles = await getSafeAllProjectFiles(projectId)
-
-  return buildProjectSummary(latestFiles)
+  const summary = buildProjectSummary(latestFiles)
+  
+  // Cache the result
+  projectSummaryCache.set(cacheKey, {
+    content: summary,
+    timestamp: Date.now()
+  })
+  
+  return summary
 }
 
 export const getCompactProjectSummary = async (projectId: number) => {
+  const cacheKey = getSummaryCacheKey(projectId, 'compact')
+  const cached = projectSummaryCache.get(cacheKey)
+  
+  // Check if cached summary is still valid
+  if (cached && Date.now() - cached.timestamp < SUMMARY_CACHE_TTL) {
+    return cached.content
+  }
+  
   // Get the full project summary first
   const fullSummary = await getFullProjectSummary(projectId)
 
@@ -46,7 +89,15 @@ export const getCompactProjectSummary = async (projectId: number) => {
       options: LOW_MODEL_CONFIG
     })
 
-    return compactSummary.trim()
+    const trimmedSummary = compactSummary.trim()
+    
+    // Cache the result
+    projectSummaryCache.set(cacheKey, {
+      content: trimmedSummary,
+      timestamp: Date.now()
+    })
+    
+    return trimmedSummary
   } catch (error) {
     // If AI service fails, provide a truncated version of the full summary as fallback
     console.error(`[CompactProjectSummary] AI service failed for project ${projectId}:`, error)
@@ -58,6 +109,12 @@ export const getCompactProjectSummary = async (projectId: number) => {
         .slice(0, Math.min(50, lines.length)) // Take first 50 lines
         .join('\n') + '\n\n[Note: AI summary service temporarily unavailable. Showing truncated file listing.]'
 
+    // Cache even the fallback summary
+    projectSummaryCache.set(cacheKey, {
+      content: fallbackSummary,
+      timestamp: Date.now()
+    })
+    
     return fallbackSummary
   }
 }
