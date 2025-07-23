@@ -249,7 +249,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       capabilities: serverCapabilities,
       serverInfo: {
         name: 'octoprompt-mcp',
-        version: '0.7.1'
+        version: '0.7.2'
       },
       _meta: { sessionId } // Include session ID for client reference
     }
@@ -641,7 +641,7 @@ async function handleResourcesRead(
       // Handle project-specific resources
       if (urlParts[0] === 'projects' && urlParts[1]) {
         const resourceProjectId = urlParts[1]
-        
+
         if (urlParts[2] === 'summary') {
           // Project summary resource - use compact summary
           const { getProjectCompactSummary } = await import('@octoprompt/services')
