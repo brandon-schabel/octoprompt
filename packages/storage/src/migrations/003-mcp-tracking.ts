@@ -6,22 +6,24 @@ import type { Database } from 'bun:sqlite'
 export const addMCPTrackingMigration = {
   version: 3,
   description: 'Add MCP tool execution tracking tables for analytics and monitoring',
-  
+
   up: (db: Database) => {
     // Check if mcp_tool_executions_v2 table already exists with the wrong schema
-    const tableInfo = db.prepare("PRAGMA table_info(mcp_tool_executions_v2)").all()
-    
+    const tableInfo = db.prepare('PRAGMA table_info(mcp_tool_executions_v2)').all()
+
     if (tableInfo.length > 0) {
       // Table exists, check if it's the JSON schema (wrong schema)
       const hasDataColumn = tableInfo.some((col: any) => col.name === 'data')
-      
+
       if (hasDataColumn) {
-        console.log('[Migration] mcp_tool_executions_v2 table exists with incorrect JSON schema, dropping and recreating')
+        console.log(
+          '[Migration] mcp_tool_executions_v2 table exists with incorrect JSON schema, dropping and recreating'
+        )
         // Drop the incorrectly created table
         db.exec('DROP TABLE IF EXISTS mcp_tool_executions_v2')
       }
     }
-    
+
     // Create main tracking table for MCP tool executions
     db.exec(`
       CREATE TABLE IF NOT EXISTS mcp_tool_executions_v2 (
@@ -47,17 +49,17 @@ export const addMCPTrackingMigration = {
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_executions_v2_tool_name 
       ON mcp_tool_executions_v2(tool_name)
     `)
-    
+
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_executions_v2_project_id 
       ON mcp_tool_executions_v2(project_id)
     `)
-    
+
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_executions_v2_started_at 
       ON mcp_tool_executions_v2(started_at)
     `)
-    
+
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_executions_v2_status 
       ON mcp_tool_executions_v2(status)
@@ -91,12 +93,12 @@ export const addMCPTrackingMigration = {
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_statistics_tool_name 
       ON mcp_tool_statistics(tool_name)
     `)
-    
+
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_statistics_project_id 
       ON mcp_tool_statistics(project_id)
     `)
-    
+
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_statistics_period 
       ON mcp_tool_statistics(period_start, period_end, period_type)
@@ -121,7 +123,7 @@ export const addMCPTrackingMigration = {
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_chains_chain_id 
       ON mcp_tool_chains(chain_id)
     `)
-    
+
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_chains_execution_id 
       ON mcp_tool_chains(execution_id)
@@ -146,7 +148,7 @@ export const addMCPTrackingMigration = {
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_patterns_project_id 
       ON mcp_tool_patterns(project_id)
     `)
-    
+
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_mcp_tool_patterns_type 
       ON mcp_tool_patterns(pattern_type)
@@ -161,7 +163,7 @@ export const addMCPTrackingMigration = {
     db.exec(`DROP TABLE IF EXISTS mcp_tool_chains`)
     db.exec(`DROP TABLE IF EXISTS mcp_tool_statistics`)
     db.exec(`DROP TABLE IF EXISTS mcp_tool_executions_v2`)
-    
+
     console.log('[Migration] MCP tracking tables removed')
   }
 }

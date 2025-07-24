@@ -37,34 +37,34 @@ export const getSafeAllProjectFiles = async (projectId: number) => {
 export const getFullProjectSummary = async (projectId: number) => {
   const cacheKey = getSummaryCacheKey(projectId, 'full')
   const cached = projectSummaryCache.get(cacheKey)
-  
+
   // Check if cached summary is still valid
   if (cached && Date.now() - cached.timestamp < SUMMARY_CACHE_TTL) {
     return cached.content
   }
-  
+
   // Get all project files for project summary
   const latestFiles = await getSafeAllProjectFiles(projectId)
   const summary = buildProjectSummary(latestFiles)
-  
+
   // Cache the result
   projectSummaryCache.set(cacheKey, {
     content: summary,
     timestamp: Date.now()
   })
-  
+
   return summary
 }
 
 export const getCompactProjectSummary = async (projectId: number) => {
   const cacheKey = getSummaryCacheKey(projectId, 'compact')
   const cached = projectSummaryCache.get(cacheKey)
-  
+
   // Check if cached summary is still valid
   if (cached && Date.now() - cached.timestamp < SUMMARY_CACHE_TTL) {
     return cached.content
   }
-  
+
   // Get the full project summary first
   const fullSummary = await getFullProjectSummary(projectId)
 
@@ -90,13 +90,13 @@ export const getCompactProjectSummary = async (projectId: number) => {
     })
 
     const trimmedSummary = compactSummary.trim()
-    
+
     // Cache the result
     projectSummaryCache.set(cacheKey, {
       content: trimmedSummary,
       timestamp: Date.now()
     })
-    
+
     return trimmedSummary
   } catch (error) {
     // If AI service fails, provide a truncated version of the full summary as fallback
@@ -114,7 +114,7 @@ export const getCompactProjectSummary = async (projectId: number) => {
       content: fallbackSummary,
       timestamp: Date.now()
     })
-    
+
     return fallbackSummary
   }
 }

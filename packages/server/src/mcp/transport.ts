@@ -9,13 +9,13 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import type { Context } from 'hono'
 import { ApiError } from '@octoprompt/shared'
-import { 
-  getMCPClientManager, 
-  getProjectFiles, 
-  getProjectById, 
+import {
+  getMCPClientManager,
+  getProjectFiles,
+  getProjectById,
   suggestFiles,
-  startMCPToolExecution, 
-  completeMCPToolExecution 
+  startMCPToolExecution,
+  completeMCPToolExecution
 } from '@octoprompt/services'
 import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './tools-registry'
 
@@ -394,11 +394,11 @@ async function handleToolsCall(
         const content = Array.isArray(result)
           ? result
           : [
-            {
-              type: 'text',
-              text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
-            }
-          ]
+              {
+                type: 'text',
+                text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+              }
+            ]
 
         // Complete tracking with success
         const outputSize = JSON.stringify(content).length
@@ -437,7 +437,7 @@ async function handleToolsCall(
 
     let result: any = null
     let executionId: number | null = null
-    
+
     try {
       // Track built-in tool execution
       console.log('[MCP] Starting tool tracking:', { sessionId, name, projectId })
@@ -449,13 +449,13 @@ async function handleToolsCall(
         sessionId || 'unknown'
       )
       console.log('[MCP] Execution ID:', executionId)
-      
+
       const toolResult = await tool.handler(args || {}, projectId ? parseInt(projectId) : undefined)
       result = toolResult.content
-      
+
       // Calculate output size
       const outputSize = JSON.stringify(result).length
-      
+
       // Complete tracking with success
       if (executionId) {
         console.log('[MCP] Completing tool tracking with success:', { executionId, outputSize })
@@ -469,13 +469,13 @@ async function handleToolsCall(
           text: `Error executing tool: ${error instanceof Error ? error.message : 'Unknown error'}`
         }
       ]
-      
+
       // Complete tracking with error
       if (executionId) {
         const outputSize = JSON.stringify(result).length
         await completeMCPToolExecution(
-          executionId, 
-          'error', 
+          executionId,
+          'error',
           outputSize,
           error instanceof Error ? error.message : 'Unknown error'
         )
@@ -670,12 +670,12 @@ async function handleResourcesRead(
           contents: Array.isArray(content)
             ? content
             : [
-              {
-                uri,
-                mimeType: resource.mimeType || 'text/plain',
-                text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
-              }
-            ]
+                {
+                  uri,
+                  mimeType: resource.mimeType || 'text/plain',
+                  text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+                }
+              ]
         }
       }
     }

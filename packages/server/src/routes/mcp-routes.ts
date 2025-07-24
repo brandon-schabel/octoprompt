@@ -48,7 +48,6 @@ import {
 
 export const mcpRoutes = new OpenAPIHono()
 
-
 // Debug middleware for all MCP routes
 mcpRoutes.use('*', async (c, next) => {
   const start = Date.now()
@@ -1381,7 +1380,7 @@ mcpRoutes.openapi(getMCPExecutionsRoute, async (c) => {
   try {
     const { projectId } = c.req.valid('param')
     const query = c.req.valid('query')
-    
+
     // Ensure numeric values for limit and offset
     const executionQuery: MCPExecutionQuery = {
       ...query,
@@ -1436,11 +1435,7 @@ mcpRoutes.openapi(getMCPAnalyticsOverviewRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const body = c.req.valid('json')
 
-    const overview = await getMCPAnalyticsOverview(
-      projectId,
-      body?.startDate,
-      body?.endDate
-    )
+    const overview = await getMCPAnalyticsOverview(projectId, body?.startDate, body?.endDate)
 
     return c.json({ success: true, data: overview })
   } catch (error) {
@@ -1535,12 +1530,7 @@ mcpRoutes.openapi(getMCPExecutionTimelineRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const body = c.req.valid('json')
 
-    const timeline = await getMCPExecutionTimeline(
-      projectId,
-      body?.period || 'day',
-      body?.startDate,
-      body?.endDate
-    )
+    const timeline = await getMCPExecutionTimeline(projectId, body?.period || 'day', body?.startDate, body?.endDate)
 
     return c.json({ success: true, data: timeline })
   } catch (error) {
@@ -1585,11 +1575,7 @@ mcpRoutes.openapi(getGlobalMCPAnalyticsRoute, async (c) => {
   try {
     const body = c.req.valid('json')
 
-    const overview = await getMCPAnalyticsOverview(
-      undefined,
-      body?.startDate,
-      body?.endDate
-    )
+    const overview = await getMCPAnalyticsOverview(undefined, body?.startDate, body?.endDate)
 
     return c.json({ success: true, data: overview })
   } catch (error) {
@@ -1621,11 +1607,13 @@ const getMCPErrorPatternsRoute = createRoute({
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.array(z.object({
-              pattern: z.any(),
-              count: z.number(),
-              lastSeen: z.number()
-            }))
+            data: z.array(
+              z.object({
+                pattern: z.any(),
+                count: z.number(),
+                lastSeen: z.number()
+              })
+            )
           })
         }
       },

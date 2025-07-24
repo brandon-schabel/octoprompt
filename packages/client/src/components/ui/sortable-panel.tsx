@@ -12,13 +12,7 @@ export interface SortablePanelProps {
   dragHandleClassName?: string
 }
 
-export function SortablePanel({ 
-  id, 
-  children, 
-  className,
-  isDragging,
-  dragHandleClassName 
-}: SortablePanelProps) {
+export function SortablePanel({ id, children, className, isDragging, dragHandleClassName }: SortablePanelProps) {
   const {
     attributes,
     listeners,
@@ -30,7 +24,7 @@ export function SortablePanel({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition
   }
 
   const isCurrentlyDragging = isDragging || isSortableDragging
@@ -39,11 +33,7 @@ export function SortablePanel({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        'relative h-full flex flex-col',
-        isCurrentlyDragging && 'opacity-50 z-50',
-        className
-      )}
+      className={cn('relative h-full flex flex-col', isCurrentlyDragging && 'opacity-50 z-50', className)}
     >
       {/* Drag Handle */}
       <div
@@ -60,13 +50,11 @@ export function SortablePanel({
         {...attributes}
         {...listeners}
       >
-        <GripHorizontal className="h-3 w-5 text-muted-foreground" />
+        <GripHorizontal className='h-3 w-5 text-muted-foreground' />
       </div>
 
       {/* Panel Content with padding */}
-      <div className="h-full w-full pt-6">
-        {children}
-      </div>
+      <div className='h-full w-full pt-6'>{children}</div>
     </div>
   )
 }

@@ -200,10 +200,10 @@ export class DatabaseManager {
 
     // Create indexes
     this.createIndexes()
-    
+
     // Run migrations asynchronously to not block startup
     import('./migrations/run-migrations').then(({ runMigrations }) => {
-      runMigrations().catch(error => {
+      runMigrations().catch((error) => {
         console.error('[DatabaseManager] Failed to run migrations:', error)
       })
     })
@@ -254,12 +254,12 @@ export class DatabaseManager {
       'file_search_fts_docsize',
       'file_search_fts_config'
     ]
-    
+
     if (migrationManagedTables.includes(tableName)) {
       // Don't create tables that are managed by migrations
       return
     }
-    
+
     // Create table if it doesn't exist
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ${tableName} (

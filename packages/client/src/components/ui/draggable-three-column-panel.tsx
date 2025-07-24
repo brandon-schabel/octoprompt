@@ -41,7 +41,7 @@ export function DraggableThreeColumnPanel({
   const getSavedState = (): StoredPanelState => {
     if (!storageKey) {
       return {
-        order: initialPanels.map(p => p.id),
+        order: initialPanels.map((p) => p.id),
         leftWidth: initialLeftPanelWidth,
         rightWidth: initialRightPanelWidth
       }
@@ -52,30 +52,30 @@ export function DraggableThreeColumnPanel({
       try {
         const parsed = JSON.parse(saved)
         return {
-          order: parsed.order || initialPanels.map(p => p.id),
+          order: parsed.order || initialPanels.map((p) => p.id),
           leftWidth: parsed.leftWidth || initialLeftPanelWidth,
           rightWidth: parsed.rightWidth || initialRightPanelWidth
         }
       } catch {
         return {
-          order: initialPanels.map(p => p.id),
+          order: initialPanels.map((p) => p.id),
           leftWidth: initialLeftPanelWidth,
           rightWidth: initialRightPanelWidth
         }
       }
     }
     return {
-      order: initialPanels.map(p => p.id),
+      order: initialPanels.map((p) => p.id),
       leftWidth: initialLeftPanelWidth,
       rightWidth: initialRightPanelWidth
     }
   }
 
   const savedState = getSavedState()
-  
+
   // Create ordered panels based on saved order
   const createOrderedPanels = (order: string[]) => {
-    return order.map(id => initialPanels.find(p => p.id === id)!).filter(Boolean)
+    return order.map((id) => initialPanels.find((p) => p.id === id)!).filter(Boolean)
   }
 
   const [panels, setPanels] = useState<PanelConfig[]>(() => createOrderedPanels(savedState.order))
@@ -93,7 +93,7 @@ export function DraggableThreeColumnPanel({
   useEffect(() => {
     if (storageKey) {
       const state: StoredPanelState = {
-        order: panels.map(p => p.id),
+        order: panels.map((p) => p.id),
         leftWidth: leftPanelWidth,
         rightWidth: rightPanelWidth
       }
@@ -121,8 +121,8 @@ export function DraggableThreeColumnPanel({
     if (active.id && over?.id && active.id !== over.id && !active.id.toString().includes('resizer')) {
       setIsDraggingPanel(false)
       setPanels((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id)
-        const newIndex = items.findIndex(item => item.id === over.id)
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
         return arrayMove(items, oldIndex, newIndex)
       })
       return
@@ -177,12 +177,8 @@ export function DraggableThreeColumnPanel({
   const panelWidths = [leftPanelWidth, middlePanelWidth, rightPanelWidth]
 
   return (
-    <DndContext 
-      onDragEnd={handleDragEnd} 
-      onDragStart={handleDragStart}
-      collisionDetection={closestCenter}
-    >
-      <SortableContext items={panels.map(p => p.id)} strategy={horizontalListSortingStrategy}>
+    <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart} collisionDetection={closestCenter}>
+      <SortableContext items={panels.map((p) => p.id)} strategy={horizontalListSortingStrategy}>
         <div
           id='draggable-three-column-container'
           className={cn('flex flex-row overflow-hidden w-full h-full', className)}
@@ -198,21 +194,17 @@ export function DraggableThreeColumnPanel({
                   maxWidth: `${panelWidths[index]}%`
                 }}
               >
-                <SortablePanel 
-                  id={panel.id} 
-                  isDragging={isDraggingPanel}
-                  dragHandleClassName={dragHandleClassName}
-                >
+                <SortablePanel id={panel.id} isDragging={isDraggingPanel} dragHandleClassName={dragHandleClassName}>
                   {panel.content}
                 </SortablePanel>
               </div>
 
               {/* Resizer (not after last panel) */}
               {index < panels.length - 1 && (
-                <Resizer 
-                  id={index === 0 ? 'left-resizer' : 'right-resizer'} 
-                  className={resizerClassName} 
-                  isDragging={index === 0 ? isDraggingLeft : isDraggingRight} 
+                <Resizer
+                  id={index === 0 ? 'left-resizer' : 'right-resizer'}
+                  className={resizerClassName}
+                  isDragging={index === 0 ? isDraggingLeft : isDraggingRight}
                 />
               )}
             </React.Fragment>

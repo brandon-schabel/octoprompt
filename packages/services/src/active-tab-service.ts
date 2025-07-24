@@ -1,10 +1,5 @@
 import { ApiError } from '@octoprompt/shared'
-import { 
-  type ActiveTab, 
-  type ActiveTabData, 
-  type UpdateActiveTabBody,
-  activeTabSchema 
-} from '@octoprompt/schemas'
+import { type ActiveTab, type ActiveTabData, type UpdateActiveTabBody, activeTabSchema } from '@octoprompt/schemas'
 import { activeTabStorage } from '@octoprompt/storage'
 import { getProjectById } from './project-service'
 
@@ -15,10 +10,10 @@ export async function getActiveTab(projectId: number, clientId?: string): Promis
   try {
     // Validate project exists
     await getProjectById(projectId)
-    
+
     // Get all active tabs
     const allActiveTabs = await activeTabStorage.getAll()
-    
+
     // Find active tab for this project (and optionally client)
     for (const activeTab of allActiveTabs.values()) {
       if (activeTab.data.projectId === projectId) {
@@ -29,7 +24,7 @@ export async function getActiveTab(projectId: number, clientId?: string): Promis
         return activeTab
       }
     }
-    
+
     return null
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -45,7 +40,7 @@ export async function getActiveTab(projectId: number, clientId?: string): Promis
  * Set the active tab for a project
  */
 export async function setActiveTab(
-  projectId: number, 
+  projectId: number,
   tabId: number,
   clientId?: string,
   tabMetadata?: ActiveTabData['tabMetadata']
@@ -53,10 +48,10 @@ export async function setActiveTab(
   try {
     // Validate project exists
     await getProjectById(projectId)
-    
+
     // Check if we already have an active tab entry for this project
     const existingActiveTab = await getActiveTab(projectId, clientId)
-    
+
     const now = Date.now()
     const activeTabData: ActiveTabData = {
       projectId,
@@ -65,7 +60,7 @@ export async function setActiveTab(
       lastUpdated: now,
       tabMetadata
     }
-    
+
     if (existingActiveTab) {
       // Update existing entry
       const updated: ActiveTab = {
@@ -73,7 +68,7 @@ export async function setActiveTab(
         data: activeTabData,
         updated: now
       }
-      
+
       await activeTabStorage.update(existingActiveTab.id, updated)
       return updated
     } else {
@@ -85,7 +80,7 @@ export async function setActiveTab(
         created: now,
         updated: now
       }
-      
+
       const validated = activeTabSchema.parse(newActiveTab)
       await activeTabStorage.create(validated)
       return validated
@@ -103,16 +98,13 @@ export async function setActiveTab(
 /**
  * Get active tab or create default (tab 0)
  */
-export async function getOrCreateDefaultActiveTab(
-  projectId: number,
-  clientId?: string
-): Promise<number> {
+export async function getOrCreateDefaultActiveTab(projectId: number, clientId?: string): Promise<number> {
   try {
     const activeTab = await getActiveTab(projectId, clientId)
     if (activeTab) {
       return activeTab.data.activeTabId
     }
-    
+
     // No active tab, create default tab 0
     const created = await setActiveTab(projectId, 0, clientId)
     return created.data.activeTabId
@@ -132,7 +124,7 @@ export async function clearActiveTab(projectId: number, clientId?: string): Prom
     if (!activeTab) {
       return false
     }
-    
+
     return await activeTabStorage.delete(activeTab.id)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -147,9 +139,6 @@ export async function clearActiveTab(projectId: number, clientId?: string): Prom
 /**
  * Update active tab from request body
  */
-export async function updateActiveTab(
-  projectId: number,
-  body: UpdateActiveTabBody
-): Promise<ActiveTab> {
+export async function updateActiveTab(projectId: number, body: UpdateActiveTabBody): Promise<ActiveTab> {
   return setActiveTab(projectId, body.tabId, body.clientId, body.tabMetadata)
 }

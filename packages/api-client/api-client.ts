@@ -749,24 +749,76 @@ export class ProjectService extends BaseApiClient {
       params: clientId ? { clientId } : undefined,
       responseSchema: z.object({
         success: z.literal(true),
-        data: z.object({
-          activeTabId: z.number(),
-          lastUpdated: z.number(),
-          clientId: z.string().optional()
-        }).nullable()
+        data: z
+          .object({
+            activeTabId: z.number(),
+            lastUpdated: z.number(),
+            clientId: z.string().optional(),
+            tabMetadata: z
+              .object({
+                displayName: z.string().optional(),
+                selectedFiles: z.array(z.number()).optional(),
+                selectedPrompts: z.array(z.number()).optional(),
+                userPrompt: z.string().optional(),
+                fileSearch: z.string().optional(),
+                contextLimit: z.number().optional(),
+                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+                suggestedFileIds: z.array(z.number()).optional(),
+                ticketSearch: z.string().optional(),
+                ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+              })
+              .optional()
+          })
+          .nullable()
       })
     })
     return result
   }
 
-  async setActiveTab(projectId: number, data: { tabId: number; clientId?: string }) {
+  async setActiveTab(
+    projectId: number,
+    data: {
+      tabId: number
+      clientId?: string
+      tabMetadata?: {
+        displayName?: string
+        selectedFiles?: number[]
+        selectedPrompts?: number[]
+        userPrompt?: string
+        fileSearch?: string
+        contextLimit?: number
+        preferredEditor?: 'vscode' | 'cursor' | 'webstorm'
+        suggestedFileIds?: number[]
+        ticketSearch?: string
+        ticketSort?: 'created_asc' | 'created_desc' | 'status' | 'priority'
+        ticketStatusFilter?: 'all' | 'open' | 'in_progress' | 'closed'
+      }
+    }
+  ) {
     const result = await this.request('POST', `/projects/${projectId}/active-tab`, {
       body: data,
       responseSchema: z.object({
         success: z.literal(true),
         data: z.object({
           activeTabId: z.number(),
-          lastUpdated: z.number()
+          lastUpdated: z.number(),
+          clientId: z.string().optional(),
+          tabMetadata: z
+            .object({
+              displayName: z.string().optional(),
+              selectedFiles: z.array(z.number()).optional(),
+              selectedPrompts: z.array(z.number()).optional(),
+              userPrompt: z.string().optional(),
+              fileSearch: z.string().optional(),
+              contextLimit: z.number().optional(),
+              preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+              suggestedFileIds: z.array(z.number()).optional(),
+              ticketSearch: z.string().optional(),
+              ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+              ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+            })
+            .optional()
         })
       })
     })

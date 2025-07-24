@@ -24,12 +24,21 @@ const DEFAULT_AI_MAX_REQUESTS = 100
 export const rateLimitConfig: RateLimitConfig = {
   // Rate limiting is disabled in development by default
   enabled: getEnvVar('RATE_LIMIT_ENABLED', 'true') === 'true' && !isDevEnv,
-  
+
   // General rate limit settings
   windowMs: parseInt(getEnvVar('RATE_LIMIT_WINDOW_MS', String(DEFAULT_WINDOW_MS)) || String(DEFAULT_WINDOW_MS), 10),
-  maxRequests: parseInt(getEnvVar('RATE_LIMIT_MAX_REQUESTS', String(DEFAULT_MAX_REQUESTS)) || String(DEFAULT_MAX_REQUESTS), 10),
-  
+  maxRequests: parseInt(
+    getEnvVar('RATE_LIMIT_MAX_REQUESTS', String(DEFAULT_MAX_REQUESTS)) || String(DEFAULT_MAX_REQUESTS),
+    10
+  ),
+
   // AI-specific rate limit settings
-  aiWindowMs: parseInt(getEnvVar('AI_RATE_LIMIT_WINDOW_MS', String(DEFAULT_AI_WINDOW_MS)) || String(DEFAULT_AI_WINDOW_MS), 10),
-  aiMaxRequests: parseInt(getEnvVar('AI_RATE_LIMIT_MAX_REQUESTS', String(DEFAULT_AI_MAX_REQUESTS)) || String(DEFAULT_AI_MAX_REQUESTS), 10)
+  aiWindowMs: parseInt(
+    getEnvVar('AI_RATE_LIMIT_WINDOW_MS', String(DEFAULT_AI_WINDOW_MS)) || String(DEFAULT_AI_WINDOW_MS),
+    10
+  ),
+  aiMaxRequests: parseInt(
+    getEnvVar('AI_RATE_LIMIT_MAX_REQUESTS', String(DEFAULT_AI_MAX_REQUESTS)) || String(DEFAULT_AI_MAX_REQUESTS),
+    10
+  )
 }

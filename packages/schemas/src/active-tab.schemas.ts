@@ -10,19 +10,21 @@ export const activeTabDataSchema = z.object({
   clientId: z.string().optional(), // Optional: for tracking per-client if needed
   lastUpdated: unixTSSchemaSpec,
   // New: Include essential tab metadata for richer context
-  tabMetadata: z.object({
-    displayName: z.string().optional(),
-    selectedFiles: z.array(z.number()).optional(),
-    selectedPrompts: z.array(z.number()).optional(), 
-    userPrompt: z.string().optional(),
-    fileSearch: z.string().optional(),
-    contextLimit: z.number().optional(),
-    preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
-    suggestedFileIds: z.array(z.number()).optional(),
-    ticketSearch: z.string().optional(),
-    ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-    ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
-  }).optional()
+  tabMetadata: z
+    .object({
+      displayName: z.string().optional(),
+      selectedFiles: z.array(z.number()).optional(),
+      selectedPrompts: z.array(z.number()).optional(),
+      userPrompt: z.string().optional(),
+      fileSearch: z.string().optional(),
+      contextLimit: z.number().optional(),
+      preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+      suggestedFileIds: z.array(z.number()).optional(),
+      ticketSearch: z.string().optional(),
+      ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+      ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+    })
+    .optional()
 })
 
 export const activeTabSchema = z.object({

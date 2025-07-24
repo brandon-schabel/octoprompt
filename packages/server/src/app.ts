@@ -67,16 +67,16 @@ const getClientIP = (c: any) => {
   // Check for forwarded headers first (production)
   const forwarded = c.req.header('x-forwarded-for') || c.req.header('x-real-ip')
   if (forwarded) return forwarded
-  
+
   // For local development, try to get the actual connection IP
   const connection = c.env?.incoming?.socket || c.req.raw?.connection || c.req.raw?.socket
   const remoteAddress = connection?.remoteAddress
-  
+
   // Check if it's a localhost IP
   if (remoteAddress === '::1' || remoteAddress === '127.0.0.1' || remoteAddress === 'localhost') {
     return 'localhost'
   }
-  
+
   return remoteAddress || 'unknown'
 }
 
@@ -132,8 +132,10 @@ const aiLimiter = rateLimiter({
 
 // Apply rate limiters only if enabled
 if (RATE_LIMIT_ENABLED) {
-  console.log(`[Server] Rate limiting enabled - General: ${RATE_LIMIT_MAX_REQUESTS}/${RATE_LIMIT_WINDOW_MS}ms, AI: ${AI_RATE_LIMIT_MAX_REQUESTS}/${AI_RATE_LIMIT_WINDOW_MS}ms`)
-  
+  console.log(
+    `[Server] Rate limiting enabled - General: ${RATE_LIMIT_MAX_REQUESTS}/${RATE_LIMIT_WINDOW_MS}ms, AI: ${AI_RATE_LIMIT_MAX_REQUESTS}/${AI_RATE_LIMIT_WINDOW_MS}ms`
+  )
+
   // Apply general rate limiter to all routes
   app.use('*', generalLimiter)
 

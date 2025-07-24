@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useGetActiveProjectTabId, useProjectTabById } from '@/hooks/use-kv-local-storage'
 import { useDebounceCallback } from './use-debounce'
@@ -8,15 +8,16 @@ import type { ProjectTabState } from '@octoprompt/schemas'
 export function useActiveTabSync(projectId: number | undefined) {
   const [activeTabId] = useGetActiveProjectTabId()
   const queryClient = useQueryClient()
-  
+  const previousTabMetadataRef = useRef<string>('')
+
   // Convert activeTabId to number if it's a string
   const tabIdNumber = typeof activeTabId === 'string' ? parseInt(activeTabId) : activeTabId
   const activeTab = useProjectTabById(tabIdNumber || -1)
-  
+
   // Extract tab metadata for syncing
   const getTabMetadata = useCallback((tab: ProjectTabState | undefined) => {
     if (!tab) return undefined
-    
+
     return {
       displayName: tab.displayName,
       selectedFiles: tab.selectedFiles,
@@ -48,9 +49,13 @@ export function useActiveTabSync(projectId: number | undefined) {
 
   // Mutation to sync active tab to backend
   const syncMutation = useMutation({
-    mutationFn: async ({ projectId, tabId, tabMetadata }: { 
-      projectId: number; 
-      tabId: number;
+    mutationFn: async ({
+      projectId,
+      tabId,
+      tabMetadata
+    }: {
+      projectId: number
+      tabId: number
       tabMetadata?: ReturnType<typeof getTabMetadata>
     }) => {
       return await octoClient.projects.setActiveTab(projectId, { tabId, tabMetadata })
@@ -64,10 +69,13 @@ export function useActiveTabSync(projectId: number | undefined) {
     }
   })
 
-  // Create a debounced sync function
-  const debouncedSync = useDebounceCallback((projectId: number, tabId: number, tabMetadata?: ReturnType<typeof getTabMetadata>) => {
-    syncMutation.mutate({ projectId, tabId, tabMetadata })
-  }, 500) // Wait 500ms after changes stop
+  // Create a debounced sync function with longer delay
+  const debouncedSync = useDebounceCallback(
+    (projectId: number, tabId: number, tabMetadata?: ReturnType<typeof getTabMetadata>) => {
+      syncMutation.mutate({ projectId, tabId, tabMetadata })
+    },
+    1500
+  ) // Wait 1.5 seconds after changes stop to reduce API calls
 
   // Sync when active tab changes or tab data changes
   useEffect(() => {
@@ -78,8 +86,35 @@ export function useActiveTabSync(projectId: number | undefined) {
     if (isNaN(tabIdNumber)) return
 
     const tabMetadata = getTabMetadata(activeTab)
-    debouncedSync(projectId, tabIdNumber, tabMetadata)
+
+    // Only sync if metadata has actually changed
+    const metadataString = JSON.stringify(tabMetadata)
+    if (metadataString !== previousTabMetadataRef.current) {
+      previousTabMetadataRef.current = metadataString
+      debouncedSync(projectId, tabIdNumber, tabMetadata)
+    }
   }, [activeTabId, projectId, activeTab, debouncedSync, getTabMetadata])
+
+  // Optional interval-based sync as a safety net (every 30 seconds)
+  useEffect(() => {
+    if (!projectId || projectId === -1 || !activeTabId) return
+
+    const intervalId = setInterval(() => {
+      const tabIdNumber = typeof activeTabId === 'string' ? parseInt(activeTabId) : activeTabId
+      if (!isNaN(tabIdNumber)) {
+        const tabMetadata = getTabMetadata(activeTab)
+        const metadataString = JSON.stringify(tabMetadata)
+
+        // Only sync if metadata has changed since last interval sync
+        if (metadataString !== previousTabMetadataRef.current) {
+          previousTabMetadataRef.current = metadataString
+          syncMutation.mutate({ projectId, tabId: tabIdNumber, tabMetadata })
+        }
+      }
+    }, 30000) // Sync every 30 seconds as a safety net
+
+    return () => clearInterval(intervalId)
+  }, [activeTabId, projectId, activeTab, syncMutation, getTabMetadata])
 
   // Function to manually trigger sync
   const syncNow = useCallback(() => {

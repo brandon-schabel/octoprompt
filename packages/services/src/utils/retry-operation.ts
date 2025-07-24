@@ -16,21 +16,14 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   shouldRetry: (error: any) => {
     // Retry on network errors, rate limits, and temporary failures
     if (error instanceof ApiError) {
-      return error.code === 'RATE_LIMIT_EXCEEDED' || 
-             error.code === 'PROVIDER_UNAVAILABLE' ||
-             error.status >= 500
+      return error.code === 'RATE_LIMIT_EXCEEDED' || error.code === 'PROVIDER_UNAVAILABLE' || error.status >= 500
     }
     // Retry on common network errors
-    return error.code === 'ECONNRESET' || 
-           error.code === 'ETIMEDOUT' ||
-           error.code === 'ENOTFOUND'
+    return error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND'
   }
 }
 
-export async function retryOperation<T>(
-  operation: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function retryOperation<T>(operation: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const opts = { ...DEFAULT_OPTIONS, ...options }
   let lastError: any
   let delay = opts.initialDelay
@@ -40,7 +33,7 @@ export async function retryOperation<T>(
       return await operation()
     } catch (error) {
       lastError = error
-      
+
       // Check if we should retry
       if (attempt >= opts.maxAttempts || !opts.shouldRetry(error, attempt)) {
         throw error
@@ -54,8 +47,8 @@ export async function retryOperation<T>(
       )
 
       // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, delay))
-      
+      await new Promise((resolve) => setTimeout(resolve, delay))
+
       // Calculate next delay with exponential backoff
       delay = Math.min(delay * opts.backoffMultiplier, opts.maxDelay)
     }

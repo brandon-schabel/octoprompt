@@ -1,11 +1,7 @@
 import { describe, test, expect } from 'bun:test'
 import { summarizeSingleFile, summarizeFiles } from './project-service'
 import { type ProjectFile } from '@octoprompt/schemas'
-import {
-  MAX_FILE_SIZE_FOR_SUMMARY,
-  MAX_TOKENS_FOR_SUMMARY,
-  CHARS_PER_TOKEN_ESTIMATE
-} from '@octoprompt/config'
+import { MAX_FILE_SIZE_FOR_SUMMARY, MAX_TOKENS_FOR_SUMMARY, CHARS_PER_TOKEN_ESTIMATE } from '@octoprompt/config'
 
 describe('Large File Handling in Summarization', () => {
   describe('summarizeSingleFile', () => {

@@ -22,7 +22,7 @@ const migrations: Migration[] = [
  */
 export async function runMigrations(): Promise<void> {
   const db = DatabaseManager.getInstance().getDatabase()
-  
+
   // Create migrations table if it doesn't exist
   db.exec(`
     CREATE TABLE IF NOT EXISTS migrations (
@@ -31,28 +31,28 @@ export async function runMigrations(): Promise<void> {
       applied_at INTEGER NOT NULL
     )
   `)
-  
+
   // Get applied migrations
-  const appliedMigrations = db.prepare(
-    'SELECT version FROM migrations ORDER BY version'
-  ).all() as { version: number }[]
-  
-  const appliedVersions = new Set(appliedMigrations.map(m => m.version))
-  
+  const appliedMigrations = db.prepare('SELECT version FROM migrations ORDER BY version').all() as { version: number }[]
+
+  const appliedVersions = new Set(appliedMigrations.map((m) => m.version))
+
   // Run pending migrations
   for (const migration of migrations) {
     if (!appliedVersions.has(migration.version)) {
       console.log(`[Migration] Running migration ${migration.version}: ${migration.description}`)
-      
+
       try {
         // Run the migration
         migration.up(db)
-        
+
         // Record it as applied
-        db.prepare(
-          'INSERT INTO migrations (version, description, applied_at) VALUES (?, ?, ?)'
-        ).run(migration.version, migration.description, Date.now())
-        
+        db.prepare('INSERT INTO migrations (version, description, applied_at) VALUES (?, ?, ?)').run(
+          migration.version,
+          migration.description,
+          Date.now()
+        )
+
         console.log(`[Migration] Migration ${migration.version} completed successfully`)
       } catch (error) {
         console.error(`[Migration] Migration ${migration.version} failed:`, error)

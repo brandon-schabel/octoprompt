@@ -114,7 +114,7 @@ export class MCPTrackingStorage {
     const stmt = this.db.prepare(`
       SELECT * FROM mcp_tool_executions_v2 WHERE id = ?
     `)
-    
+
     const row = stmt.get(id) as any
     if (!row) return null
 
@@ -158,7 +158,7 @@ export class MCPTrackingStorage {
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-    
+
     // Get total count
     const countStmt = this.db.prepare(`
       SELECT COUNT(*) as total FROM mcp_tool_executions_v2 ${whereClause}
@@ -167,19 +167,19 @@ export class MCPTrackingStorage {
     const total = countResult.total
 
     // Get paginated results
-    const sortColumn = query.sortBy === 'duration' ? 'duration_ms' : 
-                      query.sortBy === 'toolName' ? 'tool_name' : 'started_at'
+    const sortColumn =
+      query.sortBy === 'duration' ? 'duration_ms' : query.sortBy === 'toolName' ? 'tool_name' : 'started_at'
     const sortOrder = query.sortOrder === 'asc' ? 'ASC' : 'DESC'
-    
+
     const stmt = this.db.prepare(`
       SELECT * FROM mcp_tool_executions_v2
       ${whereClause}
       ORDER BY ${sortColumn} ${sortOrder}
       LIMIT ? OFFSET ?
     `)
-    
+
     const rows = stmt.all(...values, query.limit, query.offset) as any[]
-    const executions = rows.map(row => this.rowToExecution(row))
+    const executions = rows.map((row) => this.rowToExecution(row))
 
     return { executions, total }
   }
@@ -192,13 +192,10 @@ export class MCPTrackingStorage {
       SELECT id FROM mcp_tool_statistics
       WHERE tool_name = ? AND project_id IS ? AND period_start = ? AND period_type = ?
     `)
-    
-    const existing = existingStmt.get(
-      stats.toolName,
-      stats.projectId ?? null,
-      stats.periodStart,
-      stats.periodType
-    ) as { id: number } | undefined
+
+    const existing = existingStmt.get(stats.toolName, stats.projectId ?? null, stats.periodStart, stats.periodType) as
+      | { id: number }
+      | undefined
 
     if (existing) {
       // Update existing
@@ -210,7 +207,7 @@ export class MCPTrackingStorage {
           total_output_size = ?, metadata = ?
         WHERE id = ?
       `)
-      
+
       updateStmt.run(
         stats.periodEnd,
         stats.executionCount,
@@ -289,15 +286,15 @@ export class MCPTrackingStorage {
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-    
+
     const stmt = this.db.prepare(`
       SELECT * FROM mcp_tool_statistics
       ${whereClause}
       ORDER BY period_start DESC
     `)
-    
+
     const rows = stmt.all(...values) as any[]
-    return rows.map(row => this.rowToStatistics(row))
+    return rows.map((row) => this.rowToStatistics(row))
   }
 
   // --- Analytics Aggregations ---
@@ -326,8 +323,8 @@ export class MCPTrackingStorage {
     `)
 
     const rows = stmt.all(...values, limit) as any[]
-    
-    return rows.map(row => ({
+
+    return rows.map((row) => ({
       toolName: row.tool_name,
       totalExecutions: row.total_executions,
       successRate: row.total_executions > 0 ? row.success_count / row.total_executions : 0,
@@ -388,13 +385,13 @@ export class MCPTrackingStorage {
     `)
 
     const rows = stmt.all(bucketSize, bucketSize, ...values) as any[]
-    
+
     // Group by time bucket
     const timelineMap = new Map<number, MCPExecutionTimeline>()
-    
+
     for (const row of rows) {
       const timestamp = row.time_bucket
-      
+
       if (!timelineMap.has(timestamp)) {
         timelineMap.set(timestamp, {
           timestamp,
@@ -405,18 +402,19 @@ export class MCPTrackingStorage {
           errorCount: 0
         })
       }
-      
+
       const timeline = timelineMap.get(timestamp)!
       timeline.toolCounts[row.tool_name] = row.count
       timeline.totalCount += row.count
       timeline.successCount += row.success_count
       timeline.errorCount += row.error_count
-      
+
       // Update average duration (weighted average)
       const currentTotal = timeline.totalCount - row.count
-      timeline.avgDuration = currentTotal > 0
-        ? (timeline.avgDuration * currentTotal + row.avg_duration * row.count) / timeline.totalCount
-        : row.avg_duration
+      timeline.avgDuration =
+        currentTotal > 0
+          ? (timeline.avgDuration * currentTotal + row.avg_duration * row.count) / timeline.totalCount
+          : row.avg_duration
     }
 
     return Array.from(timelineMap.values()).sort((a, b) => b.timestamp - a.timestamp)
@@ -466,7 +464,12 @@ export class MCPTrackingStorage {
 
   // --- Chain Tracking ---
 
-  async createChain(chainId: string, executionId: number, parentExecutionId?: number, position: number = 0): Promise<void> {
+  async createChain(
+    chainId: string,
+    executionId: number,
+    parentExecutionId?: number,
+    position: number = 0
+  ): Promise<void> {
     const id = this.dbManager.generateUniqueId('mcp_tool_chains')
     const stmt = this.db.prepare(`
       INSERT INTO mcp_tool_chains (id, chain_id, execution_id, parent_execution_id, position, created_at)
@@ -485,7 +488,7 @@ export class MCPTrackingStorage {
     `)
 
     const rows = stmt.all(chainId) as any[]
-    return rows.map(row => this.rowToExecution(row))
+    return rows.map((row) => this.rowToExecution(row))
   }
 
   // --- Pattern Analysis ---
@@ -496,15 +499,16 @@ export class MCPTrackingStorage {
     patternData: any
   ): Promise<void> {
     const patternKey = JSON.stringify(patternData)
-    
+
     // Check if pattern exists
     const existingStmt = this.db.prepare(`
       SELECT id, occurrence_count FROM mcp_tool_patterns
       WHERE project_id IS ? AND pattern_type = ? AND pattern_data = ?
     `)
-    
-    const existing = existingStmt.get(projectId, patternType, patternKey) as 
-      { id: number; occurrence_count: number } | undefined
+
+    const existing = existingStmt.get(projectId, patternType, patternKey) as
+      | { id: number; occurrence_count: number }
+      | undefined
 
     if (existing) {
       // Update existing pattern
@@ -523,7 +527,7 @@ export class MCPTrackingStorage {
           occurrence_count, first_seen, last_seen
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `)
-      
+
       const now = Date.now()
       insertStmt.run(id, projectId, patternType, patternKey, 1, now, now)
     }
@@ -547,7 +551,7 @@ export class MCPTrackingStorage {
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-    
+
     const stmt = this.db.prepare(`
       SELECT pattern_data, occurrence_count, last_seen
       FROM mcp_tool_patterns
@@ -557,8 +561,8 @@ export class MCPTrackingStorage {
     `)
 
     const rows = stmt.all(...values, limit) as any[]
-    
-    return rows.map(row => ({
+
+    return rows.map((row) => ({
       pattern: JSON.parse(row.pattern_data),
       count: row.occurrence_count,
       lastSeen: row.last_seen

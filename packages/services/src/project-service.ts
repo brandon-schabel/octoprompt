@@ -10,12 +10,8 @@ import {
   type ImportInfo,
   type ExportInfo
 } from '@octoprompt/schemas'
-import {
-  MAX_FILE_SIZE_FOR_SUMMARY,
-  MAX_TOKENS_FOR_SUMMARY,
-  CHARS_PER_TOKEN_ESTIMATE
-} from '@octoprompt/config'
-import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG, } from '@octoprompt/config'
+import { MAX_FILE_SIZE_FOR_SUMMARY, MAX_TOKENS_FOR_SUMMARY, CHARS_PER_TOKEN_ESTIMATE } from '@octoprompt/config'
+import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/config'
 import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@octoprompt/shared'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
 import z, { ZodError } from 'zod'
@@ -34,11 +30,13 @@ async function retryFileOperation<T>(operation: () => Promise<T>): Promise<T> {
     maxAttempts: 3,
     shouldRetry: (error) => {
       // Retry on common file system errors
-      return error.code === 'EBUSY' || 
-             error.code === 'EAGAIN' || 
-             error.code === 'EACCES' ||
-             error.code === 'EMFILE' || // Too many open files
-             error.code === 'ENFILE'    // File table overflow
+      return (
+        error.code === 'EBUSY' ||
+        error.code === 'EAGAIN' ||
+        error.code === 'EACCES' ||
+        error.code === 'EMFILE' || // Too many open files
+        error.code === 'ENFILE'
+      ) // File table overflow
     }
   })
 }
@@ -202,14 +200,14 @@ export async function getProjectFiles(
     await getProjectById(projectId) // Throws 404 if project not found
     const files = await projectStorage.readProjectFiles(projectId)
     const allFiles = Object.values(files)
-    
+
     // Apply pagination if specified
     if (options?.limit !== undefined || options?.offset !== undefined) {
       const offset = options.offset || 0
       const limit = options.limit || allFiles.length
       return allFiles.slice(offset, offset + limit)
     }
-    
+
     return allFiles
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
@@ -517,7 +515,7 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
     if (createdFiles.length > 0) {
       const validatedMap = ProjectFilesStorageSchema.parse(filesMap)
       await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
-      
+
       // Invalidate cache when files are created
       invalidateProjectSummaryCache(projectId)
     }
@@ -593,7 +591,7 @@ export async function bulkUpdateProjectFiles(
     if (changesMade) {
       const validatedMap = ProjectFilesStorageSchema.parse(files)
       await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
-      
+
       // Invalidate cache when files are updated
       invalidateProjectSummaryCache(projectId)
     }
@@ -646,20 +644,24 @@ export async function bulkDeleteProjectFiles(
     if (changesMade) {
       const validatedMap = ProjectFilesStorageSchema.parse(files)
       await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
-      
+
       // Invalidate cache when files are deleted
       invalidateProjectSummaryCache(projectId)
-      
+
       // Clean up file references in tickets
       const ticketCleanupResult = await removeDeletedFileIdsFromTickets(projectId, fileIdsToDelete)
       if (ticketCleanupResult.updatedTickets > 0) {
-        console.log(`[ProjectService] Cleaned up file references in ${ticketCleanupResult.updatedTickets} tickets for project ${projectId}`)
+        console.log(
+          `[ProjectService] Cleaned up file references in ${ticketCleanupResult.updatedTickets} tickets for project ${projectId}`
+        )
       }
-      
+
       // Clean up file references in selected files
       const selectedFilesCleanupResult = await removeDeletedFileIdsFromSelectedFiles(projectId, fileIdsToDelete)
       if (selectedFilesCleanupResult.updatedEntries > 0) {
-        console.log(`[ProjectService] Cleaned up file references in ${selectedFilesCleanupResult.updatedEntries} selected files entries for project ${projectId}`)
+        console.log(
+          `[ProjectService] Cleaned up file references in ${selectedFilesCleanupResult.updatedEntries} selected files entries for project ${projectId}`
+        )
       }
     }
 
@@ -762,12 +764,12 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   const exportsContext = file.exports?.length
     ? `The file exports: ${file.exports
-      .map((e) => {
-        if (e.type === 'default') return 'default export'
-        if (e.type === 'all') return `all from ${e.source}`
-        return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
-      })
-      .join(', ')}`
+        .map((e) => {
+          if (e.type === 'default') return 'default export'
+          if (e.type === 'all') return `all from ${e.source}`
+          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+        })
+        .join(', ')}`
     : ''
 
   const systemPrompt = `
@@ -940,12 +942,12 @@ export async function summarizeFiles(
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-    `Total to process: ${totalProcessed}, ` +
-    `Successfully summarized: ${summarizedCount}, ` +
-    `Skipped (empty): ${skippedByEmptyCount}, ` +
-    `Skipped (too large): ${skippedBySizeCount}, ` +
-    `Skipped (errors): ${errorCount}, ` +
-    `Total not summarized: ${finalSkippedCount}`
+      `Total to process: ${totalProcessed}, ` +
+      `Successfully summarized: ${summarizedCount}, ` +
+      `Skipped (empty): ${skippedByEmptyCount}, ` +
+      `Skipped (too large): ${skippedBySizeCount}, ` +
+      `Skipped (errors): ${errorCount}, ` +
+      `Total not summarized: ${finalSkippedCount}`
   )
 
   return {
@@ -1097,7 +1099,7 @@ export async function getProjectCompactSummary(projectId: number): Promise<strin
 export async function getProjectFileTree(projectId: number): Promise<string> {
   try {
     await getProjectById(projectId)
-    
+
     const files = await getProjectFiles(projectId)
     if (!files || files.length === 0) {
       return 'No files found in project'
@@ -1105,20 +1107,20 @@ export async function getProjectFileTree(projectId: number): Promise<string> {
 
     const { buildFileTree } = await import('@octoprompt/shared')
     const tree = buildFileTree(files)
-    
+
     const lines: string[] = []
-    
+
     const renderTree = (node: any, name: string, prefix: string = '', isLast: boolean = true) => {
       const connector = isLast ? '└── ' : '├── '
       const fileInfo = node.file ? ` (id: ${node.file.id})` : ''
-      
+
       if (name !== '') {
         lines.push(prefix + connector + name + fileInfo)
       }
-      
+
       const extension = isLast ? '    ' : '│   '
       const newPrefix = name === '' ? '' : prefix + extension
-      
+
       if (node.children) {
         const entries = Object.entries(node.children)
         entries.forEach(([childName, childNode], index) => {
@@ -1127,13 +1129,13 @@ export async function getProjectFileTree(projectId: number): Promise<string> {
         })
       }
     }
-    
+
     const rootEntries = Object.entries(tree)
     rootEntries.forEach(([name, node], index) => {
       const isLastRoot = index === rootEntries.length - 1
       renderTree(node, name, '', isLastRoot)
     })
-    
+
     return lines.join('\n')
   } catch (error) {
     if (error instanceof ApiError) throw error

@@ -8,11 +8,7 @@ export * from './src/selected-files-storage'
 export * from './src/active-tab-storage'
 
 // Export everything from storage-v2 except MigrationConfig
-export {
-  StorageV2,
-  FileAdapter,
-  MemoryAdapter
-} from './src/storage-v2'
+export { StorageV2, FileAdapter, MemoryAdapter } from './src/storage-v2'
 
 export type {
   StorageAdapter,
@@ -40,11 +36,6 @@ export {
   validateMigrations
 } from './src/migrations'
 
-export type {
-  Migration,
-  MigrationFunction,
-  MigrationHistoryEntry,
-  MigrationConfig
-} from './src/migrations'
+export type { Migration, MigrationFunction, MigrationHistoryEntry, MigrationConfig } from './src/migrations'
 
 export * from './src/mcp-tracking-storage'

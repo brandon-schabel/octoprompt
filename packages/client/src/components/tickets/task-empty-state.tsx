@@ -8,12 +8,7 @@ interface TaskEmptyStateProps {
   isGenerating?: boolean
 }
 
-export function TaskEmptyState({ 
-  onAddTask, 
-  onAutoGenerate, 
-  hasOverview,
-  isGenerating = false
-}: TaskEmptyStateProps) {
+export function TaskEmptyState({ onAddTask, onAutoGenerate, hasOverview, isGenerating = false }: TaskEmptyStateProps) {
   return (
     <div className='flex flex-col items-center justify-center p-6 text-center space-y-4 bg-muted/20 rounded-lg min-h-[200px]'>
       <div className='text-muted-foreground'>
@@ -29,23 +24,12 @@ export function TaskEmptyState({
         </p>
       </div>
       <div className='flex flex-col gap-2 w-full max-w-xs'>
-        <Button 
-          variant='outline' 
-          size='sm' 
-          onClick={onAddTask}
-          className='w-full'
-        >
+        <Button variant='outline' size='sm' onClick={onAddTask} className='w-full'>
           <Plus className='mr-2 h-3 w-3' />
           Add First Task
         </Button>
         {hasOverview && (
-          <Button 
-            variant='outline' 
-            size='sm' 
-            onClick={onAutoGenerate}
-            disabled={isGenerating}
-            className='w-full'
-          >
+          <Button variant='outline' size='sm' onClick={onAutoGenerate} disabled={isGenerating} className='w-full'>
             {isGenerating ? (
               <>
                 <RefreshCcw className='mr-2 h-3 w-3 animate-spin' />

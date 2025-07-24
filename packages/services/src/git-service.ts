@@ -98,17 +98,15 @@ export async function getProjectGitStatus(projectId: number): Promise<GitStatusR
 
     try {
       // Check if it's a git repository
-      const isRepo = await retryOperation(
-        () => git.checkIsRepo(),
-        {
-          maxAttempts: 2,
-          shouldRetry: (error) => {
-            // Retry on network errors or temporary issues
-            return error.message?.includes('ENOENT') === false && 
-                   (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT')
-          }
+      const isRepo = await retryOperation(() => git.checkIsRepo(), {
+        maxAttempts: 2,
+        shouldRetry: (error) => {
+          // Retry on network errors or temporary issues
+          return (
+            error.message?.includes('ENOENT') === false && (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT')
+          )
         }
-      )
+      })
       if (!isRepo) {
         return {
           success: false,
@@ -120,18 +118,17 @@ export async function getProjectGitStatus(projectId: number): Promise<GitStatusR
       }
 
       // Get the status with retry for network issues
-      const status = await retryOperation(
-        () => git.status(),
-        {
-          maxAttempts: 3,
-          shouldRetry: (error) => {
-            // Retry on network errors (for remote tracking)
-            return error.code === 'ENOTFOUND' || 
-                   error.code === 'ETIMEDOUT' ||
-                   error.message?.includes('Could not read from remote repository')
-          }
+      const status = await retryOperation(() => git.status(), {
+        maxAttempts: 3,
+        shouldRetry: (error) => {
+          // Retry on network errors (for remote tracking)
+          return (
+            error.code === 'ENOTFOUND' ||
+            error.code === 'ETIMEDOUT' ||
+            error.message?.includes('Could not read from remote repository')
+          )
         }
-      )
+      })
       const gitStatus = mapGitStatusToSchema(status, projectPath)
 
       // Cache the result
@@ -544,7 +541,7 @@ export async function getCommitLog(
   options?: {
     limit?: number
     skip?: number
-    offset?: number  // Support both skip and offset for compatibility
+    offset?: number // Support both skip and offset for compatibility
     branch?: string
     file?: string
   }
@@ -573,7 +570,7 @@ export async function getCommitLog(
 
     // Handle pagination - skip/offset are treated the same
     const skipCount = options?.skip ?? options?.offset ?? 0
-    
+
     // When using skip, we need to fetch skip + limit items, then slice
     if (options?.limit || skipCount > 0) {
       logOptions.maxCount = (options?.limit || 100) + skipCount
@@ -598,12 +595,12 @@ export async function getCommitLog(
       date: commit.date || new Date().toISOString(),
       refs: commit.refs || ''
     }))
-    
+
     // Apply offset/skip by slicing the results
     if (skipCount > 0) {
       return allEntries.slice(skipCount, skipCount + (options?.limit || allEntries.length))
     }
-    
+
     return allEntries
   } catch (error) {
     if (error instanceof ApiError) throw error

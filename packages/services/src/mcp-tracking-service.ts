@@ -13,11 +13,14 @@ import {
 import { ApiError } from '@octoprompt/shared'
 
 // Global tracking state for active executions
-const activeExecutions = new Map<number, {
-  startTime: number
-  toolName: string
-  projectId?: number
-}>()
+const activeExecutions = new Map<
+  number,
+  {
+    startTime: number
+    toolName: string
+    projectId?: number
+  }
+>()
 
 /**
  * Start tracking a new MCP tool execution
@@ -87,21 +90,19 @@ export async function completeMCPToolExecution(
     })
 
     // Update statistics asynchronously
-    updateStatisticsAsync(
-      activeExecution.toolName,
-      activeExecution.projectId,
-      status,
-      durationMs,
-      outputSize
-    ).catch(error => {
-      console.error('[MCPTrackingService] Failed to update statistics:', error)
-    })
+    updateStatisticsAsync(activeExecution.toolName, activeExecution.projectId, status, durationMs, outputSize).catch(
+      (error) => {
+        console.error('[MCPTrackingService] Failed to update statistics:', error)
+      }
+    )
 
     // Record patterns asynchronously
     if (status === 'error' && errorMessage) {
-      recordErrorPatternAsync(activeExecution.projectId ?? null, activeExecution.toolName, errorMessage).catch(error => {
-        console.error('[MCPTrackingService] Failed to record error pattern:', error)
-      })
+      recordErrorPatternAsync(activeExecution.projectId ?? null, activeExecution.toolName, errorMessage).catch(
+        (error) => {
+          console.error('[MCPTrackingService] Failed to record error pattern:', error)
+        }
+      )
     }
 
     // Clean up active execution
@@ -194,22 +195,21 @@ export async function getMCPAnalyticsOverview(
 
     // Get execution timeline (last 7 days by default)
     const timelineStartDate = startDate || Date.now() - 7 * 24 * 60 * 60 * 1000
-    const executionTrend = await mcpTrackingStorage.getExecutionTimeline(
-      projectId,
-      'day',
-      timelineStartDate,
-      endDate
-    )
+    const executionTrend = await mcpTrackingStorage.getExecutionTimeline(projectId, 'day', timelineStartDate, endDate)
 
     // Calculate overview metrics
     const totalExecutions = topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number), 0)
     const uniqueTools = topTools.length
-    const overallSuccessRate = totalExecutions > 0
-      ? topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number) * (tool.successRate as number), 0) / totalExecutions
-      : 0
-    const avgExecutionTime = totalExecutions > 0
-      ? topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number) * (tool.avgDurationMs as number), 0) / totalExecutions
-      : 0
+    const overallSuccessRate =
+      totalExecutions > 0
+        ? topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number) * (tool.successRate as number), 0) /
+          totalExecutions
+        : 0
+    const avgExecutionTime =
+      totalExecutions > 0
+        ? topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number) * (tool.avgDurationMs as number), 0) /
+          totalExecutions
+        : 0
 
     return {
       totalExecutions,
@@ -218,7 +218,7 @@ export async function getMCPAnalyticsOverview(
       avgExecutionTime,
       topTools,
       recentErrors,
-      executionTrend: executionTrend.map(item => ({
+      executionTrend: executionTrend.map((item) => ({
         timestamp: item.timestamp,
         count: item.totalCount,
         avgDuration: item.avgDuration

@@ -284,7 +284,7 @@ describe('Ticket Service', () => {
     expect(task1.tags).toEqual([])
     expect(task1.done).toBe(false)
 
-    const task2 = await createTask(t.id, { 
+    const task2 = await createTask(t.id, {
       content: 'Second',
       description: 'Detailed description',
       suggestedFileIds: ['file1', 'file2'],
@@ -299,7 +299,9 @@ describe('Ticket Service', () => {
   })
 
   test('createTask throws if ticket not found', async () => {
-    await expect(createTask(99999, { content: 'Nope' })).rejects.toThrow(expect.objectContaining({ code: 'TICKET_NOT_FOUND' }))
+    await expect(createTask(99999, { content: 'Nope' })).rejects.toThrow(
+      expect.objectContaining({ code: 'TICKET_NOT_FOUND' })
+    )
   })
 
   test('getTasks returns tasks sorted by orderIndex', async () => {
@@ -333,8 +335,8 @@ describe('Ticket Service', () => {
     })
     const task = await createTask(t.id, { content: 'OldContent' })
 
-    await updateTask(t.id, task.id, { 
-      content: 'NewContent', 
+    await updateTask(t.id, task.id, {
+      content: 'NewContent',
       done: true,
       description: 'Updated description',
       tags: ['completed']

@@ -203,9 +203,7 @@ export async function removeDeletedFileIdsFromSelectedFiles(
     for (const selectedFile of allSelectedFiles) {
       if (selectedFile.data.fileIds && selectedFile.data.fileIds.length > 0) {
         const originalLength = selectedFile.data.fileIds.length
-        const updatedFileIds = selectedFile.data.fileIds.filter(
-          (fileId) => !deletedFileIds.includes(fileId)
-        )
+        const updatedFileIds = selectedFile.data.fileIds.filter((fileId) => !deletedFileIds.includes(fileId))
 
         if (updatedFileIds.length < originalLength) {
           await updateSelectedFiles(
@@ -222,10 +220,7 @@ export async function removeDeletedFileIdsFromSelectedFiles(
 
     return { updatedEntries: updatedCount }
   } catch (error) {
-    console.error(
-      `Failed to remove deleted file IDs from selected files in project ${projectId}:`,
-      error
-    )
+    console.error(`Failed to remove deleted file IDs from selected files in project ${projectId}:`, error)
     // Don't throw - this is a cleanup operation that shouldn't fail the main operation
     return { updatedEntries: 0 }
   }

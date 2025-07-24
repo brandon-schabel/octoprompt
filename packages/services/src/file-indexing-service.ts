@@ -14,14 +14,58 @@ export class FileIndexingService {
   private insertKeywordStmt: Statement
   private insertTrigramStmt: Statement
   private updateFTSStmt: Statement
-  
+
   // Common programming language keywords to filter out
   private readonly STOP_WORDS = new Set([
-    'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are', 'was', 'were',
-    'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-    'should', 'may', 'might', 'must', 'shall', 'to', 'of', 'in', 'for', 'with',
-    'function', 'const', 'let', 'var', 'if', 'else', 'return', 'import', 'export',
-    'class', 'interface', 'type', 'public', 'private', 'protected', 'static'
+    'the',
+    'is',
+    'at',
+    'which',
+    'on',
+    'and',
+    'a',
+    'an',
+    'as',
+    'are',
+    'was',
+    'were',
+    'been',
+    'be',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'could',
+    'should',
+    'may',
+    'might',
+    'must',
+    'shall',
+    'to',
+    'of',
+    'in',
+    'for',
+    'with',
+    'function',
+    'const',
+    'let',
+    'var',
+    'if',
+    'else',
+    'return',
+    'import',
+    'export',
+    'class',
+    'interface',
+    'type',
+    'public',
+    'private',
+    'protected',
+    'static'
   ])
 
   constructor() {
@@ -38,7 +82,7 @@ export class FileIndexingService {
     } catch (error) {
       // Tables don't exist, create them
       console.log('[FileIndexingService] Creating search tables...')
-      
+
       // Create FTS5 virtual table
       this.db.exec(`
         CREATE VIRTUAL TABLE IF NOT EXISTS file_search_fts USING fts5(
@@ -75,7 +119,7 @@ export class FileIndexingService {
         CREATE INDEX IF NOT EXISTS idx_file_search_metadata_project 
         ON file_search_metadata(project_id)
       `)
-      
+
       this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_file_search_metadata_indexed 
         ON file_search_metadata(last_indexed)
@@ -98,7 +142,7 @@ export class FileIndexingService {
         CREATE INDEX IF NOT EXISTS idx_file_keywords_keyword 
         ON file_keywords(keyword)
       `)
-      
+
       this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_file_keywords_file 
         ON file_keywords(file_id)
@@ -190,20 +234,15 @@ export class FileIndexingService {
       const keywords = this.extractKeywords(tokens)
       const tfIdfVector = this.calculateTfIdf(tokens, keywords)
       const trigrams = this.generateTrigrams(file.path + ' ' + content)
-      
+
       // Begin transaction for atomic updates
       this.db.transaction(() => {
         // Check if file exists in FTS
         const exists = this.db.prepare('SELECT 1 FROM file_search_fts WHERE file_id = ?').get(file.id)
-        
+
         if (exists) {
           // Update existing entry
-          this.updateFTSStmt.run(
-            content,
-            file.summary || '',
-            keywords.map(k => k.keyword).join(' '),
-            file.id
-          )
+          this.updateFTSStmt.run(content, file.summary || '', keywords.map((k) => k.keyword).join(' '), file.id)
         } else {
           // Insert new entry
           this.insertFTSStmt.run(
@@ -214,7 +253,7 @@ export class FileIndexingService {
             file.extension || '',
             content,
             file.summary || '',
-            keywords.map(k => k.keyword).join(' ')
+            keywords.map((k) => k.keyword).join(' ')
           )
         }
 
@@ -238,13 +277,7 @@ export class FileIndexingService {
 
         // Insert keywords
         for (const kw of keywords) {
-          this.insertKeywordStmt.run(
-            file.id,
-            kw.keyword,
-            kw.frequency,
-            kw.tfScore,
-            kw.idfScore || 0
-          )
+          this.insertKeywordStmt.run(file.id, kw.keyword, kw.frequency, kw.tfScore, kw.idfScore || 0)
         }
 
         // Insert trigrams
@@ -252,7 +285,6 @@ export class FileIndexingService {
           this.insertTrigramStmt.run(trigram, file.id, position)
         }
       })()
-
     } catch (error) {
       console.error(`Failed to index file ${file.id}:`, error)
       throw new ApiError(
@@ -266,7 +298,10 @@ export class FileIndexingService {
   /**
    * Index multiple files in batch for better performance
    */
-  async indexFiles(files: ProjectFile[], forceReindex = false): Promise<{
+  async indexFiles(
+    files: ProjectFile[],
+    forceReindex = false
+  ): Promise<{
     indexed: number
     skipped: number
     failed: number
@@ -279,7 +314,7 @@ export class FileIndexingService {
     const batchSize = 100
     for (let i = 0; i < files.length; i += batchSize) {
       const batch = files.slice(i, i + batchSize)
-      
+
       for (const file of batch) {
         try {
           const metadata = this.getFileMetadata(file.id)
@@ -320,27 +355,27 @@ export class FileIndexingService {
     const tokens = content
       .toLowerCase()
       .split(/[\s\n\r\t.,;:!?\(\)\[\]{}"'`<>\/\\|@#$%^&*+=~-]+/)
-      .filter(token => token.length > 2 && token.length < 50)
-      .filter(token => !this.STOP_WORDS.has(token))
-    
+      .filter((token) => token.length > 2 && token.length < 50)
+      .filter((token) => !this.STOP_WORDS.has(token))
+
     // Also split camelCase and snake_case
     const expandedTokens: string[] = []
     for (const token of tokens) {
       expandedTokens.push(token)
-      
+
       // Split camelCase
-      const camelParts = token.split(/(?=[A-Z])/).map(s => s.toLowerCase())
+      const camelParts = token.split(/(?=[A-Z])/).map((s) => s.toLowerCase())
       if (camelParts.length > 1) {
-        expandedTokens.push(...camelParts.filter(p => p.length > 2))
+        expandedTokens.push(...camelParts.filter((p) => p.length > 2))
       }
-      
+
       // Split snake_case
-      const snakeParts = token.split('_').filter(p => p.length > 2)
+      const snakeParts = token.split('_').filter((p) => p.length > 2)
       if (snakeParts.length > 1) {
         expandedTokens.push(...snakeParts)
       }
     }
-    
+
     return expandedTokens
   }
 
@@ -354,11 +389,11 @@ export class FileIndexingService {
     idfScore?: number
   }> {
     const frequencies = new Map<string, number>()
-    
+
     for (const token of tokens) {
       frequencies.set(token, (frequencies.get(token) || 0) + 1)
     }
-    
+
     const totalTokens = tokens.length
     const keywords = Array.from(frequencies.entries())
       .map(([keyword, frequency]) => ({
@@ -368,7 +403,7 @@ export class FileIndexingService {
       }))
       .sort((a, b) => b.frequency - a.frequency)
       .slice(0, 100) // Top 100 keywords
-    
+
     return keywords
   }
 
@@ -376,17 +411,17 @@ export class FileIndexingService {
    * Calculate TF-IDF vector
    */
   private calculateTfIdf(
-    tokens: string[], 
+    tokens: string[],
     keywords: Array<{ keyword: string; frequency: number; tfScore: number }>
   ): Record<string, number> {
     const vector: Record<string, number> = {}
-    
+
     // For now, just use TF scores
     // IDF calculation would require corpus statistics
     for (const kw of keywords) {
       vector[kw.keyword] = kw.tfScore
     }
-    
+
     return vector
   }
 
@@ -396,14 +431,15 @@ export class FileIndexingService {
   private generateTrigrams(text: string): Array<[string, number]> {
     const trigrams: Array<[string, number]> = []
     const normalized = text.toLowerCase()
-    
+
     for (let i = 0; i <= normalized.length - 3; i++) {
       const trigram = normalized.slice(i, i + 3)
-      if (!/\s{2,}/.test(trigram)) { // Skip trigrams with multiple spaces
+      if (!/\s{2,}/.test(trigram)) {
+        // Skip trigrams with multiple spaces
         trigrams.push([trigram, i])
       }
     }
-    
+
     return trigrams
   }
 
@@ -412,41 +448,41 @@ export class FileIndexingService {
    */
   private detectLanguage(extension: string | undefined): string {
     if (!extension) return 'unknown'
-    
+
     const languageMap: Record<string, string> = {
-      'ts': 'typescript',
-      'tsx': 'typescript',
-      'js': 'javascript',
-      'jsx': 'javascript',
-      'py': 'python',
-      'java': 'java',
-      'cpp': 'cpp',
-      'c': 'c',
-      'cs': 'csharp',
-      'go': 'go',
-      'rs': 'rust',
-      'php': 'php',
-      'rb': 'ruby',
-      'swift': 'swift',
-      'kt': 'kotlin',
-      'scala': 'scala',
-      'r': 'r',
-      'sql': 'sql',
-      'sh': 'shell',
-      'bash': 'shell',
-      'ps1': 'powershell',
-      'lua': 'lua',
-      'dart': 'dart',
-      'julia': 'julia',
-      'ml': 'ocaml',
-      'hs': 'haskell',
-      'ex': 'elixir',
-      'clj': 'clojure',
-      'elm': 'elm',
-      'vue': 'vue',
-      'svelte': 'svelte'
+      ts: 'typescript',
+      tsx: 'typescript',
+      js: 'javascript',
+      jsx: 'javascript',
+      py: 'python',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+      cs: 'csharp',
+      go: 'go',
+      rs: 'rust',
+      php: 'php',
+      rb: 'ruby',
+      swift: 'swift',
+      kt: 'kotlin',
+      scala: 'scala',
+      r: 'r',
+      sql: 'sql',
+      sh: 'shell',
+      bash: 'shell',
+      ps1: 'powershell',
+      lua: 'lua',
+      dart: 'dart',
+      julia: 'julia',
+      ml: 'ocaml',
+      hs: 'haskell',
+      ex: 'elixir',
+      clj: 'clojure',
+      elm: 'elm',
+      vue: 'vue',
+      svelte: 'svelte'
     }
-    
+
     return languageMap[extension.toLowerCase()] || 'text'
   }
 
@@ -463,7 +499,7 @@ export class FileIndexingService {
       FROM file_search_metadata 
       WHERE file_id = ?
     `)
-    
+
     return stmt.get(fileId) as any
   }
 
@@ -473,10 +509,15 @@ export class FileIndexingService {
   async clearProjectIndex(projectId: number): Promise<void> {
     this.db.transaction(() => {
       // Get all file IDs for the project
-      const fileIds = this.db.prepare(`
+      const fileIds = this.db
+        .prepare(
+          `
         SELECT file_id FROM file_search_metadata WHERE project_id = ?
-      `).all(projectId).map((row: any) => row.file_id)
-      
+      `
+        )
+        .all(projectId)
+        .map((row: any) => row.file_id)
+
       // Delete from all tables
       for (const fileId of fileIds) {
         this.removeFileFromIndex(fileId)
@@ -494,22 +535,30 @@ export class FileIndexingService {
     avgTokensPerFile: number
     lastIndexed: number | null
   }> {
-    const stats = this.db.prepare(`
+    const stats = this.db
+      .prepare(
+        `
       SELECT 
         COUNT(*) as indexed_files,
         AVG(token_count) as avg_tokens,
         MAX(last_indexed) as last_indexed
       FROM file_search_metadata
       WHERE project_id = ?
-    `).get(projectId) as any
-    
-    const keywordCount = this.db.prepare(`
+    `
+      )
+      .get(projectId) as any
+
+    const keywordCount = this.db
+      .prepare(
+        `
       SELECT COUNT(DISTINCT keyword) as count
       FROM file_keywords k
       JOIN file_search_metadata m ON k.file_id = m.file_id
       WHERE m.project_id = ?
-    `).get(projectId) as any
-    
+    `
+      )
+      .get(projectId) as any
+
     return {
       totalFiles: 0, // Would need to query project files
       indexedFiles: stats?.indexed_files || 0,

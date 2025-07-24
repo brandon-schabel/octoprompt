@@ -43,7 +43,7 @@ export function ProjectsPage() {
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectResponse } = useGetProject(selectedProjectId!)
   const projectData = projectResponse?.data
-  
+
   // Sync active tab with backend
   useActiveTabSync(selectedProjectId)
 
@@ -64,32 +64,6 @@ export function ProjectsPage() {
   const tabsKeys = Object.keys(tabs || {})
   const { setActiveProjectTabId } = useSetActiveProjectTabId()
   const { mutate: updateProjectTabs } = useSetKvValue('projectTabs')
-
-  useEffect(() => {
-    if (projects.length === 1 && noTabsYet) {
-      createProjectTabFromHook({
-        displayName: projects[0].name || `Tab for ${projects[0].id.toString().substring(0, 6)}`,
-        selectedProjectId: projects[0].id
-      })
-    }
-    if (!selectedProjectId && projects.length === 1 && tabsLen === 1) {
-      updateProjectTabs({
-        [tabsKeys[0]]: { ...tabsArray[0], selectedProjectId: projects[0].id }
-      })
-      setActiveProjectTabId(parseInt(tabsKeys[0]))
-    }
-  }, [
-    projects,
-    noTabsYet,
-    activeProjectTabState,
-    selectedProjectId,
-    createProjectTabFromHook,
-    updateActiveProjectTab,
-    tabsKeys,
-    tabsArray,
-    setActiveProjectTabId,
-    tabsLen
-  ])
 
   const handleSelectProject = (id: number) => {
     updateActiveProjectTab((prev) => ({

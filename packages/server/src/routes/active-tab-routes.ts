@@ -24,24 +24,28 @@ const getActiveTabRoute = createRoute({
         'application/json': {
           schema: z.object({
             success: z.boolean(),
-            data: z.object({
-              activeTabId: z.number(),
-              lastUpdated: z.number(),
-              clientId: z.string().optional(),
-              tabMetadata: z.object({
-                displayName: z.string().optional(),
-                selectedFiles: z.array(z.number()).optional(),
-                selectedPrompts: z.array(z.number()).optional(),
-                userPrompt: z.string().optional(),
-                fileSearch: z.string().optional(),
-                contextLimit: z.number().optional(),
-                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
-                suggestedFileIds: z.array(z.number()).optional(),
-                ticketSearch: z.string().optional(),
-                ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
-              }).optional()
-            }).nullable()
+            data: z
+              .object({
+                activeTabId: z.number(),
+                lastUpdated: z.number(),
+                clientId: z.string().optional(),
+                tabMetadata: z
+                  .object({
+                    displayName: z.string().optional(),
+                    selectedFiles: z.array(z.number()).optional(),
+                    selectedPrompts: z.array(z.number()).optional(),
+                    userPrompt: z.string().optional(),
+                    fileSearch: z.string().optional(),
+                    contextLimit: z.number().optional(),
+                    preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+                    suggestedFileIds: z.array(z.number()).optional(),
+                    ticketSearch: z.string().optional(),
+                    ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+                    ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+                  })
+                  .optional()
+              })
+              .nullable()
           })
         }
       },
@@ -53,17 +57,19 @@ const getActiveTabRoute = createRoute({
 activeTabRoutes.openapi(getActiveTabRoute, async (c) => {
   const { projectId } = c.req.valid('param')
   const { clientId } = c.req.valid('query')
-  
+
   const activeTab = await activeTabService.getActiveTab(projectId, clientId)
-  
+
   return c.json({
     success: true,
-    data: activeTab ? {
-      activeTabId: activeTab.data.activeTabId,
-      lastUpdated: activeTab.data.lastUpdated,
-      clientId: activeTab.data.clientId,
-      tabMetadata: activeTab.data.tabMetadata
-    } : null
+    data: activeTab
+      ? {
+          activeTabId: activeTab.data.activeTabId,
+          lastUpdated: activeTab.data.lastUpdated,
+          clientId: activeTab.data.clientId,
+          tabMetadata: activeTab.data.tabMetadata
+        }
+      : null
   })
 })
 
@@ -93,19 +99,21 @@ const setActiveTabRoute = createRoute({
               activeTabId: z.number(),
               lastUpdated: z.number(),
               clientId: z.string().optional(),
-              tabMetadata: z.object({
-                displayName: z.string().optional(),
-                selectedFiles: z.array(z.number()).optional(),
-                selectedPrompts: z.array(z.number()).optional(),
-                userPrompt: z.string().optional(),
-                fileSearch: z.string().optional(),
-                contextLimit: z.number().optional(),
-                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
-                suggestedFileIds: z.array(z.number()).optional(),
-                ticketSearch: z.string().optional(),
-                ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
-              }).optional()
+              tabMetadata: z
+                .object({
+                  displayName: z.string().optional(),
+                  selectedFiles: z.array(z.number()).optional(),
+                  selectedPrompts: z.array(z.number()).optional(),
+                  userPrompt: z.string().optional(),
+                  fileSearch: z.string().optional(),
+                  contextLimit: z.number().optional(),
+                  preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+                  suggestedFileIds: z.array(z.number()).optional(),
+                  ticketSearch: z.string().optional(),
+                  ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+                  ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+                })
+                .optional()
             })
           })
         }
@@ -118,9 +126,9 @@ const setActiveTabRoute = createRoute({
 activeTabRoutes.openapi(setActiveTabRoute, async (c) => {
   const { projectId } = c.req.valid('param')
   const body = c.req.valid('json')
-  
+
   const activeTab = await activeTabService.updateActiveTab(projectId, body)
-  
+
   return c.json({
     success: true,
     data: {
@@ -162,9 +170,9 @@ const clearActiveTabRoute = createRoute({
 activeTabRoutes.openapi(clearActiveTabRoute, async (c) => {
   const { projectId } = c.req.valid('param')
   const { clientId } = c.req.valid('query')
-  
+
   const success = await activeTabService.clearActiveTab(projectId, clientId)
-  
+
   return c.json({
     success,
     message: success ? 'Active tab cleared' : 'No active tab found'
