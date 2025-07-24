@@ -2,6 +2,7 @@ import { z } from '@hono/zod-openapi'
 import type { MCPToolDefinition, MCPToolResponse } from './tools-registry'
 import { MCPError, MCPErrorCode, createMCPError, formatMCPErrorResponse } from './mcp-errors'
 import { executeTransaction, createTransactionStep } from './mcp-transaction'
+import { trackMCPToolExecution } from '@octoprompt/services'
 import {
   listProjects,
   getProjectById,
@@ -153,6 +154,25 @@ function validateDataField<T>(data: any, fieldName: string, fieldType: string = 
   return value as T
 }
 
+// Helper function to wrap tool handlers with tracking
+function createTrackedHandler(
+  toolName: string,
+  handler: (args: any) => Promise<MCPToolResponse>
+): (args: any) => Promise<MCPToolResponse> {
+  return async (args: any) => {
+    // Extract projectId if available
+    const projectId = args.projectId as number | undefined
+    
+    // Use the tracking service to wrap the handler
+    return trackMCPToolExecution(
+      toolName,
+      projectId,
+      args,
+      () => handler(args)
+    )
+  }
+}
+
 // Action type enums for each consolidated tool
 export enum ProjectManagerAction {
   LIST = 'list',
@@ -173,7 +193,8 @@ export enum ProjectManagerAction {
   FAST_SEARCH_FILES = 'fast_search_files',
   CREATE_FILE = 'create_file',
   GET_FILE_CONTENT_PARTIAL = 'get_file_content_partial',
-  DELETE_FILE = 'delete_file'
+  DELETE_FILE = 'delete_file',
+  GET_FILE_TREE = 'get_file_tree'
 }
 
 export enum PromptManagerAction {
@@ -292,7 +313,8 @@ const ProjectManagerSchema = z.object({
     ProjectManagerAction.SEARCH,
     ProjectManagerAction.CREATE_FILE,
     ProjectManagerAction.GET_FILE_CONTENT_PARTIAL,
-    ProjectManagerAction.DELETE_FILE
+    ProjectManagerAction.DELETE_FILE,
+    ProjectManagerAction.GET_FILE_TREE
   ]),
   projectId: z.number().optional(),
   data: z.any().optional()
@@ -420,7 +442,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'project_manager',
     description:
-      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, browse_files, get_file_content, update_file_content, suggest_files, search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial',
+      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, browse_files, get_file_content, update_file_content, suggest_files, search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial, get_file_tree (returns project file structure with file IDs)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -441,7 +463,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
       },
       required: ['action']
     },
-    handler: async (args: z.infer<typeof ProjectManagerSchema>): Promise<MCPToolResponse> => {
+    handler: createTrackedHandler('project_manager', async (args: z.infer<typeof ProjectManagerSchema>): Promise<MCPToolResponse> => {
       try {
         const { action, projectId, data } = args
 
@@ -1166,6 +1188,15 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             }
           }
 
+          case ProjectManagerAction.GET_FILE_TREE: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const { getProjectFileTree } = await import('@octoprompt/services')
+            const fileTree = await getProjectFileTree(validProjectId)
+            return {
+              content: [{ type: 'text', text: fileTree }]
+            }
+          }
+
           default:
             throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
               action,
@@ -1182,7 +1213,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         // Return formatted error response with recovery suggestions
         return formatMCPErrorResponse(mcpError)
       }
-    }
+    })
   },
 
   {
@@ -1210,7 +1241,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
       },
       required: ['action']
     },
-    handler: async (args: z.infer<typeof PromptManagerSchema>): Promise<MCPToolResponse> => {
+    handler: createTrackedHandler('prompt_manager', async (args: z.infer<typeof PromptManagerSchema>): Promise<MCPToolResponse> => {
       try {
         const { action, projectId, data } = args
 
@@ -1409,7 +1440,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         // Return formatted error response with recovery suggestions
         return formatMCPErrorResponse(mcpError)
       }
-    }
+    })
   },
 
   {
@@ -1436,7 +1467,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
       },
       required: ['action']
     },
-    handler: async (args: z.infer<typeof TicketManagerSchema>): Promise<MCPToolResponse> => {
+    handler: createTrackedHandler('ticket_manager', async (args: z.infer<typeof TicketManagerSchema>): Promise<MCPToolResponse> => {
       try {
         const { action, projectId, data } = args
 
@@ -1684,7 +1715,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         // Return formatted error response with recovery suggestions
         return formatMCPErrorResponse(mcpError)
       }
-    }
+    })
   },
 
   {
@@ -1710,7 +1741,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
       },
       required: ['action', 'ticketId']
     },
-    handler: async (args: z.infer<typeof TaskManagerSchema>): Promise<MCPToolResponse> => {
+    handler: createTrackedHandler('task_manager', async (args: z.infer<typeof TaskManagerSchema>): Promise<MCPToolResponse> => {
       try {
         const { action, ticketId, data } = args
         const validTicketId = validateRequiredParam(ticketId, 'ticketId', 'number', '456')
@@ -1984,7 +2015,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           isError: true
         }
       }
-    }
+    })
   },
 
   {
@@ -2010,7 +2041,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
       },
       required: ['action', 'projectId']
     },
-    handler: async (args: z.infer<typeof AIAssistantSchema>): Promise<MCPToolResponse> => {
+    handler: createTrackedHandler('ai_assistant', async (args: z.infer<typeof AIAssistantSchema>): Promise<MCPToolResponse> => {
       try {
         const { action, projectId, data } = args
 
@@ -2044,7 +2075,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           isError: true
         }
       }
-    }
+    })
   },
 
   {
@@ -2069,7 +2100,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
       },
       required: ['action', 'projectId']
     },
-    handler: async (args: z.infer<typeof GitManagerSchema>): Promise<MCPToolResponse> => {
+    handler: createTrackedHandler('git_manager', async (args: z.infer<typeof GitManagerSchema>): Promise<MCPToolResponse> => {
       try {
         const { action, projectId, data } = args
 
@@ -2382,7 +2413,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           isError: true
         }
       }
-    }
+    })
   },
 
   {
@@ -2407,7 +2438,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
       },
       required: ['action', 'projectId']
     },
-    handler: async (args: z.infer<typeof TabManagerSchema>): Promise<MCPToolResponse> => {
+    handler: createTrackedHandler('tab_manager', async (args: z.infer<typeof TabManagerSchema>): Promise<MCPToolResponse> => {
       try {
         const { action, projectId, data } = args
 
@@ -2484,7 +2515,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         // Return formatted error response with recovery suggestions
         return formatMCPErrorResponse(mcpError)
       }
-    }
+    })
   }
 ]
 

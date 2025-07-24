@@ -27,7 +27,20 @@ const getActiveTabRoute = createRoute({
             data: z.object({
               activeTabId: z.number(),
               lastUpdated: z.number(),
-              clientId: z.string().optional()
+              clientId: z.string().optional(),
+              tabMetadata: z.object({
+                displayName: z.string().optional(),
+                selectedFiles: z.array(z.number()).optional(),
+                selectedPrompts: z.array(z.number()).optional(),
+                userPrompt: z.string().optional(),
+                fileSearch: z.string().optional(),
+                contextLimit: z.number().optional(),
+                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+                suggestedFileIds: z.array(z.number()).optional(),
+                ticketSearch: z.string().optional(),
+                ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+              }).optional()
             }).nullable()
           })
         }
@@ -48,7 +61,8 @@ activeTabRoutes.openapi(getActiveTabRoute, async (c) => {
     data: activeTab ? {
       activeTabId: activeTab.data.activeTabId,
       lastUpdated: activeTab.data.lastUpdated,
-      clientId: activeTab.data.clientId
+      clientId: activeTab.data.clientId,
+      tabMetadata: activeTab.data.tabMetadata
     } : null
   })
 })
@@ -77,7 +91,21 @@ const setActiveTabRoute = createRoute({
             success: z.boolean(),
             data: z.object({
               activeTabId: z.number(),
-              lastUpdated: z.number()
+              lastUpdated: z.number(),
+              clientId: z.string().optional(),
+              tabMetadata: z.object({
+                displayName: z.string().optional(),
+                selectedFiles: z.array(z.number()).optional(),
+                selectedPrompts: z.array(z.number()).optional(),
+                userPrompt: z.string().optional(),
+                fileSearch: z.string().optional(),
+                contextLimit: z.number().optional(),
+                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+                suggestedFileIds: z.array(z.number()).optional(),
+                ticketSearch: z.string().optional(),
+                ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+              }).optional()
             })
           })
         }
@@ -97,7 +125,9 @@ activeTabRoutes.openapi(setActiveTabRoute, async (c) => {
     success: true,
     data: {
       activeTabId: activeTab.data.activeTabId,
-      lastUpdated: activeTab.data.lastUpdated
+      lastUpdated: activeTab.data.lastUpdated,
+      clientId: activeTab.data.clientId,
+      tabMetadata: activeTab.data.tabMetadata
     }
   })
 })

@@ -8,7 +8,7 @@ import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/p
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { UserInputPanel, type UserInputPanelRef } from '@/components/projects/user-input-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
-import { ThreeColumnResizablePanel } from '@/components/ui/three-column-resizable-panel'
+import { DraggableThreeColumnPanel } from '@/components/ui/draggable-three-column-panel'
 import { ProjectResponse } from '@octoprompt/schemas'
 import {
   useActiveProjectTab,
@@ -28,10 +28,11 @@ import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
 import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
 import { ProjectAssetsView } from '@/components/projects/project-assets-view'
-import { Bot, Code2, Sparkles, GitBranch } from 'lucide-react'
+import { Bot, Code2, Sparkles, GitBranch, BarChart2 } from 'lucide-react'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
 import { TicketsTabView } from '@/components/tickets/tickets-tab-view'
 import { GitTabView } from '@/components/projects/git-tab-view'
+import { MCPAnalyticsTabView } from '@/components/projects/mcp-analytics-tab-view'
 import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
 
 export function ProjectsPage() {
@@ -206,6 +207,10 @@ export function ProjectsPage() {
                   <GitBranch className='h-3.5 w-3.5' />
                   Git
                 </TabsTrigger>
+                <TabsTrigger value='mcp-analytics' className='flex items-center gap-1'>
+                  <BarChart2 className='h-3.5 w-3.5' />
+                  MCP Analytics
+                </TabsTrigger>
               </TabsList>
             </div>
             <div className='flex-shrink-0'>
@@ -273,6 +278,13 @@ export function ProjectsPage() {
               <p className='p-4 md:p-6'>No project selected for Git.</p>
             )}
           </TabsContent>
+          <TabsContent value='mcp-analytics' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId ? (
+              <MCPAnalyticsTabView projectId={selectedProjectId} />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for MCP Analytics.</p>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     )
@@ -316,19 +328,32 @@ type MainProjectsLayoutProps = {
 function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
   const userInputRef = useRef<UserInputPanelRef>(null)
 
+  const panels = [
+    {
+      id: 'file-panel',
+      content: <FilePanel ref={filePanelRef} className='h-full w-full' />,
+      minWidth: 200
+    },
+    {
+      id: 'input-panel',
+      content: <UserInputPanel ref={userInputRef} className='h-full w-full' />,
+      minWidth: 300
+    },
+    {
+      id: 'prompt-panel',
+      content: <PromptOverviewPanel ref={promptPanelRef} className='h-full w-full' />,
+      minWidth: 250
+    }
+  ] as const
+
   return (
     <ErrorBoundary>
       <div className='flex-1 min-h-0 overflow-hidden h-full flex flex-col'>
-        <ThreeColumnResizablePanel
-          leftPanel={<FilePanel ref={filePanelRef} className='h-full w-full' />}
-          middlePanel={<UserInputPanel ref={userInputRef} className='h-full w-full' />}
-          rightPanel={<PromptOverviewPanel ref={promptPanelRef} className='h-full w-full' />}
+        <DraggableThreeColumnPanel
+          panels={panels}
           initialLeftPanelWidth={25}
           initialRightPanelWidth={35}
-          minLeftPanelWidth={200}
-          minMiddlePanelWidth={300}
-          minRightPanelWidth={250}
-          storageKey='projects-three-column'
+          storageKey='projects-draggable-columns'
           className='flex-1 h-full w-full'
         />
       </div>

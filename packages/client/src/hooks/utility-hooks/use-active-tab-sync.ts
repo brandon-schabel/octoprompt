@@ -1,12 +1,36 @@
 import { useEffect, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useGetActiveProjectTabId } from '@/hooks/use-kv-local-storage'
+import { useGetActiveProjectTabId, useProjectTabById } from '@/hooks/use-kv-local-storage'
 import { useDebounceCallback } from './use-debounce'
 import { octoClient } from '../octo-client'
+import type { ProjectTabState } from '@octoprompt/schemas'
 
 export function useActiveTabSync(projectId: number | undefined) {
   const [activeTabId] = useGetActiveProjectTabId()
   const queryClient = useQueryClient()
+  
+  // Convert activeTabId to number if it's a string
+  const tabIdNumber = typeof activeTabId === 'string' ? parseInt(activeTabId) : activeTabId
+  const activeTab = useProjectTabById(tabIdNumber || -1)
+  
+  // Extract tab metadata for syncing
+  const getTabMetadata = useCallback((tab: ProjectTabState | undefined) => {
+    if (!tab) return undefined
+    
+    return {
+      displayName: tab.displayName,
+      selectedFiles: tab.selectedFiles,
+      selectedPrompts: tab.selectedPrompts,
+      userPrompt: tab.userPrompt,
+      fileSearch: tab.fileSearch,
+      contextLimit: tab.contextLimit,
+      preferredEditor: tab.preferredEditor,
+      suggestedFileIds: tab.suggestedFileIds,
+      ticketSearch: tab.ticketSearch,
+      ticketSort: tab.ticketSort,
+      ticketStatusFilter: tab.ticketStatusFilter
+    }
+  }, [])
 
   // Query to fetch active tab from backend
   const { data: backendActiveTab } = useQuery({
@@ -24,8 +48,12 @@ export function useActiveTabSync(projectId: number | undefined) {
 
   // Mutation to sync active tab to backend
   const syncMutation = useMutation({
-    mutationFn: async ({ projectId, tabId }: { projectId: number; tabId: number }) => {
-      return await octoClient.projects.setActiveTab(projectId, { tabId })
+    mutationFn: async ({ projectId, tabId, tabMetadata }: { 
+      projectId: number; 
+      tabId: number;
+      tabMetadata?: ReturnType<typeof getTabMetadata>
+    }) => {
+      return await octoClient.projects.setActiveTab(projectId, { tabId, tabMetadata })
     },
     onSuccess: () => {
       // Invalidate queries to refresh data
@@ -37,11 +65,11 @@ export function useActiveTabSync(projectId: number | undefined) {
   })
 
   // Create a debounced sync function
-  const debouncedSync = useDebounceCallback((projectId: number, tabId: number) => {
-    syncMutation.mutate({ projectId, tabId })
+  const debouncedSync = useDebounceCallback((projectId: number, tabId: number, tabMetadata?: ReturnType<typeof getTabMetadata>) => {
+    syncMutation.mutate({ projectId, tabId, tabMetadata })
   }, 500) // Wait 500ms after changes stop
 
-  // Sync when active tab changes
+  // Sync when active tab changes or tab data changes
   useEffect(() => {
     if (!projectId || projectId === -1 || !activeTabId) return
 
@@ -49,8 +77,9 @@ export function useActiveTabSync(projectId: number | undefined) {
     const tabIdNumber = typeof activeTabId === 'string' ? parseInt(activeTabId) : activeTabId
     if (isNaN(tabIdNumber)) return
 
-    debouncedSync(projectId, tabIdNumber)
-  }, [activeTabId, projectId, debouncedSync])
+    const tabMetadata = getTabMetadata(activeTab)
+    debouncedSync(projectId, tabIdNumber, tabMetadata)
+  }, [activeTabId, projectId, activeTab, debouncedSync, getTabMetadata])
 
   // Function to manually trigger sync
   const syncNow = useCallback(() => {
@@ -59,8 +88,9 @@ export function useActiveTabSync(projectId: number | undefined) {
     const tabIdNumber = typeof activeTabId === 'string' ? parseInt(activeTabId) : activeTabId
     if (isNaN(tabIdNumber)) return
 
-    syncMutation.mutate({ projectId, tabId: tabIdNumber })
-  }, [activeTabId, projectId, syncMutation])
+    const tabMetadata = getTabMetadata(activeTab)
+    syncMutation.mutate({ projectId, tabId: tabIdNumber, tabMetadata })
+  }, [activeTabId, projectId, activeTab, syncMutation, getTabMetadata])
 
   // Function to clear active tab
   const clearActiveTab = useMutation({

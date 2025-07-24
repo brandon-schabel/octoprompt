@@ -1,5 +1,6 @@
 import { DatabaseManager } from '../database-manager'
 import { addFTS5SearchMigration } from './002-add-fts5-search'
+import { addMCPTrackingMigration } from './003-mcp-tracking'
 import type { Database } from 'bun:sqlite'
 
 interface Migration {
@@ -12,7 +13,8 @@ interface Migration {
 // All migrations in order
 const migrations: Migration[] = [
   // Initial migration is implicit in table creation
-  addFTS5SearchMigration
+  addFTS5SearchMigration,
+  addMCPTrackingMigration
 ]
 
 /**

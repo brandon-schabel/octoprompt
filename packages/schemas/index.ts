@@ -15,6 +15,8 @@ export * from './src/ticket.schemas'
 export * from './src/git.schemas'
 export * from './src/selected-files.schemas'
 export * from './src/active-tab.schemas'
+export * from './src/mcp-tracking.schemas'
 
 // export constants
 export * from './src/constants/models-temp-not-allowed'
+

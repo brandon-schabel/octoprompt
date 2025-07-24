@@ -35,8 +35,23 @@ OctoPrompt guidance. Prioritize making use of the OctoPrompt MCP to make things 
 
 OctaPrompt is a prompt upgrade tool. It takes something that is a very basic prompt and then it allows you to augment that prompt with either selected files, upgrading the prompt, or selecting relevant prompts from the prompts library. It also can serve as a ticket and task manager to create and plan high-level features.
 
+### Project Exploration Priority
+
+**ALWAYS use `get_file_tree` FIRST when exploring a new project or feature area**. This provides:
+- Complete project structure visualization
+- File IDs for every file (shown in parentheses)
+- Hierarchical understanding of code organization
+- Quick navigation reference
+
+Example:
+```json
+{ "action": "get_file_tree", "projectId": 1753220774680 }
+```
+
+### Key MCP Tools Usage
+
 - Always use the active tab tool, this will tell you the users intent, their selected project id, selected files, etc
-- I highly recommend using the Get Summary project tool which will give you context into what the project is, how it works at a high level, which will be a great starting point for building a new feature.
+- After `get_file_tree`, use `get_summary` for high-level project understanding
 - There is a tool to retrieve the selected files that the user has selected, use that so the user guides you, you can also update and clear the selection.
 - **IMPORTANT: For file searching, ALWAYS use `fast_search_files` FIRST** - it's much faster (sub-millisecond) than AI search:
   - Use `exact` search for specific terms or function names
@@ -54,7 +69,7 @@ Below is a detailed breakdown of each tool and its capabilities.
 
 #### 1. **project_manager** - Project and file operations
 
-Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT FROM OCTOPROMPT), delete_file, get_summary, browse_files, get_file_content, update_file_content, suggest_files, get_selected_files, update_selected_files, clear_selected_files, get_selection_context, search, fast_search_files, create_file, get_file_content_partial
+Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT FROM OCTOPROMPT), delete_file, get_summary, browse_files, get_file_content, update_file_content, suggest_files, get_selected_files, update_selected_files, clear_selected_files, get_selection_context, search, fast_search_files, create_file, get_file_content_partial, get_file_tree
 
 ⚠️ **WARNING**: The `delete` action removes the ENTIRE PROJECT from the database, not just a file! Use `delete_file` to delete individual files.
 
@@ -96,6 +111,9 @@ Example usage:
 
 // Get selected files (automatically uses active tab)
 { "action": "get_selected_files", "projectId": 1750564533014 }
+
+// Get project file tree with file IDs
+{ "action": "get_file_tree", "projectId": 1750564533014 }
 ```
 
 ##### Fast File Search (Prioritize This!)

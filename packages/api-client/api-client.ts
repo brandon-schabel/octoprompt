@@ -181,6 +181,27 @@ import {
   gitBlameSchema
 } from '@octoprompt/schemas'
 
+// MCP Analytics imports
+import type {
+  MCPExecutionQuery,
+  MCPAnalyticsRequest,
+  MCPAnalyticsOverview,
+  MCPToolExecution,
+  MCPToolStatistics,
+  MCPExecutionTimeline,
+  MCPToolPattern
+} from '@octoprompt/schemas'
+
+import {
+  mcpExecutionQuerySchema,
+  mcpAnalyticsRequestSchema,
+  mcpAnalyticsOverviewSchema,
+  mcpToolExecutionSchema,
+  mcpToolStatisticsSchema,
+  mcpExecutionTimelineSchema,
+  mcpToolPatternSchema
+} from '@octoprompt/schemas'
+
 export type DataResponseSchema<T> = {
   success: boolean
   data: T
@@ -1465,6 +1486,74 @@ export class TicketService extends BaseApiClient {
   }
 }
 
+// MCP Analytics Service
+export class MCPAnalyticsService extends BaseApiClient {
+  async getExecutions(projectId: number, query?: MCPExecutionQuery) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/analytics/executions`, {
+      params: query as any,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          executions: z.array(mcpToolExecutionSchema),
+          total: z.number(),
+          page: z.number(),
+          pageSize: z.number()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      executions: MCPToolExecution[]
+      total: number
+      page: number
+      pageSize: number
+    }>
+  }
+
+  async getOverview(projectId: number, request?: MCPAnalyticsRequest) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/analytics/overview`, {
+      body: request || {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: mcpAnalyticsOverviewSchema
+      })
+    })
+    return result as DataResponseSchema<MCPAnalyticsOverview>
+  }
+
+  async getStatistics(projectId: number, request?: MCPAnalyticsRequest) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/analytics/statistics`, {
+      body: request || {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(mcpToolStatisticsSchema)
+      })
+    })
+    return result as DataResponseSchema<MCPToolStatistics[]>
+  }
+
+  async getTimeline(projectId: number, request?: MCPAnalyticsRequest) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/analytics/timeline`, {
+      body: request || {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(mcpExecutionTimelineSchema)
+      })
+    })
+    return result as DataResponseSchema<MCPExecutionTimeline[]>
+  }
+
+  async getErrorPatterns(projectId: number, request?: MCPAnalyticsRequest) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/analytics/error-patterns`, {
+      body: request || {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(mcpToolPatternSchema)
+      })
+    })
+    return result as DataResponseSchema<MCPToolPattern[]>
+  }
+}
+
 // Git Service
 export class GitService extends BaseApiClient {
   async getProjectGitStatus(projectId: number) {
@@ -1685,6 +1774,7 @@ export class OctoPromptClient {
   public readonly mcp: MCPService
   public readonly tickets: TicketService
   public readonly git: GitService
+  public readonly mcpAnalytics: MCPAnalyticsService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -1697,6 +1787,7 @@ export class OctoPromptClient {
     this.mcp = new MCPService(config)
     this.tickets = new TicketService(config)
     this.git = new GitService(config)
+    this.mcpAnalytics = new MCPAnalyticsService(config)
   }
 }
 

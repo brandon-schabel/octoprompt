@@ -31,8 +31,23 @@ import { handleHTTPTransport, getActiveSessions, closeSession } from '../mcp/tra
 import * as projectService from '@octoprompt/services'
 import { ApiError } from '@octoprompt/shared'
 import { CONSOLIDATED_TOOLS, getAllConsolidatedToolNames } from '../mcp/tools-registry'
+import {
+  getMCPToolExecutions,
+  getMCPAnalyticsOverview,
+  getMCPToolStatistics,
+  getMCPExecutionTimeline,
+  getTopErrorPatterns
+} from '@octoprompt/services'
+import {
+  mcpExecutionQuerySchema,
+  mcpAnalyticsRequestSchema,
+  type MCPExecutionQuery,
+  type MCPAnalyticsRequest,
+  mcpExecutionQueryRequestSchema
+} from '@octoprompt/schemas'
 
 export const mcpRoutes = new OpenAPIHono()
+
 
 // Debug middleware for all MCP routes
 mcpRoutes.use('*', async (c, next) => {
@@ -1321,6 +1336,312 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
         }
       })
     }
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+// ====================
+// MCP ANALYTICS ROUTES
+// ====================
+
+/**
+ * Get MCP tool executions with filtering
+ */
+const getMCPExecutionsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/analytics/executions',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    query: mcpExecutionQueryRequestSchema.partial()
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              executions: z.array(z.any()), // TODO: Use proper execution schema
+              total: z.number(),
+              page: z.number(),
+              pageSize: z.number()
+            })
+          })
+        }
+      },
+      description: 'MCP tool executions'
+    }
+  }
+})
+
+mcpRoutes.openapi(getMCPExecutionsRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const query = c.req.valid('query')
+    
+    // Ensure numeric values for limit and offset
+    const executionQuery: MCPExecutionQuery = {
+      ...query,
+      projectId,
+      limit: query?.limit ? parseInt(String(query.limit), 10) : 100,
+      offset: query?.offset ? parseInt(String(query.offset), 10) : 0
+    }
+
+    const result = await getMCPToolExecutions(executionQuery)
+
+    return c.json({ success: true, data: result })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Get MCP analytics overview
+ */
+const getMCPAnalyticsOverviewRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/analytics/overview',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: mcpAnalyticsRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.any() // TODO: Use proper overview schema
+          })
+        }
+      },
+      description: 'MCP analytics overview'
+    }
+  }
+})
+
+mcpRoutes.openapi(getMCPAnalyticsOverviewRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const body = c.req.valid('json')
+
+    const overview = await getMCPAnalyticsOverview(
+      projectId,
+      body?.startDate,
+      body?.endDate
+    )
+
+    return c.json({ success: true, data: overview })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Get MCP tool statistics
+ */
+const getMCPToolStatisticsRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/analytics/statistics',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: mcpAnalyticsRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(z.any()) // TODO: Use proper statistics schema
+          })
+        }
+      },
+      description: 'MCP tool statistics'
+    }
+  }
+})
+
+mcpRoutes.openapi(getMCPToolStatisticsRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const body = c.req.valid('json')
+
+    const statistics = await getMCPToolStatistics({
+      ...body,
+      projectId
+    })
+
+    return c.json({ success: true, data: statistics })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Get MCP execution timeline
+ */
+const getMCPExecutionTimelineRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/analytics/timeline',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: mcpAnalyticsRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(z.any()) // TODO: Use proper timeline schema
+          })
+        }
+      },
+      description: 'MCP execution timeline'
+    }
+  }
+})
+
+mcpRoutes.openapi(getMCPExecutionTimelineRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const body = c.req.valid('json')
+
+    const timeline = await getMCPExecutionTimeline(
+      projectId,
+      body?.period || 'day',
+      body?.startDate,
+      body?.endDate
+    )
+
+    return c.json({ success: true, data: timeline })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Get global MCP analytics (across all projects)
+ */
+const getGlobalMCPAnalyticsRoute = createRoute({
+  method: 'post',
+  path: '/api/mcp/analytics/global',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            startDate: z.number().optional(),
+            endDate: z.number().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.any() // TODO: Use proper overview schema
+          })
+        }
+      },
+      description: 'Global MCP analytics'
+    }
+  }
+})
+
+mcpRoutes.openapi(getGlobalMCPAnalyticsRoute, async (c) => {
+  try {
+    const body = c.req.valid('json')
+
+    const overview = await getMCPAnalyticsOverview(
+      undefined,
+      body?.startDate,
+      body?.endDate
+    )
+
+    return c.json({ success: true, data: overview })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Get top error patterns
+ */
+const getMCPErrorPatternsRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/analytics/error-patterns',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: mcpAnalyticsRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(z.object({
+              pattern: z.any(),
+              count: z.number(),
+              lastSeen: z.number()
+            }))
+          })
+        }
+      },
+      description: 'Top error patterns'
+    }
+  }
+})
+
+mcpRoutes.openapi(getMCPErrorPatternsRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const body = c.req.valid('json')
+
+    const patterns = await getTopErrorPatterns(projectId, 10)
+
+    return c.json({ success: true, data: patterns })
   } catch (error) {
     return handleApiError(error, c)
   }

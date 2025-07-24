@@ -47,7 +47,8 @@ export async function getActiveTab(projectId: number, clientId?: string): Promis
 export async function setActiveTab(
   projectId: number, 
   tabId: number,
-  clientId?: string
+  clientId?: string,
+  tabMetadata?: ActiveTabData['tabMetadata']
 ): Promise<ActiveTab> {
   try {
     // Validate project exists
@@ -61,7 +62,8 @@ export async function setActiveTab(
       projectId,
       activeTabId: tabId,
       clientId,
-      lastUpdated: now
+      lastUpdated: now,
+      tabMetadata
     }
     
     if (existingActiveTab) {
@@ -149,5 +151,5 @@ export async function updateActiveTab(
   projectId: number,
   body: UpdateActiveTabBody
 ): Promise<ActiveTab> {
-  return setActiveTab(projectId, body.tabId, body.clientId)
+  return setActiveTab(projectId, body.tabId, body.clientId, body.tabMetadata)
 }

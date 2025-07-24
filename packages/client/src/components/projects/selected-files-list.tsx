@@ -50,7 +50,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     })
     const projectTab = useProjectTabById(projectTabId)
 
-    const { selectedProjectId } = projectTab
+    const { selectedProjectId = -1 } = projectTab || {}
 
     const projectFileMap = useProjectFileMap(selectedProjectId)
 

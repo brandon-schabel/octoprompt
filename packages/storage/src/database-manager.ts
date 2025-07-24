@@ -241,6 +241,25 @@ export class DatabaseManager {
   }
 
   private ensureTable(tableName: string): void {
+    // Skip creating tables that are managed by migrations
+    const migrationManagedTables = [
+      'mcp_tool_executions_v2',
+      'mcp_tool_statistics',
+      'mcp_tool_chains',
+      'mcp_tool_patterns',
+      'file_search_fts',
+      'file_search_fts_content',
+      'file_search_fts_data',
+      'file_search_fts_idx',
+      'file_search_fts_docsize',
+      'file_search_fts_config'
+    ]
+    
+    if (migrationManagedTables.includes(tableName)) {
+      // Don't create tables that are managed by migrations
+      return
+    }
+    
     // Create table if it doesn't exist
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ${tableName} (

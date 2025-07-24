@@ -1093,3 +1093,54 @@ export async function getProjectCompactSummary(projectId: number): Promise<strin
     )
   }
 }
+
+export async function getProjectFileTree(projectId: number): Promise<string> {
+  try {
+    await getProjectById(projectId)
+    
+    const files = await getProjectFiles(projectId)
+    if (!files || files.length === 0) {
+      return 'No files found in project'
+    }
+
+    const { buildFileTree } = await import('@octoprompt/shared')
+    const tree = buildFileTree(files)
+    
+    const lines: string[] = []
+    
+    const renderTree = (node: any, name: string, prefix: string = '', isLast: boolean = true) => {
+      const connector = isLast ? '└── ' : '├── '
+      const fileInfo = node.file ? ` (id: ${node.file.id})` : ''
+      
+      if (name !== '') {
+        lines.push(prefix + connector + name + fileInfo)
+      }
+      
+      const extension = isLast ? '    ' : '│   '
+      const newPrefix = name === '' ? '' : prefix + extension
+      
+      if (node.children) {
+        const entries = Object.entries(node.children)
+        entries.forEach(([childName, childNode], index) => {
+          const isLastChild = index === entries.length - 1
+          renderTree(childNode, childName, newPrefix, isLastChild)
+        })
+      }
+    }
+    
+    const rootEntries = Object.entries(tree)
+    rootEntries.forEach(([name, node], index) => {
+      const isLastRoot = index === rootEntries.length - 1
+      renderTree(node, name, '', isLastRoot)
+    })
+    
+    return lines.join('\n')
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to get project file tree for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
+      'PROJECT_FILE_TREE_FAILED'
+    )
+  }
+}
