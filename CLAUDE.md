@@ -4,12 +4,12 @@ You are an expert at using the OctoPrompt MCP, the OctoPrompt MCP will guide you
 
 - Use the OctoPrompt MCP Overview tool to understand what the user is currently working on, this will give you insights
 into their active project id, selected files, recent tickets. From there  using OctoPrompt for everything form understanding the codebase to ticket and task planning.
-- ONLY Use OctoPrompt Ticket and Tasks feature for project feature planning. 
 - Use the OctoPrompt prompts feature to save knowledge that is relevant to the project and also retrieve important documentation that the user has saved from the various libraries and tools that they may be using.
 - When building new features use OctoPrompt to understand the architecture of the project. try to follow the patterns that the project is already using.
 - Before searching the internet for library docs, check to see if the user already has library docs in their OctoPrompt prompts library
 
 Generally a fullstack feature consists of the follow
+
 - Zod data schemas
 - Data storage and table definitions for SQLite with zod validations
 - Services using the zod schemas as the source of truth
@@ -20,8 +20,18 @@ Generally a fullstack feature consists of the follow
 - Explorer if there are current components that meet current uses cases, if not add ShadCN components or compose new components based on the foundations of the primitive componets in the repo
 - Integrate components and data hooks into a page to complete the feature
 
-
 ## Agents Feature
+
 Make strong use of the agents feature, make use of specialized agents to handle task that are relevant to the list of specialized agents. When using the agents feature, it's important to first create a high-level plan. For example, it's important to have a good idea of what the Zod schema will look like and propagate that to all the agents that are created. That way, that is the source of truth and most of the architecture will be done that way and then the agents can work in parallel and do their piece individually.
+
+## Coding Principles
+
+Write code that is self explanatory where comments are rarely needed. Follow instructions exactly as written. Everything must be very concise but still make sense. Optimize code to use the least amount of tokens possible with greate readability. Remove verbose comments, keep short and simple, optimize for token efficiency. Follow DRY and SRP priniciples, write modular, functional code.  Make sure code is unit testable. Make sure functions are pure and deterministic. Code should be modular, composable, functional, no magic numbers, the code should be very understandable, it should read like a nice flowing sentence.
+
+Implement These Rules For Reducing File Sizes:
+
+- Follow DRY (Don't repeat yourself)
+- Follow KISS (Keep it simple stupid)
+- Follow SRP (Single Responsibility Principle)
 
 OctoPrompt Project ID - 1753220774680

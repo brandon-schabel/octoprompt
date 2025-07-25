@@ -15,19 +15,19 @@ import {
 import { ChevronLeft, ChevronRight, Search, History, GitCommit } from 'lucide-react'
 import { CommitCard } from './commit-card'
 import { CommitDetailModal } from './commit-detail-modal'
+import { BranchSelectorSearchable } from './branch-selector-searchable'
 import type { GitLogEnhancedRequest } from '@octoprompt/schemas'
 
 interface CommitListProps {
   projectId: number
-  selectedBranch?: string
-  onBranchChange?: (branch: string) => void
 }
 
-export function CommitList({ projectId, selectedBranch, onBranchChange }: CommitListProps) {
+export function CommitList({ projectId }: CommitListProps) {
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null)
   const [pageSize, setPageSize] = useState(20)
+  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined)
 
   const params: GitLogEnhancedRequest = {
     page,
@@ -69,6 +69,14 @@ export function CommitList({ projectId, selectedBranch, onBranchChange }: Commit
       {/* Search and Filter Controls */}
       <div className="flex flex-col gap-3 p-4 border-b">
         <div className="flex items-center gap-2">
+          <BranchSelectorSearchable
+            projectId={projectId}
+            selectedBranch={selectedBranch}
+            onBranchChange={(branch) => {
+              setSelectedBranch(branch)
+              setPage(1) // Reset to first page on branch change
+            }}
+          />
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

@@ -1,9 +1,9 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { GitBranch, History, Package2 } from 'lucide-react'
+import { GitBranch, History, Package2, FileSignature } from 'lucide-react'
 
-export type GitView = 'changes' | 'history' | 'stashes'
+export type GitView = 'changes' | 'history' | 'branches' | 'stashes'
 
 interface GitSidebarNavProps {
   activeView: GitView
@@ -16,7 +16,7 @@ export function GitSidebarNav({ activeView, onViewChange, className }: GitSideba
     {
       id: 'changes' as GitView,
       label: 'Changes',
-      icon: GitBranch,
+      icon: FileSignature,
       description: 'Stage and commit changes'
     },
     {
@@ -24,6 +24,12 @@ export function GitSidebarNav({ activeView, onViewChange, className }: GitSideba
       label: 'History',
       icon: History,
       description: 'View commit history'
+    },
+    {
+      id: 'branches' as GitView,
+      label: 'Branches',
+      icon: GitBranch,
+      description: 'Manage branches'
     },
     {
       id: 'stashes' as GitView,
@@ -39,16 +45,13 @@ export function GitSidebarNav({ activeView, onViewChange, className }: GitSideba
         <Button
           key={item.id}
           variant={activeView === item.id ? 'secondary' : 'ghost'}
-          className={cn(
-            'w-full justify-start gap-3 h-auto py-3 px-3',
-            activeView === item.id && 'bg-secondary'
-          )}
+          className={cn('w-full justify-start gap-3 h-auto py-3 px-3', activeView === item.id && 'bg-secondary')}
           onClick={() => onViewChange(item.id)}
         >
-          <item.icon className="h-4 w-4 shrink-0" />
-          <div className="flex flex-col items-start text-left">
-            <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{item.description}</span>
+          <item.icon className='h-4 w-4 shrink-0' />
+          <div className='flex flex-col items-start text-left'>
+            <span className='text-sm font-medium whitespace-nowrap'>{item.label}</span>
+            <span className='text-xs text-muted-foreground whitespace-nowrap'>{item.description}</span>
           </div>
         </Button>
       ))}

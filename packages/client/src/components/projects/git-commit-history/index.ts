@@ -1,4 +1,5 @@
 export { CommitList } from './commit-list'
 export { BranchSelector } from './branch-selector'
+export { BranchSelectorSearchable } from './branch-selector-searchable'
 export { CommitCard } from './commit-card'
 export { CommitDetailModal } from './commit-detail-modal'

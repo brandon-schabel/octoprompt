@@ -57,6 +57,8 @@
     "@octoprompt/shared": "workspace:*",
     "@octoprompt/storage": "workspace:*",
     "@openrouter/ai-sdk-provider": "^0.4.6",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/zod-adapter": "^1.129.8",
     "ai": "^4.3.16",
     "fast-xml-parser": "^5.2.4",
     "hono": "^4.7.11",

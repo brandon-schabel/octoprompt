@@ -589,7 +589,10 @@ export async function getCommitLog(
     }
 
     // Use simple-git's log method with built-in options
-    const logResult = await git.log(logOptions)
+    // Pass branch as first argument if specified
+    const logResult = options?.branch 
+      ? await git.log([options.branch], logOptions)
+      : await git.log(logOptions)
 
     // Map the results to our schema
     const allEntries = logResult.all.map((commit: any) => ({
@@ -1519,11 +1522,6 @@ export async function getCommitLogEnhanced(
       '--': null // Separator for path specs
     }
 
-    // Add branch
-    if (request.branch) {
-      logOptions.from = request.branch
-    }
-
     // Add filters
     if (request.author) {
       logOptions['--author'] = request.author
@@ -1538,8 +1536,10 @@ export async function getCommitLogEnhanced(
       logOptions['--grep'] = request.search
     }
 
-    // Get commit log
-    const logResult = await git.log(logOptions)
+    // Get commit log - pass branch as first argument if specified
+    const logResult = request.branch 
+      ? await git.log([request.branch], logOptions)
+      : await git.log(logOptions)
     const allCommits = logResult.all
 
     // Slice for pagination
@@ -1709,21 +1709,36 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
 
     // Process local branches
     for (const [name, branch] of Object.entries(localBranches.branches)) {
-      // Get the latest commit info for this branch
-      const logResult = await git.log({
-        from: name,
-        to: name,
-        maxCount: 1,
-        format: {
-          hash: '%H',
-          abbreviatedHash: '%h',
-          subject: '%s',
-          authorName: '%an',
-          authorDate: '%aI'
+      let latestCommit: any = null
+      let authorDate: string | undefined
+      
+      try {
+        // Get the latest commit info for this branch
+        const logResult = await git.log([name, '-1'], {
+          format: {
+            hash: '%H',
+            abbreviatedHash: '%h',
+            subject: '%s',
+            authorName: '%an',
+            authorDate: '%aI'
+          }
+        })
+        
+        latestCommit = logResult.latest
+        authorDate = latestCommit?.authorDate
+      } catch (error) {
+        console.error(`Failed to get log for branch ${name}:`, error)
+      }
+      
+      // Fallback: use git show if log failed or no date
+      if (!authorDate && branch.commit) {
+        try {
+          const showResult = await git.show([branch.commit, '--format=%aI', '--no-patch'])
+          authorDate = showResult.trim()
+        } catch (err) {
+          console.error(`Failed to get date for commit ${branch.commit}:`, err)
         }
-      })
-
-      const latestCommit = logResult.latest
+      }
       
       // Calculate ahead/behind relative to default branch
       let ahead = 0
@@ -1758,12 +1773,12 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
           abbreviatedHash: latestCommit?.abbreviatedHash || branch.commit.substring(0, 8),
           subject: latestCommit?.subject || '',
           author: latestCommit?.authorName || '',
-          relativeTime: getRelativeTime(latestCommit?.authorDate || new Date().toISOString())
+          relativeTime: authorDate ? getRelativeTime(authorDate) : 'Unknown'
         },
         tracking: branch.tracking || null,
         ahead: ahead || branch.ahead || 0,
         behind: behind || branch.behind || 0,
-        lastActivity: latestCommit?.authorDate
+        lastActivity: authorDate
       })
     }
 
@@ -1771,12 +1786,12 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
     for (const [name, branch] of Object.entries(remoteBranches.branches)) {
       if (name.includes('HEAD')) continue
 
+      let latestCommit: any = null
+      let authorDate: string | undefined
+      
       try {
         // Get the latest commit info for this branch
-        const logResult = await git.log({
-          from: name,
-          to: name,
-          maxCount: 1,
+        const logResult = await git.log([name, '-1'], {
           format: {
             hash: '%H',
             abbreviatedHash: '%h',
@@ -1785,9 +1800,25 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
             authorDate: '%aI'
           }
         })
+        
+        latestCommit = logResult.latest
+        authorDate = latestCommit?.authorDate
+      } catch (error) {
+        console.error(`Failed to get log for remote branch ${name}:`, error)
+      }
+      
+      // Fallback: use git show if log failed or no date
+      if (!authorDate && branch.commit) {
+        try {
+          const showResult = await git.show([branch.commit, '--format=%aI', '--no-patch'])
+          authorDate = showResult.trim()
+        } catch (err) {
+          console.error(`Failed to get date for commit ${branch.commit}:`, err)
+        }
+      }
 
-        const latestCommit = logResult.latest
-
+      // Only add branch if we have at least basic info
+      if (branch.commit) {
         enhancedBranches.push({
           name,
           current: false,
@@ -1797,16 +1828,13 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
             abbreviatedHash: latestCommit?.abbreviatedHash || branch.commit.substring(0, 8),
             subject: latestCommit?.subject || '',
             author: latestCommit?.authorName || '',
-            relativeTime: getRelativeTime(latestCommit?.authorDate || new Date().toISOString())
+            relativeTime: authorDate ? getRelativeTime(authorDate) : 'Unknown'
           },
           tracking: null,
           ahead: 0,
           behind: 0,
-          lastActivity: latestCommit?.authorDate
+          lastActivity: authorDate
         })
-      } catch (error) {
-        // If we can't get commit info, skip this remote branch
-        console.error(`Failed to get info for remote branch ${name}:`, error)
       }
     }
 

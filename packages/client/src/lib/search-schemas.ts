@@ -22,13 +22,25 @@ export const projectViewSchema = z.enum([
   'summarization',
   'assets',
   'git',
-  'git-history',
   'mcp-analytics'
 ]).catch('context').optional()
 
+// Git view sub-tabs enum
+export const gitViewSchema = z.enum(['changes', 'history', 'branches', 'stashes']).catch('changes').optional()
+
+// Ticket view sub-tabs enum
+export const ticketViewSchema = z.enum(['all', 'active', 'completed', 'analytics']).catch('all').optional()
+
+// Asset view sub-tabs enum
+export const assetViewSchema = z.enum(['project-docs', 'architecture', 'api-docs', 'database-schema', 'user-guides', 'diagrams', 'recent']).catch('project-docs').optional()
+
 // Route-specific search schemas
 export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema).extend({
-  activeView: projectViewSchema
+  activeView: projectViewSchema,
+  gitView: gitViewSchema,
+  ticketView: ticketViewSchema,
+  assetView: assetViewSchema,
+  selectedTicketId: z.coerce.number().optional().catch(undefined)
 })
 
 export const chatSearchSchema = z.object({
@@ -50,6 +62,9 @@ export const assetsSearchSchema = z.object({
 // Type exports for easier usage
 export type ProjectsSearch = z.infer<typeof projectsSearchSchema>
 export type ProjectView = z.infer<typeof projectViewSchema>
+export type GitView = z.infer<typeof gitViewSchema>
+export type TicketView = z.infer<typeof ticketViewSchema>
+export type AssetView = z.infer<typeof assetViewSchema>
 export type ChatSearch = z.infer<typeof chatSearchSchema>
 export type TicketsSearch = z.infer<typeof ticketsSearchSchema>
 export type AssetsSearch = z.infer<typeof assetsSearchSchema>

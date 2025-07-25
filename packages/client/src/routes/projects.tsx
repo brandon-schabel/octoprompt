@@ -28,14 +28,13 @@ import { ProjectStatsDisplayEnhanced } from '@/components/projects/project-stats
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
-import { ProjectAssetsView } from '@/components/projects/project-assets-view'
-import { GitBranch, BarChart2, History } from 'lucide-react'
+import { AssetsTabWithSidebar } from '@/components/assets/assets-tab-with-sidebar'
+import { GitBranch, BarChart2 } from 'lucide-react'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
-import { TicketsTabView } from '@/components/tickets/tickets-tab-view'
-import { GitTabView } from '@/components/projects/git-tab-view'
+import { TicketsTabWithSidebar } from '@/components/tickets/tickets-tab-with-sidebar'
+import { GitTabWithSidebar } from '@/components/projects/git-tab-with-sidebar'
 import { MCPAnalyticsTabView } from '@/components/projects/mcp-analytics-tab-view'
 import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
-import { CommitList } from '@/components/projects/git-commit-history/commit-list'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -234,10 +233,6 @@ export function ProjectsPage() {
                   <GitBranch className='h-3.5 w-3.5' />
                   Git
                 </TabsTrigger>
-                <TabsTrigger value='git-history' className='flex items-center gap-1'>
-                  <History className='h-3.5 w-3.5' />
-                  Git History
-                </TabsTrigger>
                 <TabsTrigger value='mcp-analytics' className='flex items-center gap-1'>
                   <BarChart2 className='h-3.5 w-3.5' />
                   MCP Analytics
@@ -265,10 +260,26 @@ export function ProjectsPage() {
           </TabsContent>
           <TabsContent value='tickets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData && activeProjectTabId ? (
-              <TicketsTabView
+              <TicketsTabWithSidebar
                 projectId={selectedProjectId}
                 projectName={projectData.name}
                 projectTabId={activeProjectTabId}
+                ticketView={search.ticketView}
+                selectedTicketId={search.selectedTicketId}
+                onTicketViewChange={(view) => {
+                  navigate({
+                    to: '/projects',
+                    search: (prev) => ({ ...prev, ticketView: view }),
+                    replace: true
+                  })
+                }}
+                onTicketSelect={(ticketId) => {
+                  navigate({
+                    to: '/projects',
+                    search: (prev) => ({ ...prev, selectedTicketId: ticketId }),
+                    replace: true
+                  })
+                }}
               />
             ) : (
               <p className='p-4 md:p-6'>No project selected for tickets.</p>
@@ -287,23 +298,37 @@ export function ProjectsPage() {
 
           <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData ? (
-              <ProjectAssetsView project={projectData} projectId={selectedProjectId} />
+              <AssetsTabWithSidebar 
+                projectId={selectedProjectId}
+                projectName={projectData.name}
+                assetView={search.assetView}
+                onAssetViewChange={(view) => {
+                  navigate({
+                    to: '/projects',
+                    search: (prev) => ({ ...prev, assetView: view }),
+                    replace: true
+                  })
+                }}
+              />
             ) : (
               <p className='p-4 md:p-6'>No project selected for Assets.</p>
             )}
           </TabsContent>
           <TabsContent value='git' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId ? (
-              <GitTabView projectId={selectedProjectId} />
+              <GitTabWithSidebar 
+                projectId={selectedProjectId}
+                gitView={search.gitView}
+                onGitViewChange={(view) => {
+                  navigate({
+                    to: '/projects',
+                    search: (prev) => ({ ...prev, gitView: view }),
+                    replace: true
+                  })
+                }}
+              />
             ) : (
               <p className='p-4 md:p-6'>No project selected for Git.</p>
-            )}
-          </TabsContent>
-          <TabsContent value='git-history' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
-            {selectedProjectId ? (
-              <CommitList projectId={selectedProjectId} />
-            ) : (
-              <p className='p-4 md:p-6'>No project selected for Git History.</p>
             )}
           </TabsContent>
           <TabsContent value='mcp-analytics' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>

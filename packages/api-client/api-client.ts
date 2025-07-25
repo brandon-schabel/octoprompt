@@ -1582,6 +1582,14 @@ export class GitService extends BaseApiClient {
     return result as GitOperationResponse
   }
 
+  async deleteBranch(projectId: number, branchName: string, force?: boolean) {
+    const result = await this.request('DELETE', `/projects/${projectId}/git/branches/${encodeURIComponent(branchName)}`, {
+      params: force ? { force: 'true' } : undefined,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
   // Commit History
   async getCommitLog(projectId: number, options?: { limit?: number; skip?: number; branch?: string; file?: string }) {
     const params: Record<string, any> = {}
@@ -1676,17 +1684,29 @@ export class GitService extends BaseApiClient {
   async getStashList(projectId: number) {
     const result = await this.request('GET', `/projects/${projectId}/git/stash`, {
       responseSchema: z.object({
-        success: z.boolean(),
-        data: z.array(gitStashSchema).optional(),
-        message: z.string().optional()
+        success: z.literal(true),
+        data: z.array(gitStashSchema)
       })
     })
     return result as DataResponseSchema<GitStash[]>
   }
 
-  async stashApply(projectId: number, ref?: string) {
-    const result = await this.request('POST', `/projects/${projectId}/git/stash/apply`, {
-      body: { ref: ref || 'stash@{0}' },
+  async stashApply(projectId: number, ref: string = 'stash@{0}') {
+    const result = await this.request('POST', `/projects/${projectId}/git/stash/${encodeURIComponent(ref)}/apply`, {
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async stashPop(projectId: number, ref: string = 'stash@{0}') {
+    const result = await this.request('POST', `/projects/${projectId}/git/stash/${encodeURIComponent(ref)}/pop`, {
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async stashDrop(projectId: number, ref: string = 'stash@{0}') {
+    const result = await this.request('DELETE', `/projects/${projectId}/git/stash/${encodeURIComponent(ref)}`, {
       responseSchema: gitOperationResponseSchema
     })
     return result as GitOperationResponse

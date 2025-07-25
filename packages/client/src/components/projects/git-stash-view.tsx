@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
-import { Package2, Plus, ChevronRight, Trash2, GitBranch, Clock, AlertCircle } from 'lucide-react'
+import { Package2, Plus, ChevronRight, Trash2, GitBranch, Clock, AlertCircle, FileText, Info } from 'lucide-react'
 import {
   useGitStashList,
   useGitStash,
@@ -46,6 +46,16 @@ export function GitStashView({ projectId }: GitStashViewProps) {
   const stashList = stashResponse?.data || []
   const hasChanges =
     gitStatus?.success && gitStatus.data.files.some((f) => f.status !== 'unchanged' && f.status !== 'ignored')
+  
+  // Calculate stash statistics
+  const trackedChanges = gitStatus?.success 
+    ? gitStatus.data.files.filter(f => f.status !== 'unchanged' && f.status !== 'ignored' && f.status !== 'untracked')
+    : []
+  const stagedCount = trackedChanges.filter(f => f.staged).length
+  const unstagedCount = trackedChanges.filter(f => !f.staged).length
+  const untrackedCount = gitStatus?.success
+    ? gitStatus.data.files.filter(f => f.status === 'untracked').length
+    : 0
 
   const handleCreateStash = async () => {
     await createStash.mutateAsync(stashMessage || undefined)
@@ -134,7 +144,41 @@ export function GitStashView({ projectId }: GitStashViewProps) {
               )}
             </Button>
           </div>
-          {!hasChanges && (
+          
+          {/* Stash Information */}
+          {hasChanges ? (
+            <div className='mt-3 space-y-2'>
+              <div className='flex items-start gap-2 text-sm text-muted-foreground'>
+                <Info className='h-4 w-4 mt-0.5 shrink-0' />
+                <div className='space-y-1'>
+                  <p>Git stash will save all tracked changes (both staged and unstaged).</p>
+                  {untrackedCount > 0 && (
+                    <p className='text-amber-600 dark:text-amber-500'>
+                      Note: {untrackedCount} untracked file{untrackedCount !== 1 ? 's' : ''} will not be included in the stash.
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <div className='flex flex-wrap gap-3 text-sm'>
+                <div className='flex items-center gap-1.5'>
+                  <FileText className='h-3.5 w-3.5' />
+                  <span className='font-medium'>{trackedChanges.length}</span>
+                  <span className='text-muted-foreground'>file{trackedChanges.length !== 1 ? 's' : ''} will be stashed</span>
+                </div>
+                {stagedCount > 0 && (
+                  <Badge variant='secondary' className='text-xs'>
+                    {stagedCount} staged
+                  </Badge>
+                )}
+                {unstagedCount > 0 && (
+                  <Badge variant='outline' className='text-xs'>
+                    {unstagedCount} unstaged
+                  </Badge>
+                )}
+              </div>
+            </div>
+          ) : (
             <p className='text-sm text-muted-foreground mt-2'>
               No changes to stash. Make some modifications to your files first.
             </p>

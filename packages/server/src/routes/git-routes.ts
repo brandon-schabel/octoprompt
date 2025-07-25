@@ -836,6 +836,90 @@ gitRoutes.openapi(switchBranchRoute, async (c) => {
   }
 })
 
+// Delete branch route
+const deleteBranchRoute = createRoute({
+  method: 'delete',
+  path: '/api/projects/{projectId}/git/branches/{branchName}',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10)),
+      branchName: z.string()
+    }),
+    query: z.object({
+      force: z.string().optional().transform((val) => val === 'true')
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Branch deleted successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project or branch not found'
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Cannot delete current branch'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Delete a git branch'
+})
+
+gitRoutes.openapi(deleteBranchRoute, async (c) => {
+  try {
+    const { projectId, branchName } = c.req.valid('param')
+    const { force } = c.req.valid('query')
+    
+    await gitService.deleteBranch(projectId, branchName, force || false)
+    
+    return c.json({
+      success: true,
+      message: `Branch '${branchName}' deleted successfully`
+    })
+  } catch (error) {
+    console.error('[DeleteBranch] Error:', error)
+    if (error instanceof Error) {
+      const statusCode = error.message.includes('Cannot delete the current branch') ? 400 : 500
+      return c.json(
+        {
+          success: false,
+          message: error.message
+        },
+        statusCode
+      )
+    }
+    return c.json(
+      {
+        success: false,
+        message: 'Failed to delete branch'
+      },
+      500
+    )
+  }
+})
+
 // ============================================
 // Commit History Routes
 // ============================================
@@ -1127,6 +1211,345 @@ gitRoutes.openapi(getCommitDetailRoute, async (c) => {
       {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to get commit details'
+      },
+      500
+    )
+  }
+})
+
+// ============================================
+// Stash Management Routes
+// ============================================
+
+// Get stash list
+const getStashListRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/git/stash',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(gitStashSchema)
+          })
+        }
+      },
+      description: 'Stash list retrieved successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Get list of all stashes in the repository'
+})
+
+gitRoutes.openapi(getStashListRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const stashes = await gitService.stashList(projectId)
+    return c.json({
+      success: true,
+      data: stashes
+    })
+  } catch (error) {
+    console.error('[GetStashList] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get stash list'
+      },
+      500
+    )
+  }
+})
+
+// Create stash
+const createStashRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/stash',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            message: z.string().optional().describe('Optional stash message')
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Stash created successfully'
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'No changes to stash'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Create a new stash with optional message'
+})
+
+gitRoutes.openapi(createStashRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { message } = c.req.valid('json')
+    await gitService.stash(projectId, message)
+    return c.json({
+      success: true,
+      message: 'Changes stashed successfully'
+    })
+  } catch (error) {
+    console.error('[CreateStash] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to create stash'
+      },
+      500
+    )
+  }
+})
+
+// Apply stash
+const applyStashRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/stash/{ref}/apply',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10)),
+      ref: z.string().describe('Stash reference (e.g. stash@{0})')
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Stash applied successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project or stash not found'
+    },
+    409: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Conflict while applying stash'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Apply a stash without removing it from the stash list'
+})
+
+gitRoutes.openapi(applyStashRoute, async (c) => {
+  try {
+    const { projectId, ref } = c.req.valid('param')
+    await gitService.stashApply(projectId, ref)
+    return c.json({
+      success: true,
+      message: 'Stash applied successfully'
+    })
+  } catch (error) {
+    console.error('[ApplyStash] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to apply stash'
+      },
+      500
+    )
+  }
+})
+
+// Pop stash
+const popStashRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/stash/{ref}/pop',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10)),
+      ref: z.string().describe('Stash reference (e.g. stash@{0})')
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Stash popped successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project or stash not found'
+    },
+    409: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Conflict while popping stash'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Apply a stash and remove it from the stash list'
+})
+
+gitRoutes.openapi(popStashRoute, async (c) => {
+  try {
+    const { projectId, ref } = c.req.valid('param')
+    await gitService.stashPop(projectId, ref)
+    return c.json({
+      success: true,
+      message: 'Stash popped successfully'
+    })
+  } catch (error) {
+    console.error('[PopStash] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to pop stash'
+      },
+      500
+    )
+  }
+})
+
+// Drop stash
+const dropStashRoute = createRoute({
+  method: 'delete',
+  path: '/api/projects/{projectId}/git/stash/{ref}',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10)),
+      ref: z.string().describe('Stash reference (e.g. stash@{0})')
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Stash dropped successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project or stash not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Remove a stash from the stash list'
+})
+
+gitRoutes.openapi(dropStashRoute, async (c) => {
+  try {
+    const { projectId, ref } = c.req.valid('param')
+    await gitService.stashDrop(projectId, ref)
+    return c.json({
+      success: true,
+      message: 'Stash dropped successfully'
+    })
+  } catch (error) {
+    console.error('[DropStash] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to drop stash'
       },
       500
     )

@@ -3,6 +3,7 @@ import { GitSidebarNav, type GitView } from './git-sidebar-nav'
 import { GitTabView } from './git-tab-view'
 import { CommitList } from './git-commit-history/commit-list'
 import { GitStashView } from './git-stash-view'
+import { GitBranchesView } from './git-branches-view'
 import { cn } from '@/lib/utils'
 
 interface GitTabWithSidebarProps {
@@ -28,6 +29,7 @@ export function GitTabWithSidebar({ projectId, gitView = 'changes', onGitViewCha
       <div className="flex-1 overflow-hidden">
         {gitView === 'changes' && <GitTabView projectId={projectId} />}
         {gitView === 'history' && <CommitList projectId={projectId} />}
+        {gitView === 'branches' && <GitBranchesView projectId={projectId} />}
         {gitView === 'stashes' && <GitStashView projectId={projectId} />}
       </div>
     </div>

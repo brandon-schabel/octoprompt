@@ -253,6 +253,28 @@ export function useSwitchBranch(projectId: number | undefined) {
   })
 }
 
+export function useDeleteBranch(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ branchName, force }: { branchName: string; force?: boolean }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.deleteBranch(projectId, branchName, force)
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate all branch-related queries
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
+      toast.success(`Deleted branch '${variables.branchName}'`)
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete branch: ${error.message}`)
+    }
+  })
+}
+
 // ============================================
 // Commit History Hooks
 // ============================================
@@ -298,8 +320,7 @@ export function useCommitLogEnhanced(
       return response
     },
     enabled: enabled && !!projectId,
-    staleTime: 30000, // Consider log stale after 30 seconds
-    keepPreviousData: true // Keep previous data while fetching new page
+    staleTime: 30000 // Consider log stale after 30 seconds
   })
 }
 
@@ -478,7 +499,7 @@ export function useGitStashList(projectId: number | undefined, enabled = true) {
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch stash list')
       }
-      return response.data
+      return response
     },
     enabled: enabled && !!projectId,
     staleTime: 10000 // Consider stash list stale after 10 seconds
@@ -522,6 +543,47 @@ export function useGitStashApply(projectId: number | undefined) {
     },
     onError: (error: Error) => {
       toast.error(`Failed to apply stash: ${error.message}`)
+    }
+  })
+}
+
+export function useGitStashPop(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ref?: string) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.stashPop(projectId, ref)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'stash'] })
+      toast.success('Stash popped successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to pop stash: ${error.message}`)
+    }
+  })
+}
+
+export function useGitStashDrop(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ref?: string) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.stashDrop(projectId, ref)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'stash'] })
+      toast.success('Stash dropped successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to drop stash: ${error.message}`)
     }
   })
 }
