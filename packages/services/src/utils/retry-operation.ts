@@ -33,7 +33,6 @@ export async function retryOperation<T>(operation: () => Promise<T>, options: Re
       return await operation()
     } catch (error) {
       lastError = error
-
       // Check if we should retry
       if (attempt >= opts.maxAttempts || !opts.shouldRetry(error, attempt)) {
         throw error

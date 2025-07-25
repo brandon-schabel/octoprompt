@@ -266,12 +266,10 @@ export async function suggestPrompts(projectId: number, userInput: string, limit
 
     // Get all prompts for the project
     let projectPrompts = await listPromptsByProject(projectId)
-
     // If no project-specific prompts, fall back to all prompts
     if (projectPrompts.length === 0) {
       console.log(`No prompts associated with project ${projectId}, using all prompts as fallback`)
       projectPrompts = await listAllPrompts()
-
       // If still no prompts exist at all, return empty
       if (projectPrompts.length === 0) {
         console.log('No prompts exist in the system')
@@ -326,6 +324,9 @@ Based on the user's input and project context, suggest the most relevant prompts
     // Extract the suggestions from the result object
     const suggestions = result.object
 
+    // Extract the suggestions from the result object
+    const suggestions = result.object
+    
     // Filter and order prompts based on AI suggestions
     const suggestedPromptIds = (suggestions.promptIds || []).slice(0, limit)
     let suggestedPrompts: Prompt[] = []
@@ -406,7 +407,6 @@ function calculatePromptRelevance(userInput: string, prompt: Prompt): number {
       score += matches.length * 10
     }
   }
-
   // Boost for name matches
   const nameLower = prompt.name.toLowerCase()
   for (const word of userWords) {
@@ -460,18 +460,15 @@ function calculatePromptRelevance(userInput: string, prompt: Prompt): number {
       score = Math.max(0, score - 5) // Reduced penalty from 10 to 5
     }
   }
-
   // Bonus for exact phrase matches
   const twoWordPhrases = []
   for (let i = 0; i < userWords.length - 1; i++) {
     twoWordPhrases.push(`${userWords[i]} ${userWords[i + 1]}`)
   }
-
   for (const phrase of twoWordPhrases) {
     if (promptText.includes(phrase)) {
       score += 25 // Strong bonus for exact phrase matches
     }
   }
-
   return score
 }

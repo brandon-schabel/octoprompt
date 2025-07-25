@@ -522,7 +522,6 @@ export async function searchTickets(
   if (options.limit) {
     tickets = tickets.slice(0, options.limit)
   }
-
   return { tickets, total }
 }
 
@@ -544,7 +543,6 @@ export async function filterTasks(
   options: TaskFilterOptions
 ): Promise<{ tasks: Array<TicketTask & { ticketTitle: string }>; total: number }> {
   let allTasks: Array<TicketTask & { ticketTitle: string }> = []
-
   if (options.ticketId) {
     // Filter for specific ticket
     const tasks = await getTasks(options.ticketId)
@@ -616,7 +614,6 @@ export async function filterTasks(
     if (a.ticketId !== b.ticketId) return a.ticketId - b.ticketId
     return a.orderIndex - b.orderIndex
   })
-
   // Apply pagination
   if (options.offset) {
     allTasks = allTasks.slice(options.offset)
@@ -624,7 +621,6 @@ export async function filterTasks(
   if (options.limit) {
     allTasks = allTasks.slice(0, options.limit)
   }
-
   return { tasks: allTasks, total }
 }
 
@@ -667,7 +663,6 @@ export async function batchCreateTickets(
       result.failureCount++
     }
   }
-
   return result
 }
 
@@ -729,7 +724,6 @@ export async function batchDeleteTickets(ticketIds: number[]): Promise<BatchOper
       result.failureCount++
     }
   }
-
   return result
 }
 
@@ -767,7 +761,6 @@ export async function batchCreateTasks(
       result.failureCount++
     }
   }
-
   return result
 }
 
@@ -799,7 +792,6 @@ export async function batchUpdateTasks(
       result.failureCount++
     }
   }
-
   return result
 }
 
@@ -831,7 +823,6 @@ export async function batchDeleteTasks(
       result.failureCount++
     }
   }
-
   return result
 }
 
@@ -872,7 +863,6 @@ export async function batchMoveTasks(
         orderIndex: maxIndex + 1,
         updated: Date.now()
       }
-
       await ticketStorage.updateTask(taskId, updatedTask)
       result.succeeded.push(updatedTask)
       result.successCount++
@@ -884,7 +874,6 @@ export async function batchMoveTasks(
       result.failureCount++
     }
   }
-
   return result
 }
 
@@ -1021,7 +1010,6 @@ export async function removeDeletedFileIdsFromTickets(
 
     for (const ticket of tickets) {
       let ticketUpdated = false
-
       // Update ticket's suggested files
       if (ticket.suggestedFileIds && ticket.suggestedFileIds.length > 0) {
         const originalLength = ticket.suggestedFileIds.length
@@ -1035,7 +1023,6 @@ export async function removeDeletedFileIdsFromTickets(
           updatedTicketCount++
         }
       }
-
       // Update tasks' suggested files
       const tasks = await getTasks(ticket.id)
       for (const task of tasks) {
@@ -1044,7 +1031,6 @@ export async function removeDeletedFileIdsFromTickets(
           const updatedFileIds = task.suggestedFileIds.filter(
             (fileId) => !deletedFileIds.includes(parseInt(fileId, 10))
           )
-
           if (updatedFileIds.length < originalLength) {
             await updateTask(ticket.id, task.id, { suggestedFileIds: updatedFileIds })
             updatedTaskCount++
@@ -1097,7 +1083,6 @@ export async function getTaskWithContext(
   if (!task) {
     throw new ApiError(404, `Task with ID ${taskId} not found.`, 'TASK_NOT_FOUND')
   }
-
   // In a real implementation, this would resolve file information
   // For now, return task with basic file info
   return {
@@ -1142,7 +1127,6 @@ Suggest the most relevant file IDs for this task.`
       schema: z.object({ fileIds: z.array(z.string()) }),
       options: MEDIUM_MODEL_CONFIG
     })
-
     return result.object.fileIds
   } catch (error) {
     console.error('[TicketService] Error suggesting files for task:', error)
@@ -1194,7 +1178,6 @@ ${projectContext}`
       }),
       options: MEDIUM_MODEL_CONFIG
     })
-
     return result.object
   } catch (error) {
     console.error('[TicketService] Error analyzing task complexity:', error)

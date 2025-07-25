@@ -46,6 +46,9 @@ export function ProjectsPage() {
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectResponse } = useGetProject(selectedProjectId!)
   const projectData = projectResponse?.data
+  
+  // Sync active tab with backend
+  useActiveTabSync(selectedProjectId)
 
   // Sync active tab with backend
   useActiveTabSync(selectedProjectId)

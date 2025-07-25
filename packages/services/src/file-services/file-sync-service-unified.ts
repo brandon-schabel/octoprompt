@@ -513,7 +513,6 @@ export async function syncFileSet(
         }
       }, 1000) // Delay by 1 second to let the main operation complete
     }
-
     // Remove deleted files from index
     if (deletedCount > 0) {
       setTimeout(async () => {
@@ -527,7 +526,6 @@ export async function syncFileSet(
         }
       }, 1000)
     }
-
     return { created: createdCount, updated: updatedCount, deleted: deletedCount, skipped: skippedCount }
   } catch (error) {
     console.error(`[FileSync] Error during DB batch operations for project ${project.id}:`, error)

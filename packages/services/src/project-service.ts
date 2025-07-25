@@ -199,14 +199,12 @@ export async function getProjectFiles(
     await getProjectById(projectId) // Throws 404 if project not found
     const files = await projectStorage.readProjectFiles(projectId)
     const allFiles = Object.values(files)
-
     // Apply pagination if specified
     if (options?.limit !== undefined || options?.offset !== undefined) {
       const offset = options.offset || 0
       const limit = options.limit || allFiles.length
       return allFiles.slice(offset, offset + limit)
     }
-
     return allFiles
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
@@ -514,7 +512,6 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
     if (createdFiles.length > 0) {
       const validatedMap = ProjectFilesStorageSchema.parse(filesMap)
       await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
-
       // Invalidate cache when files are created
       invalidateProjectSummaryCache(projectId)
     }
@@ -590,7 +587,6 @@ export async function bulkUpdateProjectFiles(
     if (changesMade) {
       const validatedMap = ProjectFilesStorageSchema.parse(files)
       await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
-
       // Invalidate cache when files are updated
       invalidateProjectSummaryCache(projectId)
     }

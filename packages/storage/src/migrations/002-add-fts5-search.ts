@@ -7,7 +7,6 @@ import { DatabaseManager } from '../database-manager'
 export const addFTS5SearchMigration = {
   version: 2,
   description: 'Add FTS5 full-text search tables and indexes for fast semantic file search',
-
   up: (db: Database) => {
     // Create FTS5 virtual table for file content search
     db.exec(`
@@ -45,7 +44,6 @@ export const addFTS5SearchMigration = {
       CREATE INDEX IF NOT EXISTS idx_file_search_metadata_project 
       ON file_search_metadata(project_id)
     `)
-
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_file_search_metadata_indexed 
       ON file_search_metadata(last_indexed)
@@ -88,7 +86,6 @@ export const addFTS5SearchMigration = {
       CREATE INDEX IF NOT EXISTS idx_file_keywords_keyword 
       ON file_keywords(keyword)
     `)
-
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_file_keywords_file 
       ON file_keywords(file_id)

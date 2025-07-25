@@ -280,6 +280,12 @@ export enum TabManagerAction {
   CLEAR_ACTIVE = 'clear_active'
 }
 
+export enum TabManagerAction {
+  GET_ACTIVE = 'get_active',
+  SET_ACTIVE = 'set_active',
+  CLEAR_ACTIVE = 'clear_active'
+}
+
 // Consolidated tool schemas
 const ProjectManagerSchema = z.object({
   action: z.enum([

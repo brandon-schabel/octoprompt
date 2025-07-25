@@ -10,21 +10,18 @@ export enum MCPErrorCode {
   INVALID_PARAM_VALUE = 'INVALID_PARAM_VALUE',
   INVALID_PARAM_TYPE = 'INVALID_PARAM_TYPE',
   PARAM_OUT_OF_RANGE = 'PARAM_OUT_OF_RANGE',
-
   // Resource errors
   PROJECT_NOT_FOUND = 'PROJECT_NOT_FOUND',
   FILE_NOT_FOUND = 'FILE_NOT_FOUND',
   TICKET_NOT_FOUND = 'TICKET_NOT_FOUND',
   PROMPT_NOT_FOUND = 'PROMPT_NOT_FOUND',
   RESOURCE_ALREADY_EXISTS = 'RESOURCE_ALREADY_EXISTS',
-
   // Service errors
   SERVICE_ERROR = 'SERVICE_ERROR',
   DATABASE_ERROR = 'DATABASE_ERROR',
   TRANSACTION_FAILED = 'TRANSACTION_FAILED',
   AI_SERVICE_ERROR = 'AI_SERVICE_ERROR',
   STORAGE_ERROR = 'STORAGE_ERROR',
-
   // Operation errors
   UNKNOWN_ACTION = 'UNKNOWN_ACTION',
   OPERATION_FAILED = 'OPERATION_FAILED',
@@ -43,12 +40,10 @@ export enum MCPErrorCode {
   SEARCH_FAILED = 'SEARCH_FAILED',
   INVALID_SEARCH_QUERY = 'INVALID_SEARCH_QUERY',
   NO_SEARCH_RESULTS = 'NO_SEARCH_RESULTS',
-
   // Batch operation errors
   BATCH_OPERATION_FAILED = 'BATCH_OPERATION_FAILED',
   BATCH_OPERATION_PARTIAL_FAILURE = 'BATCH_OPERATION_PARTIAL_FAILURE',
   BATCH_SIZE_EXCEEDED = 'BATCH_SIZE_EXCEEDED',
-
   // Rate limiting
   RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED'
 }
@@ -159,7 +154,6 @@ export class MCPError extends ApiError {
       timestamp: Date.now()
     } as MCPErrorDetails
   }
-
   /**
    * Determine appropriate HTTP status code based on error type
    */
@@ -172,25 +166,21 @@ export class MCPError extends ApiError {
       case MCPErrorCode.PARAM_OUT_OF_RANGE:
       case MCPErrorCode.VALIDATION_FAILED:
         return 400
-
       // 403 Forbidden
       case MCPErrorCode.PERMISSION_DENIED:
       case MCPErrorCode.PATH_TRAVERSAL_DENIED:
         return 403
-
       // 404 Not Found
       case MCPErrorCode.PROJECT_NOT_FOUND:
       case MCPErrorCode.FILE_NOT_FOUND:
       case MCPErrorCode.TICKET_NOT_FOUND:
       case MCPErrorCode.PROMPT_NOT_FOUND:
         return 404
-
       // 409 Conflict
       case MCPErrorCode.RESOURCE_ALREADY_EXISTS:
       case MCPErrorCode.CONCURRENT_MODIFICATION:
       case MCPErrorCode.INVALID_STATE:
         return 409
-
       // 500 Internal Server Error
       case MCPErrorCode.SERVICE_ERROR:
       case MCPErrorCode.DATABASE_ERROR:
@@ -208,7 +198,6 @@ export class MCPError extends ApiError {
         return defaultStatus
     }
   }
-
   /**
    * Create MCP error from an unknown error
    */

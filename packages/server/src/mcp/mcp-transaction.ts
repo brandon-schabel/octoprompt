@@ -60,7 +60,6 @@ export class MCPTransaction {
     this.steps.push(step)
     return this
   }
-
   /**
    * Execute all transaction steps
    */
@@ -111,7 +110,6 @@ export class MCPTransaction {
       rolledBack
     }
   }
-
   /**
    * Execute a step with retry logic
    */
@@ -160,7 +158,6 @@ export class MCPTransaction {
         console.log(`[MCPTransaction] No rollback defined for step: ${step.name}`)
         continue
       }
-
       try {
         console.log(`[MCPTransaction] Rolling back step: ${step.name}`)
         await step.rollback(result)
@@ -170,7 +167,6 @@ export class MCPTransaction {
         rollbackErrors++
       }
     }
-
     if (rollbackErrors > 0) {
       console.error(`[MCPTransaction] Rollback completed with ${rollbackErrors} errors`)
     } else {

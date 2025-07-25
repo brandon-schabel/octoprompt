@@ -578,7 +578,6 @@ export async function getCommitLog(
 
     // Handle pagination - skip/offset are treated the same
     const skipCount = options?.skip ?? options?.offset ?? 0
-
     // When using skip, we need to fetch skip + limit items, then slice
     if (options?.limit || skipCount > 0) {
       logOptions.maxCount = (options?.limit || 100) + skipCount
@@ -606,12 +605,10 @@ export async function getCommitLog(
       date: commit.date || new Date().toISOString(),
       refs: commit.refs || ''
     }))
-
     // Apply offset/skip by slicing the results
     if (skipCount > 0) {
       return allEntries.slice(skipCount, skipCount + (options?.limit || allEntries.length))
     }
-
     return allEntries
   } catch (error) {
     if (error instanceof ApiError) throw error

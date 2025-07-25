@@ -74,7 +74,6 @@ const getClientIP = (c: any) => {
   if (remoteAddress === '::1' || remoteAddress === '127.0.0.1' || remoteAddress === 'localhost') {
     return 'localhost'
   }
-
   return remoteAddress || 'unknown'
 }
 

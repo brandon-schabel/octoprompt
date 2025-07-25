@@ -24,7 +24,6 @@ export async function getActiveTab(projectId: number, clientId?: string): Promis
         return activeTab
       }
     }
-
     return null
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -68,7 +67,6 @@ export async function setActiveTab(
         data: activeTabData,
         updated: now
       }
-
       await activeTabStorage.update(existingActiveTab.id, updated)
       return updated
     } else {
@@ -80,7 +78,6 @@ export async function setActiveTab(
         created: now,
         updated: now
       }
-
       const validated = activeTabSchema.parse(newActiveTab)
       await activeTabStorage.create(validated)
       return validated
@@ -104,7 +101,6 @@ export async function getOrCreateDefaultActiveTab(projectId: number, clientId?: 
     if (activeTab) {
       return activeTab.data.activeTabId
     }
-
     // No active tab, create default tab 0
     const created = await setActiveTab(projectId, 0, clientId)
     return created.data.activeTabId
@@ -124,7 +120,6 @@ export async function clearActiveTab(projectId: number, clientId?: string): Prom
     if (!activeTab) {
       return false
     }
-
     return await activeTabStorage.delete(activeTab.id)
   } catch (error) {
     if (error instanceof ApiError) throw error

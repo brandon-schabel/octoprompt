@@ -199,7 +199,6 @@ export class FileSearchService {
   private async fuzzySearch(projectId: number, options: SearchOptions): Promise<SearchResult[]> {
     const query = options.query.toLowerCase()
     const trigrams = this.generateQueryTrigrams(query)
-
     if (trigrams.length === 0) {
       return []
     }
@@ -232,7 +231,6 @@ export class FileSearchService {
         })
       }
     }
-
     return results.sort((a, b) => b.score - a.score)
   }
 
@@ -261,7 +259,6 @@ export class FileSearchService {
           const lines = content.substring(0, match.index).split('\n')
           const line = lines.length
           const column = lines[lines.length - 1].length + 1
-
           matches.push({
             line,
             column,
@@ -284,7 +281,6 @@ export class FileSearchService {
     } catch (error) {
       throw new ApiError(400, 'Invalid regex pattern', 'INVALID_REGEX')
     }
-
     return results
   }
 
@@ -325,7 +321,6 @@ export class FileSearchService {
     for (const result of ftsResults) {
       const fileData = await this.getFileData(result.file_id)
       if (!fileData) continue
-
       // Calculate combined score
       const ftsScore = Math.abs(result.rank)
       const keywordScore = this.calculateKeywordScore(queryTokens, JSON.parse(result.keyword_vector || '[]'))
@@ -341,7 +336,6 @@ export class FileSearchService {
         snippet: result.snippet
       })
     }
-
     return results.sort((a, b) => b.score - a.score)
   }
 
@@ -350,7 +344,6 @@ export class FileSearchService {
    */
   private async ensureIndexed(projectId: number): Promise<void> {
     const stats = await fileIndexingService.getIndexingStats(projectId)
-
     // If less than 80% coverage or no recent index, trigger indexing
     if (stats.indexedFiles === 0 || !stats.lastIndexed || Date.now() - stats.lastIndexed > 24 * 60 * 60 * 1000) {
       const files = await getProjectFiles(projectId)
@@ -411,7 +404,6 @@ export class FileSearchService {
         score += keywordMap.get(token) || 0
       }
     }
-
     return score / queryTokens.length
   }
 
@@ -429,7 +421,6 @@ export class FileSearchService {
     for (const token of queryTokens) {
       const queryWeight = 1 / queryTokens.length
       const docWeight = tfIdfVector[token] || 0
-
       score += queryWeight * docWeight
       queryMagnitude += queryWeight * queryWeight
       docMagnitude += docWeight * docWeight
@@ -471,7 +462,6 @@ export class FileSearchService {
       options.limit || 100,
       options.offset || 0
     ]
-
     return parts.join('|')
   }
 
@@ -480,14 +470,12 @@ export class FileSearchService {
    */
   private checkCache(cacheKey: string): { results: SearchResult[] } | null {
     const cached = this.searchCacheStmt.get(cacheKey, Date.now()) as any
-
     if (cached) {
       this.updateCacheHitStmt.run(cacheKey)
       return {
         results: JSON.parse(cached.results)
       }
     }
-
     return null
   }
 
@@ -539,7 +527,6 @@ export class FileSearchService {
         snippet: result.snippet
       })
     }
-
     return results
   }
 
@@ -551,13 +538,11 @@ export class FileSearchService {
     const lines = content.split('\n')
     const lowerContent = content.toLowerCase()
     const lowerQuery = query.toLowerCase()
-
     let index = 0
     while ((index = lowerContent.indexOf(lowerQuery, index)) !== -1) {
       const linesBefore = content.substring(0, index).split('\n')
       const line = linesBefore.length
       const column = linesBefore[linesBefore.length - 1].length + 1
-
       matches.push({
         line,
         column,
@@ -595,7 +580,6 @@ export class FileSearchService {
     const lines = content.split('\n')
     const start = Math.max(0, lineNumber - contextLines - 1)
     const end = Math.min(lines.length, lineNumber + contextLines)
-
     return lines.slice(start, end).join('\n')
   }
 
@@ -642,7 +626,6 @@ export class FileSearchService {
   private async getIndexCoverage(projectId: number): Promise<number> {
     const stats = await fileIndexingService.getIndexingStats(projectId)
     const files = await getProjectFiles(projectId)
-
     if (files.length === 0) return 100
     return Math.round((stats.indexedFiles / files.length) * 100)
   }

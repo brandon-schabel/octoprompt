@@ -82,7 +82,6 @@ export class FileIndexingService {
     } catch (error) {
       // Tables don't exist, create them
       console.log('[FileIndexingService] Creating search tables...')
-
       // Create FTS5 virtual table
       this.db.exec(`
         CREATE VIRTUAL TABLE IF NOT EXISTS file_search_fts USING fts5(
@@ -119,7 +118,6 @@ export class FileIndexingService {
         CREATE INDEX IF NOT EXISTS idx_file_search_metadata_project 
         ON file_search_metadata(project_id)
       `)
-
       this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_file_search_metadata_indexed 
         ON file_search_metadata(last_indexed)
@@ -142,7 +140,6 @@ export class FileIndexingService {
         CREATE INDEX IF NOT EXISTS idx_file_keywords_keyword 
         ON file_keywords(keyword)
       `)
-
       this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_file_keywords_file 
         ON file_keywords(file_id)
@@ -234,7 +231,6 @@ export class FileIndexingService {
       const keywords = this.extractKeywords(tokens)
       const tfIdfVector = this.calculateTfIdf(tokens, keywords)
       const trigrams = this.generateTrigrams(file.path + ' ' + content)
-
       // Begin transaction for atomic updates
       this.db.transaction(() => {
         // Check if file exists in FTS
@@ -314,7 +310,6 @@ export class FileIndexingService {
     const batchSize = 100
     for (let i = 0; i < files.length; i += batchSize) {
       const batch = files.slice(i, i + batchSize)
-
       for (const file of batch) {
         try {
           const metadata = this.getFileMetadata(file.id)
@@ -375,7 +370,6 @@ export class FileIndexingService {
         expandedTokens.push(...snakeParts)
       }
     }
-
     return expandedTokens
   }
 
@@ -403,7 +397,6 @@ export class FileIndexingService {
       }))
       .sort((a, b) => b.frequency - a.frequency)
       .slice(0, 100) // Top 100 keywords
-
     return keywords
   }
 
@@ -421,7 +414,6 @@ export class FileIndexingService {
     for (const kw of keywords) {
       vector[kw.keyword] = kw.tfScore
     }
-
     return vector
   }
 
@@ -499,7 +491,6 @@ export class FileIndexingService {
       FROM file_search_metadata 
       WHERE file_id = ?
     `)
-
     return stmt.get(fileId) as any
   }
 

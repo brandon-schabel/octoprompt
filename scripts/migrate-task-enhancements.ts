@@ -26,12 +26,10 @@ async function migrateTaskEnhancements() {
         sql: `CREATE INDEX IF NOT EXISTS idx_ticket_tasks_tags ON ticket_tasks (JSON_EXTRACT(data, '$.tags'))`
       }
     ]
-
     for (const index of newIndexes) {
       console.log(`Creating index: ${index.name}`)
       db.exec(index.sql)
     }
-
     // Update existing tasks to have default values for new fields
     const updateSql = `
       UPDATE ticket_tasks 

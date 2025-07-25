@@ -22,7 +22,6 @@ const migrations: Migration[] = [
  */
 export async function runMigrations(): Promise<void> {
   const db = DatabaseManager.getInstance().getDatabase()
-
   // Create migrations table if it doesn't exist
   db.exec(`
     CREATE TABLE IF NOT EXISTS migrations (
