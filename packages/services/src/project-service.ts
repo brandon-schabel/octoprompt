@@ -21,7 +21,6 @@ import { getFullProjectSummary, invalidateProjectSummaryCache } from './utils/ge
 import { resolvePath } from './utils/path-utils'
 import path from 'node:path'
 import { removeDeletedFileIdsFromTickets } from './ticket-service'
-import { removeDeletedFileIdsFromSelectedFiles } from './selected-files-sync-service'
 import { retryOperation } from './utils/retry-operation'
 
 // Helper function to retry file system operations
@@ -655,14 +654,6 @@ export async function bulkDeleteProjectFiles(
           `[ProjectService] Cleaned up file references in ${ticketCleanupResult.updatedTickets} tickets for project ${projectId}`
         )
       }
-
-      // Clean up file references in selected files
-      const selectedFilesCleanupResult = await removeDeletedFileIdsFromSelectedFiles(projectId, fileIdsToDelete)
-      if (selectedFilesCleanupResult.updatedEntries > 0) {
-        console.log(
-          `[ProjectService] Cleaned up file references in ${selectedFilesCleanupResult.updatedEntries} selected files entries for project ${projectId}`
-        )
-      }
     }
 
     return { deletedCount }
@@ -1143,6 +1134,150 @@ export async function getProjectFileTree(projectId: number): Promise<string> {
       500,
       `Failed to get project file tree for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
       'PROJECT_FILE_TREE_FAILED'
+    )
+  }
+}
+
+/**
+ * Get a comprehensive overview of the project including active tab, prompts, tickets, and structure
+ * This is the recommended first tool for AI agents to call
+ */
+export async function getProjectOverview(projectId: number): Promise<string> {
+  try {
+    // Validate project exists and get basic info
+    const project = await getProjectById(projectId)
+
+    // Import necessary functions
+    const { getActiveTab } = await import('./active-tab-service')
+    const { listPromptsByProject } = await import('./prompt-service')
+    const { listTicketsByProject, listTicketsWithTaskCount } = await import('./ticket-service')
+    const { getProjectStatistics } = await import('./project-statistics-service')
+    const { getProjectGitStatus, getCurrentBranch } = await import('./git-service')
+
+    // Get all data in parallel for performance
+    const [activeTab, prompts, ticketsWithTaskCount, statistics, gitStatus, gitBranch, fileTree] = await Promise.all([
+      getActiveTab(projectId).catch(() => null),
+      listPromptsByProject(projectId).catch(() => []),
+      listTicketsWithTaskCount(projectId).catch(() => []),
+      getProjectStatistics(projectId).catch(() => null),
+      getProjectGitStatus(projectId).catch(() => null),
+      getCurrentBranch(projectId).catch(() => 'unknown'),
+      getProjectFileTree(projectId).catch(() => 'Unable to load file tree')
+    ])
+
+    // Build the overview sections
+    const lines: string[] = []
+
+    // Project header
+    lines.push('=== PROJECT OVERVIEW ===')
+    lines.push(`Project: ${project.name} (ID: ${project.id})`)
+    lines.push(`Path: ${project.path}`)
+    lines.push(`Branch: ${gitBranch} | Last Updated: ${new Date(project.updated).toLocaleString()}`)
+    lines.push('')
+
+    // Active tab section
+    lines.push('=== ACTIVE TAB ===')
+    if (activeTab?.data.tabMetadata) {
+      const tabMeta = activeTab.data.tabMetadata
+      lines.push(`Tab ${activeTab.data.activeTabId}: ${tabMeta.displayName || 'Untitled'}`)
+
+      // Selected files
+      if (tabMeta.selectedFiles && tabMeta.selectedFiles.length > 0) {
+        lines.push(`Selected Files: ${tabMeta.selectedFiles.length} (showing top 5)`)
+        const files = await getProjectFiles(projectId)
+        const selectedFiles = files?.filter((f) => tabMeta.selectedFiles.includes(f.id)) || []
+        selectedFiles.slice(0, 5).forEach((file) => {
+          const size = file.size ? `${(file.size / 1024).toFixed(1)}KB` : 'unknown'
+          lines.push(`  - ${file.path} (${size})`)
+        })
+        if (tabMeta.selectedFiles.length > 5) {
+          lines.push(`  ... and ${tabMeta.selectedFiles.length - 5} more`)
+        }
+      } else {
+        lines.push('Selected Files: None')
+      }
+
+      // User prompt
+      if (tabMeta.userPrompt) {
+        lines.push(
+          `User Prompt: "${tabMeta.userPrompt.substring(0, 100)}${tabMeta.userPrompt.length > 100 ? '...' : ''}"`
+        )
+      }
+    } else {
+      lines.push('No active tab')
+    }
+    lines.push('')
+
+    // Prompts section
+    lines.push(`=== PROMPTS (${prompts.length} total) ===`)
+    if (prompts.length > 0) {
+      prompts.slice(0, 10).forEach((prompt) => {
+        lines.push(`- ${prompt.name}`)
+      })
+      if (prompts.length > 10) {
+        lines.push(`... and ${prompts.length - 10} more`)
+      }
+    } else {
+      lines.push('No prompts associated with this project')
+    }
+    lines.push('')
+
+    // Tickets section
+    const openTickets = ticketsWithTaskCount.filter((t) => t.ticket.status !== 'closed')
+    lines.push(`=== RECENT TICKETS (${openTickets.length} open) ===`)
+    if (openTickets.length > 0) {
+      openTickets.slice(0, 5).forEach(({ ticket, taskCount }) => {
+        const priority = ticket.priority ? `[${ticket.priority.toUpperCase()}]` : ''
+        const updated = new Date(ticket.updated).toLocaleString()
+        lines.push(`#${ticket.id}: ${ticket.title} ${priority} - ${taskCount} tasks (Updated: ${updated})`)
+      })
+      if (openTickets.length > 5) {
+        lines.push(`... and ${openTickets.length - 5} more open tickets`)
+      }
+    } else {
+      lines.push('No open tickets')
+    }
+    lines.push('')
+
+    // Project structure (limited depth)
+    lines.push('=== PROJECT STRUCTURE ===')
+    const treeLines = fileTree.split('\n')
+    const maxTreeLines = 30
+    if (treeLines.length <= maxTreeLines) {
+      lines.push(fileTree)
+    } else {
+      lines.push(...treeLines.slice(0, maxTreeLines))
+      lines.push(`... and ${treeLines.length - maxTreeLines} more lines`)
+    }
+    lines.push('')
+
+    // Quick stats
+    if (statistics) {
+      lines.push('=== QUICK STATS ===')
+      lines.push(
+        `Files: ${statistics.fileStats.totalFiles} total (${(statistics.fileStats.totalSize / 1024 / 1024).toFixed(1)}MB)`
+      )
+      lines.push(`- Source: ${statistics.fileStats.filesByCategory.source} files`)
+      lines.push(`- Tests: ${statistics.fileStats.filesByCategory.tests} files`)
+      lines.push(`- Docs: ${statistics.fileStats.filesByCategory.docs} files`)
+
+      // Top file types
+      const topTypes = Object.entries(statistics.fileStats.filesByType)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+      if (topTypes.length > 0) {
+        const typeStr = topTypes.map(([ext, count]) => `${ext} (${count})`).join(', ')
+        lines.push(`Top Types: ${typeStr}`)
+      }
+    }
+
+    return lines.join('\n')
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to get project overview for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
+      'PROJECT_OVERVIEW_FAILED'
     )
   }
 }

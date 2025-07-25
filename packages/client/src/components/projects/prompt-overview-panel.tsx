@@ -66,16 +66,16 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               />
             ) : (
               // At least one collapsed - use flex layout for automatic sizing
-              <div className='flex flex-col gap-4 h-full'>
+              <div className='flex flex-col gap-4 h-full overflow-hidden'>
                 <PromptsList
                   ref={promptsListRef}
                   projectTabId={activeProjectTabId || -1}
-                  className={promptsPanelCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0 overflow-hidden'}
+                  className={promptsPanelCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}
                 />
                 <CollapsibleSelectedFilesList
                   ref={selectedFilesListRef}
                   projectTabId={activeProjectTabId || -1}
-                  className={selectedFilesCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0 overflow-hidden'}
+                  className={selectedFilesCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}
                 />
               </div>
             )}

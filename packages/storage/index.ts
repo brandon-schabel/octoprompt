@@ -4,7 +4,6 @@ export * from './src/prompt-storage'
 export * from './src/provider-key-storage'
 export * from './src/ticket-storage'
 export * from './src/mcp-storage'
-export * from './src/selected-files-storage'
 export * from './src/active-tab-storage'
 
 // Export everything from storage-v2 except MigrationConfig

@@ -29,7 +29,13 @@ export function useActiveTabSync(projectId: number | undefined) {
       suggestedFileIds: tab.suggestedFileIds,
       ticketSearch: tab.ticketSearch,
       ticketSort: tab.ticketSort,
-      ticketStatusFilter: tab.ticketStatusFilter
+      ticketStatusFilter: tab.ticketStatusFilter,
+      searchByContent: tab.searchByContent,
+      resolveImports: tab.resolveImports,
+      bookmarkedFileGroups: tab.bookmarkedFileGroups,
+      sortOrder: tab.sortOrder,
+      promptsPanelCollapsed: tab.promptsPanelCollapsed,
+      selectedFilesCollapsed: tab.selectedFilesCollapsed
     }
   }, [])
 

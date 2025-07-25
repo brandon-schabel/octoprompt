@@ -67,29 +67,6 @@ import {
   type UnifiedModel
 } from '@octoprompt/schemas'
 
-// Agent Coder imports
-import type {
-  RunAgentCoderBody,
-  RunAgentCoderResponseData,
-  ListAgentCoderRunsResponseData,
-  GetAgentCoderLogsResponseData,
-  GetAgentCoderDataResponseData,
-  ConfirmAgentCoderChangesResponseData,
-  DeleteAgentCoderRunResponseData,
-  AgentCoderRun,
-  AgentCoderLog
-} from '@octoprompt/schemas'
-
-import {
-  AgentCoderRunRequestSchema as RunAgentCoderBodySchema,
-  AgentCoderRunResponseSchema as RunAgentCoderResponseDataSchema,
-  ListAgentCoderRunsResponseSchema as ListAgentCoderRunsResponseDataSchema,
-  GetAgentCoderLogsResponseSchema as GetAgentCoderLogsResponseDataSchema,
-  GetAgentCoderDataResponseSchema as GetAgentCoderDataResponseDataSchema,
-  ConfirmAgentCoderChangesResponseSchema as ConfirmAgentCoderChangesResponseDataSchema,
-  DeleteAgentCoderRunResponseSchema as DeleteAgentCoderRunResponseDataSchema
-} from '@octoprompt/schemas'
-
 // Browse Directory imports
 import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@octoprompt/schemas'
 import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@octoprompt/schemas'
@@ -157,7 +134,11 @@ import type {
   GitRemote,
   GitTag,
   GitStash,
-  GitBlame
+  GitBlame,
+  GitLogEnhancedRequest,
+  GitLogEnhancedResponse,
+  GitBranchListEnhancedResponse,
+  GitCommitDetailResponse
 } from '@octoprompt/schemas'
 
 import {
@@ -178,7 +159,11 @@ import {
   gitRemoteSchema,
   gitTagSchema,
   gitStashSchema,
-  gitBlameSchema
+  gitBlameSchema,
+  gitLogEnhancedRequestSchema,
+  gitLogEnhancedResponseSchema,
+  gitBranchListEnhancedResponseSchema,
+  gitCommitDetailResponseSchema
 } from '@octoprompt/schemas'
 
 // MCP Analytics imports
@@ -673,76 +658,6 @@ export class ProjectService extends BaseApiClient {
     return result as DataResponseSchema<ProjectStatistics>
   }
 
-  // Selected Files methods
-  async getSelectedFiles(projectId: number, tabId?: number) {
-    const result = await this.request('GET', `/projects/${projectId}/selected-files`, {
-      params: tabId ? { tabId } : undefined,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.any().nullable()
-      })
-    })
-    return result
-  }
-
-  async getAllSelectedFiles(projectId: number) {
-    const result = await this.request('GET', `/projects/${projectId}/selected-files/all`, {
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.array(z.any())
-      })
-    })
-    return result
-  }
-
-  async updateSelectedFiles(
-    projectId: number,
-    data: {
-      tabId: number
-      fileIds: number[]
-      promptIds?: number[]
-      userPrompt?: string
-    }
-  ) {
-    const result = await this.request('PUT', `/projects/${projectId}/selected-files`, {
-      body: data,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.any()
-      })
-    })
-    return result
-  }
-
-  async clearSelectedFiles(projectId: number, tabId?: number) {
-    const result = await this.request('DELETE', `/projects/${projectId}/selected-files`, {
-      params: tabId ? { tabId } : undefined,
-      responseSchema: z.object({
-        success: z.literal(true),
-        message: z.string()
-      })
-    })
-    return result.success
-  }
-
-  async getSelectionContext(projectId: number, tabId?: number) {
-    const result = await this.request('GET', `/projects/${projectId}/selection-context`, {
-      params: tabId ? { tabId } : undefined,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z
-          .object({
-            fileIds: z.array(z.number()),
-            promptIds: z.array(z.number()),
-            userPrompt: z.string(),
-            lastUpdated: z.number()
-          })
-          .nullable()
-      })
-    })
-    return result
-  }
-
   // Active Tab methods
   async getActiveTab(projectId: number, clientId?: string) {
     const result = await this.request('GET', `/projects/${projectId}/active-tab`, {
@@ -766,7 +681,14 @@ export class ProjectService extends BaseApiClient {
                 suggestedFileIds: z.array(z.number()).optional(),
                 ticketSearch: z.string().optional(),
                 ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+                // Additional fields from ProjectTabState for complete synchronization
+                searchByContent: z.boolean().optional(),
+                resolveImports: z.boolean().optional(),
+                bookmarkedFileGroups: z.record(z.string(), z.array(z.number())).optional(),
+                sortOrder: z.number().optional(),
+                promptsPanelCollapsed: z.boolean().optional(),
+                selectedFilesCollapsed: z.boolean().optional()
               })
               .optional()
           })
@@ -793,6 +715,13 @@ export class ProjectService extends BaseApiClient {
         ticketSearch?: string
         ticketSort?: 'created_asc' | 'created_desc' | 'status' | 'priority'
         ticketStatusFilter?: 'all' | 'open' | 'in_progress' | 'closed'
+        // Additional fields from ProjectTabState for complete synchronization
+        searchByContent?: boolean
+        resolveImports?: boolean
+        bookmarkedFileGroups?: Record<string, number[]>
+        sortOrder?: number
+        promptsPanelCollapsed?: boolean
+        selectedFilesCollapsed?: boolean
       }
     }
   ) {
@@ -816,7 +745,14 @@ export class ProjectService extends BaseApiClient {
               suggestedFileIds: z.array(z.number()).optional(),
               ticketSearch: z.string().optional(),
               ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-              ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+              ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+              // Additional fields from ProjectTabState for complete synchronization
+              searchByContent: z.boolean().optional(),
+              resolveImports: z.boolean().optional(),
+              bookmarkedFileGroups: z.record(z.string(), z.array(z.number())).optional(),
+              sortOrder: z.number().optional(),
+              promptsPanelCollapsed: z.boolean().optional(),
+              selectedFilesCollapsed: z.boolean().optional()
             })
             .optional()
         })
@@ -1026,53 +962,6 @@ export class GenAiService extends BaseApiClient {
       }
       throw new OctoPromptError('Unknown error occurred during stream request')
     }
-  }
-}
-
-// Agent Coder Service
-export class AgentCoderService extends BaseApiClient {
-  async runAgentCoder(projectId: number, body: RunAgentCoderBody) {
-    const validatedData = this.validateBody(RunAgentCoderBodySchema, body)
-    const result = await this.request('POST', `/projects/${projectId}/agent-coder`, {
-      body: validatedData,
-      responseSchema: RunAgentCoderResponseDataSchema
-    })
-    return result as RunAgentCoderResponseData
-  }
-
-  async listRuns(projectId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs`, {
-      responseSchema: ListAgentCoderRunsResponseDataSchema
-    })
-    return result as ListAgentCoderRunsResponseData
-  }
-
-  async getLogs(projectId: number, agentJobId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/logs`, {
-      responseSchema: GetAgentCoderLogsResponseDataSchema
-    })
-    return result as GetAgentCoderLogsResponseData
-  }
-
-  async getData(projectId: number, agentJobId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/data`, {
-      responseSchema: GetAgentCoderDataResponseDataSchema
-    })
-    return result as GetAgentCoderDataResponseData
-  }
-
-  async confirmChanges(projectId: number, agentJobId: number) {
-    const result = await this.request('POST', `/agent-coder/project/${projectId}/runs/${agentJobId}/confirm`, {
-      responseSchema: ConfirmAgentCoderChangesResponseDataSchema
-    })
-    return result as ConfirmAgentCoderChangesResponseData
-  }
-
-  async deleteRun(agentJobId: number) {
-    const result = await this.request('DELETE', `/agent-coder/runs/${agentJobId}`, {
-      responseSchema: DeleteAgentCoderRunResponseDataSchema
-    })
-    return result as DeleteAgentCoderRunResponseData
   }
 }
 
@@ -1812,6 +1701,31 @@ export class GitService extends BaseApiClient {
     })
     return result as GitOperationResponse
   }
+
+  // Enhanced Git Methods
+  async getCommitLogEnhanced(projectId: number, params?: GitLogEnhancedRequest) {
+    const validatedParams = params ? this.validateBody(gitLogEnhancedRequestSchema, params) : undefined
+    const result = await this.request('GET', `/projects/${projectId}/git/log/enhanced`, {
+      params: validatedParams as any,
+      responseSchema: gitLogEnhancedResponseSchema
+    })
+    return result as GitLogEnhancedResponse
+  }
+
+  async getBranchesEnhanced(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/branches/enhanced`, {
+      responseSchema: gitBranchListEnhancedResponseSchema
+    })
+    return result as GitBranchListEnhancedResponse
+  }
+
+  async getCommitDetail(projectId: number, hash: string, includeFileContents?: boolean) {
+    const result = await this.request('GET', `/projects/${projectId}/git/commits/${hash}`, {
+      params: includeFileContents ? { includeFileContents } : undefined,
+      responseSchema: gitCommitDetailResponseSchema
+    })
+    return result as GitCommitDetailResponse
+  }
 }
 
 // Main OctoPrompt Client
@@ -1821,7 +1735,6 @@ export class OctoPromptClient {
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
-  public readonly agentCoder: AgentCoderService
   public readonly system: SystemService
   public readonly mcp: MCPService
   public readonly tickets: TicketService
@@ -1834,7 +1747,6 @@ export class OctoPromptClient {
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
-    this.agentCoder = new AgentCoderService(config)
     this.system = new SystemService(config)
     this.mcp = new MCPService(config)
     this.tickets = new TicketService(config)

@@ -23,11 +23,6 @@ import {
   addPromptToProject,
   removePromptFromProject,
   suggestPrompts,
-  getSelectedFiles,
-  getAllSelectedFilesForProject,
-  updateSelectedFiles,
-  clearSelectedFiles,
-  getSelectionContext,
   createTicket,
   getTicketById,
   listTicketsByProject,
@@ -90,6 +85,10 @@ import {
   clean,
   getConfig,
   setConfig,
+  // Enhanced git operations
+  getCommitLogEnhanced,
+  getBranchesEnhanced,
+  getCommitDetail,
   bulkDeleteProjectFiles,
   // Active tab functionality
   getOrCreateDefaultActiveTab,
@@ -172,16 +171,14 @@ export enum ProjectManagerAction {
   GET_FILE_CONTENT = 'get_file_content',
   UPDATE_FILE_CONTENT = 'update_file_content',
   SUGGEST_FILES = 'suggest_files',
-  GET_SELECTED_FILES = 'get_selected_files',
-  UPDATE_SELECTED_FILES = 'update_selected_files',
-  CLEAR_SELECTED_FILES = 'clear_selected_files',
   GET_SELECTION_CONTEXT = 'get_selection_context',
   SEARCH = 'search',
   FAST_SEARCH_FILES = 'fast_search_files',
   CREATE_FILE = 'create_file',
   GET_FILE_CONTENT_PARTIAL = 'get_file_content_partial',
   DELETE_FILE = 'delete_file',
-  GET_FILE_TREE = 'get_file_tree'
+  GET_FILE_TREE = 'get_file_tree',
+  OVERVIEW = 'overview'
 }
 
 export enum PromptManagerAction {
@@ -248,7 +245,9 @@ export enum GitManagerAction {
   DELETE_BRANCH = 'delete_branch',
   MERGE_BRANCH = 'merge_branch',
   LOG = 'log',
+  LOG_ENHANCED = 'log_enhanced',
   COMMIT_DETAILS = 'commit_details',
+  COMMIT_DETAIL = 'commit_detail',
   FILE_DIFF = 'file_diff',
   COMMIT_DIFF = 'commit_diff',
   CHERRY_PICK = 'cherry_pick',
@@ -271,7 +270,8 @@ export enum GitManagerAction {
   BLAME = 'blame',
   CLEAN = 'clean',
   CONFIG_GET = 'config_get',
-  CONFIG_SET = 'config_set'
+  CONFIG_SET = 'config_set',
+  BRANCHES_ENHANCED = 'branches_enhanced'
 }
 
 export enum TabManagerAction {
@@ -293,15 +293,13 @@ const ProjectManagerSchema = z.object({
     ProjectManagerAction.GET_FILE_CONTENT,
     ProjectManagerAction.UPDATE_FILE_CONTENT,
     ProjectManagerAction.SUGGEST_FILES,
-    ProjectManagerAction.GET_SELECTED_FILES,
-    ProjectManagerAction.UPDATE_SELECTED_FILES,
-    ProjectManagerAction.CLEAR_SELECTED_FILES,
     ProjectManagerAction.GET_SELECTION_CONTEXT,
     ProjectManagerAction.SEARCH,
     ProjectManagerAction.CREATE_FILE,
     ProjectManagerAction.GET_FILE_CONTENT_PARTIAL,
     ProjectManagerAction.DELETE_FILE,
-    ProjectManagerAction.GET_FILE_TREE
+    ProjectManagerAction.GET_FILE_TREE,
+    ProjectManagerAction.OVERVIEW
   ]),
   projectId: z.number().optional(),
   data: z.any().optional()
@@ -385,7 +383,9 @@ const GitManagerSchema = z.object({
     GitManagerAction.DELETE_BRANCH,
     GitManagerAction.MERGE_BRANCH,
     GitManagerAction.LOG,
+    GitManagerAction.LOG_ENHANCED,
     GitManagerAction.COMMIT_DETAILS,
+    GitManagerAction.COMMIT_DETAIL,
     GitManagerAction.FILE_DIFF,
     GitManagerAction.COMMIT_DIFF,
     GitManagerAction.CHERRY_PICK,
@@ -408,7 +408,8 @@ const GitManagerSchema = z.object({
     GitManagerAction.BLAME,
     GitManagerAction.CLEAN,
     GitManagerAction.CONFIG_GET,
-    GitManagerAction.CONFIG_SET
+    GitManagerAction.CONFIG_SET,
+    GitManagerAction.BRANCHES_ENHANCED
   ]),
   projectId: z.number(),
   data: z.any().optional()
@@ -425,7 +426,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'project_manager',
     description:
-      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, browse_files, get_file_content, update_file_content, suggest_files, search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial, get_file_tree (returns project file structure with file IDs)',
+      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, browse_files, get_file_content, update_file_content, suggest_files, get_selection_context (get complete active tab context), search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial, get_file_tree (returns project file structure with file IDs), overview (get essential project context - recommended first tool)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -441,7 +442,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         data: {
           type: 'object',
           description:
-            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For update_selected_files: { fileIds: [123, 456], tabId: 1 (optional, defaults to 0), promptIds: [789] (optional), userPrompt: "text" (optional) }. For delete_file: { path: "src/file.ts" }. For fast_search_files: { query: "search term", searchType: "semantic" | "exact" | "fuzzy" | "regex" (default: "semantic"), fileTypes: ["ts", "js"], limit: 20, includeContext: false, scoringMethod: "relevance" | "recency" | "frequency" }'
+            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For delete_file: { path: "src/file.ts" }. For fast_search_files: { query: "search term", searchType: "semantic" | "exact" | "fuzzy" | "regex" (default: "semantic"), fileTypes: ["ts", "js"], limit: 20, includeContext: false, scoringMethod: "relevance" | "recency" | "frequency" }. For overview: no data required'
         }
       },
       required: ['action']
@@ -684,118 +685,64 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
               }
             }
 
-            case ProjectManagerAction.GET_SELECTED_FILES: {
-              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              let tabId = data?.tabId as number | undefined
-
-              // If no tabId provided, use the active tab
-              if (tabId === undefined) {
-                tabId = await getOrCreateDefaultActiveTab(validProjectId)
-              }
-
-              const selectedFiles = await getSelectedFiles(validProjectId, tabId)
-              if (!selectedFiles) {
-                return {
-                  content: [{ type: 'text', text: 'No selected files found' }]
-                }
-              }
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text:
-                      `Selected files for project ${validProjectId}${tabId ? ` tab ${tabId}` : ''}:\n` +
-                      `File IDs: ${selectedFiles.data.fileIds.join(', ') || 'none'}\n` +
-                      `Prompt IDs: ${selectedFiles.data.promptIds.join(', ') || 'none'}\n` +
-                      `User prompt: ${selectedFiles.data.userPrompt || 'empty'}\n` +
-                      `Last updated: ${new Date(selectedFiles.data.updatedAt).toISOString()}`
-                  }
-                ]
-              }
-            }
-
-            case ProjectManagerAction.UPDATE_SELECTED_FILES: {
-              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              let tabId = data?.tabId as number | undefined
-
-              // If no tabId provided, use the active tab
-              if (tabId === undefined) {
-                tabId = await getOrCreateDefaultActiveTab(validProjectId)
-              }
-
-              const fileIds = validateDataField<number[]>(data, 'fileIds', 'array', '[123, 456]')
-              const promptIds = data?.promptIds as number[] | undefined
-              const userPrompt = data?.userPrompt as string | undefined
-
-              const updated = await updateSelectedFiles(
-                validProjectId,
-                tabId,
-                fileIds,
-                promptIds || [],
-                userPrompt || ''
-              )
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: `Successfully updated selected files for project ${validProjectId} tab ${tabId}`
-                  }
-                ]
-              }
-            }
-
-            case ProjectManagerAction.CLEAR_SELECTED_FILES: {
-              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              let tabId = data?.tabId as number | undefined
-
-              // If no tabId provided and we want to clear a specific tab (not all),
-              // use the active tab
-              if (tabId === undefined) {
-                tabId = await getOrCreateDefaultActiveTab(validProjectId)
-              }
-
-              await clearSelectedFiles(validProjectId, tabId)
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: `Cleared selected files for project ${validProjectId}${tabId ? ` tab ${tabId}` : ' (all tabs)'}`
-                  }
-                ]
-              }
-            }
-
             case ProjectManagerAction.GET_SELECTION_CONTEXT: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              let tabId = data?.tabId as number | undefined
 
-              // If no tabId provided, use the active tab
-              if (tabId === undefined) {
-                tabId = await getOrCreateDefaultActiveTab(validProjectId)
-              }
-
-              const context = await getSelectionContext(validProjectId, tabId)
-              if (!context) {
+              // Get active tab to get selection context
+              const activeTab = await getActiveTab(validProjectId)
+              if (!activeTab) {
                 return {
-                  content: [{ type: 'text', text: 'No selection context found' }]
+                  content: [{ type: 'text', text: 'No active tab found' }]
                 }
               }
 
-              // Get file details for better context
-              const files = await getProjectFiles(validProjectId)
-              const selectedFileDetails = files?.filter((f) => context.fileIds.includes(f.id)) || []
-              const fileList = selectedFileDetails.map((f) => `  - ${f.path} (${f.size} bytes)`).join('\n')
+              const tabMetadata = activeTab.data.tabMetadata
+              if (!tabMetadata) {
+                return {
+                  content: [{ type: 'text', text: 'No active tab metadata found' }]
+                }
+              }
+
+              // Get file details if there are selected files
+              let fileList = ''
+              if (tabMetadata.selectedFiles && tabMetadata.selectedFiles.length > 0) {
+                const files = await getProjectFiles(validProjectId)
+                const selectedFileDetails = files?.filter((f) => tabMetadata.selectedFiles.includes(f.id)) || []
+                fileList = selectedFileDetails.map((f) => `  - ${f.path} (${f.size} bytes)`).join('\n')
+              }
+
+              // Build comprehensive context output
+              let contextText = `Active tab context for project ${validProjectId}:\n`
+              contextText += `\nTab ID: ${activeTab.data.activeTabId}`
+              contextText += `\nTab Name: ${tabMetadata.displayName || 'Unnamed Tab'}`
+              contextText += `\n\nSelected files (${tabMetadata.selectedFiles?.length || 0}):\n${fileList || '  None'}`
+              contextText += `\n\nPrompt IDs: ${tabMetadata.selectedPrompts?.join(', ') || 'none'}`
+              contextText += `\nUser prompt: ${tabMetadata.userPrompt || 'empty'}`
+              contextText += `\n\nSearch/Filter Settings:`
+              contextText += `\n  File search: ${tabMetadata.fileSearch || 'none'}`
+              contextText += `\n  Search by content: ${tabMetadata.searchByContent || false}`
+              contextText += `\n  Resolve imports: ${tabMetadata.resolveImports || false}`
+              contextText += `\n  Context limit: ${tabMetadata.contextLimit || 'default'}`
+              contextText += `\n  Preferred editor: ${tabMetadata.preferredEditor || 'default'}`
+
+              if (tabMetadata.ticketSearch || tabMetadata.ticketSort || tabMetadata.ticketStatusFilter) {
+                contextText += `\n\nTicket Settings:`
+                contextText += `\n  Search: ${tabMetadata.ticketSearch || 'none'}`
+                contextText += `\n  Sort: ${tabMetadata.ticketSort || 'default'}`
+                contextText += `\n  Status filter: ${tabMetadata.ticketStatusFilter || 'all'}`
+              }
+
+              contextText += `\n\nUI State:`
+              contextText += `\n  Prompts panel: ${tabMetadata.promptsPanelCollapsed ? 'collapsed' : 'expanded'}`
+              contextText += `\n  Selected files panel: ${tabMetadata.selectedFilesCollapsed ? 'collapsed' : 'expanded'}`
+
+              contextText += `\n\nLast updated: ${new Date(activeTab.data.lastUpdated).toISOString()}`
 
               return {
                 content: [
                   {
                     type: 'text',
-                    text:
-                      `Selection context for project ${validProjectId}${tabId ? ` tab ${tabId}` : ''}:\n` +
-                      `\nSelected files (${context.fileIds.length}):\n${fileList || '  None'}\n` +
-                      `\nPrompt IDs: ${context.promptIds.join(', ') || 'none'}\n` +
-                      `User prompt: ${context.userPrompt || 'empty'}\n` +
-                      `Last updated: ${new Date(context.lastUpdated).toISOString()}`
+                    text: contextText
                   }
                 ]
               }
@@ -1186,6 +1133,15 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
               const fileTree = await getProjectFileTree(validProjectId)
               return {
                 content: [{ type: 'text', text: fileTree }]
+              }
+            }
+
+            case ProjectManagerAction.OVERVIEW: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+              const { getProjectOverview } = await import('@octoprompt/services')
+              const overview = await getProjectOverview(validProjectId)
+              return {
+                content: [{ type: 'text', text: overview }]
               }
             }
 
@@ -2231,7 +2187,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         },
         data: {
           type: 'object',
-          description: 'Action-specific data'
+          description: 'Action-specific data. For log_enhanced: { branch?: "main", author?: "john", search?: "fix", page?: 1, perPage?: 20, since?: "2024-01-01", until?: "2024-12-31", includeStats?: true, includeFileDetails?: true }. For commit_detail: { hash: "abc123", includeFileContents?: true }. For other actions, see git service documentation.'
         }
       },
       required: ['action', 'projectId']
@@ -2538,6 +2494,126 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               await setConfig(projectId, key, value, options)
               return { content: [{ type: 'text', text: `Set config: ${key} = ${value}` }] }
             }
+            case GitManagerAction.LOG_ENHANCED: {
+              const request = {
+                branch: data?.branch as string | undefined,
+                author: data?.author as string | undefined,
+                search: data?.search as string | undefined,
+                page: data?.page as number | undefined || 1,
+                perPage: data?.perPage as number | undefined || 20,
+                since: data?.since as string | undefined,
+                until: data?.until as string | undefined,
+                includeStats: data?.includeStats as boolean | undefined || false,
+                includeFileDetails: data?.includeFileDetails as boolean | undefined || false
+              }
+              const result = await getCommitLogEnhanced(projectId, request)
+              if (!result.success || !result.data) {
+                return {
+                  content: [{ type: 'text', text: result.message || 'Failed to get enhanced commit log' }],
+                  isError: true
+                }
+              }
+              const { commits, pagination, branch } = result.data
+              let text = `Branch: ${branch}\n`
+              text += `Page ${pagination.page} (${pagination.perPage} per page)${pagination.hasMore ? ' - More available' : ''}\n\n`
+              text += commits
+                .map((commit) => {
+                  let commitText = `${commit.abbreviatedHash} - ${commit.subject}\n`
+                  commitText += `  Author: ${commit.author.name} <${commit.author.email}>\n`
+                  commitText += `  Date: ${commit.author.relativeTime} (${new Date(commit.author.date).toLocaleString()})\n`
+                  if (commit.body) {
+                    commitText += `  Body: ${commit.body.split('\n').join('\n  ')}\n`
+                  }
+                  if (commit.stats) {
+                    commitText += `  Stats: +${commit.stats.additions} -${commit.stats.deletions} (${commit.stats.filesChanged} files)\n`
+                  }
+                  if (commit.fileStats && commit.fileStats.length > 0) {
+                    commitText += '  Files:\n'
+                    commit.fileStats.forEach((file) => {
+                      commitText += `    ${file.status}: ${file.path} (+${file.additions} -${file.deletions})\n`
+                    })
+                  }
+                  return commitText
+                })
+                .join('\n')
+              return { content: [{ type: 'text', text }] }
+            }
+            case GitManagerAction.BRANCHES_ENHANCED: {
+              const result = await getBranchesEnhanced(projectId)
+              if (!result.success || !result.data) {
+                return {
+                  content: [{ type: 'text', text: result.message || 'Failed to get enhanced branches' }],
+                  isError: true
+                }
+              }
+              const { branches, currentBranch, totalCount } = result.data
+              let text = `Current branch: ${currentBranch || 'none'}\n`
+              text += `Total branches: ${totalCount}\n\n`
+              text += branches
+                .map((branch) => {
+                  const marker = branch.current ? '* ' : '  '
+                  let branchText = `${marker}${branch.name}`
+                  if (branch.isRemote) branchText += ' [remote]'
+                  if (branch.isProtected) branchText += ' [protected]'
+                  branchText += '\n'
+                  branchText += `    Latest: ${branch.latestCommit.abbreviatedHash} - ${branch.latestCommit.subject}\n`
+                  branchText += `    Author: ${branch.latestCommit.author} (${branch.latestCommit.relativeTime})\n`
+                  if (branch.tracking) {
+                    branchText += `    Tracking: ${branch.tracking.remoteName}/${branch.tracking.remoteBranch}\n`
+                    if (branch.tracking.ahead > 0 || branch.tracking.behind > 0) {
+                      branchText += `    Status: ${branch.tracking.ahead} ahead, ${branch.tracking.behind} behind\n`
+                    }
+                  }
+                  return branchText
+                })
+                .join('\n')
+              return { content: [{ type: 'text', text }] }
+            }
+            case GitManagerAction.COMMIT_DETAIL: {
+              const hash = validateDataField<string>(data, 'hash', 'string', '"abc123"')
+              const includeFileContents = data?.includeFileContents as boolean | undefined || false
+              const result = await getCommitDetail(projectId, hash, includeFileContents)
+              if (!result.success || !result.data) {
+                return {
+                  content: [{ type: 'text', text: result.message || 'Failed to get commit details' }],
+                  isError: true
+                }
+              }
+              const commit = result.data
+              let text = `Commit: ${commit.hash}\n`
+              text += `Author: ${commit.author.name} <${commit.author.email}>\n`
+              text += `Date: ${new Date(commit.author.date).toLocaleString()} (${commit.author.relativeTime})\n`
+              if (commit.committer && commit.committer.email !== commit.author.email) {
+                text += `Committer: ${commit.committer.name} <${commit.committer.email}>\n`
+              }
+              text += `\nMessage:\n${commit.subject}\n`
+              if (commit.body) {
+                text += `\n${commit.body}\n`
+              }
+              if (commit.stats) {
+                text += `\nStats: ${commit.stats.filesChanged} files changed, +${commit.stats.additions} -${commit.stats.deletions}\n`
+              }
+              if (commit.parents && commit.parents.length > 0) {
+                text += `\nParents: ${commit.parents.join(', ')}\n`
+              }
+              if (commit.refs && commit.refs.length > 0) {
+                text += `Refs: ${commit.refs.join(', ')}\n`
+              }
+              if (commit.files && commit.files.length > 0) {
+                text += '\nFiles:\n'
+                commit.files.forEach((file) => {
+                  text += `  ${file.status}: ${file.path} (+${file.additions} -${file.deletions})`
+                  if (file.binary) text += ' [binary]'
+                  if (file.oldPath) text += ` (from ${file.oldPath})`
+                  text += '\n'
+                  if (includeFileContents && file.diff) {
+                    text += '    Diff:\n'
+                    text += file.diff.split('\n').map(line => '    ' + line).join('\n') + '\n'
+                  }
+                })
+              }
+              return { content: [{ type: 'text', text }] }
+            }
 
             default:
               throw new Error(`Unknown action: ${action}`)
@@ -2668,6 +2744,122 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
+        }
+      }
+    )
+  },
+
+  {
+    name: 'tab_manager',
+    description: 'Manage active tabs for projects. Actions: get_active, set_active, clear_active',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: ['get_active', 'set_active', 'clear_active']
+        },
+        projectId: {
+          type: 'number',
+          description: 'The project ID (required for all actions). Example: 1750564533014'
+        },
+        data: {
+          type: 'object',
+          description: 'Action-specific data. For set_active: { tabId: 0, clientId: "optional-client-id" }'
+        }
+      },
+      required: ['action', 'projectId']
+    },
+    handler: createTrackedHandler(
+      'tab_manager',
+      async (args: { action: string; projectId: number; data?: any }): Promise<MCPToolResponse> => {
+        try {
+          const { action, projectId, data } = args
+
+          // Validate project exists
+          await getProjectById(projectId)
+
+          switch (action) {
+            case 'get_active': {
+              const clientId = data?.clientId as string | undefined
+              const activeTab = await getActiveTab(projectId, clientId)
+
+              if (!activeTab) {
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'No active tab set for this project'
+                    }
+                  ]
+                }
+              }
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        activeTabId: activeTab.data.activeTabId,
+                        clientId: activeTab.data.clientId,
+                        lastUpdated: activeTab.data.lastUpdated,
+                        tabMetadata: activeTab.data.tabMetadata
+                      },
+                      null,
+                      2
+                    )
+                  }
+                ]
+              }
+            }
+
+            case 'set_active': {
+              if (!data || typeof data.tabId !== 'number') {
+                throw new Error('tabId is required and must be a number')
+              }
+
+              const { tabId, clientId } = data
+              const result = await setActiveTab(projectId, { tabId, clientId })
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Active tab set to ${tabId}${clientId ? ` for client ${clientId}` : ''}`
+                  }
+                ]
+              }
+            }
+
+            case 'clear_active': {
+              const clientId = data?.clientId as string | undefined
+              await clearActiveTab(projectId, clientId)
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Active tab cleared${clientId ? ` for client ${clientId}` : ''}`
+                  }
+                ]
+              }
+            }
+
+            default:
+              throw new Error(`Unknown action: ${action}`)
+          }
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Error: ${error instanceof Error ? error.message : String(error)}`
+              }
+            ],
+            isError: true
+          }
         }
       }
     )

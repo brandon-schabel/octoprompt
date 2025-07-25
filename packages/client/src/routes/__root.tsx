@@ -1,5 +1,6 @@
 // File: packages/client/src/routes/__root.tsx
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
+import type { RouterContext } from '../main'
 // Removed: import { AppNavbar } from '@/components/navigation/app-navbar';
 import { AppSidebar } from '@/components/navigation/app-sidebar' // Added
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar' // Added
@@ -147,7 +148,7 @@ function GlobalCommandPalette() {
   )
 }
 
-export const Route = createRootRouteWithContext()({
+export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent
 })
 

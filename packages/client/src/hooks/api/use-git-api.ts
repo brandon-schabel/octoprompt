@@ -2,7 +2,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { octoClient } from '../octo-client'
 import { toast } from 'sonner'
 
-import type { GitStatusResult, GitBranch, GitLogEntry, GitRemote, GitTag, GitStash } from '@octoprompt/schemas'
+import type {
+  GitStatusResult,
+  GitBranch,
+  GitLogEntry,
+  GitRemote,
+  GitTag,
+  GitStash,
+  GitLogEnhancedRequest,
+  GitLogEnhancedResponse,
+  GitBranchListEnhancedResponse,
+  GitCommitDetailResponse
+} from '@octoprompt/schemas'
 
 export function useProjectGitStatus(projectId: number | undefined, enabled = true) {
   return useQuery({
@@ -178,6 +189,26 @@ export function useGitBranches(projectId: number | undefined, enabled = true) {
   })
 }
 
+// Enhanced branches with additional metadata
+export function useBranchesEnhanced(projectId: number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'git', 'branches', 'enhanced'],
+    queryFn: async () => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      const response = await octoClient.git.getBranchesEnhanced(projectId)
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch enhanced branches')
+      }
+      return response
+    },
+    enabled: enabled && !!projectId,
+    staleTime: 10000, // Consider branches stale after 10 seconds
+    refetchInterval: 30000 // Refetch every 30 seconds to keep branch data fresh
+  })
+}
+
 export function useCreateBranch(projectId: number | undefined) {
   const queryClient = useQueryClient()
 
@@ -210,6 +241,7 @@ export function useSwitchBranch(projectId: number | undefined) {
       return octoClient.git.switchBranch(projectId, branchName)
     },
     onSuccess: (data, branchName) => {
+      // Invalidate all branch-related queries
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'log'] })
@@ -244,6 +276,54 @@ export function useGitLog(
     },
     enabled: enabled && !!projectId,
     staleTime: 30000 // Consider log stale after 30 seconds
+  })
+}
+
+// Enhanced commit log with pagination and advanced filters
+export function useCommitLogEnhanced(
+  projectId: number | undefined,
+  params?: GitLogEnhancedRequest,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'git', 'log', 'enhanced', params],
+    queryFn: async () => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      const response = await octoClient.git.getCommitLogEnhanced(projectId, params)
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch enhanced commit log')
+      }
+      return response
+    },
+    enabled: enabled && !!projectId,
+    staleTime: 30000, // Consider log stale after 30 seconds
+    keepPreviousData: true // Keep previous data while fetching new page
+  })
+}
+
+// Get detailed information about a specific commit
+export function useCommitDetail(
+  projectId: number | undefined,
+  hash: string | undefined,
+  includeFileContents?: boolean,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'git', 'commits', hash, { includeFileContents }],
+    queryFn: async () => {
+      if (!projectId || !hash) {
+        throw new Error('Project ID and commit hash are required')
+      }
+      const response = await octoClient.git.getCommitDetail(projectId, hash, includeFileContents)
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch commit details')
+      }
+      return response
+    },
+    enabled: enabled && !!projectId && !!hash,
+    staleTime: 60000 // Consider commit details stale after 1 minute
   })
 }
 

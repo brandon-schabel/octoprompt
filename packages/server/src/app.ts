@@ -7,12 +7,10 @@ import { projectRoutes } from './routes/project-routes'
 import { providerKeyRoutes } from './routes/provider-key-routes'
 import { promptRoutes } from './routes/prompt-routes'
 import { ticketRoutes } from './routes/ticket-routes'
-import { agentCoderRoutes } from './routes/agent-coder-routes'
 import { browseDirectoryRoutes } from './routes/browse-directory-routes'
 import { mcpRoutes } from './routes/mcp-routes'
 import { gitRoutes } from './routes/git-routes'
 import { gitAdvancedRoutes } from './routes/git-advanced-routes'
-import { selectedFilesRoutes } from './routes/selected-files-routes'
 import { activeTabRoutes } from './routes/active-tab-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
@@ -176,12 +174,10 @@ app.route('/', providerKeyRoutes)
 app.route('/', promptRoutes)
 app.route('/', ticketRoutes)
 app.route('/', genAiRoutes)
-app.route('/', agentCoderRoutes)
 app.route('/', browseDirectoryRoutes)
 app.route('/', mcpRoutes)
 app.route('/', gitRoutes)
 app.route('/', gitAdvancedRoutes)
-app.route('/', selectedFilesRoutes)
 app.route('/', activeTabRoutes)
 
 // Global error handler

@@ -1,4 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { zodValidator } from '@tanstack/zod-adapter'
+import { projectsSearchSchema, type ProjectsSearch } from '@/lib/search-schemas'
+import { projectRouteMiddleware } from '@/lib/search-middleware'
 import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
@@ -8,7 +11,7 @@ import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/p
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { UserInputPanel, type UserInputPanelRef } from '@/components/projects/user-input-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
-import { DraggableThreeColumnPanel } from '@/components/ui/draggable-three-column-panel'
+import { DraggableThreeColumnPanel, type PanelConfig } from '@/components/ui/draggable-three-column-panel'
 import { ProjectResponse } from '@octoprompt/schemas'
 import {
   useActiveProjectTab,
@@ -21,23 +24,24 @@ import {
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ProjectStatsDisplay } from '@/components/projects/project-stats-display'
 import { ProjectStatsDisplayEnhanced } from '@/components/projects/project-stats-display-enhanced-v2'
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
-import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
 import { ProjectAssetsView } from '@/components/projects/project-assets-view'
-import { Bot, Code2, Sparkles, GitBranch, BarChart2 } from 'lucide-react'
+import { GitBranch, BarChart2, History } from 'lucide-react'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
 import { TicketsTabView } from '@/components/tickets/tickets-tab-view'
 import { GitTabView } from '@/components/projects/git-tab-view'
 import { MCPAnalyticsTabView } from '@/components/projects/mcp-analytics-tab-view'
 import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
+import { CommitList } from '@/components/projects/git-commit-history/commit-list'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
   const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
+  const navigate = useNavigate()
+  const search = Route.useSearch()
   const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
 
   const selectedProjectId = activeProjectTabState?.selectedProjectId
@@ -52,18 +56,61 @@ export function ProjectsPage() {
   const { createProjectTab: createProjectTabFromHook } = useCreateProjectTab()
   const updateActiveProjectTab = useUpdateActiveProjectTab()
   const { mutate: deleteProjectMutate } = useDeleteProject()
+  const { setActiveProjectTabId } = useSetActiveProjectTabId()
 
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [projectFormOpen, setProjectFormOpen] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null)
+  const [hasInitializedFromUrl, setHasInitializedFromUrl] = useState(false)
 
   const projects = allProjectsData?.data || []
   const tabsLen = Object.keys(tabs || {}).length
   const noTabsYet = Object.keys(tabs || {}).length === 0
   const tabsArray = Object.values(tabs || {})
   const tabsKeys = Object.keys(tabs || {})
-  const { setActiveProjectTabId } = useSetActiveProjectTabId()
   const { mutate: updateProjectTabs } = useSetKvValue('projectTabs')
+
+  // Sync tab from URL on initial load
+  useEffect(() => {
+    if (!hasInitializedFromUrl && tabs) {
+      if (search.tab) {
+        const tabIdNum = parseInt(search.tab)
+        // Only set if it's a valid tab that exists
+        if (!isNaN(tabIdNum) && tabs[tabIdNum]) {
+          setActiveProjectTabId(tabIdNum)
+        } else if (activeProjectTabId && tabs[activeProjectTabId]) {
+          // If URL tab is invalid but we have a valid active tab, update URL to match
+          navigate({
+            to: '/projects',
+            search: (prev) => ({ ...prev, tab: activeProjectTabId.toString() }),
+            replace: true
+          })
+        }
+      } else if (activeProjectTabId && tabs[activeProjectTabId]) {
+        // If no tab in URL but we have an active tab, add it to URL
+        navigate({
+          to: '/projects',
+          search: (prev) => ({ ...prev, tab: activeProjectTabId.toString() }),
+          replace: true
+        })
+      }
+      setHasInitializedFromUrl(true)
+    }
+  }, [search.tab, tabs, hasInitializedFromUrl, setActiveProjectTabId, activeProjectTabId, navigate])
+
+  // Update URL when active tab changes (but not on initial load)
+  useEffect(() => {
+    if (hasInitializedFromUrl && activeProjectTabId !== undefined && activeProjectTabId !== null) {
+      const currentUrlTabId = search.tab ? parseInt(search.tab) : undefined
+      if (currentUrlTabId !== activeProjectTabId) {
+        navigate({
+          to: '/projects',
+          search: (prev) => ({ ...prev, tab: activeProjectTabId.toString() }),
+          replace: true
+        })
+      }
+    }
+  }, [activeProjectTabId, hasInitializedFromUrl, navigate, search.tab])
 
   const handleSelectProject = (id: number) => {
     updateActiveProjectTab((prev) => ({
@@ -155,7 +202,17 @@ export function ProjectsPage() {
         <div className='flex-none'>
           <ProjectsTabManager />
         </div>
-        <Tabs defaultValue='context' className='flex-1 flex flex-col min-h-0'>
+        <Tabs 
+          value={search.activeView || 'context'} 
+          onValueChange={(value) => {
+            navigate({
+              to: '/projects',
+              search: (prev) => ({ ...prev, activeView: value as any }),
+              replace: true
+            })
+          }}
+          className='flex-1 flex flex-col min-h-0'
+        >
           <div className='flex-none px-4 py-2 border-b dark:border-slate-700 flex items-center justify-between'>
             <ProjectSwitcher
               currentProject={projectData ?? null}
@@ -170,16 +227,16 @@ export function ProjectsPage() {
                   Tickets
                 </TabsTrigger>
                 <TabsTrigger value='summarization'>Summarization</TabsTrigger>
-                {/* <TabsTrigger value='agent-coder' className='flex items-center gap-1'>
-                  <Code2 className='h-3.5 w-3.5' />
-                  Agent Coder
-                </TabsTrigger> */}
                 <TabsTrigger value='assets' className='flex items-center gap-1'>
                   Assets
                 </TabsTrigger>
                 <TabsTrigger value='git' className='flex items-center gap-1'>
                   <GitBranch className='h-3.5 w-3.5' />
                   Git
+                </TabsTrigger>
+                <TabsTrigger value='git-history' className='flex items-center gap-1'>
+                  <History className='h-3.5 w-3.5' />
+                  Git History
                 </TabsTrigger>
                 <TabsTrigger value='mcp-analytics' className='flex items-center gap-1'>
                   <BarChart2 className='h-3.5 w-3.5' />
@@ -227,17 +284,7 @@ export function ProjectsPage() {
               <p>No project selected for summarization settings.</p>
             )}
           </TabsContent>
-          <TabsContent value='agent-coder' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
-            {selectedProjectId && projectData && allProjectsData ? (
-              <AgentCoderTabView
-                project={projectData}
-                projectId={selectedProjectId}
-                allProjects={allProjectsData.data || []}
-              />
-            ) : (
-              <p className='p-4 md:p-6'>No project selected for Agent Coder.</p>
-            )}
-          </TabsContent>
+
           <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData ? (
               <ProjectAssetsView project={projectData} projectId={selectedProjectId} />
@@ -250,6 +297,13 @@ export function ProjectsPage() {
               <GitTabView projectId={selectedProjectId} />
             ) : (
               <p className='p-4 md:p-6'>No project selected for Git.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='git-history' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId ? (
+              <CommitList projectId={selectedProjectId} />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for Git History.</p>
             )}
           </TabsContent>
           <TabsContent value='mcp-analytics' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
@@ -292,7 +346,32 @@ export function ProjectsPage() {
   )
 }
 
-export const Route = createFileRoute('/projects')({ component: ProjectsPage })
+export const Route = createFileRoute('/projects')({
+  validateSearch: zodValidator(projectsSearchSchema),
+  search: {
+    middlewares: projectRouteMiddleware
+  },
+  beforeLoad: async ({ context, search }) => {
+    const { queryClient, octoClient } = context
+
+    // Prefetch projects list if not already cached
+    await queryClient.prefetchQuery({
+      queryKey: ['projects'],
+      queryFn: () => octoClient.projects.listProjects(),
+      staleTime: 5 * 60 * 1000 // 5 minutes
+    })
+
+    // If we have a projectId in search, prefetch that project's data
+    if (search.projectId) {
+      await queryClient.prefetchQuery({
+        queryKey: ['project', search.projectId],
+        queryFn: () => octoClient.projects.getProject(search.projectId!),
+        staleTime: 5 * 60 * 1000
+      })
+    }
+  },
+  component: ProjectsPage
+})
 
 type MainProjectsLayoutProps = {
   filePanelRef: React.RefObject<FilePanelRef>
@@ -302,7 +381,7 @@ type MainProjectsLayoutProps = {
 function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
   const userInputRef = useRef<UserInputPanelRef>(null)
 
-  const panels = [
+  const panels: [PanelConfig, PanelConfig, PanelConfig] = [
     {
       id: 'file-panel',
       content: <FilePanel ref={filePanelRef} className='h-full w-full' />,
@@ -318,7 +397,7 @@ function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayout
       content: <PromptOverviewPanel ref={promptPanelRef} className='h-full w-full' />,
       minWidth: 250
     }
-  ] as const
+  ]
 
   return (
     <ErrorBoundary>

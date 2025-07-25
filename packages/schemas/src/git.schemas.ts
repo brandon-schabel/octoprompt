@@ -269,3 +269,204 @@ export const gitDiffResponseSchema = z.object({
 })
 
 export type GitDiffResponse = z.infer<typeof gitDiffResponseSchema>
+
+// ============================================================================
+// Enhanced Git Schemas for Commit History Viewer
+// ============================================================================
+
+// Enhanced author info with optional avatar
+export const gitAuthorEnhancedSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  avatarUrl: z.string().url().optional().describe('Gravatar or other avatar URL')
+})
+
+export type GitAuthorEnhanced = z.infer<typeof gitAuthorEnhancedSchema>
+
+// File change statistics
+export const gitFileStatsSchema = z.object({
+  path: z.string().describe('File path relative to repository root'),
+  additions: z.number().int().min(0).describe('Number of lines added'),
+  deletions: z.number().int().min(0).describe('Number of lines removed'),
+  status: z.enum(['added', 'modified', 'deleted', 'renamed', 'copied']).describe('Change type'),
+  oldPath: z.string().optional().describe('Previous path for renamed/moved files')
+})
+
+export type GitFileStats = z.infer<typeof gitFileStatsSchema>
+
+// Enhanced commit entry with full details
+export const gitCommitEnhancedSchema = z.object({
+  // Basic info
+  hash: z.string().describe('Full SHA-1 commit hash'),
+  abbreviatedHash: z.string().describe('Abbreviated commit hash (7-8 chars)'),
+  
+  // Message parts
+  subject: z.string().describe('First line of commit message'),
+  body: z.string().describe('Full commit message including subject'),
+  
+  // Author and committer info
+  author: gitAuthorEnhancedSchema.describe('Commit author information'),
+  committer: gitAuthorEnhancedSchema.describe('Committer information (may differ from author)'),
+  
+  // Timestamps
+  authoredDate: z.string().describe('ISO 8601 timestamp when authored'),
+  committedDate: z.string().describe('ISO 8601 timestamp when committed'),
+  relativeTime: z.string().describe('Human-readable relative time (e.g., "2 hours ago")'),
+  
+  // Relationships
+  parents: z.array(z.string()).describe('Parent commit hashes'),
+  refs: z.array(z.string()).describe('Branch and tag references pointing to this commit'),
+  
+  // Statistics
+  stats: z.object({
+    filesChanged: z.number().int().min(0).describe('Total number of files changed'),
+    additions: z.number().int().min(0).describe('Total lines added'),
+    deletions: z.number().int().min(0).describe('Total lines removed')
+  }).describe('Summary statistics for the commit'),
+  
+  // Detailed file changes (optional for performance)
+  fileStats: z.array(gitFileStatsSchema).optional().describe('Per-file change statistics')
+})
+
+export type GitCommitEnhanced = z.infer<typeof gitCommitEnhancedSchema>
+
+// Enhanced branch info with commit details
+export const gitBranchEnhancedSchema = z.object({
+  name: z.string().describe('Branch name'),
+  current: z.boolean().describe('Whether this is the currently checked out branch'),
+  isRemote: z.boolean().describe('Whether this is a remote branch'),
+  isProtected: z.boolean().optional().describe('Whether the branch is protected'),
+  
+  // Latest commit info
+  latestCommit: z.object({
+    hash: z.string(),
+    abbreviatedHash: z.string(),
+    subject: z.string(),
+    author: z.string().describe('Author name'),
+    relativeTime: z.string()
+  }).describe('Summary of the latest commit on this branch'),
+  
+  // Tracking info
+  tracking: z.string().nullable().describe('Remote tracking branch'),
+  ahead: z.number().int().min(0).describe('Commits ahead of tracking/main branch'),
+  behind: z.number().int().min(0).describe('Commits behind tracking/main branch'),
+  
+  // Metadata
+  lastActivity: z.string().optional().describe('ISO 8601 timestamp of last activity')
+})
+
+export type GitBranchEnhanced = z.infer<typeof gitBranchEnhancedSchema>
+
+// Pagination info for commit history
+export const gitPaginationSchema = z.object({
+  page: z.number().int().min(1).describe('Current page number (1-based)'),
+  perPage: z.number().int().min(1).max(100).describe('Number of items per page'),
+  totalCount: z.number().int().min(0).optional().describe('Total number of items if available'),
+  hasMore: z.boolean().describe('Whether more items are available'),
+  cursor: z.string().optional().describe('Cursor for cursor-based pagination')
+})
+
+export type GitPagination = z.infer<typeof gitPaginationSchema>
+
+// Request schemas for enhanced operations
+export const gitLogEnhancedRequestSchema = z.object({
+  branch: z.string().optional().describe('Branch to get commits from (default: current branch)'),
+  page: z.number().int().min(1).default(1).describe('Page number for pagination'),
+  perPage: z.number().int().min(1).max(100).default(20).describe('Number of commits per page'),
+  search: z.string().optional().describe('Search in commit messages and authors'),
+  author: z.string().optional().describe('Filter by author name or email'),
+  since: z.string().optional().describe('ISO date or relative time (e.g., "2 weeks ago")'),
+  until: z.string().optional().describe('ISO date or relative time'),
+  includeStats: z.boolean().default(false).describe('Include file statistics (slower)'),
+  includeFileDetails: z.boolean().default(false).describe('Include per-file change details (much slower)')
+})
+
+export type GitLogEnhancedRequest = z.infer<typeof gitLogEnhancedRequestSchema>
+
+// Response schemas
+export const gitLogEnhancedResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    commits: z.array(gitCommitEnhancedSchema),
+    pagination: gitPaginationSchema,
+    branch: z.string().describe('Branch name these commits are from')
+  }).optional(),
+  message: z.string().optional()
+})
+
+export type GitLogEnhancedResponse = z.infer<typeof gitLogEnhancedResponseSchema>
+
+export const gitBranchListEnhancedResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    branches: z.array(gitBranchEnhancedSchema),
+    current: z.string().nullable().describe('Name of current branch'),
+    defaultBranch: z.string().describe('Default branch name (e.g., main, master)')
+  }).optional(),
+  message: z.string().optional()
+})
+
+export type GitBranchListEnhancedResponse = z.infer<typeof gitBranchListEnhancedResponseSchema>
+
+// Commit detail request (for viewing a single commit)
+export const gitCommitDetailRequestSchema = z.object({
+  hash: z.string().describe('Commit hash (full or abbreviated)'),
+  includeFileContents: z.boolean().default(false).describe('Include file content diffs')
+})
+
+export type GitCommitDetailRequest = z.infer<typeof gitCommitDetailRequestSchema>
+
+// File diff details for commit view
+export const gitFileDiffSchema = z.object({
+  path: z.string(),
+  status: z.enum(['added', 'modified', 'deleted', 'renamed', 'copied']),
+  additions: z.number().int().min(0),
+  deletions: z.number().int().min(0),
+  binary: z.boolean(),
+  oldPath: z.string().optional(),
+  diff: z.string().optional().describe('Unified diff content if requested')
+})
+
+export type GitFileDiff = z.infer<typeof gitFileDiffSchema>
+
+export const gitCommitDetailResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    commit: gitCommitEnhancedSchema,
+    files: z.array(gitFileDiffSchema).describe('Detailed file changes'),
+    totalDiff: z.string().optional().describe('Full unified diff if requested')
+  }).optional(),
+  message: z.string().optional()
+})
+
+export type GitCommitDetailResponse = z.infer<typeof gitCommitDetailResponseSchema>
+
+// Commit comparison request
+export const gitCompareCommitsRequestSchema = z.object({
+  base: z.string().describe('Base commit/branch/tag'),
+  head: z.string().describe('Head commit/branch/tag to compare'),
+  includeStats: z.boolean().default(true).describe('Include change statistics'),
+  includeDiffs: z.boolean().default(false).describe('Include file diffs')
+})
+
+export type GitCompareCommitsRequest = z.infer<typeof gitCompareCommitsRequestSchema>
+
+export const gitCompareCommitsResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    base: z.string().describe('Resolved base commit hash'),
+    head: z.string().describe('Resolved head commit hash'),
+    ahead: z.number().int().min(0).describe('Commits ahead'),
+    behind: z.number().int().min(0).describe('Commits behind'),
+    commits: z.array(gitCommitEnhancedSchema).describe('Commits between base and head'),
+    stats: z.object({
+      filesChanged: z.number().int().min(0),
+      additions: z.number().int().min(0),
+      deletions: z.number().int().min(0)
+    }).optional(),
+    files: z.array(gitFileDiffSchema).optional()
+  }).optional(),
+  message: z.string().optional()
+})
+
+export type GitCompareCommitsResponse = z.infer<typeof gitCompareCommitsResponseSchema>

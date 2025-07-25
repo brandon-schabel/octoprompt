@@ -323,7 +323,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
           </DialogContent>
         </Dialog>
 
-        <div className={`flex flex-col min-h-0 ${className}`}>
+        <div className={cn('flex flex-col h-full', className)}>
           <div className='flex items-center gap-2 mb-2 shrink-0'>
             <Input
               placeholder='Filter files'

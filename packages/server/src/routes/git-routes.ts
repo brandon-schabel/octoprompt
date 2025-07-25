@@ -21,7 +21,12 @@ import {
   gitRemoteSchema,
   gitTagSchema,
   gitStashSchema,
-  gitBlameSchema
+  gitBlameSchema,
+  gitLogEnhancedRequestSchema,
+  gitLogEnhancedResponseSchema,
+  gitBranchListEnhancedResponseSchema,
+  gitCommitDetailResponseSchema,
+  type GitLogEnhancedRequest
 } from '@octoprompt/schemas'
 import * as gitService from '@octoprompt/services'
 
@@ -919,6 +924,209 @@ gitRoutes.openapi(getCommitLogRoute, async (c) => {
       {
         success: false,
         message: 'Failed to get commit log'
+      },
+      500
+    )
+  }
+})
+
+// Enhanced commit log route
+const getCommitLogEnhancedRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/git/log/enhanced',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    query: z.object({
+      branch: z.string().optional(),
+      page: z.string().optional().transform((val) => val ? parseInt(val, 10) : 1),
+      perPage: z.string().optional().transform((val) => val ? parseInt(val, 10) : 20),
+      search: z.string().optional(),
+      author: z.string().optional(),
+      since: z.string().optional(),
+      until: z.string().optional(),
+      includeStats: z.string().optional().transform((val) => val === 'true'),
+      includeFileDetails: z.string().optional().transform((val) => val === 'true')
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitLogEnhancedResponseSchema
+        }
+      },
+      description: 'Enhanced commit log retrieved successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Get enhanced commit log with detailed author info, statistics, and file changes'
+})
+
+gitRoutes.openapi(getCommitLogEnhancedRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const params = c.req.valid('query')
+    
+    // Convert query params to match service expectations
+    const serviceParams: GitLogEnhancedRequest = {
+      page: params.page || 1,
+      perPage: params.perPage || 20,
+      branch: params.branch,
+      search: params.search,
+      author: params.author,
+      since: params.since,
+      until: params.until,
+      includeStats: params.includeStats || false,
+      includeFileDetails: params.includeFileDetails || false
+    }
+    
+    console.log('[GetCommitLogEnhanced] Params:', serviceParams)
+    const result = await gitService.getCommitLogEnhanced(projectId, serviceParams)
+    return c.json(result)
+  } catch (error) {
+    console.error('[GetCommitLogEnhanced] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get enhanced commit log'
+      },
+      500
+    )
+  }
+})
+
+// Enhanced branches route
+const getBranchesEnhancedRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/git/branches/enhanced',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitBranchListEnhancedResponseSchema
+        }
+      },
+      description: 'Enhanced branch list retrieved successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Get enhanced branch list with latest commit info and tracking details'
+})
+
+gitRoutes.openapi(getBranchesEnhancedRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const result = await gitService.getBranchesEnhanced(projectId)
+    return c.json(result)
+  } catch (error) {
+    console.error('[GetBranchesEnhanced] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get enhanced branches'
+      },
+      500
+    )
+  }
+})
+
+// Commit detail route
+const getCommitDetailRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/git/commits/{hash}',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10)),
+      hash: z.string().describe('Commit hash (full or abbreviated)')
+    }),
+    query: z.object({
+      includeFileContents: z
+        .union([z.boolean(), z.string().transform((val) => val === 'true')])
+        .optional()
+        .default(false)
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitCommitDetailResponseSchema
+        }
+      },
+      description: 'Commit details retrieved successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project or commit not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Get detailed information about a specific commit including file changes'
+})
+
+gitRoutes.openapi(getCommitDetailRoute, async (c) => {
+  try {
+    const { projectId, hash } = c.req.valid('param')
+    const { includeFileContents } = c.req.valid('query')
+    const result = await gitService.getCommitDetail(projectId, hash, includeFileContents)
+    return c.json(result)
+  } catch (error) {
+    console.error('[GetCommitDetail] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get commit details'
       },
       500
     )

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Folder, ChevronDown, Search, Clock, Star, FolderOpen } from 'lucide-react'
+import { Folder, ChevronDown, Search, Clock, Star, FolderOpen, GitBranch } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@ui'
 import {
@@ -17,6 +17,8 @@ import { Project } from '@octoprompt/schemas'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import { useRecentProjects } from '@/hooks/use-recent-projects'
+import { useGitCurrentBranch } from '@/hooks/api/use-git-branch'
+import { ProjectBranchInfo } from './project-branch-info'
 
 interface ProjectSwitcherProps {
   currentProject: Project | null
@@ -34,6 +36,7 @@ export function ProjectSwitcher({ currentProject, className, onManageProjects }:
   const projects = projectsData?.data ?? []
   const updateActiveProjectTab = useUpdateActiveProjectTab()
   const { recentProjects, addRecentProject } = useRecentProjects()
+  const { branch: currentBranch } = useGitCurrentBranch(currentProject?.id)
 
   const handleSelectProject = (projectId: number) => {
     updateActiveProjectTab((prev) => ({
@@ -96,8 +99,15 @@ export function ProjectSwitcher({ currentProject, className, onManageProjects }:
           ) : (
             <Folder className='h-5 w-5 shrink-0 text-muted-foreground' />
           )}
-          <span className='truncate max-w-[300px]'>
-            {isLoading ? 'Loading...' : currentProject?.name || 'Select Project'}
+          <span className='flex items-center gap-2 max-w-[400px]'>
+            <span className='truncate'>{isLoading ? 'Loading...' : currentProject?.name || 'Select Project'}</span>
+            {currentProject && currentBranch && (
+              <>
+                <span className='text-muted-foreground'>|</span>
+                <GitBranch className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                <span className='text-sm text-muted-foreground truncate'>{currentBranch}</span>
+              </>
+            )}
           </span>
           <ChevronDown className='h-4 w-4 shrink-0 opacity-50 ml-1' />
         </Button>
@@ -131,7 +141,10 @@ export function ProjectSwitcher({ currentProject, className, onManageProjects }:
                   <Clock className='h-4 w-4 mr-2 shrink-0 text-muted-foreground' />
                   <div className='flex-1 overflow-hidden'>
                     <div className='truncate font-medium'>{project.name}</div>
-                    <div className='truncate text-xs text-muted-foreground'>{project.path}</div>
+                    <div className='flex items-center gap-2'>
+                      <div className='truncate text-xs text-muted-foreground flex-1'>{project.path}</div>
+                      <ProjectBranchInfo projectId={project.id} />
+                    </div>
                   </div>
                 </DropdownMenuItem>
               ))}
@@ -166,7 +179,10 @@ export function ProjectSwitcher({ currentProject, className, onManageProjects }:
                 )}
                 <div className='flex-1 overflow-hidden'>
                   <div className='truncate font-medium'>{project.name}</div>
-                  <div className='truncate text-xs text-muted-foreground'>{project.path}</div>
+                  <div className='flex items-center gap-2'>
+                    <div className='truncate text-xs text-muted-foreground flex-1'>{project.path}</div>
+                    <ProjectBranchInfo projectId={project.id} />
+                  </div>
                 </div>
               </DropdownMenuItem>
             ))

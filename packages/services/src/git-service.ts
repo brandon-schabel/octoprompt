@@ -19,7 +19,15 @@ import type {
   GitTag,
   GitStash,
   GitBlame,
-  GitBlameLine
+  GitBlameLine,
+  GitCommitEnhanced,
+  GitBranchEnhanced,
+  GitLogEnhancedRequest,
+  GitLogEnhancedResponse,
+  GitBranchListEnhancedResponse,
+  GitFileStats,
+  GitFileDiff,
+  GitCommitDetailResponse
 } from '@octoprompt/schemas'
 import { getProjectById } from './project-service'
 import { ApiError } from '@octoprompt/shared'
@@ -1420,5 +1428,610 @@ export async function setConfig(
       `Failed to set config: ${error instanceof Error ? error.message : String(error)}`,
       'GIT_SET_CONFIG_FAILED'
     )
+  }
+}
+
+// ============================================
+// Enhanced Commit History Features
+// ============================================
+
+/**
+ * Calculates relative time from a date string
+ */
+function getRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (seconds < 60) return `${seconds} second${seconds !== 1 ? 's' : ''} ago`
+  
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+  
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`
+  
+  const weeks = Math.floor(days / 7)
+  if (weeks < 4) return `${weeks} week${weeks !== 1 ? 's' : ''} ago`
+  
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months} month${months !== 1 ? 's' : ''} ago`
+  
+  const years = Math.floor(days / 365)
+  return `${years} year${years !== 1 ? 's' : ''} ago`
+}
+
+/**
+ * Parse refs string into array of branch/tag names
+ */
+function parseRefs(refsString: string): string[] {
+  if (!refsString) return []
+  
+  // Remove HEAD -> prefix and split by comma
+  const cleaned = refsString.replace(/HEAD\s*->\s*/, '')
+  if (!cleaned) return []
+  
+  return cleaned.split(',').map(ref => ref.trim()).filter(Boolean)
+}
+
+/**
+ * Get enhanced commit log with detailed information
+ */
+export async function getCommitLogEnhanced(
+  projectId: number,
+  request: GitLogEnhancedRequest
+): Promise<GitLogEnhancedResponse> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+
+    // Get current branch if not specified
+    const currentBranch = request.branch || (await git.status()).current || 'HEAD'
+
+    // Calculate skip for pagination
+    const skip = (request.page - 1) * request.perPage
+
+    // Build log options
+    const logOptions: any = {
+      format: {
+        hash: '%H',
+        abbreviatedHash: '%h',
+        subject: '%s',
+        body: '%B',
+        authorName: '%an',
+        authorEmail: '%ae',
+        authorDate: '%aI',
+        committerName: '%cn',
+        committerEmail: '%ce',
+        committerDate: '%cI',
+        parents: '%P',
+        refs: '%D'
+      },
+      maxCount: request.perPage + skip + 1, // +1 to check if there are more
+      '--': null // Separator for path specs
+    }
+
+    // Add branch
+    if (request.branch) {
+      logOptions.from = request.branch
+    }
+
+    // Add filters
+    if (request.author) {
+      logOptions['--author'] = request.author
+    }
+    if (request.since) {
+      logOptions['--since'] = request.since
+    }
+    if (request.until) {
+      logOptions['--until'] = request.until
+    }
+    if (request.search) {
+      logOptions['--grep'] = request.search
+    }
+
+    // Get commit log
+    const logResult = await git.log(logOptions)
+    const allCommits = logResult.all
+
+    // Slice for pagination
+    const pageCommits = allCommits.slice(skip, skip + request.perPage)
+    const hasMore = allCommits.length > skip + request.perPage
+
+    // Process commits
+    const enhancedCommits: GitCommitEnhanced[] = await Promise.all(
+      pageCommits.map(async (commit: any) => {
+        const result: GitCommitEnhanced = {
+          hash: commit.hash,
+          abbreviatedHash: commit.abbreviatedHash || commit.hash.substring(0, 8),
+          subject: commit.subject || commit.body?.split('\n')[0] || '',
+          body: commit.body || commit.subject || '',
+          author: {
+            name: commit.authorName || '',
+            email: commit.authorEmail || ''
+          },
+          committer: {
+            name: commit.committerName || commit.authorName || '',
+            email: commit.committerEmail || commit.authorEmail || ''
+          },
+          authoredDate: commit.authorDate || new Date().toISOString(),
+          committedDate: commit.committerDate || commit.authorDate || new Date().toISOString(),
+          relativeTime: getRelativeTime(commit.authorDate || new Date().toISOString()),
+          parents: commit.parents ? commit.parents.split(' ').filter(Boolean) : [],
+          refs: parseRefs(commit.refs || ''),
+          stats: {
+            filesChanged: 0,
+            additions: 0,
+            deletions: 0
+          }
+        }
+
+        // Get file statistics if requested
+        if (request.includeStats || request.includeFileDetails) {
+          try {
+            // Get numstat for this commit
+            const numstat = await git.raw([
+              'show',
+              '--numstat',
+              '--format=',
+              commit.hash
+            ])
+
+            const fileStats: GitFileStats[] = []
+            let totalAdditions = 0
+            let totalDeletions = 0
+
+            const lines = numstat.trim().split('\n').filter(Boolean)
+            for (const line of lines) {
+              const parts = line.split('\t')
+              if (parts.length >= 3) {
+                const additions = parseInt(parts[0], 10) || 0
+                const deletions = parseInt(parts[1], 10) || 0
+                const filePath = parts[2]
+
+                // Handle renames
+                let status: GitFileStats['status'] = 'modified'
+                let oldPath: string | undefined
+
+                if (filePath.includes('=>')) {
+                  // This is a rename
+                  const renameParts = filePath.match(/(.+?)\s*=>\s*(.+)/)
+                  if (renameParts) {
+                    oldPath = renameParts[1].trim()
+                    status = 'renamed'
+                  }
+                } else if (additions > 0 && deletions === 0) {
+                  status = 'added'
+                } else if (additions === 0 && deletions > 0) {
+                  status = 'deleted'
+                }
+
+                if (request.includeFileDetails) {
+                  fileStats.push({
+                    path: filePath,
+                    additions,
+                    deletions,
+                    status,
+                    oldPath
+                  })
+                }
+
+                totalAdditions += additions
+                totalDeletions += deletions
+              }
+            }
+
+            result.stats = {
+              filesChanged: fileStats.length,
+              additions: totalAdditions,
+              deletions: totalDeletions
+            }
+
+            if (request.includeFileDetails) {
+              result.fileStats = fileStats
+            }
+          } catch (error) {
+            // If stats fail, continue without them
+            console.error(`Failed to get stats for commit ${commit.hash}:`, error)
+          }
+        }
+
+        return result
+      })
+    )
+
+    return {
+      success: true,
+      data: {
+        commits: enhancedCommits,
+        pagination: {
+          page: request.page,
+          perPage: request.perPage,
+          hasMore,
+          totalCount: undefined // We don't know total without counting all
+        },
+        branch: currentBranch
+      }
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    return {
+      success: false,
+      message: `Failed to get enhanced commit log: ${error instanceof Error ? error.message : String(error)}`
+    }
+  }
+}
+
+/**
+ * Get enhanced branches with detailed information
+ */
+export async function getBranchesEnhanced(projectId: number): Promise<GitBranchListEnhancedResponse> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+
+    // Get current branch
+    const status = await git.status()
+    const currentBranch = status.current
+
+    // Get all branches with verbose info
+    const [localBranches, remoteBranches] = await Promise.all([
+      git.branchLocal('-v'),
+      git.branch(['-r', '-v'])
+    ])
+
+    // Determine default branch (main or master)
+    let defaultBranch = 'main'
+    if ('main' in localBranches.branches) {
+      defaultBranch = 'main'
+    } else if ('master' in localBranches.branches) {
+      defaultBranch = 'master'
+    } else if ('origin/main' in remoteBranches.branches) {
+      defaultBranch = 'main'
+    } else if ('origin/master' in remoteBranches.branches) {
+      defaultBranch = 'master'
+    }
+
+    const enhancedBranches: GitBranchEnhanced[] = []
+
+    // Process local branches
+    for (const [name, branch] of Object.entries(localBranches.branches)) {
+      // Get the latest commit info for this branch
+      const logResult = await git.log({
+        from: name,
+        to: name,
+        maxCount: 1,
+        format: {
+          hash: '%H',
+          abbreviatedHash: '%h',
+          subject: '%s',
+          authorName: '%an',
+          authorDate: '%aI'
+        }
+      })
+
+      const latestCommit = logResult.latest
+      
+      // Calculate ahead/behind relative to default branch
+      let ahead = 0
+      let behind = 0
+      
+      if (name !== defaultBranch) {
+        try {
+          // Get ahead/behind counts
+          const revList = await git.raw([
+            'rev-list',
+            '--left-right',
+            '--count',
+            `${defaultBranch}...${name}`
+          ])
+          
+          const [behindStr, aheadStr] = revList.trim().split('\t')
+          behind = parseInt(behindStr, 10) || 0
+          ahead = parseInt(aheadStr, 10) || 0
+        } catch (error) {
+          // If comparison fails, use tracking branch info
+          ahead = branch.ahead || 0
+          behind = branch.behind || 0
+        }
+      }
+
+      enhancedBranches.push({
+        name,
+        current: branch.current,
+        isRemote: false,
+        latestCommit: {
+          hash: latestCommit?.hash || branch.commit,
+          abbreviatedHash: latestCommit?.abbreviatedHash || branch.commit.substring(0, 8),
+          subject: latestCommit?.subject || '',
+          author: latestCommit?.authorName || '',
+          relativeTime: getRelativeTime(latestCommit?.authorDate || new Date().toISOString())
+        },
+        tracking: branch.tracking || null,
+        ahead: ahead || branch.ahead || 0,
+        behind: behind || branch.behind || 0,
+        lastActivity: latestCommit?.authorDate
+      })
+    }
+
+    // Process remote branches (excluding HEAD)
+    for (const [name, branch] of Object.entries(remoteBranches.branches)) {
+      if (name.includes('HEAD')) continue
+
+      try {
+        // Get the latest commit info for this branch
+        const logResult = await git.log({
+          from: name,
+          to: name,
+          maxCount: 1,
+          format: {
+            hash: '%H',
+            abbreviatedHash: '%h',
+            subject: '%s',
+            authorName: '%an',
+            authorDate: '%aI'
+          }
+        })
+
+        const latestCommit = logResult.latest
+
+        enhancedBranches.push({
+          name,
+          current: false,
+          isRemote: true,
+          latestCommit: {
+            hash: latestCommit?.hash || branch.commit,
+            abbreviatedHash: latestCommit?.abbreviatedHash || branch.commit.substring(0, 8),
+            subject: latestCommit?.subject || '',
+            author: latestCommit?.authorName || '',
+            relativeTime: getRelativeTime(latestCommit?.authorDate || new Date().toISOString())
+          },
+          tracking: null,
+          ahead: 0,
+          behind: 0,
+          lastActivity: latestCommit?.authorDate
+        })
+      } catch (error) {
+        // If we can't get commit info, skip this remote branch
+        console.error(`Failed to get info for remote branch ${name}:`, error)
+      }
+    }
+
+    // Sort branches by last activity (most recent first)
+    enhancedBranches.sort((a, b) => {
+      if (!a.lastActivity) return 1
+      if (!b.lastActivity) return -1
+      return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
+    })
+
+    return {
+      success: true,
+      data: {
+        branches: enhancedBranches,
+        current: currentBranch,
+        defaultBranch
+      }
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    return {
+      success: false,
+      message: `Failed to get enhanced branches: ${error instanceof Error ? error.message : String(error)}`
+    }
+  }
+}
+
+/**
+ * Get detailed information about a single commit
+ */
+export async function getCommitDetail(
+  projectId: number,
+  commitHash: string,
+  includeFileContents: boolean = false
+): Promise<GitCommitDetailResponse> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+
+    // Get commit info using show
+    const commitFormat = [
+      '%H',  // hash
+      '%h',  // abbreviated hash
+      '%s',  // subject
+      '%b',  // body
+      '%an', // author name
+      '%ae', // author email
+      '%aI', // author date ISO
+      '%cn', // committer name
+      '%ce', // committer email
+      '%cI', // committer date ISO
+      '%P',  // parents
+      '%D'   // refs
+    ].join('%n')
+
+    const showResult = await git.show([
+      commitHash,
+      `--format=${commitFormat}`,
+      '--no-patch'
+    ])
+
+    const lines = showResult.split('\n')
+    const [
+      hash,
+      abbreviatedHash,
+      subject,
+      ...bodyAndRest
+    ] = lines
+
+    // Find where the body ends (empty line after body)
+    let bodyEndIndex = bodyAndRest.findIndex(line => line === '')
+    if (bodyEndIndex === -1) bodyEndIndex = bodyAndRest.length
+
+    const body = bodyAndRest.slice(0, bodyEndIndex).join('\n')
+    const metadataLines = bodyAndRest.slice(bodyEndIndex + 1)
+
+    const [
+      authorName,
+      authorEmail,
+      authorDate,
+      committerName,
+      committerEmail,
+      committerDate,
+      parents,
+      refs
+    ] = metadataLines
+
+    // Get file changes with numstat
+    const numstatResult = await git.raw([
+      'show',
+      '--numstat',
+      '--format=',
+      commitHash
+    ])
+
+    const fileDiffs: GitFileDiff[] = []
+    let totalAdditions = 0
+    let totalDeletions = 0
+
+    const numstatLines = numstatResult.trim().split('\n').filter(Boolean)
+    
+    for (const line of numstatLines) {
+      const parts = line.split('\t')
+      if (parts.length >= 3) {
+        const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10) || 0
+        const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10) || 0
+        const filePath = parts[2]
+        
+        // Determine file status
+        let status: GitFileDiff['status'] = 'modified'
+        let path = filePath
+        let oldPath: string | undefined
+        
+        // Handle renames (format: "oldname => newname" or "{oldname => newname}")
+        if (filePath.includes('=>')) {
+          const renameParts = filePath.match(/^(?:\{(.+?)\s*=>\s*(.+?)\}|(.+?)\s*=>\s*(.+))$/)
+          if (renameParts) {
+            oldPath = renameParts[1] || renameParts[3]
+            path = renameParts[2] || renameParts[4]
+            status = 'renamed'
+          }
+        } else if (additions > 0 && deletions === 0) {
+          status = 'added'
+        } else if (additions === 0 && deletions > 0) {
+          status = 'deleted'
+        }
+
+        fileDiffs.push({
+          path,
+          status,
+          additions,
+          deletions,
+          binary: parts[0] === '-' && parts[1] === '-',
+          oldPath
+        })
+
+        if (!fileDiffs[fileDiffs.length - 1].binary) {
+          totalAdditions += additions
+          totalDeletions += deletions
+        }
+      }
+    }
+
+    // Get individual file diffs if requested
+    if (includeFileContents) {
+      for (const file of fileDiffs) {
+        if (!file.binary) {
+          try {
+            const diff = await git.diff([`${commitHash}^`, commitHash, '--', file.path])
+            file.diff = diff
+          } catch (error) {
+            // For initial commits or other edge cases
+            try {
+              const diff = await git.show([commitHash, '--', file.path])
+              file.diff = diff
+            } catch {
+              // Ignore diff errors
+            }
+          }
+        }
+      }
+    }
+
+    // Build enhanced commit object
+    const enhancedCommit: GitCommitEnhanced = {
+      hash,
+      abbreviatedHash,
+      subject,
+      body: body || subject,
+      author: {
+        name: authorName || '',
+        email: authorEmail || ''
+      },
+      committer: {
+        name: committerName || authorName || '',
+        email: committerEmail || authorEmail || ''
+      },
+      authoredDate: authorDate || new Date().toISOString(),
+      committedDate: committerDate || authorDate || new Date().toISOString(),
+      relativeTime: getRelativeTime(authorDate || new Date().toISOString()),
+      parents: parents ? parents.split(' ').filter(Boolean) : [],
+      refs: parseRefs(refs || ''),
+      stats: {
+        filesChanged: fileDiffs.length,
+        additions: totalAdditions,
+        deletions: totalDeletions
+      },
+      fileStats: fileDiffs.map(f => ({
+        path: f.path,
+        additions: f.additions,
+        deletions: f.deletions,
+        status: f.status,
+        oldPath: f.oldPath
+      }))
+    }
+
+    // Get full diff if requested
+    let totalDiff: string | undefined
+    if (includeFileContents) {
+      try {
+        totalDiff = await git.diff([`${commitHash}^`, commitHash])
+      } catch {
+        // For initial commits
+        totalDiff = await git.show([commitHash])
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        commit: enhancedCommit,
+        files: fileDiffs,
+        totalDiff
+      }
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    return {
+      success: false,
+      message: `Failed to get commit detail: ${error instanceof Error ? error.message : String(error)}`
+    }
   }
 }

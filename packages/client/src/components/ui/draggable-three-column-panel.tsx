@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { DndContext, closestCenter, DragEndEvent, useDraggable } from '@dnd-kit/core'
+import { DndContext, closestCenter, DragEndEvent, useDraggable, DragOverlay } from '@dnd-kit/core'
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
@@ -84,6 +84,7 @@ export function DraggableThreeColumnPanel({
   const [isDraggingLeft, setIsDraggingLeft] = useState(false)
   const [isDraggingRight, setIsDraggingRight] = useState(false)
   const [isDraggingPanel, setIsDraggingPanel] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(null)
   const [containerWidth, setContainerWidth] = useState(1000)
 
   // Calculate middle panel width
@@ -116,6 +117,9 @@ export function DraggableThreeColumnPanel({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over, delta } = event
+
+    // Clear active ID
+    setActiveId(null)
 
     // Handle panel reordering
     if (active.id && over?.id && active.id !== over.id && !active.id.toString().includes('resizer')) {
@@ -170,11 +174,15 @@ export function DraggableThreeColumnPanel({
       setIsDraggingRight(true)
     } else {
       setIsDraggingPanel(true)
+      setActiveId(active.id as string)
     }
   }
 
   // Calculate widths for each panel position
   const panelWidths = [leftPanelWidth, middlePanelWidth, rightPanelWidth]
+
+  // Get the active panel for DragOverlay
+  const activePanel = activeId ? panels.find((p) => p.id === activeId) : null
 
   return (
     <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart} collisionDetection={closestCenter}>
@@ -194,7 +202,12 @@ export function DraggableThreeColumnPanel({
                   maxWidth: `${panelWidths[index]}%`
                 }}
               >
-                <SortablePanel id={panel.id} isDragging={isDraggingPanel} dragHandleClassName={dragHandleClassName}>
+                <SortablePanel
+                  id={panel.id}
+                  isDragging={isDraggingPanel}
+                  dragHandleClassName={dragHandleClassName}
+                  isAnyPanelDragging={isDraggingPanel}
+                >
                   {panel.content}
                 </SortablePanel>
               </div>
@@ -211,6 +224,18 @@ export function DraggableThreeColumnPanel({
           ))}
         </div>
       </SortableContext>
+      <DragOverlay>
+        {activePanel && (
+          <div
+            className={cn(
+              'h-full w-full bg-background border-2 border-green-500 rounded-lg shadow-2xl opacity-90',
+              activePanel.className
+            )}
+          >
+            <div className='p-4 opacity-50'>{activePanel.content}</div>
+          </div>
+        )}
+      </DragOverlay>
     </DndContext>
   )
 }

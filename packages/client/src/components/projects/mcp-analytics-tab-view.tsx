@@ -28,6 +28,7 @@ import {
 } from '@/hooks/api/use-mcp-analytics-api'
 import type { MCPAnalyticsRequest, MCPExecutionQuery } from '@octoprompt/schemas'
 import { formatDistanceToNow } from 'date-fns'
+import { MCPExecutionsTable } from './mcp-analytics/mcp-executions-table'
 
 interface MCPAnalyticsTabViewProps {
   projectId: number
@@ -60,13 +61,6 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
     isLoading: overviewLoading,
     refetch: refetchOverview
   } = useGetMCPAnalyticsOverview(projectId, analyticsRequest)
-  const { data: executions, isLoading: executionsLoading } = useGetMCPExecutions(projectId, {
-    projectId,
-    limit: 10,
-    offset: 0,
-    sortBy: 'startedAt',
-    sortOrder: 'desc'
-  })
   const { data: statistics, isLoading: statsLoading } = useGetMCPToolStatistics(projectId, analyticsRequest)
 
   const { data: timeline, isLoading: timelineLoading } = useGetMCPExecutionTimeline(projectId, analyticsRequest)
@@ -271,66 +265,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
         </TabsContent>
 
         <TabsContent value='executions' className='flex-1 overflow-hidden mt-4'>
-          <Card className='h-full flex flex-col'>
-            <CardHeader>
-              <CardTitle>Recent Executions</CardTitle>
-              <CardDescription>Latest tool executions across the project</CardDescription>
-            </CardHeader>
-            <CardContent className='flex-1 min-h-0'>
-              <ScrollArea className='h-full'>
-                <div className='space-y-2'>
-                  {executions?.executions?.length > 0 ? (
-                    executions.executions.map((execution: any) => (
-                      <div key={execution.id} className='p-3 border rounded-lg flex items-center justify-between'>
-                        <div className='flex items-center gap-3'>
-                          {execution.status === 'success' ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : execution.status === 'error' ? (
-                            <XCircle className='h-4 w-4 text-red-500' />
-                          ) : (
-                            <Timer className='h-4 w-4 text-yellow-500' />
-                          )}
-                          <div>
-                            <p className='font-medium'>
-                              {execution.toolName}
-                              {getActionFromParams(execution.inputParams) && (
-                                <span className='text-muted-foreground'>
-                                  {' '}
-                                  · {getActionFromParams(execution.inputParams)}
-                                </span>
-                              )}
-                            </p>
-                            <p className='text-xs text-muted-foreground'>
-                              {formatDistanceToNow(new Date(execution.startedAt), { addSuffix: true })}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className='flex items-center gap-2'>
-                          {execution.durationMs && (
-                            <Badge variant='outline'>{(execution.durationMs / 1000).toFixed(2)}s</Badge>
-                          )}
-                          {execution.outputSize && (
-                            <Badge variant='outline'>{(execution.outputSize / 1024).toFixed(1)} KB</Badge>
-                          )}
-                          {execution.errorMessage && (
-                            <Badge variant='destructive' title={execution.errorMessage}>
-                              Error
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className='text-center py-8 text-muted-foreground'>
-                      <Clock className='h-12 w-12 mx-auto mb-3 opacity-50' />
-                      <p>No recent executions found</p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <MCPExecutionsTable projectId={projectId} />
         </TabsContent>
 
         <TabsContent value='timeline' className='flex-1 overflow-hidden mt-4'>

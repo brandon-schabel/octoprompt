@@ -1,6 +1,8 @@
 import { ChangeEvent, KeyboardEvent, ClipboardEvent, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
+import { persistListParams } from '@/lib/router/search-middleware'
 import {
   MessageSquareIcon,
   PlusIcon,
@@ -905,7 +907,16 @@ export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
   )
 }
 
+const chatSearchSchema = z.object({
+  chatId: z.number().optional(),
+  prefill: z.boolean().optional().default(false)
+})
+
 export const Route = createFileRoute('/chat')({
+  validateSearch: chatSearchSchema,
+  search: {
+    middlewares: [persistListParams]
+  },
   component: ChatPage
 })
 
