@@ -22,8 +22,11 @@ import {
   useUpdateProjectTabById
 } from '@/hooks/use-kv-local-storage'
 import { toast } from 'sonner'
-import { useGetProjects } from '@/hooks/api/use-projects-api'
+import { useGetProjects, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { useGenerateTabName } from '@/hooks/api/use-tab-naming'
+import { Sparkles } from 'lucide-react'
+import type { ProjectFile } from '@octoprompt/schemas'
 
 export type ProjectsTabManagerProps = {
   className?: string
@@ -49,6 +52,8 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
 
   const scrollableTabsRef = useRef<HTMLDivElement>(null)
   const [showFade, setShowFade] = useState(false)
+  
+  const generateTabNameMutation = useGenerateTabName()
 
   const calculateInitialOrder = (): number[] => {
     if (!tabs) return []
@@ -155,8 +160,31 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     }
   }, [tabs, finalTabOrder]) // Re-check when tabs or their order changes
 
-  const handleCreateTab = () => {
-    createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
+  const handleCreateTab = async () => {
+    const newTabId = createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
+    
+    // Auto-generate name for the new tab
+    if (projectId && projects?.data) {
+      const project = projects.data.find(p => p.id === projectId)
+      if (project) {
+        try {
+          const generatedName = await generateTabNameMutation.mutateAsync({
+            projectName: project.name,
+            selectedFiles: [],
+            context: undefined
+          })
+          
+          updateProjectTabById(newTabId, { 
+            displayName: generatedName,
+            nameGenerationStatus: 'success',
+            nameGeneratedAt: new Date()
+          })
+        } catch (error) {
+          console.error('Failed to auto-generate tab name:', error)
+          // Fallback is already set by the createProjectTab function
+        }
+      }
+    }
   }
 
   const handleRenameTab = (tabId: number, newName: string) => {
@@ -193,6 +221,43 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const cancelDialogRename = () => {
     setDialogEditingTab(null)
     setDialogEditingName('')
+  }
+  
+  const handleGenerateTabName = async (tabId: number, projectFiles?: ProjectFile[]) => {
+    const tabData = tabs?.[tabId]
+    if (!tabData) return
+    
+    const project = projects?.data.find(p => p.id === tabData.selectedProjectId)
+    if (!project) return
+    
+    try {
+      // Get file names from the selected file IDs
+      const selectedFileNames = tabData.selectedFiles?.map(fileId => {
+        const file = projectFiles?.find(f => f.id === fileId)
+        return file?.path || file?.name || `file_${fileId}`
+      }) || []
+      
+      const generatedName = await generateTabNameMutation.mutateAsync({
+        projectName: project.name,
+        selectedFiles: selectedFileNames,
+        context: tabData.userPrompt || undefined
+      })
+      
+      updateProjectTabById(tabId, { 
+        displayName: generatedName,
+        nameGenerationStatus: 'success',
+        nameGeneratedAt: new Date()
+      })
+      toast.success('Tab name generated')
+      
+      // If we're in editing mode, update the dialog
+      if (dialogEditingTab === tabId) {
+        setDialogEditingName(generatedName)
+      }
+    } catch (error) {
+      console.error('Failed to generate tab name:', error)
+      toast.error('Failed to generate tab name')
+    }
   }
 
   function getTabStats(tabId: number): string {
@@ -284,6 +349,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                       const tabData = tabs[tabId]
                       if (!tabData) return null
                       const displayName = tabData.displayName || `Tab ${tabId.toString().slice(-4)}`
+                      const isAIGenerated = tabData.nameGenerationStatus === 'success'
 
                       return (
                         <SortableTab
@@ -292,6 +358,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                           index={index}
                           displayName={displayName}
                           hasLink={false}
+                          isAIGenerated={isAIGenerated}
                           isEditingInline={editingTabName?.id === tabId}
                           editingInlineName={editingTabName?.name ?? ''}
                           setEditingInlineName={(name) => setEditingTabName({ id: tabId, name })}
@@ -378,6 +445,21 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                           <Pencil className='h-3.5 w-3.5' />
                         </Button>
                       )}
+                      
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        className='h-6 w-6'
+                        onClick={() => handleGenerateTabName(tabId)}
+                        disabled={generateTabNameMutation.isPending}
+                        title='Auto-generate Tab Name'
+                      >
+                        {generateTabNameMutation.isPending ? (
+                          <span className='h-3.5 w-3.5 animate-spin'>⌛</span>
+                        ) : (
+                          <Sparkles className='h-3.5 w-3.5' />
+                        )}
+                      </Button>
 
                       <Button
                         variant='ghost'
@@ -408,6 +490,7 @@ function SortableTab(props: {
   index: number
   displayName: string
   hasLink: boolean
+  isAIGenerated?: boolean
   isEditingInline: boolean
   editingInlineName: string
   setEditingInlineName: (name: string) => void
@@ -421,6 +504,7 @@ function SortableTab(props: {
     index,
     displayName,
     hasLink,
+    isAIGenerated,
     isEditingInline,
     editingInlineName,
     setEditingInlineName,
@@ -507,6 +591,7 @@ function SortableTab(props: {
                 </Badge>
               )}
               <span className='truncate max-w-[120px]'>{displayName}</span>
+              {isAIGenerated && <Sparkles className='h-3 w-3 text-muted-foreground flex-shrink-0' />}
               {hasLink && <LinkIcon className='h-3.5 w-3.5 text-muted-foreground flex-shrink-0' />}
             </>
           )}

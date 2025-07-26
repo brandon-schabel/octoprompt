@@ -45,59 +45,59 @@ const defaultXmlOptions: Required<SummaryXmlOptions> = {
 function getFileTypeDescription(extension: string): string {
   const fileTypeMap: Record<string, string> = {
     // Programming languages
-    'ts': 'TypeScript',
-    'tsx': 'TypeScript React',
-    'js': 'JavaScript',
-    'jsx': 'JavaScript React',
-    'py': 'Python',
-    'java': 'Java',
-    'cpp': 'C++',
-    'c': 'C',
-    'cs': 'C#',
-    'go': 'Go',
-    'rs': 'Rust',
-    'php': 'PHP',
-    'rb': 'Ruby',
-    'swift': 'Swift',
-    'kt': 'Kotlin',
-    
+    ts: 'TypeScript',
+    tsx: 'TypeScript React',
+    js: 'JavaScript',
+    jsx: 'JavaScript React',
+    py: 'Python',
+    java: 'Java',
+    cpp: 'C++',
+    c: 'C',
+    cs: 'C#',
+    go: 'Go',
+    rs: 'Rust',
+    php: 'PHP',
+    rb: 'Ruby',
+    swift: 'Swift',
+    kt: 'Kotlin',
+
     // Web files
-    'html': 'HTML',
-    'css': 'CSS',
-    'scss': 'SCSS',
-    'sass': 'Sass',
-    'less': 'Less',
-    'vue': 'Vue',
-    'svelte': 'Svelte',
-    
+    html: 'HTML',
+    css: 'CSS',
+    scss: 'SCSS',
+    sass: 'Sass',
+    less: 'Less',
+    vue: 'Vue',
+    svelte: 'Svelte',
+
     // Data/Config files
-    'json': 'JSON',
-    'yaml': 'YAML',
-    'yml': 'YAML',
-    'xml': 'XML',
-    'toml': 'TOML',
-    'ini': 'INI config',
-    'env': 'Environment config',
-    
+    json: 'JSON',
+    yaml: 'YAML',
+    yml: 'YAML',
+    xml: 'XML',
+    toml: 'TOML',
+    ini: 'INI config',
+    env: 'Environment config',
+
     // Documentation
-    'md': 'Markdown',
-    'mdx': 'MDX',
-    'rst': 'reStructuredText',
-    'txt': 'Text',
-    
+    md: 'Markdown',
+    mdx: 'MDX',
+    rst: 'reStructuredText',
+    txt: 'Text',
+
     // Other
-    'sql': 'SQL',
-    'sh': 'Shell script',
-    'bash': 'Bash script',
-    'ps1': 'PowerShell',
-    'dockerfile': 'Dockerfile',
-    'gitignore': 'Git ignore',
-    'lock': 'Lock file',
-    'log': 'Log',
-    'test': 'Test',
-    'spec': 'Test specification'
+    sql: 'SQL',
+    sh: 'Shell script',
+    bash: 'Bash script',
+    ps1: 'PowerShell',
+    dockerfile: 'Dockerfile',
+    gitignore: 'Git ignore',
+    lock: 'Lock file',
+    log: 'Log',
+    test: 'Test',
+    spec: 'Test specification'
   }
-  
+
   return fileTypeMap[extension] || 'Unknown type'
 }
 

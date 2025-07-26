@@ -200,10 +200,10 @@ export class DatabaseManager {
 
     // Create indexes
     this.createIndexes()
-    
+
     // Run migrations asynchronously to not block startup
     import('./migrations/run-migrations').then(({ runMigrations }) => {
-      runMigrations().catch(error => {
+      runMigrations().catch((error) => {
         console.error('[DatabaseManager] Failed to run migrations:', error)
       })
     })
@@ -241,6 +241,25 @@ export class DatabaseManager {
   }
 
   private ensureTable(tableName: string): void {
+    // Skip creating tables that are managed by migrations
+    const migrationManagedTables = [
+      'mcp_tool_executions_v2',
+      'mcp_tool_statistics',
+      'mcp_tool_chains',
+      'mcp_tool_patterns',
+      'file_search_fts',
+      'file_search_fts_content',
+      'file_search_fts_data',
+      'file_search_fts_idx',
+      'file_search_fts_docsize',
+      'file_search_fts_config'
+    ]
+
+    if (migrationManagedTables.includes(tableName)) {
+      // Don't create tables that are managed by migrations
+      return
+    }
+
     // Create table if it doesn't exist
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ${tableName} (
@@ -463,6 +482,7 @@ export class DatabaseManager {
 
   async runMigration(migration: {
     version: number
+    description?: string
     up: (db: Database) => void
     down?: (db: Database) => void
   }): Promise<void> {
@@ -470,6 +490,7 @@ export class DatabaseManager {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS migrations (
         version INTEGER PRIMARY KEY,
+        description TEXT NOT NULL,
         applied_at INTEGER NOT NULL
       )
     `)
@@ -482,8 +503,8 @@ export class DatabaseManager {
       // Run migration in a transaction
       this.db.transaction(() => {
         migration.up(this.db)
-        const insertQuery = this.db.prepare('INSERT INTO migrations (version, applied_at) VALUES (?, ?)')
-        insertQuery.run(migration.version, Date.now())
+        const insertQuery = this.db.prepare('INSERT INTO migrations (version, description, applied_at) VALUES (?, ?, ?)')
+        insertQuery.run(migration.version, migration.description || `Migration ${migration.version}`, Date.now())
       })()
     }
   }
@@ -492,6 +513,7 @@ export class DatabaseManager {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS migrations (
         version INTEGER PRIMARY KEY,
+        description TEXT NOT NULL,
         applied_at INTEGER NOT NULL
       )
     `)

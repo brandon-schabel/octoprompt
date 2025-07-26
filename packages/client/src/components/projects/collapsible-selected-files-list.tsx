@@ -1,5 +1,5 @@
 import { forwardRef, useMemo } from 'react'
-import { Badge, ScrollArea } from '@ui'
+import { Badge } from '@ui'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -7,7 +7,6 @@ import { OctoTooltip } from '@/components/octo/octo-tooltip'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { SelectedFilesList, SelectedFilesListRef } from './selected-files-list'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useSelectedFilesSync } from '@/hooks/utility-hooks/use-selected-files-sync'
 import { useUpdateProjectTabState, useGetProjectTabById } from '@/hooks/use-kv-local-storage'
 
 interface CollapsibleSelectedFilesListProps {
@@ -20,9 +19,6 @@ export const CollapsibleSelectedFilesList = forwardRef<SelectedFilesListRef, Col
     const updateProjectTabState = useUpdateProjectTabState(projectTabId)
     const [projectTab] = useGetProjectTabById(projectTabId)
     const { selectedFiles, removeSelectedFile } = useSelectedFiles()
-
-    // Enable sync to backend
-    useSelectedFilesSync(projectTabId?.toString())
 
     // Collapsible state - default to true (collapsed) to save space
     const isCollapsed = projectTab?.selectedFilesCollapsed ?? true
@@ -72,20 +68,16 @@ export const CollapsibleSelectedFilesList = forwardRef<SelectedFilesListRef, Col
           </CollapsibleTrigger>
 
           <CollapsibleContent className='flex-1 flex flex-col overflow-hidden'>
-            <ScrollArea className='flex-1 border-0'>
-              <div className='p-2'>
-                {projectTabId && (
-                  <SelectedFilesList
-                    ref={ref}
-                    onRemoveFile={(fileId: number) => {
-                      removeSelectedFile(fileId)
-                    }}
-                    className='w-full'
-                    projectTabId={projectTabId}
-                  />
-                )}
-              </div>
-            </ScrollArea>
+            {projectTabId && (
+              <SelectedFilesList
+                ref={ref}
+                onRemoveFile={(fileId: number) => {
+                  removeSelectedFile(fileId)
+                }}
+                className='w-full h-full p-2'
+                projectTabId={projectTabId}
+              />
+            )}
           </CollapsibleContent>
         </Collapsible>
       </div>

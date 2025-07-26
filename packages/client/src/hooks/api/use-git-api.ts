@@ -2,7 +2,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { octoClient } from '../octo-client'
 import { toast } from 'sonner'
 
-import type { GitStatusResult, GitBranch, GitLogEntry, GitRemote, GitTag, GitStash } from '@octoprompt/schemas'
+import type {
+  GitStatusResult,
+  GitBranch,
+  GitLogEntry,
+  GitRemote,
+  GitTag,
+  GitStash,
+  GitLogEnhancedRequest,
+  GitLogEnhancedResponse,
+  GitBranchListEnhancedResponse,
+  GitCommitDetailResponse
+} from '@octoprompt/schemas'
 
 export function useProjectGitStatus(projectId: number | undefined, enabled = true) {
   return useQuery({
@@ -178,6 +189,26 @@ export function useGitBranches(projectId: number | undefined, enabled = true) {
   })
 }
 
+// Enhanced branches with additional metadata
+export function useBranchesEnhanced(projectId: number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'git', 'branches', 'enhanced'],
+    queryFn: async () => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      const response = await octoClient.git.getBranchesEnhanced(projectId)
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch enhanced branches')
+      }
+      return response
+    },
+    enabled: enabled && !!projectId,
+    staleTime: 10000, // Consider branches stale after 10 seconds
+    refetchInterval: 30000 // Refetch every 30 seconds to keep branch data fresh
+  })
+}
+
 export function useCreateBranch(projectId: number | undefined) {
   const queryClient = useQueryClient()
 
@@ -210,6 +241,7 @@ export function useSwitchBranch(projectId: number | undefined) {
       return octoClient.git.switchBranch(projectId, branchName)
     },
     onSuccess: (data, branchName) => {
+      // Invalidate all branch-related queries
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'log'] })
@@ -217,6 +249,28 @@ export function useSwitchBranch(projectId: number | undefined) {
     },
     onError: (error: Error) => {
       toast.error(`Failed to switch branch: ${error.message}`)
+    }
+  })
+}
+
+export function useDeleteBranch(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ branchName, force }: { branchName: string; force?: boolean }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.deleteBranch(projectId, branchName, force)
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate all branch-related queries
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
+      toast.success(`Deleted branch '${variables.branchName}'`)
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete branch: ${error.message}`)
     }
   })
 }
@@ -244,6 +298,53 @@ export function useGitLog(
     },
     enabled: enabled && !!projectId,
     staleTime: 30000 // Consider log stale after 30 seconds
+  })
+}
+
+// Enhanced commit log with pagination and advanced filters
+export function useCommitLogEnhanced(
+  projectId: number | undefined,
+  params?: GitLogEnhancedRequest,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'git', 'log', 'enhanced', params],
+    queryFn: async () => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      const response = await octoClient.git.getCommitLogEnhanced(projectId, params)
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch enhanced commit log')
+      }
+      return response
+    },
+    enabled: enabled && !!projectId,
+    staleTime: 30000 // Consider log stale after 30 seconds
+  })
+}
+
+// Get detailed information about a specific commit
+export function useCommitDetail(
+  projectId: number | undefined,
+  hash: string | undefined,
+  includeFileContents?: boolean,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'git', 'commits', hash, { includeFileContents }],
+    queryFn: async () => {
+      if (!projectId || !hash) {
+        throw new Error('Project ID and commit hash are required')
+      }
+      const response = await octoClient.git.getCommitDetail(projectId, hash, includeFileContents)
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch commit details')
+      }
+      return response
+    },
+    enabled: enabled && !!projectId && !!hash,
+    staleTime: 60000 // Consider commit details stale after 1 minute
   })
 }
 
@@ -398,7 +499,7 @@ export function useGitStashList(projectId: number | undefined, enabled = true) {
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch stash list')
       }
-      return response.data
+      return response
     },
     enabled: enabled && !!projectId,
     staleTime: 10000 // Consider stash list stale after 10 seconds
@@ -446,6 +547,47 @@ export function useGitStashApply(projectId: number | undefined) {
   })
 }
 
+export function useGitStashPop(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ref?: string) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.stashPop(projectId, ref)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'stash'] })
+      toast.success('Stash popped successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to pop stash: ${error.message}`)
+    }
+  })
+}
+
+export function useGitStashDrop(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ref?: string) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.stashDrop(projectId, ref)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'stash'] })
+      toast.success('Stash dropped successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to drop stash: ${error.message}`)
+    }
+  })
+}
+
 // ============================================
 // Reset Operations Hooks
 // ============================================
@@ -466,6 +608,141 @@ export function useGitReset(projectId: number | undefined) {
     },
     onError: (error: Error) => {
       toast.error(`Failed to reset: ${error.message}`)
+    }
+  })
+}
+
+// ============================================
+// Worktree Operations Hooks
+// ============================================
+
+export function useGitWorktrees(projectId: number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'git', 'worktrees'],
+    queryFn: async () => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      const response = await octoClient.git.worktrees.list(projectId)
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch worktrees')
+      }
+      return response.data
+    },
+    enabled: enabled && !!projectId
+  })
+}
+
+export function useAddGitWorktree(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (params: { path: string; branch?: string; newBranch?: string; commitish?: string; detach?: boolean }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.add(projectId, params)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      toast.success('Worktree created successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create worktree: ${error.message}`)
+    }
+  })
+}
+
+export function useRemoveGitWorktree(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ path, force }: { path: string; force?: boolean }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.remove(projectId, { path, force })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      toast.success('Worktree removed successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to remove worktree: ${error.message}`)
+    }
+  })
+}
+
+export function useLockGitWorktree(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ path, reason }: { path: string; reason?: string }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.lock(projectId, { path, reason })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      toast.success('Worktree locked successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to lock worktree: ${error.message}`)
+    }
+  })
+}
+
+export function useUnlockGitWorktree(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ path }: { path: string }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.unlock(projectId, { path })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      toast.success('Worktree unlocked successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to unlock worktree: ${error.message}`)
+    }
+  })
+}
+
+export function usePruneGitWorktrees(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ dryRun }: { dryRun?: boolean } = {}) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.prune(projectId, { dryRun })
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      if (variables?.dryRun) {
+        const prunedPaths = data.data || []
+        if (prunedPaths.length === 0) {
+          toast.info('No worktrees to prune')
+        } else {
+          toast.info(`Would prune ${prunedPaths.length} worktree(s):\n${prunedPaths.join('\n')}`)
+        }
+      } else {
+        const prunedPaths = data.data || []
+        if (prunedPaths.length === 0) {
+          toast.success('No worktrees needed pruning')
+        } else {
+          toast.success(`Pruned ${prunedPaths.length} worktree(s)`)
+        }
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to prune worktrees: ${error.message}`)
     }
   })
 }

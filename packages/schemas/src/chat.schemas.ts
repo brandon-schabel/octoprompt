@@ -252,6 +252,10 @@ export const AiChatStreamRequestSchema = z
     debug: z.boolean().optional().openapi({
       example: true,
       description: 'Enable debug mode for detailed logging.'
+    }),
+    enableChatAutoNaming: z.boolean().optional().openapi({
+      example: true,
+      description: 'Enable automatic chat naming based on the first user message.'
     })
     // 'messages' array is removed - history will be fetched using chatId
     // Fields related to SDK native structured output (schema, enumValues, etc.) are removed

@@ -12,7 +12,7 @@ import {
 import { ApiError, promptsMap } from '@octoprompt/shared'
 import { ZodError } from 'zod'
 import { generateStructuredData } from './gen-ai-services'
-import { getCompactProjectSummary } from './utils/get-full-project-summary'
+import { getCompactProjectSummary } from './utils/project-summary-service'
 
 // Utility function to populate projectId on prompts from associations
 async function populatePromptProjectId(prompt: Prompt): Promise<Prompt> {
@@ -261,21 +261,15 @@ export async function suggestPrompts(projectId: number, userInput: string, limit
   try {
     // Validate input
     if (!userInput || userInput.trim().length === 0) {
-      throw new ApiError(
-        400,
-        'User input is required for prompt suggestions',
-        'USER_INPUT_REQUIRED'
-      )
+      throw new ApiError(400, 'User input is required for prompt suggestions', 'USER_INPUT_REQUIRED')
     }
 
     // Get all prompts for the project
     let projectPrompts = await listPromptsByProject(projectId)
-    
     // If no project-specific prompts, fall back to all prompts
     if (projectPrompts.length === 0) {
       console.log(`No prompts associated with project ${projectId}, using all prompts as fallback`)
       projectPrompts = await listAllPrompts()
-      
       // If still no prompts exist at all, return empty
       if (projectPrompts.length === 0) {
         console.log('No prompts exist in the system')
@@ -289,7 +283,9 @@ export async function suggestPrompts(projectId: number, userInput: string, limit
       projectSummary = await getCompactProjectSummary(projectId)
     } catch (error) {
       // If project summary fails (e.g., no files), continue with empty summary
-      console.log(`Warning: Could not get project summary for prompt suggestions: ${error instanceof Error ? error.message : String(error)}`)
+      console.log(
+        `Warning: Could not get project summary for prompt suggestions: ${error instanceof Error ? error.message : String(error)}`
+      )
       projectSummary = 'No project context available'
     }
 
@@ -343,21 +339,21 @@ Based on the user's input and project context, suggest the most relevant prompts
     // If AI suggestions are insufficient, enhance with keyword-based matching
     if (suggestedPrompts.length < Math.min(3, limit)) {
       console.log(`AI only suggested ${suggestedPrompts.length} prompts, enhancing with keyword matching`)
-      
+
       // Calculate relevance scores for remaining prompts
-      const remainingPrompts = projectPrompts.filter(p => !suggestedPrompts.find(sp => sp.id === p.id))
-      const scoredPrompts = remainingPrompts.map(prompt => ({
+      const remainingPrompts = projectPrompts.filter((p) => !suggestedPrompts.find((sp) => sp.id === p.id))
+      const scoredPrompts = remainingPrompts.map((prompt) => ({
         prompt,
         score: calculatePromptRelevance(userInput, prompt)
       }))
-      
+
       // Add high-scoring prompts
       const additionalPrompts = scoredPrompts
-        .filter(item => item.score > 0)
+        .filter((item) => item.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, limit - suggestedPrompts.length)
-        .map(item => item.prompt)
-      
+        .map((item) => item.prompt)
+
       suggestedPrompts = [...suggestedPrompts, ...additionalPrompts]
     }
 
@@ -366,19 +362,19 @@ Based on the user's input and project context, suggest the most relevant prompts
     // If AI fails, fall back to keyword-based matching
     if (error instanceof Error && error.message.includes('generate')) {
       console.log('AI prompt suggestion failed, using keyword-based fallback')
-      
-      const scoredPrompts = projectPrompts.map(prompt => ({
+
+      const scoredPrompts = projectPrompts.map((prompt) => ({
         prompt,
         score: calculatePromptRelevance(userInput, prompt)
       }))
-      
+
       return scoredPrompts
-        .filter(item => item.score > 0)
+        .filter((item) => item.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, limit)
-        .map(item => item.prompt)
+        .map((item) => item.prompt)
     }
-    
+
     if (error instanceof ApiError) throw error
     throw new ApiError(
       500,
@@ -392,11 +388,14 @@ Based on the user's input and project context, suggest the most relevant prompts
  * Calculate relevance score between user input and prompt
  */
 function calculatePromptRelevance(userInput: string, prompt: Prompt): number {
-  const userWords = userInput.toLowerCase().split(/\s+/).filter(word => word.length > 2)
+  const userWords = userInput
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((word) => word.length > 2)
   const promptText = `${prompt.name} ${prompt.content}`.toLowerCase()
-  
+
   let score = 0
-  
+
   // Direct word matches
   for (const word of userWords) {
     const regex = new RegExp(`\\b${word}\\b`, 'gi')
@@ -405,7 +404,6 @@ function calculatePromptRelevance(userInput: string, prompt: Prompt): number {
       score += matches.length * 10
     }
   }
-  
   // Boost for name matches
   const nameLower = prompt.name.toLowerCase()
   for (const word of userWords) {
@@ -413,57 +411,61 @@ function calculatePromptRelevance(userInput: string, prompt: Prompt): number {
       score += 20
     }
   }
-  
+
   // Check for common programming concepts with enhanced MCP-specific terms
   const concepts = {
-    'debug': ['error', 'fix', 'troubleshoot', 'issue', 'problem', 'bug', 'resolve', 'trace', 'diagnose'],
-    'implement': ['create', 'build', 'develop', 'add', 'feature', 'code', 'write', 'construct', 'design'],
-    'optimize': ['performance', 'speed', 'improve', 'enhance', 'refactor', 'efficiency', 'fast', 'slow'],
-    'test': ['testing', 'unit', 'integration', 'e2e', 'spec', 'jest', 'playwright', 'mock', 'assertion'],
-    'document': ['docs', 'documentation', 'readme', 'guide', 'comment', 'explain', 'describe'],
-    'mcp': ['model context protocol', 'tool', 'integration', 'consolidated-tools', 'mcp-server', 'mcp-client', 'octoprompt'],
-    'api': ['endpoint', 'route', 'rest', 'graphql', 'http', 'request', 'response', 'hono'],
-    'database': ['sql', 'query', 'schema', 'migration', 'storage', 'sqlite', 'table', 'index'],
-    'ai': ['llm', 'model', 'prompt', 'generate', 'claude', 'openai', 'anthropic', 'gpt'],
-    'file': ['filesystem', 'directory', 'path', 'read', 'write', 'sync', 'summarize'],
-    'ticket': ['issue', 'task', 'todo', 'project', 'priority', 'status'],
-    'error': ['exception', 'failure', 'crash', 'broken', 'fail', 'retry', 'recovery'],
-    'config': ['configuration', 'settings', 'environment', 'setup', 'initialize'],
-    'auth': ['authentication', 'authorization', 'permission', 'security', 'token', 'key']
+    debug: ['error', 'fix', 'troubleshoot', 'issue', 'problem', 'bug', 'resolve', 'trace', 'diagnose'],
+    implement: ['create', 'build', 'develop', 'add', 'feature', 'code', 'write', 'construct', 'design'],
+    optimize: ['performance', 'speed', 'improve', 'enhance', 'refactor', 'efficiency', 'fast', 'slow'],
+    test: ['testing', 'unit', 'integration', 'e2e', 'spec', 'jest', 'playwright', 'mock', 'assertion'],
+    document: ['docs', 'documentation', 'readme', 'guide', 'comment', 'explain', 'describe'],
+    mcp: [
+      'model context protocol',
+      'tool',
+      'integration',
+      'consolidated-tools',
+      'mcp-server',
+      'mcp-client',
+      'octoprompt'
+    ],
+    api: ['endpoint', 'route', 'rest', 'graphql', 'http', 'request', 'response', 'hono'],
+    database: ['sql', 'query', 'schema', 'migration', 'storage', 'sqlite', 'table', 'index'],
+    ai: ['llm', 'model', 'prompt', 'generate', 'claude', 'openai', 'anthropic', 'gpt'],
+    file: ['filesystem', 'directory', 'path', 'read', 'write', 'sync', 'summarize'],
+    ticket: ['issue', 'task', 'todo', 'project', 'priority', 'status'],
+    error: ['exception', 'failure', 'crash', 'broken', 'fail', 'retry', 'recovery'],
+    config: ['configuration', 'settings', 'environment', 'setup', 'initialize'],
+    auth: ['authentication', 'authorization', 'permission', 'security', 'token', 'key']
   }
-  
+
   for (const [concept, related] of Object.entries(concepts)) {
-    const userHasConcept = userInput.toLowerCase().includes(concept) || 
-                          related.some(r => userInput.toLowerCase().includes(r))
-    const promptHasConcept = promptText.includes(concept) || 
-                            related.some(r => promptText.includes(r))
-    
+    const userHasConcept =
+      userInput.toLowerCase().includes(concept) || related.some((r) => userInput.toLowerCase().includes(r))
+    const promptHasConcept = promptText.includes(concept) || related.some((r) => promptText.includes(r))
+
     if (userHasConcept && promptHasConcept) {
       score += 15
     }
   }
-  
+
   // Slightly penalize generic prompts when user has specific request
   const genericTerms = ['general', 'overview', 'introduction', 'basic']
-  const hasSpecificRequest = userWords.length > 3 || userWords.some(w => w.length > 6)
-  if (hasSpecificRequest && genericTerms.some(term => nameLower.includes(term))) {
+  const hasSpecificRequest = userWords.length > 3 || userWords.some((w) => w.length > 6)
+  if (hasSpecificRequest && genericTerms.some((term) => nameLower.includes(term))) {
     // Only penalize if the prompt has no other matching concepts
     if (score < 15) {
       score = Math.max(0, score - 5) // Reduced penalty from 10 to 5
     }
   }
-  
   // Bonus for exact phrase matches
   const twoWordPhrases = []
   for (let i = 0; i < userWords.length - 1; i++) {
     twoWordPhrases.push(`${userWords[i]} ${userWords[i + 1]}`)
   }
-  
   for (const phrase of twoWordPhrases) {
     if (promptText.includes(phrase)) {
       score += 25 // Strong bonus for exact phrase matches
     }
   }
-  
   return score
 }

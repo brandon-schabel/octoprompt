@@ -1,6 +1,6 @@
 // Define types locally to avoid circular dependency with @octoprompt/schemas
 
-export type APIProviders = 
+export type APIProviders =
   | 'openai'
   | 'anthropic'
   | 'google'

@@ -3,7 +3,7 @@ import type { ModelConfig, ModelOptionsWithProvider } from '../types'
 export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
   frequencyPenalty: 0,
   presencePenalty: 0,
-  maxTokens: 10000,
+  maxTokens: 20000,
   temperature: 0.7,
   topP: 0,
   topK: 0,

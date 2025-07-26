@@ -9,7 +9,14 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import type { Context } from 'hono'
 import { ApiError } from '@octoprompt/shared'
-import { getMCPClientManager, getProjectFiles, getProjectById, suggestFiles } from '@octoprompt/services'
+import {
+  getMCPClientManager,
+  getProjectFiles,
+  getProjectById,
+  suggestFiles,
+  startMCPToolExecution,
+  completeMCPToolExecution
+} from '@octoprompt/services'
 import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './tools-registry'
 
 // JSON-RPC 2.0 message types
@@ -249,7 +256,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       capabilities: serverCapabilities,
       serverInfo: {
         name: 'octoprompt-mcp',
-        version: '0.7.2'
+        version: '0.8.0'
       },
       _meta: { sessionId } // Include session ID for client reference
     }
@@ -373,20 +380,44 @@ async function handleToolsCall(
         }
       }
 
-      const result = await getMCPClientManager().executeTool(tool.serverId, externalToolName, args || {})
-      const content = Array.isArray(result)
-        ? result
-        : [
-          {
-            type: 'text',
-            text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
-          }
-        ]
+      // Start tracking for external tool
+      const executionId = await startMCPToolExecution(
+        `external_${externalToolName}`,
+        parseInt(projectId),
+        args,
+        undefined,
+        sessionId
+      )
 
-      return {
-        jsonrpc: '2.0',
-        id,
-        result: { content }
+      try {
+        const result = await getMCPClientManager().executeTool(tool.serverId, externalToolName, args || {})
+        const content = Array.isArray(result)
+          ? result
+          : [
+            {
+              type: 'text',
+              text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+            }
+          ]
+
+        // Complete tracking with success
+        const outputSize = JSON.stringify(content).length
+        await completeMCPToolExecution(executionId, 'success', outputSize)
+
+        return {
+          jsonrpc: '2.0',
+          id,
+          result: { content }
+        }
+      } catch (error) {
+        // Complete tracking with error
+        await completeMCPToolExecution(
+          executionId,
+          'error',
+          undefined,
+          error instanceof Error ? error.message : String(error)
+        )
+        throw error
       }
     }
 
@@ -405,9 +436,32 @@ async function handleToolsCall(
     }
 
     let result: any = null
+    let executionId: number | null = null
+
     try {
+      // Track built-in tool execution
+      console.log('[MCP] Starting tool tracking:', { sessionId, name, projectId })
+      executionId = await startMCPToolExecution(
+        name,
+        projectId ? parseInt(projectId) : undefined,
+        args || {},
+        undefined,
+        sessionId || 'unknown'
+      )
+      console.log('[MCP] Execution ID:', executionId)
+
       const toolResult = await tool.handler(args || {}, projectId ? parseInt(projectId) : undefined)
       result = toolResult.content
+
+      // Calculate output size
+      const outputSize = JSON.stringify(result).length
+
+      // Complete tracking with success
+      if (executionId) {
+        console.log('[MCP] Completing tool tracking with success:', { executionId, outputSize })
+        await completeMCPToolExecution(executionId, 'success', outputSize)
+        console.log('[MCP] Tool tracking completed')
+      }
     } catch (error) {
       result = [
         {
@@ -415,6 +469,17 @@ async function handleToolsCall(
           text: `Error executing tool: ${error instanceof Error ? error.message : 'Unknown error'}`
         }
       ]
+
+      // Complete tracking with error
+      if (executionId) {
+        const outputSize = JSON.stringify(result).length
+        await completeMCPToolExecution(
+          executionId,
+          'error',
+          outputSize,
+          error instanceof Error ? error.message : 'Unknown error'
+        )
+      }
     }
 
     return {

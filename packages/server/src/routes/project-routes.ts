@@ -85,6 +85,72 @@ const RevertToVersionBodySchema = z.object({
   versionNumber: z.number().int().positive()
 })
 
+// Batch summarization schemas
+const StartBatchSummarizationBodySchema = z.object({
+  strategy: z.enum(['imports', 'directory', 'semantic', 'mixed']).default('mixed'),
+  options: z.object({
+    maxGroupSize: z.number().min(1).max(50).optional(),
+    maxTokensPerGroup: z.number().min(1000).max(100000).optional(),
+    priorityThreshold: z.number().min(0).max(10).optional(),
+    maxConcurrentGroups: z.number().min(1).max(10).optional(),
+    staleThresholdDays: z.number().min(1).max(365).optional(),
+    includeStaleFiles: z.boolean().optional(),
+    retryFailedFiles: z.boolean().optional()
+  }).optional()
+})
+
+const BatchProgressResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    batchId: z.string(),
+    currentGroup: z.string(),
+    groupIndex: z.number(),
+    totalGroups: z.number(),
+    filesProcessed: z.number(),
+    totalFiles: z.number(),
+    tokensUsed: z.number(),
+    errors: z.array(z.string())
+  })
+})
+
+const FileSummarizationStatsResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    projectId: z.number(),
+    totalFiles: z.number(),
+    summarizedFiles: z.number(),
+    unsummarizedFiles: z.number(),
+    staleFiles: z.number(),
+    failedFiles: z.number(),
+    averageTokensPerFile: z.number(),
+    lastBatchRun: z.number().optional(),
+    filesByStatus: z.object({
+      pending: z.number(),
+      in_progress: z.number(),
+      completed: z.number(),
+      failed: z.number(),
+      skipped: z.number()
+    })
+  })
+})
+
+const FileGroupsResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    groups: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      strategy: z.enum(['imports', 'directory', 'semantic', 'mixed']),
+      fileIds: z.array(z.number()),
+      estimatedTokens: z.number().optional(),
+      priority: z.number()
+    })),
+    totalFiles: z.number(),
+    totalGroups: z.number(),
+    estimatedTotalTokens: z.number()
+  })
+})
+
 // Existing route definitions...
 const createProjectRoute = createRoute({
   method: 'post',
@@ -329,6 +395,78 @@ const getProjectSummaryRoute = createRoute({
   }
 })
 
+const getProjectSummaryAdvancedRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/summary/advanced',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Get an advanced project summary with customizable options',
+  request: { 
+    params: ProjectIdParamsSchema,
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            depth: z.enum(['minimal', 'standard', 'detailed']).optional(),
+            format: z.enum(['xml', 'json', 'markdown']).optional(),
+            strategy: z.enum(['fast', 'balanced', 'thorough']).optional(),
+            focus: z.array(z.string()).optional(),
+            includeImports: z.boolean().optional(),
+            includeExports: z.boolean().optional(),
+            maxTokens: z.number().min(100).max(100000).optional(),
+            progressive: z.boolean().optional(),
+            expand: z.array(z.string()).optional(),
+            includeMetrics: z.boolean().optional()
+          })
+        }
+      },
+      description: 'Summary generation options'
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: z.any() } }, // Using any for now, should be EnhancedProjectSummaryResponseSchema
+      description: 'Successfully generated advanced project summary'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const getProjectSummaryMetricsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/summary/metrics',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Get metrics about project summary generation',
+  request: { params: ProjectIdParamsSchema },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: z.any() } }, // Metrics response
+      description: 'Successfully retrieved summary generation metrics'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const invalidateProjectSummaryCacheRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/summary/invalidate',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Invalidate the project summary cache',
+  request: { params: ProjectIdParamsSchema },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
+      description: 'Successfully invalidated summary cache'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
 const suggestFilesRoute = createRoute({
   method: 'post',
   path: '/api/projects/{projectId}/suggest-files',
@@ -377,6 +515,120 @@ const optimizeUserInputRoute = createRoute({
       content: { 'application/json': { schema: ApiErrorResponseSchema } },
       description: 'Internal Server Error or AI provider error during optimization'
     }
+  }
+})
+
+// Batch summarization routes
+const startBatchSummarizationRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/batch-summarize',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Start batch summarization of unsummarized files',
+  request: {
+    params: ProjectIdParamsSchema,
+    body: { content: { 'application/json': { schema: StartBatchSummarizationBodySchema } } }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: BatchProgressResponseSchema } },
+      description: 'Batch summarization started successfully'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const getBatchProgressRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/batch-summarize/{batchId}',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Get progress of a batch summarization operation',
+  request: {
+    params: z.object({
+      projectId: z.coerce.number().int().positive(),
+      batchId: z.string()
+    })
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: BatchProgressResponseSchema } },
+      description: 'Successfully retrieved batch progress'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Batch not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const cancelBatchSummarizationRoute = createRoute({
+  method: 'delete',
+  path: '/api/projects/{projectId}/batch-summarize/{batchId}',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Cancel a running batch summarization',
+  request: {
+    params: z.object({
+      projectId: z.coerce.number().int().positive(),
+      batchId: z.string()
+    })
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
+      description: 'Batch summarization cancelled successfully'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Batch not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const getSummarizationStatsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/summarization-stats',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Get file summarization statistics for a project',
+  request: {
+    params: ProjectIdParamsSchema
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: FileSummarizationStatsResponseSchema } },
+      description: 'Successfully retrieved summarization statistics'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const previewFileGroupsRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/preview-file-groups',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Preview how files would be grouped for summarization',
+  request: {
+    params: ProjectIdParamsSchema,
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            strategy: z.enum(['imports', 'directory', 'semantic', 'mixed']).default('mixed'),
+            maxGroupSize: z.number().min(1).max(50).optional(),
+            includeStaleFiles: z.boolean().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: FileGroupsResponseSchema } },
+      description: 'Successfully generated file groups preview'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
 })
 
@@ -707,6 +959,107 @@ export const projectRoutes = new OpenAPIHono()
       )
     }
   })
+  
+  .openapi(getProjectSummaryAdvancedRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const options = c.req.valid('json')
+    
+    try {
+      const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
+      const { SummaryOptionsSchema } = await import('@octoprompt/schemas')
+      
+      // Validate options
+      const validatedOptions = SummaryOptionsSchema.parse(options)
+      
+      // Get summary with options
+      const result = await getProjectSummaryWithOptions(projectId, validatedOptions)
+      
+      return c.json(result, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to generate advanced project summary: ${error instanceof Error ? error.message : String(error)}`,
+        'AI_SUMMARY_ERROR'
+      )
+    }
+  })
+  
+  .openapi(getProjectSummaryMetricsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    
+    try {
+      const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
+      
+      // Get summary with metrics enabled
+      const result = await getProjectSummaryWithOptions(projectId, {
+        depth: 'standard',
+        format: 'xml',
+        strategy: 'balanced',
+        includeImports: true,
+        includeExports: true,
+        progressive: false,
+        includeMetrics: true
+      })
+      
+      if (!result.metrics) {
+        throw new ApiError(500, 'Failed to generate metrics', 'METRICS_GENERATION_ERROR')
+      }
+      
+      const payload = {
+        success: true,
+        data: {
+          metrics: result.metrics,
+          version: result.version
+        }
+      }
+      
+      return c.json(payload, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to retrieve summary metrics: ${error instanceof Error ? error.message : String(error)}`,
+        'AI_METRICS_ERROR'
+      )
+    }
+  })
+  
+  .openapi(invalidateProjectSummaryCacheRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    
+    try {
+      // Verify project exists
+      const project = await projectService.getProjectById(projectId)
+      if (!project) {
+        throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+      }
+      
+      const { invalidateProjectSummaryCache } = await import('@octoprompt/services')
+      invalidateProjectSummaryCache(projectId)
+      
+      const payload: z.infer<typeof OperationSuccessResponseSchema> = {
+        success: true,
+        message: 'Project summary cache invalidated successfully'
+      }
+      
+      return c.json(payload, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to invalidate cache: ${error instanceof Error ? error.message : String(error)}`,
+        'CACHE_INVALIDATION_ERROR'
+      )
+    }
+  })
+  
   .openapi(optimizeUserInputRoute, async (c) => {
     const { userContext, projectId } = c.req.valid('json')
     const optimized = await optimizeUserInput(projectId, userContext)
@@ -880,6 +1233,237 @@ export const projectRoutes = new OpenAPIHono()
       },
       200
     )
+  })
+  .openapi(startBatchSummarizationRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { strategy, options } = c.req.valid('json')
+    
+    const project = await projectService.getProjectById(projectId)
+    if (!project) {
+      throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+    }
+    
+    try {
+      const { enhancedSummarizationService } = await import('@octoprompt/services')
+      const { BatchSummaryOptionsSchema } = await import('@octoprompt/schemas')
+      
+      // Prepare batch options
+      const batchOptions = BatchSummaryOptionsSchema.parse({
+        strategy,
+        ...options
+      })
+      
+      // Start batch summarization (async iterator)
+      const progressIterator = enhancedSummarizationService.batchSummarizeWithProgress(
+        projectId,
+        batchOptions
+      )
+      
+      // Get first progress update
+      const firstProgress = await progressIterator.next()
+      if (firstProgress.done || !firstProgress.value) {
+        throw new ApiError(500, 'Failed to start batch summarization', 'BATCH_START_ERROR')
+      }
+      
+      // Store iterator for streaming updates (would need WebSocket or SSE for real-time)
+      // For now, just return initial progress
+      const payload = {
+        success: true as const,
+        data: firstProgress.value
+      }
+      
+      return c.json(payload, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to start batch summarization: ${error instanceof Error ? error.message : String(error)}`,
+        'BATCH_SUMMARIZATION_ERROR'
+      )
+    }
+  })
+  .openapi(getBatchProgressRoute, async (c) => {
+    const { projectId, batchId } = c.req.valid('param')
+    
+    try {
+      const { fileSummarizationTracker } = await import('@octoprompt/services')
+      
+      const progress = fileSummarizationTracker.getSummarizationProgress(projectId)
+      
+      if (!progress || progress.batchId !== batchId) {
+        throw new ApiError(404, `Batch ${batchId} not found`, 'BATCH_NOT_FOUND')
+      }
+      
+      const payload = {
+        success: true as const,
+        data: {
+          batchId: progress.batchId,
+          currentGroup: progress.currentGroup || 'Initializing',
+          groupIndex: progress.processedGroups,
+          totalGroups: progress.totalGroups,
+          filesProcessed: progress.processedFiles,
+          totalFiles: progress.totalFiles,
+          tokensUsed: progress.estimatedTokensUsed,
+          errors: progress.errors || []
+        }
+      }
+      
+      return c.json(payload, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to get batch progress: ${error instanceof Error ? error.message : String(error)}`,
+        'GET_PROGRESS_ERROR'
+      )
+    }
+  })
+  .openapi(cancelBatchSummarizationRoute, async (c) => {
+    const { projectId, batchId } = c.req.valid('param')
+    
+    try {
+      const { fileSummarizationTracker, enhancedSummarizationService } = await import('@octoprompt/services')
+      
+      // Cancel in tracker
+      const cancelledInTracker = fileSummarizationTracker.cancelBatch(batchId)
+      
+      // Cancel in service
+      const cancelledInService = enhancedSummarizationService.cancelBatch(batchId)
+      
+      if (!cancelledInTracker && !cancelledInService) {
+        throw new ApiError(404, `Batch ${batchId} not found or already completed`, 'BATCH_NOT_FOUND')
+      }
+      
+      const payload: z.infer<typeof OperationSuccessResponseSchema> = {
+        success: true,
+        message: 'Batch summarization cancelled successfully'
+      }
+      
+      return c.json(payload, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to cancel batch: ${error instanceof Error ? error.message : String(error)}`,
+        'CANCEL_BATCH_ERROR'
+      )
+    }
+  })
+  .openapi(getSummarizationStatsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    
+    const project = await projectService.getProjectById(projectId)
+    if (!project) {
+      throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+    }
+    
+    try {
+      const { fileSummarizationTracker } = await import('@octoprompt/services')
+      
+      const stats = await fileSummarizationTracker.getSummarizationStats(projectId)
+      
+      const payload = {
+        success: true as const,
+        data: stats
+      }
+      
+      return c.json(payload, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to get summarization stats: ${error instanceof Error ? error.message : String(error)}`,
+        'GET_STATS_ERROR'
+      )
+    }
+  })
+  .openapi(previewFileGroupsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { strategy, maxGroupSize, includeStaleFiles } = c.req.valid('json')
+    
+    const project = await projectService.getProjectById(projectId)
+    if (!project) {
+      throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+    }
+    
+    try {
+      const { fileSummarizationTracker, fileGroupingService } = await import('@octoprompt/services')
+      
+      // Get files to group
+      const unsummarizedFiles = await fileSummarizationTracker.getUnsummarizedFiles(projectId)
+      const staleFiles = includeStaleFiles
+        ? await fileSummarizationTracker.getStaleFiles(projectId)
+        : []
+      
+      // Combine and deduplicate
+      const fileMap = new Map()
+      const allFilesToGroup = [...unsummarizedFiles, ...staleFiles]
+      allFilesToGroup.forEach(f => fileMap.set(f.id, f))
+      const filesToGroup = Array.from(fileMap.values())
+      
+      if (filesToGroup.length === 0) {
+        const payload = {
+          success: true as const,
+          data: {
+            groups: [],
+            totalFiles: 0,
+            totalGroups: 0,
+            estimatedTotalTokens: 0
+          }
+        }
+        return c.json(payload, 200)
+      }
+      
+      // Group files
+      const groups = fileGroupingService.groupFilesByStrategy(
+        filesToGroup,
+        strategy,
+        { maxGroupSize }
+      )
+      
+      // Estimate tokens
+      let totalTokens = 0
+      const groupsWithTokens = groups.map(group => {
+        const estimatedTokens = group.fileIds.reduce((sum, fileId) => {
+          const file = fileMap.get(fileId)
+          return sum + Math.ceil((file?.content?.length || 0) / 4)
+        }, 0)
+        totalTokens += estimatedTokens
+        return {
+          ...group,
+          estimatedTokens
+        }
+      })
+      
+      const payload = {
+        success: true as const,
+        data: {
+          groups: groupsWithTokens,
+          totalFiles: filesToGroup.length,
+          totalGroups: groups.length,
+          estimatedTotalTokens: totalTokens
+        }
+      }
+      
+      return c.json(payload, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to preview file groups: ${error instanceof Error ? error.message : String(error)}`,
+        'PREVIEW_GROUPS_ERROR'
+      )
+    }
   })
 
 export type ProjectRouteTypes = typeof projectRoutes

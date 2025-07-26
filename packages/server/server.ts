@@ -3,9 +3,13 @@ import { join } from 'node:path'
 import { statSync } from 'node:fs'
 import { app } from './src/app'
 
-import { listProjects } from '@octoprompt/services'
+import { listProjects, getJobQueue, createLogger } from '@octoprompt/services'
 import { getServerConfig } from '@octoprompt/config'
 import { watchersManager, createCleanupService } from '@octoprompt/services'
+import { gitWorktreeHandlers } from '@octoprompt/services/src/job-handlers/git-worktree-handlers'
+import { getWebSocketManager } from './src/services/websocket-manager'
+
+const logger = createLogger('Server')
 
 const serverConfig = getServerConfig()
 
@@ -26,7 +30,7 @@ type ServerConfig = {
 type Server = ReturnType<typeof serve>
 
 export async function instantiateServer({ port = serverConfig.serverPort }: ServerConfig = {}): Promise<Server> {
-  console.log(`[Server] Starting server initialization on port ${port}...`)
+  logger.info(`Starting server initialization on port ${port}...`)
   const server = serve({
     idleTimeout: 255,
     port,
@@ -45,9 +49,9 @@ export async function instantiateServer({ port = serverConfig.serverPort }: Serv
 
       // FIXED: Always return API responses for API routes, regardless of status code
       if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth')) {
-        console.log(`[Server] Routing ${req.method} ${url.pathname} to Hono app`)
+        logger.debug(`Routing ${req.method} ${url.pathname} to Hono app`)
         const response = await app.fetch(req)
-        console.log(`[Server] Hono response status: ${response.status}`)
+        logger.debug(`Hono response status: ${response.status}`)
         return response
       }
 
@@ -72,41 +76,65 @@ export async function instantiateServer({ port = serverConfig.serverPort }: Serv
 
     websocket: {
       async open(ws) {
-        console.debug('New WS connection', { clientId: (ws.data as any).clientId })
+        const wsManager = getWebSocketManager()
+        wsManager.addClient(ws)
       },
       close(ws) {
-        console.debug('WS closed', { clientId: (ws.data as any).clientId })
+        const wsManager = getWebSocketManager()
+        wsManager.removeClient((ws.data as any).clientId)
       },
       async message(ws, rawMessage) {
         try {
+          const wsManager = getWebSocketManager()
+          const message = typeof rawMessage === 'string' ? rawMessage : rawMessage.toString()
+          wsManager.handleMessage(ws, message)
         } catch (err) {
-          console.error('Error handling WS message:', err)
+          logger.error('Error handling WS message', err)
         }
       }
     }
   })
 
-  // Start watchers for existing projects
-  ;(async () => {
-    console.log('[Server] Starting project watchers...')
-    try {
-      const allProjects = await listProjects()
-      console.log(`[Server] Found ${allProjects.length} projects to watch`)
-      for (const project of allProjects) {
-        // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
-        watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
+    // Start watchers for existing projects
+    ; (async () => {
+      logger.info('Starting project watchers...')
+      try {
+        const allProjects = await listProjects()
+        logger.info(`Found ${allProjects.length} projects to watch`)
+        for (const project of allProjects) {
+          // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
+          watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
+        }
+        logger.info('Project watchers started')
+      } catch (error) {
+        logger.error('Error starting project watchers', error)
       }
-      console.log('[Server] Project watchers started')
-    } catch (error) {
-      console.error('[Server] Error starting project watchers:', error)
-    }
 
-    cleanupService.start()
-  })()
+      cleanupService.start()
 
-  console.log(`[Server] Server running at http://localhost:${server.port}`)
-  console.log(`[Server] Server swagger at http://localhost:${server.port}/swagger`)
-  console.log(`[Server] Server docs at http://localhost:${server.port}/doc`)
+      // Initialize job queue
+      logger.info('Initializing job queue...')
+      const jobQueue = getJobQueue()
+
+      // Register git worktree handlers
+      for (const handler of gitWorktreeHandlers) {
+        jobQueue.registerHandler(handler)
+      }
+
+      // Connect job events to WebSocket
+      const wsManager = getWebSocketManager()
+      jobQueue.on('job-event', (event) => {
+        wsManager.sendJobEvent(event)
+      })
+
+      // Start job processing
+      jobQueue.startProcessing()
+      logger.info('Job queue started')
+    })()
+
+  logger.info(`Server running at http://localhost:${server.port}`)
+  logger.info(`Server swagger at http://localhost:${server.port}/swagger`)
+  logger.info(`Server docs at http://localhost:${server.port}/doc`)
 
   // Flush stdout to ensure Tauri can read the output
   if (process.stdout.isTTY) {
@@ -130,16 +158,19 @@ function serveStatic(path: string): Response {
 }
 
 if (import.meta.main) {
-  ;(async () => {
+  ; (async () => {
     // Parse command line arguments
     const args = process.argv.slice(2)
 
     // Check if we should start in MCP stdio mode
     if (args.includes('--mcp-stdio')) {
       // Import and start MCP stdio server directly
-      console.error('Starting OctoPrompt MCP server in stdio mode...')
-      await import('./src/mcp-stdio-server.js')
-      return
+      logger.info('Starting OctoPrompt MCP server in stdio mode...');
+      if (process.platform === 'win32') {
+        logger.info('Running on Windows - ensuring compatible stdio handling');
+      }
+      await import('./src/mcp-stdio-server.js');
+      return;
     }
 
     let port = serverConfig.serverPort
@@ -154,21 +185,22 @@ if (import.meta.main) {
     }
 
     // Start normal HTTP server
-    console.log('[Server] Starting server...')
+    logger.info('Starting server...')
     try {
       const server = await instantiateServer({ port })
-      console.log('[Server] Server instantiated successfully')
+      logger.info('Server instantiated successfully')
 
       function handleShutdown() {
-        console.log('Received kill signal. Shutting down gracefully...')
+        logger.info('Received kill signal. Shutting down gracefully...')
         watchersManager.stopAllWatchers?.()
+        getJobQueue().stopProcessing()
         server.stop()
         process.exit(0)
       }
       process.on('SIGINT', handleShutdown)
       process.on('SIGTERM', handleShutdown)
     } catch (error) {
-      console.error('[Server] Failed to start server:', error)
+      logger.error('Failed to start server', error)
       process.exit(1)
     }
   })()

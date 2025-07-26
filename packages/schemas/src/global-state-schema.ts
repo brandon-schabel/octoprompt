@@ -108,7 +108,21 @@ export const projectTabStateSchema = z
       .boolean()
       .optional()
       .default(true)
-      .openapi({ description: 'Whether the selected files panel is collapsed to save space.' })
+      .openapi({ description: 'Whether the selected files panel is collapsed to save space.' }),
+    enableChatAutoNaming: z
+      .boolean()
+      .optional()
+      .default(false)
+      .openapi({ description: 'Whether to automatically name new chats based on their initial content.' }),
+    nameGenerationStatus: z
+      .enum(['pending', 'success', 'failed', 'fallback'])
+      .optional()
+      .openapi({ description: 'Status of the AI-generated tab name attempt' }),
+    nameGeneratedAt: z
+      .date()
+      .nullable()
+      .optional()
+      .openapi({ description: 'Timestamp when the tab name was generated' })
   })
   .openapi('ProjectTabState', {
     description:
@@ -387,7 +401,8 @@ export const createSafeGlobalState = (): GlobalState => ({
       ticketSort: 'created_desc' as const,
       ticketStatusFilter: 'all' as const,
       promptsPanelCollapsed: true,
-      selectedFilesCollapsed: false
+      selectedFilesCollapsed: false,
+      enableChatAutoNaming: false
     }
   },
   projectActiveTabId: 1,
@@ -435,7 +450,7 @@ export function getDefaultAppSettings(): AppSettings {
 
 // Helper function to get default project tab state cleanly
 export function getDefaultProjectTabState(displayName: string = 'Default Project Tab'): ProjectTabState {
-  return projectTabStateSchema.parse({ displayName })
+  return projectTabStateSchema.parse({ displayName, enableChatAutoNaming: false })
 }
 
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>

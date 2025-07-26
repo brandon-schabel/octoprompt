@@ -1,7 +1,6 @@
+import type { ProjectFileMap, ProjectFile } from '@octoprompt/schemas'
 import { $ } from 'bun'
 import { XMLParser } from 'fast-xml-parser'
-import { ProjectFile, ProjectFileMap } from 'shared/src/schemas/project.schemas'
-import { Task } from 'shared/src/schemas/agent-coder.schemas'
 
 // Define ParsedJUnitResults type (structure based on JUnit XML)
 export type ParsedJUnitResults = {
@@ -9,6 +8,11 @@ export type ParsedJUnitResults = {
   totalTests: number
   failedTests: number
   failures: { testName: string; message: string; stackTrace?: string }[]
+}
+
+type Task = {
+  title: string
+  relatedTestFileId: number
 }
 
 // --- Test Agent ---

@@ -11,6 +11,7 @@ import type { APIProviders, ProviderKey } from '@octoprompt/schemas'
 import type { AiChatStreamRequest } from '@octoprompt/schemas'
 import type { AiSdkOptions } from '@octoprompt/schemas'
 import { LOW_MODEL_CONFIG, getProvidersConfig } from '@octoprompt/config'
+import { structuredDataSchemas } from '@octoprompt/schemas'
 
 import { ApiError } from '@octoprompt/shared'
 import { mapProviderErrorToApiError } from './error-mappers'
@@ -26,8 +27,9 @@ export async function handleChatMessage({
   options = {},
   systemMessage,
   tempId,
-  debug = false
-}: AiChatStreamRequest): Promise<ReturnType<typeof streamText>> {
+  debug = false,
+  enableChatAutoNaming = false
+}: AiChatStreamRequest & { enableChatAutoNaming?: boolean }): Promise<ReturnType<typeof streamText>> {
   let finalAssistantMessageId: number | undefined
   const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
   const provider = finalOptions.provider as APIProviders
@@ -43,6 +45,10 @@ export async function handleChatMessage({
     role: msg.role as 'user' | 'assistant' | 'system',
     content: msg.content
   }))
+  
+  // Check if this is the first user message for auto-naming
+  const isFirstUserMessage = dbMessages.filter(msg => msg.role === 'user').length === 0
+  
   messagesToProcess.push(...dbMessages)
 
   const savedUserMessage = await chatService.saveMessage({
@@ -97,6 +103,28 @@ export async function handleChatMessage({
             `[UnifiedProviderService] Failed to update final message content in DB for ID ${finalAssistantMessageId}:`,
             dbError
           )
+        }
+      }
+
+      // Auto-name the chat if this is the first user message and auto-naming is enabled
+      if (isFirstUserMessage && enableChatAutoNaming) {
+        try {
+          // Get current chat to check if it has a default name
+          const allChats = await chatService.getAllChats()
+          const currentChat = allChats.find(chat => chat.id === chatId)
+          
+          if (currentChat && (currentChat.title.startsWith('New Chat') || currentChat.title.startsWith('Chat '))) {
+            // Generate a name based on the user's message
+            const generatedName = await generateChatName(userMessage)
+            await chatService.updateChat(chatId, generatedName)
+            
+            if (debug) {
+              console.log(`[UnifiedProviderService] Auto-named chat ${chatId}: "${generatedName}"`)
+            }
+          }
+        } catch (namingError) {
+          console.error(`[UnifiedProviderService] Failed to auto-name chat ${chatId}:`, namingError)
+          // Don't throw - auto-naming failure shouldn't break the chat
         }
       }
     },
@@ -309,9 +337,11 @@ export async function generateSingleText({
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateSingleText')
-          return mappedError.code === 'RATE_LIMIT_EXCEEDED' || 
-                 mappedError.code === 'PROVIDER_UNAVAILABLE' ||
-                 mappedError.status >= 500
+          return (
+            mappedError.code === 'RATE_LIMIT_EXCEEDED' ||
+            mappedError.code === 'PROVIDER_UNAVAILABLE' ||
+            mappedError.status >= 500
+          )
         }
       }
     )
@@ -391,9 +421,11 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateStructuredData')
-          return mappedError.code === 'RATE_LIMIT_EXCEEDED' || 
-                 mappedError.code === 'PROVIDER_UNAVAILABLE' ||
-                 mappedError.status >= 500
+          return (
+            mappedError.code === 'RATE_LIMIT_EXCEEDED' ||
+            mappedError.code === 'PROVIDER_UNAVAILABLE' ||
+            mappedError.status >= 500
+          )
         }
       }
     )
@@ -489,5 +521,50 @@ export async function genTextStream({
     if (error instanceof ApiError) throw error
     console.error(`[UnifiedProviderService - genTextStream] Error setting up stream for ${provider}:`, error)
     throw mapProviderErrorToApiError(error, provider, 'genTextStream')
+  }
+}
+
+export async function generateChatName(chatContent: string): Promise<string> {
+  try {
+    const chatNamingConfig = structuredDataSchemas.chatNaming
+    const result = await generateStructuredData({
+      prompt: chatContent,
+      schema: chatNamingConfig.schema,
+      systemMessage: chatNamingConfig.systemPrompt,
+      options: chatNamingConfig.modelSettings
+    })
+    
+    return result.object.chatName
+  } catch (error) {
+    console.error('[generateChatName] Error generating chat name:', error)
+    // Return a default name if generation fails
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return `Chat ${timestamp}`
+  }
+}
+
+export async function generateTabName(projectName: string, selectedFiles: string[] = [], context?: string): Promise<string> {
+  try {
+    const tabNamingConfig = structuredDataSchemas.tabNaming
+    
+    // Prepare the prompt with the provided information
+    const selectedFilesStr = selectedFiles.length > 0 
+      ? selectedFiles.slice(0, 5).join(', ') + (selectedFiles.length > 5 ? '...' : '')
+      : 'No specific files selected'
+    
+    const promptData = `Project Name: ${projectName}, Selected Files: ${selectedFilesStr}, Context: ${context || 'General project work'}`
+    
+    const result = await generateStructuredData({
+      prompt: promptData,
+      schema: tabNamingConfig.schema,
+      systemMessage: tabNamingConfig.systemPrompt,
+      options: tabNamingConfig.modelSettings
+    })
+    
+    return result.object.tabName
+  } catch (error) {
+    console.error('[generateTabName] Error generating tab name:', error)
+    // Return a default name if generation fails
+    return `${projectName} Tab`
   }
 }

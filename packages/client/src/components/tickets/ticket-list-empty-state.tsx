@@ -9,12 +9,12 @@ interface TicketListEmptyStateProps {
   onClearFilters?: () => void
 }
 
-export function TicketListEmptyState({ 
-  hasFilters, 
-  onCreateTicket, 
-  filterStatus, 
+export function TicketListEmptyState({
+  hasFilters,
+  onCreateTicket,
+  filterStatus,
   searchTerm,
-  onClearFilters 
+  onClearFilters
 }: TicketListEmptyStateProps) {
   if (hasFilters) {
     return (
@@ -24,19 +24,11 @@ export function TicketListEmptyState({
         </div>
         <h3 className='text-lg font-semibold'>No tickets found</h3>
         <div className='max-w-md space-y-2'>
-          {searchTerm && (
-            <p className='text-sm text-muted-foreground'>
-              No tickets match "{searchTerm}"
-            </p>
-          )}
+          {searchTerm && <p className='text-sm text-muted-foreground'>No tickets match "{searchTerm}"</p>}
           {filterStatus !== 'all' && (
-            <p className='text-sm text-muted-foreground'>
-              No tickets with status "{filterStatus.replace('_', ' ')}"
-            </p>
+            <p className='text-sm text-muted-foreground'>No tickets with status "{filterStatus.replace('_', ' ')}"</p>
           )}
-          <p className='text-sm text-muted-foreground'>
-            Try adjusting your search criteria or create a new ticket.
-          </p>
+          <p className='text-sm text-muted-foreground'>Try adjusting your search criteria or create a new ticket.</p>
         </div>
         <div className='flex gap-2'>
           {onClearFilters && (
@@ -65,8 +57,8 @@ export function TicketListEmptyState({
       <div className='space-y-2'>
         <h3 className='text-xl font-semibold'>Start organizing your work</h3>
         <p className='max-w-md text-sm text-muted-foreground'>
-          Create tickets to track features, bugs, and tasks. Break them down into smaller, 
-          actionable items to stay organized and productive.
+          Create tickets to track features, bugs, and tasks. Break them down into smaller, actionable items to stay
+          organized and productive.
         </p>
       </div>
       <Button onClick={onCreateTicket} size='lg'>

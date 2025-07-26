@@ -67,29 +67,6 @@ import {
   type UnifiedModel
 } from '@octoprompt/schemas'
 
-// Agent Coder imports
-import type {
-  RunAgentCoderBody,
-  RunAgentCoderResponseData,
-  ListAgentCoderRunsResponseData,
-  GetAgentCoderLogsResponseData,
-  GetAgentCoderDataResponseData,
-  ConfirmAgentCoderChangesResponseData,
-  DeleteAgentCoderRunResponseData,
-  AgentCoderRun,
-  AgentCoderLog
-} from '@octoprompt/schemas'
-
-import {
-  AgentCoderRunRequestSchema as RunAgentCoderBodySchema,
-  AgentCoderRunResponseSchema as RunAgentCoderResponseDataSchema,
-  ListAgentCoderRunsResponseSchema as ListAgentCoderRunsResponseDataSchema,
-  GetAgentCoderLogsResponseSchema as GetAgentCoderLogsResponseDataSchema,
-  GetAgentCoderDataResponseSchema as GetAgentCoderDataResponseDataSchema,
-  ConfirmAgentCoderChangesResponseSchema as ConfirmAgentCoderChangesResponseDataSchema,
-  DeleteAgentCoderRunResponseSchema as DeleteAgentCoderRunResponseDataSchema
-} from '@octoprompt/schemas'
-
 // Browse Directory imports
 import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@octoprompt/schemas'
 import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@octoprompt/schemas'
@@ -157,7 +134,18 @@ import type {
   GitRemote,
   GitTag,
   GitStash,
-  GitBlame
+  GitBlame,
+  GitLogEnhancedRequest,
+  GitLogEnhancedResponse,
+  GitBranchListEnhancedResponse,
+  GitCommitDetailResponse,
+  GitWorktree,
+  GitWorktreeListResponse,
+  GitWorktreeAddRequest,
+  GitWorktreeRemoveRequest,
+  GitWorktreeLockRequest,
+  GitWorktreePruneRequest,
+  GitWorktreePruneResponse
 } from '@octoprompt/schemas'
 
 import {
@@ -178,7 +166,38 @@ import {
   gitRemoteSchema,
   gitTagSchema,
   gitStashSchema,
-  gitBlameSchema
+  gitBlameSchema,
+  gitLogEnhancedRequestSchema,
+  gitLogEnhancedResponseSchema,
+  gitBranchListEnhancedResponseSchema,
+  gitCommitDetailResponseSchema,
+  gitWorktreeListResponseSchema,
+  gitWorktreeAddRequestSchema,
+  gitWorktreeRemoveRequestSchema,
+  gitWorktreeLockRequestSchema,
+  gitWorktreePruneRequestSchema,
+  gitWorktreePruneResponseSchema
+} from '@octoprompt/schemas'
+
+// MCP Analytics imports
+import type {
+  MCPExecutionQuery,
+  MCPAnalyticsRequest,
+  MCPAnalyticsOverview,
+  MCPToolExecution,
+  MCPToolStatistics,
+  MCPExecutionTimeline,
+  MCPToolPattern
+} from '@octoprompt/schemas'
+
+import {
+  mcpExecutionQuerySchema,
+  mcpAnalyticsRequestSchema,
+  mcpAnalyticsOverviewSchema,
+  mcpToolExecutionSchema,
+  mcpToolStatisticsSchema,
+  mcpExecutionTimelineSchema,
+  mcpToolPatternSchema
 } from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
@@ -652,69 +671,39 @@ export class ProjectService extends BaseApiClient {
     return result as DataResponseSchema<ProjectStatistics>
   }
 
-  // Selected Files methods
-  async getSelectedFiles(projectId: number, tabId?: number) {
-    const result = await this.request('GET', `/projects/${projectId}/selected-files`, {
-      params: tabId ? { tabId } : undefined,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.any().nullable()
-      })
-    })
-    return result
-  }
-
-  async getAllSelectedFiles(projectId: number) {
-    const result = await this.request('GET', `/projects/${projectId}/selected-files/all`, {
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.array(z.any())
-      })
-    })
-    return result
-  }
-
-  async updateSelectedFiles(
-    projectId: number,
-    data: {
-      tabId: number
-      fileIds: number[]
-      promptIds?: number[]
-      userPrompt?: string
-    }
-  ) {
-    const result = await this.request('PUT', `/projects/${projectId}/selected-files`, {
-      body: data,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.any()
-      })
-    })
-    return result
-  }
-
-  async clearSelectedFiles(projectId: number, tabId?: number) {
-    const result = await this.request('DELETE', `/projects/${projectId}/selected-files`, {
-      params: tabId ? { tabId } : undefined,
-      responseSchema: z.object({
-        success: z.literal(true),
-        message: z.string()
-      })
-    })
-    return result.success
-  }
-
-  async getSelectionContext(projectId: number, tabId?: number) {
-    const result = await this.request('GET', `/projects/${projectId}/selection-context`, {
-      params: tabId ? { tabId } : undefined,
+  // Active Tab methods
+  async getActiveTab(projectId: number, clientId?: string) {
+    const result = await this.request('GET', `/projects/${projectId}/active-tab`, {
+      params: clientId ? { clientId } : undefined,
       responseSchema: z.object({
         success: z.literal(true),
         data: z
           .object({
-            fileIds: z.array(z.number()),
-            promptIds: z.array(z.number()),
-            userPrompt: z.string(),
-            lastUpdated: z.number()
+            activeTabId: z.number(),
+            lastUpdated: z.number(),
+            clientId: z.string().optional(),
+            tabMetadata: z
+              .object({
+                displayName: z.string().optional(),
+                selectedFiles: z.array(z.number()).optional(),
+                selectedPrompts: z.array(z.number()).optional(),
+                userPrompt: z.string().optional(),
+                fileSearch: z.string().optional(),
+                contextLimit: z.number().optional(),
+                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+                suggestedFileIds: z.array(z.number()).optional(),
+                ticketSearch: z.string().optional(),
+                ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+                // Additional fields from ProjectTabState for complete synchronization
+                searchByContent: z.boolean().optional(),
+                resolveImports: z.boolean().optional(),
+                bookmarkedFileGroups: z.record(z.string(), z.array(z.number())).optional(),
+                sortOrder: z.number().optional(),
+                promptsPanelCollapsed: z.boolean().optional(),
+                selectedFilesCollapsed: z.boolean().optional()
+              })
+              .optional()
           })
           .nullable()
       })
@@ -722,30 +711,63 @@ export class ProjectService extends BaseApiClient {
     return result
   }
 
-  // Active Tab methods
-  async getActiveTab(projectId: number, clientId?: string) {
-    const result = await this.request('GET', `/projects/${projectId}/active-tab`, {
-      params: clientId ? { clientId } : undefined,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.object({
-          activeTabId: z.number(),
-          lastUpdated: z.number(),
-          clientId: z.string().optional()
-        }).nullable()
-      })
-    })
-    return result
-  }
-
-  async setActiveTab(projectId: number, data: { tabId: number; clientId?: string }) {
+  async setActiveTab(
+    projectId: number,
+    data: {
+      tabId: number
+      clientId?: string
+      tabMetadata?: {
+        displayName?: string
+        selectedFiles?: number[]
+        selectedPrompts?: number[]
+        userPrompt?: string
+        fileSearch?: string
+        contextLimit?: number
+        preferredEditor?: 'vscode' | 'cursor' | 'webstorm'
+        suggestedFileIds?: number[]
+        ticketSearch?: string
+        ticketSort?: 'created_asc' | 'created_desc' | 'status' | 'priority'
+        ticketStatusFilter?: 'all' | 'open' | 'in_progress' | 'closed'
+        // Additional fields from ProjectTabState for complete synchronization
+        searchByContent?: boolean
+        resolveImports?: boolean
+        bookmarkedFileGroups?: Record<string, number[]>
+        sortOrder?: number
+        promptsPanelCollapsed?: boolean
+        selectedFilesCollapsed?: boolean
+      }
+    }
+  ) {
     const result = await this.request('POST', `/projects/${projectId}/active-tab`, {
       body: data,
       responseSchema: z.object({
         success: z.literal(true),
         data: z.object({
           activeTabId: z.number(),
-          lastUpdated: z.number()
+          lastUpdated: z.number(),
+          clientId: z.string().optional(),
+          tabMetadata: z
+            .object({
+              displayName: z.string().optional(),
+              selectedFiles: z.array(z.number()).optional(),
+              selectedPrompts: z.array(z.number()).optional(),
+              userPrompt: z.string().optional(),
+              fileSearch: z.string().optional(),
+              contextLimit: z.number().optional(),
+              preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+              suggestedFileIds: z.array(z.number()).optional(),
+              ticketSearch: z.string().optional(),
+              ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
+              ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+              // Additional fields from ProjectTabState for complete synchronization
+              searchByContent: z.boolean().optional(),
+              resolveImports: z.boolean().optional(),
+              bookmarkedFileGroups: z.record(z.string(), z.array(z.number())).optional(),
+              sortOrder: z.number().optional(),
+              promptsPanelCollapsed: z.boolean().optional(),
+              selectedFilesCollapsed: z.boolean().optional()
+            })
+            .optional()
         })
       })
     })
@@ -761,6 +783,85 @@ export class ProjectService extends BaseApiClient {
       })
     })
     return result
+  }
+
+  async generateProjectTabName(tabId: number, data: {
+    projectId: number
+    tabData?: {
+      selectedFiles?: number[]
+      userPrompt?: string
+    }
+    existingNames?: string[]
+  }) {
+    const validatedData = this.validateBody(z.object({
+      projectId: z.number(),
+      tabData: z.object({
+        selectedFiles: z.array(z.number()).optional(),
+        userPrompt: z.string().optional()
+      }).optional(),
+      existingNames: z.array(z.string()).optional()
+    }), data)
+    
+    const result = await this.request('POST', `/project-tabs/${tabId}/generate-name`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          name: z.string(),
+          status: z.enum(['success', 'fallback']),
+          generatedAt: z.string()
+        })
+      })
+    })
+    return result
+  }
+
+  async getMCPInstallationStatus(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/installation/status`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          projectConfig: z.object({
+            projectId: z.number(),
+            projectName: z.string(),
+            mcpEnabled: z.boolean(),
+            installedTools: z.array(z.object({
+              tool: z.string(),
+              installedAt: z.number(),
+              configPath: z.string().optional(),
+              serverName: z.string()
+            })),
+            customInstructions: z.string().optional()
+          }).nullable(),
+          connectionStatus: z.object({
+            connected: z.boolean(),
+            sessionId: z.string().optional(),
+            lastActivity: z.number().optional(),
+            projectId: z.number().optional()
+          })
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      projectConfig: {
+        projectId: number
+        projectName: string
+        mcpEnabled: boolean
+        installedTools: Array<{
+          tool: string
+          installedAt: number
+          configPath?: string
+          serverName: string
+        }>
+        customInstructions?: string
+      } | null
+      connectionStatus: {
+        connected: boolean
+        sessionId?: string
+        lastActivity?: number
+        projectId?: number
+      }
+    }>
   }
 }
 
@@ -953,53 +1054,6 @@ export class GenAiService extends BaseApiClient {
       }
       throw new OctoPromptError('Unknown error occurred during stream request')
     }
-  }
-}
-
-// Agent Coder Service
-export class AgentCoderService extends BaseApiClient {
-  async runAgentCoder(projectId: number, body: RunAgentCoderBody) {
-    const validatedData = this.validateBody(RunAgentCoderBodySchema, body)
-    const result = await this.request('POST', `/projects/${projectId}/agent-coder`, {
-      body: validatedData,
-      responseSchema: RunAgentCoderResponseDataSchema
-    })
-    return result as RunAgentCoderResponseData
-  }
-
-  async listRuns(projectId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs`, {
-      responseSchema: ListAgentCoderRunsResponseDataSchema
-    })
-    return result as ListAgentCoderRunsResponseData
-  }
-
-  async getLogs(projectId: number, agentJobId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/logs`, {
-      responseSchema: GetAgentCoderLogsResponseDataSchema
-    })
-    return result as GetAgentCoderLogsResponseData
-  }
-
-  async getData(projectId: number, agentJobId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/data`, {
-      responseSchema: GetAgentCoderDataResponseDataSchema
-    })
-    return result as GetAgentCoderDataResponseData
-  }
-
-  async confirmChanges(projectId: number, agentJobId: number) {
-    const result = await this.request('POST', `/agent-coder/project/${projectId}/runs/${agentJobId}/confirm`, {
-      responseSchema: ConfirmAgentCoderChangesResponseDataSchema
-    })
-    return result as ConfirmAgentCoderChangesResponseData
-  }
-
-  async deleteRun(agentJobId: number) {
-    const result = await this.request('DELETE', `/agent-coder/runs/${agentJobId}`, {
-      responseSchema: DeleteAgentCoderRunResponseDataSchema
-    })
-    return result as DeleteAgentCoderRunResponseData
   }
 }
 
@@ -1465,6 +1519,74 @@ export class TicketService extends BaseApiClient {
   }
 }
 
+// MCP Analytics Service
+export class MCPAnalyticsService extends BaseApiClient {
+  async getExecutions(projectId: number, query?: MCPExecutionQuery) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/analytics/executions`, {
+      params: query as any,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          executions: z.array(mcpToolExecutionSchema),
+          total: z.number(),
+          page: z.number(),
+          pageSize: z.number()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      executions: MCPToolExecution[]
+      total: number
+      page: number
+      pageSize: number
+    }>
+  }
+
+  async getOverview(projectId: number, request?: MCPAnalyticsRequest) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/analytics/overview`, {
+      body: request || {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: mcpAnalyticsOverviewSchema
+      })
+    })
+    return result as DataResponseSchema<MCPAnalyticsOverview>
+  }
+
+  async getStatistics(projectId: number, request?: MCPAnalyticsRequest) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/analytics/statistics`, {
+      body: request || {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(mcpToolStatisticsSchema)
+      })
+    })
+    return result as DataResponseSchema<MCPToolStatistics[]>
+  }
+
+  async getTimeline(projectId: number, request?: MCPAnalyticsRequest) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/analytics/timeline`, {
+      body: request || {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(mcpExecutionTimelineSchema)
+      })
+    })
+    return result as DataResponseSchema<MCPExecutionTimeline[]>
+  }
+
+  async getErrorPatterns(projectId: number, request?: MCPAnalyticsRequest) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/analytics/error-patterns`, {
+      body: request || {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(mcpToolPatternSchema)
+      })
+    })
+    return result as DataResponseSchema<MCPToolPattern[]>
+  }
+}
+
 // Git Service
 export class GitService extends BaseApiClient {
   async getProjectGitStatus(projectId: number) {
@@ -1547,6 +1669,14 @@ export class GitService extends BaseApiClient {
     const validatedData = this.validateBody(gitSwitchBranchRequestSchema, { name })
     const result = await this.request('POST', `/projects/${projectId}/git/branches/switch`, {
       body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async deleteBranch(projectId: number, branchName: string, force?: boolean) {
+    const result = await this.request('DELETE', `/projects/${projectId}/git/branches/${encodeURIComponent(branchName)}`, {
+      params: force ? { force: 'true' } : undefined,
       responseSchema: gitOperationResponseSchema
     })
     return result as GitOperationResponse
@@ -1646,17 +1776,29 @@ export class GitService extends BaseApiClient {
   async getStashList(projectId: number) {
     const result = await this.request('GET', `/projects/${projectId}/git/stash`, {
       responseSchema: z.object({
-        success: z.boolean(),
-        data: z.array(gitStashSchema).optional(),
-        message: z.string().optional()
+        success: z.literal(true),
+        data: z.array(gitStashSchema)
       })
     })
     return result as DataResponseSchema<GitStash[]>
   }
 
-  async stashApply(projectId: number, ref?: string) {
-    const result = await this.request('POST', `/projects/${projectId}/git/stash/apply`, {
-      body: { ref: ref || 'stash@{0}' },
+  async stashApply(projectId: number, ref: string = 'stash@{0}') {
+    const result = await this.request('POST', `/projects/${projectId}/git/stash/${encodeURIComponent(ref)}/apply`, {
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async stashPop(projectId: number, ref: string = 'stash@{0}') {
+    const result = await this.request('POST', `/projects/${projectId}/git/stash/${encodeURIComponent(ref)}/pop`, {
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async stashDrop(projectId: number, ref: string = 'stash@{0}') {
+    const result = await this.request('DELETE', `/projects/${projectId}/git/stash/${encodeURIComponent(ref)}`, {
       responseSchema: gitOperationResponseSchema
     })
     return result as GitOperationResponse
@@ -1671,6 +1813,380 @@ export class GitService extends BaseApiClient {
     })
     return result as GitOperationResponse
   }
+
+  // Enhanced Git Methods
+  async getCommitLogEnhanced(projectId: number, params?: GitLogEnhancedRequest) {
+    const validatedParams = params ? this.validateBody(gitLogEnhancedRequestSchema, params) : undefined
+    const result = await this.request('GET', `/projects/${projectId}/git/log/enhanced`, {
+      params: validatedParams as any,
+      responseSchema: gitLogEnhancedResponseSchema
+    })
+    return result as GitLogEnhancedResponse
+  }
+
+  async getBranchesEnhanced(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/branches/enhanced`, {
+      responseSchema: gitBranchListEnhancedResponseSchema
+    })
+    return result as GitBranchListEnhancedResponse
+  }
+
+  async getCommitDetail(projectId: number, hash: string, includeFileContents?: boolean) {
+    const result = await this.request('GET', `/projects/${projectId}/git/commits/${hash}`, {
+      params: includeFileContents ? { includeFileContents } : undefined,
+      responseSchema: gitCommitDetailResponseSchema
+    })
+    return result as GitCommitDetailResponse
+  }
+
+  // Worktree Management
+  worktrees = {
+    list: async (projectId: number) => {
+      const result = await this.request('GET', `/projects/${projectId}/git/worktrees`, {
+        responseSchema: gitWorktreeListResponseSchema
+      })
+      return result as GitWorktreeListResponse
+    },
+
+    add: async (projectId: number, params: GitWorktreeAddRequest) => {
+      const validatedData = this.validateBody(gitWorktreeAddRequestSchema, params)
+      const result = await this.request('POST', `/projects/${projectId}/git/worktrees`, {
+        body: validatedData,
+        responseSchema: gitOperationResponseSchema
+      })
+      return result as GitOperationResponse
+    },
+
+    remove: async (projectId: number, params: GitWorktreeRemoveRequest) => {
+      const validatedData = this.validateBody(gitWorktreeRemoveRequestSchema, params)
+      const result = await this.request('DELETE', `/projects/${projectId}/git/worktrees`, {
+        body: validatedData,
+        responseSchema: gitOperationResponseSchema
+      })
+      return result as GitOperationResponse
+    },
+
+    lock: async (projectId: number, params: GitWorktreeLockRequest) => {
+      const validatedData = this.validateBody(gitWorktreeLockRequestSchema, params)
+      const result = await this.request('POST', `/projects/${projectId}/git/worktrees/lock`, {
+        body: validatedData,
+        responseSchema: gitOperationResponseSchema
+      })
+      return result as GitOperationResponse
+    },
+
+    unlock: async (projectId: number, params: { path: string }) => {
+      const validatedData = this.validateBody(z.object({ path: z.string() }), params)
+      const result = await this.request('POST', `/projects/${projectId}/git/worktrees/unlock`, {
+        body: validatedData,
+        responseSchema: gitOperationResponseSchema
+      })
+      return result as GitOperationResponse
+    },
+    prune: async (projectId: number, params: { dryRun?: boolean } = {}) => {
+      const validatedData = this.validateBody(gitWorktreePruneRequestSchema, params)
+      const result = await this.request('POST', `/projects/${projectId}/git/worktrees/prune`, {
+        body: validatedData,
+        responseSchema: gitWorktreePruneResponseSchema
+      })
+      return result as GitWorktreePruneResponse
+    }
+  }
+}
+
+// Agent Files Service
+export class AgentFilesService extends BaseApiClient {
+  async detectFiles(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/agent-files/detect`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          projectFiles: z.array(z.object({
+            type: z.string(),
+            name: z.string(),
+            path: z.string(),
+            scope: z.enum(['global', 'project']),
+            exists: z.boolean(),
+            writable: z.boolean(),
+            content: z.string().optional(),
+            hasInstructions: z.boolean().optional(),
+            instructionVersion: z.string().optional()
+          })),
+          globalFiles: z.array(z.object({
+            type: z.string(),
+            name: z.string(),
+            path: z.string(),
+            scope: z.enum(['global', 'project']),
+            exists: z.boolean(),
+            writable: z.boolean(),
+            content: z.string().optional(),
+            hasInstructions: z.boolean().optional(),
+            instructionVersion: z.string().optional()
+          })),
+          suggestedFiles: z.array(z.object({
+            type: z.string(),
+            name: z.string(),
+            suggestedPath: z.string()
+          }))
+        })
+      })
+    })
+    return result
+  }
+
+  async updateFile(projectId: number, data: { files?: { path: string, update: boolean }[] }) {
+    const result = await this.request('POST', `/projects/${projectId}/agent-files/update`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          projectId: z.number(),
+          results: z.array(z.object({
+            path: z.string(),
+            success: z.boolean(),
+            message: z.string(),
+            backedUp: z.boolean().optional()
+          }))
+        })
+      })
+    })
+    return result
+  }
+
+  async removeInstructions(projectId: number, filePath: string) {
+    const result = await this.request('POST', `/projects/${projectId}/agent-files/remove-instructions`, {
+      body: { filePath },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          path: z.string(),
+          success: z.boolean(),
+          message: z.string(),
+          backedUp: z.boolean().optional()
+        })
+      })
+    })
+    return result
+  }
+
+  async getStatus(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/agent-files/status`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          totalFiles: z.number(),
+          existingFiles: z.number(),
+          withInstructions: z.number(),
+          needsUpdate: z.number(),
+          files: z.array(z.object({
+            path: z.string(),
+            filename: z.string(),
+            exists: z.boolean(),
+            hasInstructions: z.boolean(),
+            version: z.string().optional(),
+            needsUpdate: z.boolean()
+          }))
+        })
+      })
+    })
+    return result
+  }
+
+  async createFile(projectId: number, data: { path: string, content?: string }) {
+    const result = await this.request('POST', `/projects/${projectId}/agent-files/create`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          path: z.string(),
+          success: z.boolean(),
+          message: z.string()
+        })
+      })
+    })
+    return result
+  }
+}
+
+export class MCPInstallationService extends BaseApiClient {
+  async detectTools() {
+    const result = await this.request('GET', '/mcp/installation/detect', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          detectedAgents: z.array(z.object({
+            name: z.string(),
+            displayName: z.string(),
+            detected: z.boolean(),
+            configPath: z.string().optional(),
+            executable: z.string().optional(),
+            version: z.string().optional()
+          })),
+          platform: z.string()
+        })
+      })
+    })
+    return result
+  }
+
+  async getInstallationStatus(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/installation/status`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          installed: z.boolean(),
+          configPath: z.string().optional(),
+          isConnected: z.boolean(),
+          lastActivity: z.string().optional(),
+          activeSessions: z.number(),
+          projectId: z.number(),
+          platform: z.string(),
+          detectedAgents: z.array(z.any()),
+          mcpSessions: z.array(z.any()),
+          serverRunning: z.boolean()
+        })
+      })
+    })
+    return result
+  }
+
+  async install(projectId: number, data: { platform?: string, backup?: boolean }) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/installation/install`, {
+      body: {
+        tool: data.platform,
+        backup: data.backup
+      },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          success: z.boolean(),
+          message: z.string(),
+          configPath: z.string().optional(),
+          backupPath: z.string().optional()
+        })
+      })
+    })
+    return result
+  }
+
+  async uninstall(projectId: number, tool: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/installation/uninstall`, {
+      body: { tool },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          success: z.boolean(),
+          message: z.string()
+        })
+      })
+    })
+    return result
+  }
+
+  async getGlobalStatus() {
+    const result = await this.request('GET', '/mcp/status', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          installed: z.boolean(),
+          configPath: z.string().optional(),
+          isConnected: z.boolean(),
+          lastActivity: z.string().optional(),
+          activeSessions: z.number(),
+          platform: z.string(),
+          detectedAgents: z.array(z.object({
+            name: z.string(),
+            displayName: z.string(),
+            detected: z.boolean(),
+            configPath: z.string().optional(),
+            executable: z.string().optional(),
+            version: z.string().optional()
+          })),
+          mcpSessions: z.array(z.object({
+            id: z.string(),
+            projectId: z.number().optional(),
+            createdAt: z.number(),
+            lastActivity: z.number()
+          })),
+          serverRunning: z.boolean()
+        })
+      })
+    })
+    return result
+  }
+
+  async updateProjectConfig(projectId: number, data: { config: any }) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/config`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          success: z.boolean(),
+          message: z.string(),
+          configPath: z.string()
+        })
+      })
+    })
+    return result
+  }
+}
+
+export class JobService extends BaseApiClient {
+  async listJobs(filter?: any) {
+    const result = await this.request('GET', '/jobs', {
+      params: filter,
+      responseSchema: z.object({
+        success: z.boolean(),
+        jobs: z.array(z.any())
+      })
+    })
+    return result.jobs
+  }
+
+  async getJob(jobId: number) {
+    const result = await this.request('GET', `/jobs/${jobId}`, {
+      responseSchema: z.any()
+    })
+    return result
+  }
+
+  async getProjectJobs(projectId: number) {
+    const result = await this.request('GET', `/jobs/project/${projectId}`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        jobs: z.array(z.any())
+      })
+    })
+    return result.jobs
+  }
+
+  async cancelJob(jobId: number) {
+    const result = await this.request('POST', `/jobs/${jobId}/cancel`, {
+      responseSchema: z.object({
+        success: z.boolean()
+      })
+    })
+    return result
+  }
+
+  async retryJob(jobId: number) {
+    const result = await this.request('POST', `/jobs/${jobId}/retry`, {
+      responseSchema: z.any()
+    })
+    return result
+  }
+
+  async cleanupJobs(olderThanDays?: number) {
+    const result = await this.request('POST', '/jobs/cleanup', {
+      body: { olderThanDays },
+      responseSchema: z.object({
+        success: z.boolean(),
+        deletedCount: z.number(),
+        message: z.string()
+      })
+    })
+    return result
+  }
 }
 
 // Main OctoPrompt Client
@@ -1680,11 +2196,14 @@ export class OctoPromptClient {
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
-  public readonly agentCoder: AgentCoderService
   public readonly system: SystemService
   public readonly mcp: MCPService
   public readonly tickets: TicketService
   public readonly git: GitService
+  public readonly mcpAnalytics: MCPAnalyticsService
+  public readonly jobs: JobService
+  public readonly agentFiles: AgentFilesService
+  public readonly mcpInstallation: MCPInstallationService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -1692,11 +2211,14 @@ export class OctoPromptClient {
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
-    this.agentCoder = new AgentCoderService(config)
     this.system = new SystemService(config)
     this.mcp = new MCPService(config)
     this.tickets = new TicketService(config)
     this.git = new GitService(config)
+    this.mcpAnalytics = new MCPAnalyticsService(config)
+    this.jobs = new JobService(config)
+    this.agentFiles = new AgentFilesService(config)
+    this.mcpInstallation = new MCPInstallationService(config)
   }
 }
 

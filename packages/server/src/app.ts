@@ -7,13 +7,15 @@ import { projectRoutes } from './routes/project-routes'
 import { providerKeyRoutes } from './routes/provider-key-routes'
 import { promptRoutes } from './routes/prompt-routes'
 import { ticketRoutes } from './routes/ticket-routes'
-import { agentCoderRoutes } from './routes/agent-coder-routes'
 import { browseDirectoryRoutes } from './routes/browse-directory-routes'
 import { mcpRoutes } from './routes/mcp-routes'
 import { gitRoutes } from './routes/git-routes'
 import { gitAdvancedRoutes } from './routes/git-advanced-routes'
-import { selectedFilesRoutes } from './routes/selected-files-routes'
 import { activeTabRoutes } from './routes/active-tab-routes'
+import { jobApp } from './routes/job-routes'
+import { projectTabRoutes } from './routes/project-tab-routes'
+import { agentFilesRoutes } from './routes/agent-files-routes'
+import { mcpInstallationRoutes } from './routes/mcp-installation-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { getServerConfig, getRateLimitConfig } from '@octoprompt/config'
@@ -67,16 +69,15 @@ const getClientIP = (c: any) => {
   // Check for forwarded headers first (production)
   const forwarded = c.req.header('x-forwarded-for') || c.req.header('x-real-ip')
   if (forwarded) return forwarded
-  
+
   // For local development, try to get the actual connection IP
   const connection = c.env?.incoming?.socket || c.req.raw?.connection || c.req.raw?.socket
   const remoteAddress = connection?.remoteAddress
-  
+
   // Check if it's a localhost IP
   if (remoteAddress === '::1' || remoteAddress === '127.0.0.1' || remoteAddress === 'localhost') {
     return 'localhost'
   }
-  
   return remoteAddress || 'unknown'
 }
 
@@ -132,8 +133,10 @@ const aiLimiter = rateLimiter({
 
 // Apply rate limiters only if enabled
 if (RATE_LIMIT_ENABLED) {
-  console.log(`[Server] Rate limiting enabled - General: ${RATE_LIMIT_MAX_REQUESTS}/${RATE_LIMIT_WINDOW_MS}ms, AI: ${AI_RATE_LIMIT_MAX_REQUESTS}/${AI_RATE_LIMIT_WINDOW_MS}ms`)
-  
+  console.log(
+    `[Server] Rate limiting enabled - General: ${RATE_LIMIT_MAX_REQUESTS}/${RATE_LIMIT_WINDOW_MS}ms, AI: ${AI_RATE_LIMIT_MAX_REQUESTS}/${AI_RATE_LIMIT_WINDOW_MS}ms`
+  )
+
   // Apply general rate limiter to all routes
   app.use('*', generalLimiter)
 
@@ -174,13 +177,15 @@ app.route('/', providerKeyRoutes)
 app.route('/', promptRoutes)
 app.route('/', ticketRoutes)
 app.route('/', genAiRoutes)
-app.route('/', agentCoderRoutes)
 app.route('/', browseDirectoryRoutes)
 app.route('/', mcpRoutes)
 app.route('/', gitRoutes)
 app.route('/', gitAdvancedRoutes)
-app.route('/', selectedFilesRoutes)
 app.route('/', activeTabRoutes)
+app.route('/api/jobs', jobApp)
+app.route('/', projectTabRoutes)
+app.route('/', agentFilesRoutes)
+app.route('/', mcpInstallationRoutes)
 
 // Global error handler
 app.onError((err, c) => {

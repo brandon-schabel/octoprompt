@@ -19,12 +19,24 @@ import type {
   GitTag,
   GitStash,
   GitBlame,
-  GitBlameLine
+  GitBlameLine,
+  GitCommitEnhanced,
+  GitBranchEnhanced,
+  GitLogEnhancedRequest,
+  GitLogEnhancedResponse,
+  GitBranchListEnhancedResponse,
+  GitFileStats,
+  GitFileDiff,
+  GitCommitDetailResponse,
+  GitWorktree
 } from '@octoprompt/schemas'
 import { getProjectById } from './project-service'
 import { ApiError } from '@octoprompt/shared'
 import path from 'path'
 import { retryOperation } from './utils/retry-operation'
+import { createLogger } from './utils/logger'
+
+const logger = createLogger('GitService')
 
 interface GitStatusCache {
   status: GitStatus
@@ -98,17 +110,15 @@ export async function getProjectGitStatus(projectId: number): Promise<GitStatusR
 
     try {
       // Check if it's a git repository
-      const isRepo = await retryOperation(
-        () => git.checkIsRepo(),
-        {
-          maxAttempts: 2,
-          shouldRetry: (error) => {
-            // Retry on network errors or temporary issues
-            return error.message?.includes('ENOENT') === false && 
-                   (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT')
-          }
+      const isRepo = await retryOperation(() => git.checkIsRepo(), {
+        maxAttempts: 2,
+        shouldRetry: (error) => {
+          // Retry on network errors or temporary issues
+          return (
+            error.message?.includes('ENOENT') === false && (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT')
+          )
         }
-      )
+      })
       if (!isRepo) {
         return {
           success: false,
@@ -120,18 +130,17 @@ export async function getProjectGitStatus(projectId: number): Promise<GitStatusR
       }
 
       // Get the status with retry for network issues
-      const status = await retryOperation(
-        () => git.status(),
-        {
-          maxAttempts: 3,
-          shouldRetry: (error) => {
-            // Retry on network errors (for remote tracking)
-            return error.code === 'ENOTFOUND' || 
-                   error.code === 'ETIMEDOUT' ||
-                   error.message?.includes('Could not read from remote repository')
-          }
+      const status = await retryOperation(() => git.status(), {
+        maxAttempts: 3,
+        shouldRetry: (error) => {
+          // Retry on network errors (for remote tracking)
+          return (
+            error.code === 'ENOTFOUND' ||
+            error.code === 'ETIMEDOUT' ||
+            error.message?.includes('Could not read from remote repository')
+          )
         }
-      )
+      })
       const gitStatus = mapGitStatusToSchema(status, projectPath)
 
       // Cache the result
@@ -544,7 +553,7 @@ export async function getCommitLog(
   options?: {
     limit?: number
     skip?: number
-    offset?: number  // Support both skip and offset for compatibility
+    offset?: number // Support both skip and offset for compatibility
     branch?: string
     file?: string
   }
@@ -573,7 +582,6 @@ export async function getCommitLog(
 
     // Handle pagination - skip/offset are treated the same
     const skipCount = options?.skip ?? options?.offset ?? 0
-    
     // When using skip, we need to fetch skip + limit items, then slice
     if (options?.limit || skipCount > 0) {
       logOptions.maxCount = (options?.limit || 100) + skipCount
@@ -584,7 +592,10 @@ export async function getCommitLog(
     }
 
     // Use simple-git's log method with built-in options
-    const logResult = await git.log(logOptions)
+    // Pass branch as first argument if specified
+    const logResult = options?.branch 
+      ? await git.log([options.branch], logOptions)
+      : await git.log(logOptions)
 
     // Map the results to our schema
     const allEntries = logResult.all.map((commit: any) => ({
@@ -598,12 +609,10 @@ export async function getCommitLog(
       date: commit.date || new Date().toISOString(),
       refs: commit.refs || ''
     }))
-    
     // Apply offset/skip by slicing the results
     if (skipCount > 0) {
       return allEntries.slice(skipCount, skipCount + (options?.limit || allEntries.length))
     }
-    
     return allEntries
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1423,5 +1432,915 @@ export async function setConfig(
       `Failed to set config: ${error instanceof Error ? error.message : String(error)}`,
       'GIT_SET_CONFIG_FAILED'
     )
+  }
+}
+
+// ============================================
+// Worktree Management
+// ============================================
+
+export async function getWorktrees(projectId: number): Promise<GitWorktree[]> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+
+    // Get worktrees using porcelain format for easier parsing
+    const worktreeList = await git.raw(['worktree', 'list', '--porcelain'])
+    
+    const worktrees: GitWorktree[] = []
+    const lines = worktreeList.split('\n')
+    
+    let currentWorktree: Partial<GitWorktree> = {}
+    
+    for (const line of lines) {
+      if (!line.trim()) {
+        // Empty line indicates end of worktree entry
+        if (currentWorktree.path) {
+          worktrees.push({
+            path: currentWorktree.path,
+            branch: currentWorktree.branch || 'HEAD',
+            commit: currentWorktree.commit || '',
+            isMain: currentWorktree.isMain || false,
+            isLocked: currentWorktree.isLocked || false,
+            lockReason: currentWorktree.lockReason,
+            prunable: currentWorktree.prunable
+          })
+          currentWorktree = {}
+        }
+        continue
+      }
+      
+      const [key, ...valueParts] = line.split(' ')
+      const value = valueParts.join(' ')
+      
+      switch (key) {
+        case 'worktree':
+          currentWorktree.path = value
+          // Check if this is the main worktree
+          currentWorktree.isMain = path.resolve(value) === projectPath
+          break
+        case 'HEAD':
+          currentWorktree.commit = value
+          break
+        case 'branch':
+          // branch refs/heads/branch-name
+          currentWorktree.branch = value.replace('refs/heads/', '')
+          break
+        case 'detached':
+          // If detached, there's no branch
+          currentWorktree.branch = 'HEAD'
+          break
+        case 'locked':
+          currentWorktree.isLocked = true
+          if (value) {
+            currentWorktree.lockReason = value
+          }
+          break
+        case 'prunable':
+          currentWorktree.prunable = true
+          break
+      }
+    }
+    
+    // Add the last worktree if exists
+    if (currentWorktree.path) {
+      worktrees.push({
+        path: currentWorktree.path,
+        branch: currentWorktree.branch || 'HEAD',
+        commit: currentWorktree.commit || '',
+        isMain: currentWorktree.isMain || false,
+        isLocked: currentWorktree.isLocked || false,
+        lockReason: currentWorktree.lockReason,
+        prunable: currentWorktree.prunable
+      })
+    }
+    
+    return worktrees
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to get worktrees: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_WORKTREES_FAILED'
+    )
+  }
+}
+
+export async function addWorktree(
+  projectId: number,
+  options: {
+    path: string
+    branch?: string
+    newBranch?: string
+    commitish?: string
+    detach?: boolean
+  }
+): Promise<void> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    // Resolve the worktree path to absolute
+    const worktreePath = path.resolve(options.path)
+    
+    const args = ['worktree', 'add']
+    
+    // Add options
+    if (options.newBranch) {
+      args.push('-b', options.newBranch)
+    } else if (options.detach) {
+      args.push('--detach')
+    }
+    
+    args.push(worktreePath)
+    
+    // Add branch/commit to checkout
+    if (options.commitish) {
+      args.push(options.commitish)
+    } else if (options.branch && !options.newBranch) {
+      args.push(options.branch)
+    }
+    
+    await git.raw(args)
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to add worktree: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_ADD_WORKTREE_FAILED'
+    )
+  }
+}
+
+export async function removeWorktree(projectId: number, worktreePath: string, force: boolean = false): Promise<void> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    // Get current worktrees to validate
+    const worktrees = await getWorktrees(projectId)
+    const targetPath = path.resolve(worktreePath)
+    const worktree = worktrees.find(w => path.resolve(w.path) === targetPath)
+    
+    if (!worktree) {
+      throw new ApiError(404, 'Worktree not found', 'WORKTREE_NOT_FOUND')
+    }
+    
+    if (worktree.isMain) {
+      throw new ApiError(400, 'Cannot remove the main worktree', 'CANNOT_REMOVE_MAIN_WORKTREE')
+    }
+    
+    const args = ['worktree', 'remove']
+    if (force) {
+      args.push('--force')
+    }
+    args.push(targetPath)
+    
+    await git.raw(args)
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to remove worktree: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_REMOVE_WORKTREE_FAILED'
+    )
+  }
+}
+
+export async function lockWorktree(projectId: number, worktreePath: string, reason?: string): Promise<void> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    const targetPath = path.resolve(worktreePath)
+    
+    const args = ['worktree', 'lock']
+    if (reason) {
+      args.push('--reason', reason)
+    }
+    args.push(targetPath)
+    
+    await git.raw(args)
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to lock worktree: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_LOCK_WORKTREE_FAILED'
+    )
+  }
+}
+
+export async function unlockWorktree(projectId: number, worktreePath: string): Promise<void> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    const targetPath = path.resolve(worktreePath)
+    
+    await git.raw(['worktree', 'unlock', targetPath])
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to unlock worktree: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_UNLOCK_WORKTREE_FAILED'
+    )
+  }
+}
+
+export async function pruneWorktrees(projectId: number, dryRun: boolean = false): Promise<string[]> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    const args = ['worktree', 'prune']
+    if (dryRun) {
+      args.push('--dry-run')
+    }
+    args.push('--verbose')
+    
+    const result = await git.raw(args)
+    
+    // Parse the output to get pruned worktree paths
+    const prunedPaths: string[] = []
+    const lines = result.split('\n').filter(Boolean)
+    
+    for (const line of lines) {
+      // Git outputs lines like "Removing worktrees/branch-name: gitdir file points to non-existent location"
+      const match = line.match(/^Removing (.+?):|^Would remove (.+?):/)
+      if (match) {
+        prunedPaths.push(match[1] || match[2])
+      }
+    }
+    
+    return prunedPaths
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to prune worktrees: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_PRUNE_WORKTREES_FAILED'
+    )
+  }
+}
+
+// ============================================
+// Enhanced Commit History Features
+// ============================================
+
+/**
+ * Calculates relative time from a date string
+ */
+function getRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (seconds < 60) return `${seconds} second${seconds !== 1 ? 's' : ''} ago`
+  
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+  
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`
+  
+  const weeks = Math.floor(days / 7)
+  if (weeks < 4) return `${weeks} week${weeks !== 1 ? 's' : ''} ago`
+  
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months} month${months !== 1 ? 's' : ''} ago`
+  
+  const years = Math.floor(days / 365)
+  return `${years} year${years !== 1 ? 's' : ''} ago`
+}
+
+/**
+ * Parse refs string into array of branch/tag names
+ */
+function parseRefs(refsString: string): string[] {
+  if (!refsString) return []
+  
+  // Remove HEAD -> prefix and split by comma
+  const cleaned = refsString.replace(/HEAD\s*->\s*/, '')
+  if (!cleaned) return []
+  
+  return cleaned.split(',').map(ref => ref.trim()).filter(Boolean)
+}
+
+/**
+ * Get enhanced commit log with detailed information
+ */
+export async function getCommitLogEnhanced(
+  projectId: number,
+  request: GitLogEnhancedRequest
+): Promise<GitLogEnhancedResponse> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+
+    // Get current branch if not specified
+    const currentBranch = request.branch || (await git.status()).current || 'HEAD'
+
+    // Calculate skip for pagination
+    const skip = (request.page - 1) * request.perPage
+
+    // Build log options
+    const logOptions: any = {
+      format: {
+        hash: '%H',
+        abbreviatedHash: '%h',
+        subject: '%s',
+        body: '%B',
+        authorName: '%an',
+        authorEmail: '%ae',
+        authorDate: '%aI',
+        committerName: '%cn',
+        committerEmail: '%ce',
+        committerDate: '%cI',
+        parents: '%P',
+        refs: '%D'
+      },
+      maxCount: request.perPage + skip + 1, // +1 to check if there are more
+      '--': null // Separator for path specs
+    }
+
+    // Add filters
+    if (request.author) {
+      logOptions['--author'] = request.author
+    }
+    if (request.since) {
+      logOptions['--since'] = request.since
+    }
+    if (request.until) {
+      logOptions['--until'] = request.until
+    }
+    if (request.search) {
+      logOptions['--grep'] = request.search
+    }
+
+    // Get commit log - pass branch as first argument if specified
+    const logResult = request.branch 
+      ? await git.log([request.branch], logOptions)
+      : await git.log(logOptions)
+    const allCommits = logResult.all
+
+    // Slice for pagination
+    const pageCommits = allCommits.slice(skip, skip + request.perPage)
+    const hasMore = allCommits.length > skip + request.perPage
+
+    // Process commits
+    const enhancedCommits: GitCommitEnhanced[] = await Promise.all(
+      pageCommits.map(async (commit: any) => {
+        const result: GitCommitEnhanced = {
+          hash: commit.hash,
+          abbreviatedHash: commit.abbreviatedHash || commit.hash.substring(0, 8),
+          subject: commit.subject || commit.body?.split('\n')[0] || '',
+          body: commit.body || commit.subject || '',
+          author: {
+            name: commit.authorName || '',
+            email: commit.authorEmail || ''
+          },
+          committer: {
+            name: commit.committerName || commit.authorName || '',
+            email: commit.committerEmail || commit.authorEmail || ''
+          },
+          authoredDate: commit.authorDate || new Date().toISOString(),
+          committedDate: commit.committerDate || commit.authorDate || new Date().toISOString(),
+          relativeTime: getRelativeTime(commit.authorDate || new Date().toISOString()),
+          parents: commit.parents ? commit.parents.split(' ').filter(Boolean) : [],
+          refs: parseRefs(commit.refs || ''),
+          stats: {
+            filesChanged: 0,
+            additions: 0,
+            deletions: 0
+          }
+        }
+
+        // Get file statistics if requested
+        if (request.includeStats || request.includeFileDetails) {
+          try {
+            // Get numstat for this commit
+            const numstat = await git.raw([
+              'show',
+              '--numstat',
+              '--format=',
+              commit.hash
+            ])
+
+            const fileStats: GitFileStats[] = []
+            let totalAdditions = 0
+            let totalDeletions = 0
+
+            const lines = numstat.trim().split('\n').filter(Boolean)
+            for (const line of lines) {
+              const parts = line.split('\t')
+              if (parts.length >= 3) {
+                const additions = parseInt(parts[0], 10) || 0
+                const deletions = parseInt(parts[1], 10) || 0
+                const filePath = parts[2]
+
+                // Handle renames
+                let status: GitFileStats['status'] = 'modified'
+                let oldPath: string | undefined
+
+                if (filePath.includes('=>')) {
+                  // This is a rename
+                  const renameParts = filePath.match(/(.+?)\s*=>\s*(.+)/)
+                  if (renameParts) {
+                    oldPath = renameParts[1].trim()
+                    status = 'renamed'
+                  }
+                } else if (additions > 0 && deletions === 0) {
+                  status = 'added'
+                } else if (additions === 0 && deletions > 0) {
+                  status = 'deleted'
+                }
+
+                if (request.includeFileDetails) {
+                  fileStats.push({
+                    path: filePath,
+                    additions,
+                    deletions,
+                    status,
+                    oldPath
+                  })
+                }
+
+                totalAdditions += additions
+                totalDeletions += deletions
+              }
+            }
+
+            result.stats = {
+              filesChanged: fileStats.length,
+              additions: totalAdditions,
+              deletions: totalDeletions
+            }
+
+            if (request.includeFileDetails) {
+              result.fileStats = fileStats
+            }
+          } catch (error) {
+            // If stats fail, continue without them
+            console.error(`Failed to get stats for commit ${commit.hash}:`, error)
+          }
+        }
+
+        return result
+      })
+    )
+
+    return {
+      success: true,
+      data: {
+        commits: enhancedCommits,
+        pagination: {
+          page: request.page,
+          perPage: request.perPage,
+          hasMore,
+          totalCount: undefined // We don't know total without counting all
+        },
+        branch: currentBranch
+      }
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    return {
+      success: false,
+      message: `Failed to get enhanced commit log: ${error instanceof Error ? error.message : String(error)}`
+    }
+  }
+}
+
+/**
+ * Get enhanced branches with detailed information
+ */
+export async function getBranchesEnhanced(projectId: number): Promise<GitBranchListEnhancedResponse> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+
+    // Get current branch
+    const status = await git.status()
+    const currentBranch = status.current
+
+    // Get all branches with verbose info
+    const [localBranches, remoteBranches] = await Promise.all([
+      git.branchLocal('-v'),
+      git.branch(['-r', '-v'])
+    ])
+
+    // Determine default branch (main or master)
+    let defaultBranch = 'main'
+    if ('main' in localBranches.branches) {
+      defaultBranch = 'main'
+    } else if ('master' in localBranches.branches) {
+      defaultBranch = 'master'
+    } else if ('origin/main' in remoteBranches.branches) {
+      defaultBranch = 'main'
+    } else if ('origin/master' in remoteBranches.branches) {
+      defaultBranch = 'master'
+    }
+
+    const enhancedBranches: GitBranchEnhanced[] = []
+
+    // Process local branches
+    for (const [name, branch] of Object.entries(localBranches.branches)) {
+      let latestCommit: any = null
+      let authorDate: string | undefined
+      
+      try {
+        // Get the latest commit info for this branch
+        const logResult = await git.log([name, '-1'], {
+          format: {
+            hash: '%H',
+            abbreviatedHash: '%h',
+            subject: '%s',
+            authorName: '%an',
+            authorDate: '%aI'
+          }
+        })
+        
+        latestCommit = logResult.latest
+        authorDate = latestCommit?.authorDate
+      } catch (error) {
+        console.error(`Failed to get log for branch ${name}:`, error)
+      }
+      
+      // Fallback: use git show if log failed or no date
+      if (!authorDate && branch.commit) {
+        try {
+          const showResult = await git.show([branch.commit, '--format=%aI', '--no-patch'])
+          authorDate = showResult.trim()
+        } catch (err) {
+          logger.debug(`Failed to get date for commit ${branch.commit}`, err)
+        }
+      }
+      
+      // Calculate ahead/behind relative to default branch
+      let ahead = 0
+      let behind = 0
+      
+      if (name !== defaultBranch) {
+        try {
+          // Get ahead/behind counts
+          const revList = await git.raw([
+            'rev-list',
+            '--left-right',
+            '--count',
+            `${defaultBranch}...${name}`
+          ])
+          
+          const [behindStr, aheadStr] = revList.trim().split('\t')
+          behind = parseInt(behindStr, 10) || 0
+          ahead = parseInt(aheadStr, 10) || 0
+        } catch (error) {
+          // If comparison fails, use tracking branch info
+          ahead = branch.ahead || 0
+          behind = branch.behind || 0
+        }
+      }
+
+      enhancedBranches.push({
+        name,
+        current: branch.current,
+        isRemote: false,
+        latestCommit: {
+          hash: latestCommit?.hash || branch.commit,
+          abbreviatedHash: latestCommit?.abbreviatedHash || branch.commit.substring(0, 8),
+          subject: latestCommit?.subject || '',
+          author: latestCommit?.authorName || '',
+          relativeTime: authorDate ? getRelativeTime(authorDate) : 'Unknown'
+        },
+        tracking: branch.tracking || null,
+        ahead: ahead || branch.ahead || 0,
+        behind: behind || branch.behind || 0,
+        lastActivity: authorDate
+      })
+    }
+
+    // Process remote branches (excluding HEAD)
+    for (const [name, branch] of Object.entries(remoteBranches.branches)) {
+      if (name.includes('HEAD')) continue
+
+      let latestCommit: any = null
+      let authorDate: string | undefined
+      
+      try {
+        // Get the latest commit info for this branch
+        const logResult = await git.log([name, '-1'], {
+          format: {
+            hash: '%H',
+            abbreviatedHash: '%h',
+            subject: '%s',
+            authorName: '%an',
+            authorDate: '%aI'
+          }
+        })
+        
+        latestCommit = logResult.latest
+        authorDate = latestCommit?.authorDate
+      } catch (error) {
+        console.error(`Failed to get log for remote branch ${name}:`, error)
+      }
+      
+      // Fallback: use git show if log failed or no date
+      if (!authorDate && branch.commit) {
+        try {
+          const showResult = await git.show([branch.commit, '--format=%aI', '--no-patch'])
+          authorDate = showResult.trim()
+        } catch (err) {
+          logger.debug(`Failed to get date for commit ${branch.commit}`, err)
+        }
+      }
+
+      // Only add branch if we have at least basic info
+      if (branch.commit) {
+        enhancedBranches.push({
+          name,
+          current: false,
+          isRemote: true,
+          latestCommit: {
+            hash: latestCommit?.hash || branch.commit,
+            abbreviatedHash: latestCommit?.abbreviatedHash || branch.commit.substring(0, 8),
+            subject: latestCommit?.subject || '',
+            author: latestCommit?.authorName || '',
+            relativeTime: authorDate ? getRelativeTime(authorDate) : 'Unknown'
+          },
+          tracking: null,
+          ahead: 0,
+          behind: 0,
+          lastActivity: authorDate
+        })
+      }
+    }
+
+    // Sort branches by last activity (most recent first)
+    enhancedBranches.sort((a, b) => {
+      if (!a.lastActivity) return 1
+      if (!b.lastActivity) return -1
+      return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
+    })
+
+    return {
+      success: true,
+      data: {
+        branches: enhancedBranches,
+        current: currentBranch,
+        defaultBranch
+      }
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    return {
+      success: false,
+      message: `Failed to get enhanced branches: ${error instanceof Error ? error.message : String(error)}`
+    }
+  }
+}
+
+/**
+ * Get detailed information about a single commit
+ */
+export async function getCommitDetail(
+  projectId: number,
+  commitHash: string,
+  includeFileContents: boolean = false
+): Promise<GitCommitDetailResponse> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+
+    // Get commit info using show
+    const commitFormat = [
+      '%H',  // hash
+      '%h',  // abbreviated hash
+      '%s',  // subject
+      '%b',  // body
+      '%an', // author name
+      '%ae', // author email
+      '%aI', // author date ISO
+      '%cn', // committer name
+      '%ce', // committer email
+      '%cI', // committer date ISO
+      '%P',  // parents
+      '%D'   // refs
+    ].join('%n')
+
+    const showResult = await git.show([
+      commitHash,
+      `--format=${commitFormat}`,
+      '--no-patch'
+    ])
+
+    const lines = showResult.split('\n')
+    const [
+      hash,
+      abbreviatedHash,
+      subject,
+      ...bodyAndRest
+    ] = lines
+
+    // Find where the body ends (empty line after body)
+    let bodyEndIndex = bodyAndRest.findIndex(line => line === '')
+    if (bodyEndIndex === -1) bodyEndIndex = bodyAndRest.length
+
+    const body = bodyAndRest.slice(0, bodyEndIndex).join('\n')
+    const metadataLines = bodyAndRest.slice(bodyEndIndex + 1)
+
+    const [
+      authorName,
+      authorEmail,
+      authorDate,
+      committerName,
+      committerEmail,
+      committerDate,
+      parents,
+      refs
+    ] = metadataLines
+
+    // Get file changes with numstat
+    const numstatResult = await git.raw([
+      'show',
+      '--numstat',
+      '--format=',
+      commitHash
+    ])
+
+    const fileDiffs: GitFileDiff[] = []
+    let totalAdditions = 0
+    let totalDeletions = 0
+
+    const numstatLines = numstatResult.trim().split('\n').filter(Boolean)
+    
+    for (const line of numstatLines) {
+      const parts = line.split('\t')
+      if (parts.length >= 3) {
+        const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10) || 0
+        const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10) || 0
+        const filePath = parts[2]
+        
+        // Determine file status
+        let status: GitFileDiff['status'] = 'modified'
+        let path = filePath
+        let oldPath: string | undefined
+        
+        // Handle renames (format: "oldname => newname" or "{oldname => newname}")
+        if (filePath.includes('=>')) {
+          const renameParts = filePath.match(/^(?:\{(.+?)\s*=>\s*(.+?)\}|(.+?)\s*=>\s*(.+))$/)
+          if (renameParts) {
+            oldPath = renameParts[1] || renameParts[3]
+            path = renameParts[2] || renameParts[4]
+            status = 'renamed'
+          }
+        } else if (additions > 0 && deletions === 0) {
+          status = 'added'
+        } else if (additions === 0 && deletions > 0) {
+          status = 'deleted'
+        }
+
+        fileDiffs.push({
+          path,
+          status,
+          additions,
+          deletions,
+          binary: parts[0] === '-' && parts[1] === '-',
+          oldPath
+        })
+
+        if (!fileDiffs[fileDiffs.length - 1].binary) {
+          totalAdditions += additions
+          totalDeletions += deletions
+        }
+      }
+    }
+
+    // Get individual file diffs if requested
+    if (includeFileContents) {
+      for (const file of fileDiffs) {
+        if (!file.binary) {
+          try {
+            const diff = await git.diff([`${commitHash}^`, commitHash, '--', file.path])
+            file.diff = diff
+          } catch (error) {
+            // For initial commits or other edge cases
+            try {
+              const diff = await git.show([commitHash, '--', file.path])
+              file.diff = diff
+            } catch {
+              // Ignore diff errors
+            }
+          }
+        }
+      }
+    }
+
+    // Build enhanced commit object
+    const enhancedCommit: GitCommitEnhanced = {
+      hash,
+      abbreviatedHash,
+      subject,
+      body: body || subject,
+      author: {
+        name: authorName || '',
+        email: authorEmail || ''
+      },
+      committer: {
+        name: committerName || authorName || '',
+        email: committerEmail || authorEmail || ''
+      },
+      authoredDate: authorDate || new Date().toISOString(),
+      committedDate: committerDate || authorDate || new Date().toISOString(),
+      relativeTime: getRelativeTime(authorDate || new Date().toISOString()),
+      parents: parents ? parents.split(' ').filter(Boolean) : [],
+      refs: parseRefs(refs || ''),
+      stats: {
+        filesChanged: fileDiffs.length,
+        additions: totalAdditions,
+        deletions: totalDeletions
+      },
+      fileStats: fileDiffs.map(f => ({
+        path: f.path,
+        additions: f.additions,
+        deletions: f.deletions,
+        status: f.status,
+        oldPath: f.oldPath
+      }))
+    }
+
+    // Get full diff if requested
+    let totalDiff: string | undefined
+    if (includeFileContents) {
+      try {
+        totalDiff = await git.diff([`${commitHash}^`, commitHash])
+      } catch {
+        // For initial commits
+        totalDiff = await git.show([commitHash])
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        commit: enhancedCommit,
+        files: fileDiffs,
+        totalDiff
+      }
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    return {
+      success: false,
+      message: `Failed to get commit detail: ${error instanceof Error ? error.message : String(error)}`
+    }
   }
 }

@@ -45,7 +45,6 @@ const mainNavItems = [
     routeIds: ['/projects']
   },
   { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
-  { id: 'assets', title: 'Assets', to: '/assets', icon: Sparkles, routeIds: ['/assets'] },
   { id: 'keys', title: 'Keys', to: '/keys', icon: KeyIcon, routeIds: ['/keys'] },
   { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] }
 ]
@@ -200,7 +199,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2 text-xs text-muted-foreground'>
-                <span className='px-3'>v0.7.2</span>
+                <span className='px-3'>v0.8.0</span>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

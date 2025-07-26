@@ -1,6 +1,8 @@
 import { ChangeEvent, KeyboardEvent, ClipboardEvent, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
+import { persistListParams } from '@/lib/router/search-middleware'
 import {
   MessageSquareIcon,
   PlusIcon,
@@ -55,7 +57,7 @@ import { APIProviders, AiSdkOptions } from '@octoprompt/schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { useActiveChatId, useSelectSetting } from '@/hooks/use-kv-local-storage'
+import { useActiveChatId, useSelectSetting, useProjectTabField } from '@/hooks/use-kv-local-storage'
 import { OctoCombobox } from '@/components/octo/octo-combobox'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
@@ -905,7 +907,14 @@ export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
   )
 }
 
+const chatSearchSchema = z.object({
+  chatId: z.coerce.number().optional().catch(undefined),
+  prefill: z.boolean().optional().default(false).catch(false),
+  projectId: z.coerce.number().optional().catch(undefined)
+})
+
 export const Route = createFileRoute('/chat')({
+  validateSearch: chatSearchSchema,
   component: ChatPage
 })
 
@@ -917,6 +926,7 @@ function ChatPage() {
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
   const { data: modelsData } = useGetModels(provider as APIProviders)
+  const { data: enableChatAutoNaming } = useProjectTabField('enableChatAutoNaming')
   const { copyToClipboard } = useCopyClipboard()
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 
@@ -945,7 +955,8 @@ function ChatPage() {
     chatId: activeChatId ?? -1,
     provider,
     model: model ?? '',
-    systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.'
+    systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.',
+    enableChatAutoNaming: !!enableChatAutoNaming
   })
 
   const selectedModelName = useMemo(() => {

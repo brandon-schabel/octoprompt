@@ -19,7 +19,7 @@ import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './mcp/tools-regis
 const server = new Server(
   {
     name: 'octoprompt-mcp',
-    version: '0.7.2'
+    version: '0.8.0'
   },
   {
     capabilities: {
@@ -31,12 +31,13 @@ const server = new Server(
 
 // Helper to get project ID from environment or use default
 function getProjectId(): number {
-  const projectId = process.env.OCTOPROMPT_PROJECT_ID
-  if (projectId) {
-    return parseInt(projectId, 10)
+  const projectIdStr = process.env.OCTOPROMPT_PROJECT_ID
+  if (projectIdStr) {
+    const parsed = parseInt(projectIdStr, 10)
+    if (!isNaN(parsed)) return parsed
   }
-  // Default to project 1 if not specified
-  return 1
+  // Fallback to known project ID from rules
+  return 1750564533014
 }
 
 // Helper to get project or create default

@@ -40,10 +40,7 @@ class ConfigLoader {
 
     for (const key in source) {
       if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.deepMerge(
-          result[key] as any,
-          source[key] as any
-        )
+        result[key] = this.deepMerge(result[key] as any, source[key] as any)
       } else if (source[key] !== undefined) {
         result[key] = source[key] as any
       }
@@ -70,7 +67,7 @@ class ConfigLoader {
     }
 
     // Server overrides handled in server.config.ts via process.env
-    
+
     this.config = this.deepMerge(this.config, this.overrides)
   }
 

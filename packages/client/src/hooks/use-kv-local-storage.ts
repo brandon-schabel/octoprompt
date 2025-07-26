@@ -219,7 +219,7 @@ export const useCreateProjectTab = () => {
       selectedPrompts: [],
       userPrompt: '',
       sortOrder: 0,
-      displayName: `Tab ${Date.now()}`,
+      displayName: `New Tab`,
       searchByContent: false,
       contextLimit: 64000
     }

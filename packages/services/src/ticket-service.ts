@@ -13,8 +13,9 @@ import { TaskSuggestionsSchema, FileSuggestionsZodSchema } from '@octoprompt/sch
 import { MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/config'
 import { ticketStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
-import { getFullProjectSummary, getCompactProjectSummary } from './utils/get-full-project-summary'
+import { getFullProjectSummary, getCompactProjectSummary } from './utils/project-summary-service'
 import { generateStructuredData } from './gen-ai-services'
+import { fileSuggestionStrategyService } from './file-suggestion-strategy-service'
 import { z } from 'zod'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
@@ -63,7 +64,22 @@ export async function fetchTaskSuggestionsForTicket(
   ticket: Ticket,
   userContext: string | undefined
 ): Promise<TaskSuggestions> {
-  const projectSummary = await getFullProjectSummary(ticket.projectId)
+  let projectSummary: string
+  
+  try {
+    projectSummary = await getFullProjectSummary(ticket.projectId)
+  } catch (error) {
+    // Handle case where project doesn't exist or has no files
+    if (error instanceof ApiError && error.status === 404) {
+      throw new ApiError(
+        404,
+        `Cannot generate tasks: Project ${ticket.projectId} not found or has no files`,
+        'PROJECT_NOT_FOUND',
+        { ticketId: ticket.id, projectId: ticket.projectId }
+      )
+    }
+    throw error
+  }
 
   const userMessage = `
   <goal>
@@ -95,14 +111,26 @@ export async function fetchTaskSuggestionsForTicket(
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, 'CONFIG_ERROR')
   }
 
-  const result = await generateStructuredData({
-    prompt: userMessage,
-    systemMessage: defaultTaskPrompt,
-    schema: TaskSuggestionsSchema,
-    options: MEDIUM_MODEL_CONFIG
-  })
+  try {
+    const result = await generateStructuredData({
+      prompt: userMessage,
+      systemMessage: defaultTaskPrompt,
+      schema: TaskSuggestionsSchema,
+      options: MEDIUM_MODEL_CONFIG
+    })
 
-  return result.object
+    return result.object
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error
+    }
+    throw new ApiError(
+      500,
+      `Failed to generate task suggestions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      'TASK_GENERATION_FAILED',
+      { ticketId: ticket.id, originalError: error }
+    )
+  }
 }
 
 // --- Ticket CRUD Operations ---
@@ -369,64 +397,51 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
 
 export async function suggestFilesForTicket(
   ticketId: number,
-  options: { extraUserInput?: string } = {}
+  options: { 
+    extraUserInput?: string,
+    strategy?: 'fast' | 'balanced' | 'thorough',
+    maxResults?: number 
+  } = {}
 ): Promise<{ recommendedFileIds: string[]; combinedSummaries?: string; message?: string }> {
   const ticket = await getTicketById(ticketId)
 
   try {
-    // Get full project summary for context (includes file IDs needed for suggestion)
-    const projectSummary = await getFullProjectSummary(ticket.projectId)
+    // Determine strategy based on project size if not specified
+    const { FileSuggestionStrategyService } = await import('./file-suggestion-strategy-service')
+    const strategy = options.strategy || await FileSuggestionStrategyService.recommendStrategy(ticket.projectId)
+    
+    // Use the new file suggestion strategy service
+    const suggestionResponse = await fileSuggestionStrategyService.suggestFiles(
+      ticket,
+      strategy,
+      options.maxResults || 10,
+      options.extraUserInput
+    )
 
-    // Prepare system prompt for file suggestion
-    const systemPrompt = `You are a code assistant that recommends relevant files from a project based on a ticket's content.
-
-Analyze the ticket information and project structure to suggest the most relevant files that would need to be modified or reviewed to complete the ticket.
-
-Focus on:
-- Files directly related to the functionality mentioned in the ticket
-- Configuration files that might need updates
-- Test files that should be created or modified
-- Related components or modules that interact with the main functionality
-
-Return file IDs as numbers only.`
-
-    // Prepare user prompt with ticket details and project context
-    const userPrompt = `Ticket Title: ${ticket.title}
-
-Ticket Overview: ${ticket.overview || 'No overview provided'}
-
-${options.extraUserInput ? `Additional Context: ${options.extraUserInput}\n\n` : ''}Project Summary:
-${projectSummary}
-
-Based on this ticket and project structure, suggest the most relevant file IDs that would need to be examined or modified to complete this ticket. Focus on files that are directly related to the functionality described.`
-
-    // Use AI to suggest relevant files
-    const result = await generateStructuredData({
-      prompt: userPrompt,
-      schema: FileSuggestionsZodSchema,
-      systemMessage: systemPrompt,
-      options: HIGH_MODEL_CONFIG
-    })
-
-    // Get the suggested file IDs and convert to strings
-    const suggestedFileIds = result.object.fileIds.map(id => id.toString())
+    // Convert file IDs to strings
+    const suggestedFileIds = suggestionResponse.suggestions.map(id => id.toString())
 
     // Merge with existing suggestions to preserve any manually added files
     const allFileIds = [...new Set([...ticket.suggestedFileIds, ...suggestedFileIds])]
 
     // Update the ticket with the new suggestions if there are new ones
-    if (suggestedFileIds.length > 0 && suggestedFileIds.some(id => !ticket.suggestedFileIds.includes(id))) {
+    if (suggestedFileIds.length > 0 && suggestedFileIds.some((id) => !ticket.suggestedFileIds.includes(id))) {
       await updateTicket(ticketId, {
         suggestedFileIds: allFileIds
       })
     }
 
+    // Create summary message with performance info
+    const { metadata } = suggestionResponse
+    const performanceInfo = `(${metadata.analyzedFiles} files analyzed in ${metadata.processingTime}ms, ~${Math.round(metadata.tokensSaved || 0).toLocaleString()} tokens saved)`
+
     return {
       recommendedFileIds: allFileIds,
-      combinedSummaries: `AI-suggested ${suggestedFileIds.length} relevant files based on ticket: "${ticket.title}"`,
-      message: suggestedFileIds.length > 0 
-        ? `Found ${suggestedFileIds.length} relevant files for this ticket`
-        : 'No additional files suggested beyond existing selections'
+      combinedSummaries: `AI-suggested ${suggestedFileIds.length} relevant files using ${strategy} strategy ${performanceInfo}`,
+      message:
+        suggestedFileIds.length > 0
+          ? `Found ${suggestedFileIds.length} relevant files for this ticket ${performanceInfo}`
+          : 'No additional files suggested beyond existing selections'
     }
   } catch (error) {
     console.error('[TicketService] Error suggesting files:', error)
@@ -463,60 +478,57 @@ export async function searchTickets(
 ): Promise<{ tickets: Ticket[]; total: number }> {
   let tickets = await listTicketsByProject(projectId)
   const originalTotal = tickets.length
-  
+
   // Text search
   if (options.query) {
     const query = options.query.toLowerCase()
-    tickets = tickets.filter(ticket => 
-      ticket.title.toLowerCase().includes(query) ||
-      ticket.overview.toLowerCase().includes(query)
+    tickets = tickets.filter(
+      (ticket) => ticket.title.toLowerCase().includes(query) || ticket.overview.toLowerCase().includes(query)
     )
   }
-  
+
   // Status filter
   if (options.status) {
     const statuses = Array.isArray(options.status) ? options.status : [options.status]
-    tickets = tickets.filter(ticket => statuses.includes(ticket.status))
+    tickets = tickets.filter((ticket) => statuses.includes(ticket.status))
   }
-  
+
   // Priority filter
   if (options.priority) {
     const priorities = Array.isArray(options.priority) ? options.priority : [options.priority]
-    tickets = tickets.filter(ticket => priorities.includes(ticket.priority))
+    tickets = tickets.filter((ticket) => priorities.includes(ticket.priority))
   }
-  
+
   // Date range filter
   if (options.dateFrom || options.dateTo) {
-    tickets = tickets.filter(ticket => {
+    tickets = tickets.filter((ticket) => {
       if (options.dateFrom && ticket.created < options.dateFrom) return false
       if (options.dateTo && ticket.created > options.dateTo) return false
       return true
     })
   }
-  
+
   // Has files filter
   if (options.hasFiles !== undefined) {
-    tickets = tickets.filter(ticket => 
+    tickets = tickets.filter((ticket) =>
       options.hasFiles ? ticket.suggestedFileIds.length > 0 : ticket.suggestedFileIds.length === 0
     )
   }
-  
+
   // Tags filter (search in associated tasks)
   if (options.tags && options.tags.length > 0) {
     const ticketsWithTags = await Promise.all(
       tickets.map(async (ticket) => {
         const tasks = await getTasks(ticket.id)
-        const hasTags = tasks.some(task => 
-          task.tags?.some(tag => options.tags?.includes(tag))
-        )
+        const hasTags = tasks.some((task) => task.tags?.some((tag) => options.tags?.includes(tag)))
         return hasTags ? ticket : null
       })
     )
     tickets = ticketsWithTags.filter((t): t is Ticket => t !== null)
   }
-  
+
   const total = tickets.length
-  
+
   // Apply pagination
   if (options.offset) {
     tickets = tickets.slice(options.offset)
@@ -524,7 +536,6 @@ export async function searchTickets(
   if (options.limit) {
     tickets = tickets.slice(0, options.limit)
   }
-  
   return { tickets, total }
 }
 
@@ -546,78 +557,77 @@ export async function filterTasks(
   options: TaskFilterOptions
 ): Promise<{ tasks: Array<TicketTask & { ticketTitle: string }>; total: number }> {
   let allTasks: Array<TicketTask & { ticketTitle: string }> = []
-  
   if (options.ticketId) {
     // Filter for specific ticket
     const tasks = await getTasks(options.ticketId)
     const ticket = await getTicketById(options.ticketId)
-    allTasks = tasks.map(task => ({ ...task, ticketTitle: ticket.title }))
+    allTasks = tasks.map((task) => ({ ...task, ticketTitle: ticket.title }))
   } else {
     // Get all tasks from all tickets in project
     const tickets = await listTicketsByProject(projectId)
     for (const ticket of tickets) {
       const tasks = await getTasks(ticket.id)
-      allTasks.push(...tasks.map(task => ({ ...task, ticketTitle: ticket.title })))
+      allTasks.push(...tasks.map((task) => ({ ...task, ticketTitle: ticket.title })))
     }
   }
-  
+
   // Apply filters
-  
+
   // Status filter
   if (options.status && options.status !== 'all') {
-    allTasks = allTasks.filter(task => 
-      options.status === 'done' ? task.done : !task.done
-    )
+    allTasks = allTasks.filter((task) => (options.status === 'done' ? task.done : !task.done))
   }
-  
+
   // Tags filter
   if (options.tags && options.tags.length > 0) {
-    allTasks = allTasks.filter(task => 
-      task.tags?.some(tag => options.tags?.includes(tag))
-    )
+    allTasks = allTasks.filter((task) => task.tags?.some((tag) => options.tags?.includes(tag)))
   }
-  
+
   // Estimated hours filter
   if (options.estimatedHoursMin !== undefined || options.estimatedHoursMax !== undefined) {
-    allTasks = allTasks.filter(task => {
+    allTasks = allTasks.filter((task) => {
       if (!task.estimatedHours) return false
       if (options.estimatedHoursMin && task.estimatedHours < options.estimatedHoursMin) return false
       if (options.estimatedHoursMax && task.estimatedHours > options.estimatedHoursMax) return false
       return true
     })
   }
-  
+
   // Has description filter
   if (options.hasDescription !== undefined) {
-    allTasks = allTasks.filter(task => 
-      options.hasDescription ? (task.description && task.description.length > 0) : (!task.description || task.description.length === 0)
+    allTasks = allTasks.filter((task) =>
+      options.hasDescription
+        ? task.description && task.description.length > 0
+        : !task.description || task.description.length === 0
     )
   }
-  
+
   // Has files filter
   if (options.hasFiles !== undefined) {
-    allTasks = allTasks.filter(task => 
-      options.hasFiles ? (task.suggestedFileIds && task.suggestedFileIds.length > 0) : (!task.suggestedFileIds || task.suggestedFileIds.length === 0)
+    allTasks = allTasks.filter((task) =>
+      options.hasFiles
+        ? task.suggestedFileIds && task.suggestedFileIds.length > 0
+        : !task.suggestedFileIds || task.suggestedFileIds.length === 0
     )
   }
-  
+
   // Text search
   if (options.query) {
     const query = options.query.toLowerCase()
-    allTasks = allTasks.filter(task => 
-      task.content.toLowerCase().includes(query) ||
-      (task.description && task.description.toLowerCase().includes(query))
+    allTasks = allTasks.filter(
+      (task) =>
+        task.content.toLowerCase().includes(query) ||
+        (task.description && task.description.toLowerCase().includes(query))
     )
   }
-  
+
   const total = allTasks.length
-  
+
   // Sort by ticket and order
   allTasks.sort((a, b) => {
     if (a.ticketId !== b.ticketId) return a.ticketId - b.ticketId
     return a.orderIndex - b.orderIndex
   })
-  
   // Apply pagination
   if (options.offset) {
     allTasks = allTasks.slice(options.offset)
@@ -625,7 +635,6 @@ export async function filterTasks(
   if (options.limit) {
     allTasks = allTasks.slice(0, options.limit)
   }
-  
   return { tasks: allTasks, total }
 }
 
@@ -650,11 +659,11 @@ export async function batchCreateTickets(
     successCount: 0,
     failureCount: 0
   }
-  
+
   if (tickets.length > 100) {
     throw new ApiError(400, 'Batch size exceeded. Maximum 100 tickets per batch.', 'BATCH_SIZE_EXCEEDED')
   }
-  
+
   for (const ticketData of tickets) {
     try {
       const ticket = await createTicket({ ...ticketData, projectId })
@@ -668,7 +677,6 @@ export async function batchCreateTickets(
       result.failureCount++
     }
   }
-  
   return result
 }
 
@@ -682,11 +690,11 @@ export async function batchUpdateTickets(
     successCount: 0,
     failureCount: 0
   }
-  
+
   if (updates.length > 100) {
     throw new ApiError(400, 'Batch size exceeded. Maximum 100 tickets per batch.', 'BATCH_SIZE_EXCEEDED')
   }
-  
+
   for (const { ticketId, data } of updates) {
     try {
       const ticket = await updateTicket(ticketId, data)
@@ -700,13 +708,11 @@ export async function batchUpdateTickets(
       result.failureCount++
     }
   }
-  
+
   return result
 }
 
-export async function batchDeleteTickets(
-  ticketIds: number[]
-): Promise<BatchOperationResult<number>> {
+export async function batchDeleteTickets(ticketIds: number[]): Promise<BatchOperationResult<number>> {
   const result: BatchOperationResult<number> = {
     succeeded: [],
     failed: [],
@@ -714,11 +720,11 @@ export async function batchDeleteTickets(
     successCount: 0,
     failureCount: 0
   }
-  
+
   if (ticketIds.length > 100) {
     throw new ApiError(400, 'Batch size exceeded. Maximum 100 tickets per batch.', 'BATCH_SIZE_EXCEEDED')
   }
-  
+
   for (const ticketId of ticketIds) {
     try {
       await deleteTicket(ticketId)
@@ -732,7 +738,6 @@ export async function batchDeleteTickets(
       result.failureCount++
     }
   }
-  
   return result
 }
 
@@ -749,14 +754,14 @@ export async function batchCreateTasks(
     successCount: 0,
     failureCount: 0
   }
-  
+
   if (tasks.length > 100) {
     throw new ApiError(400, 'Batch size exceeded. Maximum 100 tasks per batch.', 'BATCH_SIZE_EXCEEDED')
   }
-  
+
   // Verify ticket exists first
   await getTicketById(ticketId)
-  
+
   for (const taskData of tasks) {
     try {
       const task = await createTask(ticketId, taskData)
@@ -770,7 +775,6 @@ export async function batchCreateTasks(
       result.failureCount++
     }
   }
-  
   return result
 }
 
@@ -784,11 +788,11 @@ export async function batchUpdateTasks(
     successCount: 0,
     failureCount: 0
   }
-  
+
   if (updates.length > 100) {
     throw new ApiError(400, 'Batch size exceeded. Maximum 100 tasks per batch.', 'BATCH_SIZE_EXCEEDED')
   }
-  
+
   for (const { ticketId, taskId, data } of updates) {
     try {
       const task = await updateTask(ticketId, taskId, data)
@@ -802,7 +806,6 @@ export async function batchUpdateTasks(
       result.failureCount++
     }
   }
-  
   return result
 }
 
@@ -816,11 +819,11 @@ export async function batchDeleteTasks(
     successCount: 0,
     failureCount: 0
   }
-  
+
   if (deletes.length > 100) {
     throw new ApiError(400, 'Batch size exceeded. Maximum 100 tasks per batch.', 'BATCH_SIZE_EXCEEDED')
   }
-  
+
   for (const { ticketId, taskId } of deletes) {
     try {
       await deleteTask(ticketId, taskId)
@@ -834,7 +837,6 @@ export async function batchDeleteTasks(
       result.failureCount++
     }
   }
-  
   return result
 }
 
@@ -848,11 +850,11 @@ export async function batchMoveTasks(
     successCount: 0,
     failureCount: 0
   }
-  
+
   if (moves.length > 100) {
     throw new ApiError(400, 'Batch size exceeded. Maximum 100 tasks per batch.', 'BATCH_SIZE_EXCEEDED')
   }
-  
+
   for (const { taskId, fromTicketId, toTicketId } of moves) {
     try {
       // Get the task
@@ -860,14 +862,14 @@ export async function batchMoveTasks(
       if (!task || task.ticketId !== fromTicketId) {
         throw new ApiError(404, `Task ${taskId} not found in ticket ${fromTicketId}`, 'TASK_NOT_FOUND')
       }
-      
+
       // Verify target ticket exists
       await getTicketById(toTicketId)
-      
+
       // Get max order index in target ticket
       const targetTasks = await getTasks(toTicketId)
-      const maxIndex = targetTasks.length > 0 ? Math.max(...targetTasks.map(t => t.orderIndex)) : -1
-      
+      const maxIndex = targetTasks.length > 0 ? Math.max(...targetTasks.map((t) => t.orderIndex)) : -1
+
       // Update the task
       const updatedTask: TicketTask = {
         ...task,
@@ -875,7 +877,6 @@ export async function batchMoveTasks(
         orderIndex: maxIndex + 1,
         updated: Date.now()
       }
-      
       await ticketStorage.updateTask(taskId, updatedTask)
       result.succeeded.push(updatedTask)
       result.successCount++
@@ -887,7 +888,6 @@ export async function batchMoveTasks(
       result.failureCount++
     }
   }
-  
   return result
 }
 
@@ -1024,7 +1024,6 @@ export async function removeDeletedFileIdsFromTickets(
 
     for (const ticket of tickets) {
       let ticketUpdated = false
-      
       // Update ticket's suggested files
       if (ticket.suggestedFileIds && ticket.suggestedFileIds.length > 0) {
         const originalLength = ticket.suggestedFileIds.length
@@ -1038,7 +1037,6 @@ export async function removeDeletedFileIdsFromTickets(
           updatedTicketCount++
         }
       }
-      
       // Update tasks' suggested files
       const tasks = await getTasks(ticket.id)
       for (const task of tasks) {
@@ -1047,7 +1045,6 @@ export async function removeDeletedFileIdsFromTickets(
           const updatedFileIds = task.suggestedFileIds.filter(
             (fileId) => !deletedFileIds.includes(parseInt(fileId, 10))
           )
-          
           if (updatedFileIds.length < originalLength) {
             await updateTask(ticket.id, task.id, { suggestedFileIds: updatedFileIds })
             updatedTaskCount++
@@ -1058,10 +1055,7 @@ export async function removeDeletedFileIdsFromTickets(
 
     return { updatedTickets: updatedTicketCount, updatedTasks: updatedTaskCount }
   } catch (error) {
-    console.error(
-      `Failed to remove deleted file IDs from tickets in project ${projectId}:`,
-      error
-    )
+    console.error(`Failed to remove deleted file IDs from tickets in project ${projectId}:`, error)
     // Don't throw - this is a cleanup operation that shouldn't fail the main operation
     return { updatedTickets: 0, updatedTasks: 0 }
   }
@@ -1073,13 +1067,13 @@ export async function removeDeletedFileIdsFromTickets(
  * Create a task with full context including file associations
  */
 export async function createTaskWithContext(
-  ticketId: number, 
+  ticketId: number,
   content: string,
   options?: {
-    description?: string,
-    suggestedFileIds?: string[],
-    estimatedHours?: number,
-    dependencies?: number[],
+    description?: string
+    suggestedFileIds?: string[]
+    estimatedHours?: number
+    dependencies?: number[]
     tags?: string[]
   }
 ): Promise<TicketTask> {
@@ -1103,12 +1097,11 @@ export async function getTaskWithContext(
   if (!task) {
     throw new ApiError(404, `Task with ID ${taskId} not found.`, 'TASK_NOT_FOUND')
   }
-  
   // In a real implementation, this would resolve file information
   // For now, return task with basic file info
   return {
     ...task,
-    files: task.suggestedFileIds?.map(id => ({
+    files: task.suggestedFileIds?.map((id) => ({
       id,
       path: `file-${id}` // This would be resolved from file storage
     }))
@@ -1118,18 +1111,15 @@ export async function getTaskWithContext(
 /**
  * AI-powered file suggestion for individual tasks
  */
-export async function suggestFilesForTask(
-  taskId: number,
-  context?: string
-): Promise<string[]> {
+export async function suggestFilesForTask(taskId: number, context?: string): Promise<string[]> {
   const task = await ticketStorage.getTaskById(taskId)
   if (!task) {
     throw new ApiError(404, `Task with ID ${taskId} not found.`, 'TASK_NOT_FOUND')
   }
-  
+
   const ticket = await getTicketById(task.ticketId)
   const projectSummary = await getCompactProjectSummary(ticket.projectId)
-  
+
   const systemPrompt = `You are an expert at analyzing tasks and suggesting relevant files from a project.
 Given a task's content and description, suggest the most relevant files that would need to be modified or reviewed.
 
@@ -1151,7 +1141,6 @@ Suggest the most relevant file IDs for this task.`
       schema: z.object({ fileIds: z.array(z.string()) }),
       options: MEDIUM_MODEL_CONFIG
     })
-    
     return result.object.fileIds
   } catch (error) {
     console.error('[TicketService] Error suggesting files for task:', error)
@@ -1162,22 +1151,20 @@ Suggest the most relevant file IDs for this task.`
 /**
  * Analyze task complexity and provide insights
  */
-export async function analyzeTaskComplexity(
-  taskId: number
-): Promise<{
-  complexity: 'low' | 'medium' | 'high',
-  estimatedHours: number,
-  requiredSkills: string[],
+export async function analyzeTaskComplexity(taskId: number): Promise<{
+  complexity: 'low' | 'medium' | 'high'
+  estimatedHours: number
+  requiredSkills: string[]
   suggestedApproach: string
 }> {
   const task = await ticketStorage.getTaskById(taskId)
   if (!task) {
     throw new ApiError(404, `Task with ID ${taskId} not found.`, 'TASK_NOT_FOUND')
   }
-  
+
   const ticket = await getTicketById(task.ticketId)
   const projectContext = await getCompactProjectSummary(ticket.projectId)
-  
+
   const systemPrompt = `You are a technical project manager analyzing task complexity.
 Analyze the given task and provide insights on its complexity, estimated time, required skills, and suggested approach.
 
@@ -1205,7 +1192,6 @@ ${projectContext}`
       }),
       options: MEDIUM_MODEL_CONFIG
     })
-    
     return result.object
   } catch (error) {
     console.error('[TicketService] Error analyzing task complexity:', error)
