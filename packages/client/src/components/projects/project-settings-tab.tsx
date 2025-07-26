@@ -11,7 +11,7 @@ import { MCPStatusIndicator } from './mcp-status-indicator'
 import { AgentFilesManager } from './agent-files-manager'
 import { useMutation } from '@tanstack/react-query'
 import { octoClient } from '@/hooks/octo-client'
-import { useToast } from '@/components/ui/use-toast'
+import { toast } from 'sonner'
 
 const MCP_PLATFORMS = [
   { value: 'claude-desktop', label: 'Claude Desktop' },
@@ -21,7 +21,7 @@ const MCP_PLATFORMS = [
 ] as const
 
 const getPlatformDisplayName = (platform: string): string => {
-  return MCP_PLATFORMS.find(p => p.value === platform)?.label || platform
+  return MCP_PLATFORMS.find((p) => p.value === platform)?.label || platform
 }
 
 export function ProjectSettingsTab() {
@@ -32,12 +32,13 @@ export function ProjectSettingsTab() {
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
   const { data: projectId } = useProjectTabField('selectedProjectId')
   const { data: enableChatAutoNaming } = useProjectTabField('enableChatAutoNaming')
-  const [selectedMCPPlatform, setSelectedMCPPlatform] = useState<'claude-desktop' | 'vscode' | 'cursor' | 'continue'>('claude-desktop')
+  const [selectedMCPPlatform, setSelectedMCPPlatform] = useState<'claude-desktop' | 'vscode' | 'cursor' | 'continue'>(
+    'claude-desktop'
+  )
 
   const { data: projectResponse } = useGetProject(projectId!)
   const projectData = projectResponse?.data
   const { copyToClipboard } = useCopyClipboard()
-  const { toast } = useToast()
   const [showAgentFiles, setShowAgentFiles] = useState(false)
 
   const { isPending: isSyncing, mutate: syncProject } = useSyncProject()
@@ -53,23 +54,18 @@ export function ProjectSettingsTab() {
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'MCP Installed',
+        toast.success('MCP Installed', {
           description: `OctoPrompt MCP has been installed for ${getPlatformDisplayName(selectedMCPPlatform)}. Please restart the application to activate.`
         })
       } else {
-        toast({
-          title: 'Installation Failed',
-          description: data.data.message,
-          variant: 'destructive'
+        toast.error('Installation Failed', {
+          description: data.data.message
         })
       }
     },
     onError: (error) => {
-      toast({
-        title: 'Installation Error',
-        description: error.message,
-        variant: 'destructive'
+      toast.error('Installation Error', {
+        description: error.message
       })
     }
   })

@@ -5,17 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/components/ui/use-toast'
 import { FileText, RefreshCw, Check, X, AlertCircle, Loader2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { toast } from 'sonner'
 
 interface AgentFilesManagerProps {
   projectId: number
@@ -34,16 +27,19 @@ interface AgentFile {
 }
 
 export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
-  const { toast } = useToast()
   const queryClient = useQueryClient()
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
 
-  const { data: filesData, isLoading, refetch } = useQuery({
+  const {
+    data: filesData,
+    isLoading,
+    refetch
+  } = useQuery({
     queryKey: ['agent-files', projectId],
     queryFn: async () => {
       const response = await octoClient.agentFiles.detectFiles(projectId)
       return response.data
-    },
+    }
   })
 
   const { data: statusData } = useQuery({
@@ -51,32 +47,29 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
     queryFn: async () => {
       const response = await octoClient.agentFiles.getStatus(projectId)
       return response.data
-    },
+    }
   })
 
   const updateMutation = useMutation({
     mutationFn: async (files?: { path: string; update: boolean }[]) => {
       const response = await octoClient.agentFiles.updateFile(projectId, {
-        files,
+        files
       })
       return response
     },
     onSuccess: (data) => {
-      toast({
-        title: 'Agent files updated',
-        description: `Successfully updated ${data.data.results.length} files`,
+      toast.success('Agent files updated', {
+        description: `Successfully updated ${data.data.results.length} files`
       })
       queryClient.invalidateQueries({ queryKey: ['agent-files', projectId] })
       queryClient.invalidateQueries({ queryKey: ['agent-files-status', projectId] })
       setSelectedFiles(new Set())
     },
     onError: (error) => {
-      toast({
-        title: 'Update failed',
-        description: error.message,
-        variant: 'destructive',
+      toast.error('Update failed', {
+        description: error.message
       })
-    },
+    }
   })
 
   const handleSelectFile = (path: string) => {
@@ -90,9 +83,9 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
   }
 
   const handleUpdateSelected = () => {
-    const filesToUpdate = Array.from(selectedFiles).map(path => ({
+    const filesToUpdate = Array.from(selectedFiles).map((path) => ({
       path,
-      update: true,
+      update: true
     }))
     updateMutation.mutate(filesToUpdate)
   }
@@ -104,8 +97,8 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
+        <CardContent className='flex items-center justify-center py-8'>
+          <Loader2 className='h-6 w-6 animate-spin' />
         </CardContent>
       </Card>
     )
@@ -113,21 +106,21 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
 
   // Transform and combine data from both endpoints
   const transformedFiles: AgentFile[] = []
-  
+
   if (filesData && statusData) {
-    // Process project files  
+    // Process project files
     const projectFiles = filesData.projectFiles || []
     const statusFiles = statusData.files || []
-    
+
     // Create a map for quick status lookup
     const statusMap = new Map(statusFiles.map((f: any) => [f.path, f]))
-    
+
     // Combine project and global files
     const allFiles = [
       ...projectFiles.map((f: any) => ({ ...f, source: 'project' })),
       ...(filesData.globalFiles || []).map((f: any) => ({ ...f, source: 'global' }))
     ]
-    
+
     allFiles.forEach((file: any) => {
       const statusInfo = statusMap.get(file.path)
       transformedFiles.push({
@@ -143,50 +136,44 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
       })
     })
   }
-  
+
   const files = transformedFiles
-  const needsUpdateCount = files.filter(f => f.needsUpdate).length
+  const needsUpdateCount = files.filter((f) => f.needsUpdate).length
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className='flex items-center justify-between'>
           <div>
             <CardTitle>Agent Configuration Files</CardTitle>
-            <CardDescription>
-              Manage OctoPrompt MCP instructions in your agent configuration files
-            </CardDescription>
+            <CardDescription>Manage OctoPrompt MCP instructions in your agent configuration files</CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className='flex items-center gap-2'>
             {needsUpdateCount > 0 && (
-              <Badge variant="secondary">
-                <AlertCircle className="w-3 h-3 mr-1" />
+              <Badge variant='secondary'>
+                <AlertCircle className='w-3 h-3 mr-1' />
                 {needsUpdateCount} need{needsUpdateCount === 1 ? 's' : ''} update
               </Badge>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button variant='outline' size='sm' onClick={() => refetch()}>
+              <RefreshCw className='h-4 w-4 mr-2' />
               Refresh
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className='space-y-4'>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className='w-[50px]'></TableHead>
                 <TableHead>File</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Scope</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Version</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className='text-right'>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -200,44 +187,42 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div className='flex items-center gap-2'>
+                      <FileText className='h-4 w-4 text-muted-foreground' />
                       <Tooltip>
                         <TooltipTrigger>
-                          <span className="font-mono text-sm">{file.filename}</span>
+                          <span className='font-mono text-sm'>{file.filename}</span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="text-xs">{file.path}</p>
+                          <p className='text-xs'>{file.path}</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="capitalize">
+                    <Badge variant='outline' className='capitalize'>
                       {file.type || 'Unknown'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={file.scope === 'global' ? 'secondary' : 'default'}>
-                      {file.scope || 'Unknown'}
-                    </Badge>
+                    <Badge variant={file.scope === 'global' ? 'secondary' : 'default'}>{file.scope || 'Unknown'}</Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className='flex items-center gap-2'>
                       {file.exists ? (
-                        <Badge variant="outline" className="gap-1">
-                          <Check className="h-3 w-3" />
+                        <Badge variant='outline' className='gap-1'>
+                          <Check className='h-3 w-3' />
                           Exists
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="gap-1">
-                          <X className="h-3 w-3" />
+                        <Badge variant='secondary' className='gap-1'>
+                          <X className='h-3 w-3' />
                           Not Found
                         </Badge>
                       )}
                       {file.hasInstructions && (
-                        <Badge variant="default" className="gap-1">
-                          <Check className="h-3 w-3" />
+                        <Badge variant='default' className='gap-1'>
+                          <Check className='h-3 w-3' />
                           Configured
                         </Badge>
                       )}
@@ -245,14 +230,14 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
                   </TableCell>
                   <TableCell>
                     {file.version ? (
-                      <Badge variant="outline">v{file.version}</Badge>
+                      <Badge variant='outline'>v{file.version}</Badge>
                     ) : (
-                      <span className="text-sm text-muted-foreground">-</span>
+                      <span className='text-sm text-muted-foreground'>-</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className='text-right'>
                     {file.needsUpdate && (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant='secondary' className='text-xs'>
                         Update Available
                       </Badge>
                     )}
@@ -262,35 +247,30 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div className="text-sm text-muted-foreground">
+          <div className='flex items-center justify-between pt-4 border-t'>
+            <div className='text-sm text-muted-foreground'>
               {selectedFiles.size > 0 && (
-                <span>{selectedFiles.size} file{selectedFiles.size !== 1 ? 's' : ''} selected</span>
+                <span>
+                  {selectedFiles.size} file{selectedFiles.size !== 1 ? 's' : ''} selected
+                </span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className='flex gap-2'>
               {selectedFiles.size > 0 && (
-                <Button
-                  onClick={handleUpdateSelected}
-                  disabled={updateMutation.isPending}
-                >
+                <Button onClick={handleUpdateSelected} disabled={updateMutation.isPending}>
                   {updateMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                   ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <RefreshCw className='h-4 w-4 mr-2' />
                   )}
                   Update Selected
                 </Button>
               )}
-              <Button
-                variant="outline"
-                onClick={handleUpdateAll}
-                disabled={updateMutation.isPending}
-              >
+              <Button variant='outline' onClick={handleUpdateAll} disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                 ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className='h-4 w-4 mr-2' />
                 )}
                 Update All Files
               </Button>
