@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AssetGeneratorDialog } from '@/components/assets/asset-generator-dialog'
+import { AssetGeneratorWrapper } from '@/components/assets/asset-generator-wrapper'
 import { Database, Sparkles, Copy, Table2, Network, Key } from 'lucide-react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -409,10 +409,14 @@ export function DatabaseSchemaView({ projectId, projectName = 'Project' }: Datab
         </TabsContent>
       </Tabs>
 
-      <AssetGeneratorDialog
+      <AssetGeneratorWrapper
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        assetType="database-schema"
+        assetType="database-doc"
+        projectContext={{
+          name: projectName,
+          description: `Database schema documentation for ${projectName}`
+        }}
         onSuccess={(content, name) => {
           // Handle success
         }}

@@ -357,7 +357,7 @@ export const chatRoutes = new OpenAPIHono()
     )
   })
   .openapi(postAiChatSdkRoute, async (c) => {
-    const { chatId, userMessage, options, systemMessage, tempId } = c.req.valid('json')
+    const { chatId, userMessage, options, systemMessage, tempId, enableChatAutoNaming } = c.req.valid('json')
 
     const provider = options?.provider as APIProviders
     const model = options?.model as string
@@ -376,7 +376,8 @@ export const chatRoutes = new OpenAPIHono()
         userMessage,
         options: unifiedOptions,
         systemMessage,
-        tempId
+        tempId,
+        enableChatAutoNaming
       })
 
       return stream(c, async (streamInstance) => {

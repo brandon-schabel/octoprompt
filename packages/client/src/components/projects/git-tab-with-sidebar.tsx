@@ -4,6 +4,7 @@ import { GitTabView } from './git-tab-view'
 import { CommitList } from './git-commit-history/commit-list'
 import { GitStashView } from './git-stash-view'
 import { GitBranchesView } from './git-branches-view'
+import { GitWorktreeView } from './git-worktree-view'
 import { cn } from '@/lib/utils'
 
 interface GitTabWithSidebarProps {
@@ -31,6 +32,7 @@ export function GitTabWithSidebar({ projectId, gitView = 'changes', onGitViewCha
         {gitView === 'history' && <CommitList projectId={projectId} />}
         {gitView === 'branches' && <GitBranchesView projectId={projectId} />}
         {gitView === 'stashes' && <GitStashView projectId={projectId} />}
+        {gitView === 'worktrees' && <GitWorktreeView projectId={projectId} />}
       </div>
     </div>
   )

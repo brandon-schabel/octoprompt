@@ -1,5 +1,4 @@
 import { redirect } from '@tanstack/react-router'
-import type { BeforeLoadContext } from '@tanstack/react-router'
 
 /**
  * Authentication state interface
@@ -35,7 +34,7 @@ export function getAuthState(): AuthState {
           email: 'user@octoprompt.com'
         }
       : null,
-    apiKey
+    apiKey: apiKey || undefined
   }
 }
 
@@ -43,15 +42,12 @@ export function getAuthState(): AuthState {
  * beforeLoad function to check authentication
  * Redirects to login if not authenticated
  */
-export async function requireAuth({ location, context }: BeforeLoadContext & { context: any }) {
+export async function requireAuth({ location, context }: { location: any; context: any }) {
   const auth = getAuthState()
 
   if (!auth.isAuthenticated) {
     throw redirect({
-      to: '/login',
-      search: {
-        redirect: location.href
-      }
+      to: '/'
     })
   }
 
@@ -64,15 +60,12 @@ export async function requireAuth({ location, context }: BeforeLoadContext & { c
 /**
  * beforeLoad function for admin-only routes
  */
-export async function requireAdmin({ location, context }: BeforeLoadContext & { context: any }) {
+export async function requireAdmin({ location, context }: { location: any; context: any }) {
   const auth = getAuthState()
 
   if (!auth.isAuthenticated) {
     throw redirect({
-      to: '/login',
-      search: {
-        redirect: location.href
-      }
+      to: '/'
     })
   }
 
@@ -81,10 +74,7 @@ export async function requireAdmin({ location, context }: BeforeLoadContext & { 
 
   if (!isAdmin) {
     throw redirect({
-      to: '/unauthorized',
-      search: {
-        from: location.pathname
-      }
+      to: '/'
     })
   }
 

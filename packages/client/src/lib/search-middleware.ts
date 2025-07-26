@@ -1,4 +1,5 @@
-import type { SearchMiddleware } from '@tanstack/react-router'
+// Define middleware type locally since TanStack Router v1 doesn't export SearchMiddleware
+type SearchMiddleware = (args: { search: any; next: (search: any) => any }) => any
 import { defaultSearchParams } from './search-schemas'
 
 /**

@@ -1,4 +1,4 @@
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile, Ticket } from '@octoprompt/schemas'
 import { ApiError } from '@octoprompt/shared'
 import { DatabaseManager } from '@octoprompt/storage'
 import type { Database, Statement } from 'bun:sqlite'
@@ -179,6 +179,81 @@ export class FileSearchService {
         'SEARCH_FAILED'
       )
     }
+  }
+
+  /**
+   * Search files based on ticket content
+   */
+  async searchByTicket(
+    ticket: Ticket,
+    options: Partial<SearchOptions> = {}
+  ): Promise<{
+    results: SearchResult[]
+    stats: SearchStats
+  }> {
+    // Extract keywords from ticket
+    const ticketText = `${ticket.title} ${ticket.overview || ''}`
+    const keywords = this.extractQueryKeywords(ticketText)
+    
+    // Build search query from keywords
+    const searchOptions: SearchOptions = {
+      query: keywords.join(' '),
+      searchType: options.searchType || 'semantic',
+      fileTypes: options.fileTypes,
+      limit: options.limit || 50,
+      offset: options.offset || 0,
+      includeContext: options.includeContext || false,
+      contextLines: options.contextLines || 3,
+      scoringMethod: options.scoringMethod || 'relevance',
+      caseSensitive: options.caseSensitive || false
+    }
+
+    return this.search(ticket.projectId, searchOptions)
+  }
+
+  /**
+   * Search files by keywords array
+   */
+  async searchByKeywords(
+    projectId: number,
+    keywords: string[],
+    options: Partial<SearchOptions> = {}
+  ): Promise<{
+    results: SearchResult[]
+    stats: SearchStats
+  }> {
+    const searchOptions: SearchOptions = {
+      query: keywords.join(' '),
+      searchType: options.searchType || 'semantic',
+      fileTypes: options.fileTypes,
+      limit: options.limit || 50,
+      offset: options.offset || 0,
+      includeContext: options.includeContext || false,
+      contextLines: options.contextLines || 3,
+      scoringMethod: options.scoringMethod || 'relevance',
+      caseSensitive: options.caseSensitive || false
+    }
+
+    return this.search(projectId, searchOptions)
+  }
+
+  /**
+   * Extract keywords from text for searching
+   */
+  private extractQueryKeywords(text: string): string[] {
+    const tokens = this.tokenizeQuery(text)
+    const wordFreq = new Map<string, number>()
+
+    for (const token of tokens) {
+      if (token.length < 3) continue
+      wordFreq.set(token, (wordFreq.get(token) || 0) + 1)
+    }
+
+    // Sort by frequency and take top keywords
+    return Array.from(wordFreq.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([word]) => word)
   }
 
   /**

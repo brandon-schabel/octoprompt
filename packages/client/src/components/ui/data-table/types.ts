@@ -6,7 +6,9 @@ import type {
   PaginationState,
   Table,
   Row,
-  Column
+  Column,
+  OnChangeFn,
+  RowSelectionState
 } from '@tanstack/react-table'
 
 export interface DataTableProps<TData, TValue = unknown> {
@@ -16,29 +18,29 @@ export interface DataTableProps<TData, TValue = unknown> {
   // Pagination
   pageCount?: number
   pagination?: PaginationState
-  onPaginationChange?: (pagination: PaginationState) => void
+  onPaginationChange?: OnChangeFn<PaginationState>
   manualPagination?: boolean
 
   // Sorting
   sorting?: SortingState
-  onSortingChange?: (sorting: SortingState) => void
+  onSortingChange?: OnChangeFn<SortingState>
   manualSorting?: boolean
 
   // Filtering
   columnFilters?: ColumnFiltersState
-  onColumnFiltersChange?: (filters: ColumnFiltersState) => void
+  onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>
   globalFilter?: string
-  onGlobalFilterChange?: (filter: string) => void
+  onGlobalFilterChange?: OnChangeFn<string>
   manualFiltering?: boolean
 
   // Selection
   enableRowSelection?: boolean
   enableMultiRowSelection?: boolean
-  onRowSelectionChange?: (selection: Record<string, boolean>) => void
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>
 
   // Visibility
   columnVisibility?: VisibilityState
-  onColumnVisibilityChange?: (visibility: VisibilityState) => void
+  onColumnVisibilityChange?: OnChangeFn<VisibilityState>
 
   // Loading & Empty states
   isLoading?: boolean
@@ -74,7 +76,7 @@ export interface DataTableColumnHeaderProps<TData, TValue> {
 export interface DataTableToolbarProps<TData> {
   table: Table<TData>
   globalFilter?: string
-  onGlobalFilterChange?: (value: string) => void
+  onGlobalFilterChange?: OnChangeFn<string>
   children?: React.ReactNode
 }
 
@@ -128,5 +130,7 @@ export type {
   PaginationState,
   Table,
   Row,
-  Column
+  Column,
+  OnChangeFn,
+  RowSelectionState
 } from '@tanstack/react-table'

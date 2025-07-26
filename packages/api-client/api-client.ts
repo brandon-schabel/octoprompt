@@ -138,7 +138,14 @@ import type {
   GitLogEnhancedRequest,
   GitLogEnhancedResponse,
   GitBranchListEnhancedResponse,
-  GitCommitDetailResponse
+  GitCommitDetailResponse,
+  GitWorktree,
+  GitWorktreeListResponse,
+  GitWorktreeAddRequest,
+  GitWorktreeRemoveRequest,
+  GitWorktreeLockRequest,
+  GitWorktreePruneRequest,
+  GitWorktreePruneResponse
 } from '@octoprompt/schemas'
 
 import {
@@ -163,7 +170,13 @@ import {
   gitLogEnhancedRequestSchema,
   gitLogEnhancedResponseSchema,
   gitBranchListEnhancedResponseSchema,
-  gitCommitDetailResponseSchema
+  gitCommitDetailResponseSchema,
+  gitWorktreeListResponseSchema,
+  gitWorktreeAddRequestSchema,
+  gitWorktreeRemoveRequestSchema,
+  gitWorktreeLockRequestSchema,
+  gitWorktreePruneRequestSchema,
+  gitWorktreePruneResponseSchema
 } from '@octoprompt/schemas'
 
 // MCP Analytics imports
@@ -767,6 +780,37 @@ export class ProjectService extends BaseApiClient {
       responseSchema: z.object({
         success: z.literal(true),
         message: z.string()
+      })
+    })
+    return result
+  }
+
+  async generateProjectTabName(tabId: number, data: {
+    projectId: number
+    tabData?: {
+      selectedFiles?: number[]
+      userPrompt?: string
+    }
+    existingNames?: string[]
+  }) {
+    const validatedData = this.validateBody(z.object({
+      projectId: z.number(),
+      tabData: z.object({
+        selectedFiles: z.array(z.number()).optional(),
+        userPrompt: z.string().optional()
+      }).optional(),
+      existingNames: z.array(z.string()).optional()
+    }), data)
+    
+    const result = await this.request('POST', `/project-tabs/${tabId}/generate-name`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          name: z.string(),
+          status: z.enum(['success', 'fallback']),
+          generatedAt: z.string()
+        })
       })
     })
     return result
@@ -1746,6 +1790,119 @@ export class GitService extends BaseApiClient {
     })
     return result as GitCommitDetailResponse
   }
+
+  // Worktree Management
+  worktrees = {
+    list: async (projectId: number) => {
+      const result = await this.request('GET', `/projects/${projectId}/git/worktrees`, {
+        responseSchema: gitWorktreeListResponseSchema
+      })
+      return result as GitWorktreeListResponse
+    },
+
+    add: async (projectId: number, params: GitWorktreeAddRequest) => {
+      const validatedData = this.validateBody(gitWorktreeAddRequestSchema, params)
+      const result = await this.request('POST', `/projects/${projectId}/git/worktrees`, {
+        body: validatedData,
+        responseSchema: gitOperationResponseSchema
+      })
+      return result as GitOperationResponse
+    },
+
+    remove: async (projectId: number, params: GitWorktreeRemoveRequest) => {
+      const validatedData = this.validateBody(gitWorktreeRemoveRequestSchema, params)
+      const result = await this.request('DELETE', `/projects/${projectId}/git/worktrees`, {
+        body: validatedData,
+        responseSchema: gitOperationResponseSchema
+      })
+      return result as GitOperationResponse
+    },
+
+    lock: async (projectId: number, params: GitWorktreeLockRequest) => {
+      const validatedData = this.validateBody(gitWorktreeLockRequestSchema, params)
+      const result = await this.request('POST', `/projects/${projectId}/git/worktrees/lock`, {
+        body: validatedData,
+        responseSchema: gitOperationResponseSchema
+      })
+      return result as GitOperationResponse
+    },
+
+    unlock: async (projectId: number, params: { path: string }) => {
+      const validatedData = this.validateBody(z.object({ path: z.string() }), params)
+      const result = await this.request('POST', `/projects/${projectId}/git/worktrees/unlock`, {
+        body: validatedData,
+        responseSchema: gitOperationResponseSchema
+      })
+      return result as GitOperationResponse
+    },
+    prune: async (projectId: number, params: { dryRun?: boolean } = {}) => {
+      const validatedData = this.validateBody(gitWorktreePruneRequestSchema, params)
+      const result = await this.request('POST', `/projects/${projectId}/git/worktrees/prune`, {
+        body: validatedData,
+        responseSchema: gitWorktreePruneResponseSchema
+      })
+      return result as GitWorktreePruneResponse
+    }
+  }
+}
+
+// Job Service
+export class JobService extends BaseApiClient {
+  async listJobs(filter?: any) {
+    const result = await this.request('GET', '/jobs', {
+      params: filter,
+      responseSchema: z.object({
+        success: z.boolean(),
+        jobs: z.array(z.any())
+      })
+    })
+    return result.jobs
+  }
+
+  async getJob(jobId: number) {
+    const result = await this.request('GET', `/jobs/${jobId}`, {
+      responseSchema: z.any()
+    })
+    return result
+  }
+
+  async getProjectJobs(projectId: number) {
+    const result = await this.request('GET', `/jobs/project/${projectId}`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        jobs: z.array(z.any())
+      })
+    })
+    return result.jobs
+  }
+
+  async cancelJob(jobId: number) {
+    const result = await this.request('POST', `/jobs/${jobId}/cancel`, {
+      responseSchema: z.object({
+        success: z.boolean()
+      })
+    })
+    return result
+  }
+
+  async retryJob(jobId: number) {
+    const result = await this.request('POST', `/jobs/${jobId}/retry`, {
+      responseSchema: z.any()
+    })
+    return result
+  }
+
+  async cleanupJobs(olderThanDays?: number) {
+    const result = await this.request('POST', '/jobs/cleanup', {
+      body: { olderThanDays },
+      responseSchema: z.object({
+        success: z.boolean(),
+        deletedCount: z.number(),
+        message: z.string()
+      })
+    })
+    return result
+  }
 }
 
 // Main OctoPrompt Client
@@ -1760,6 +1917,7 @@ export class OctoPromptClient {
   public readonly tickets: TicketService
   public readonly git: GitService
   public readonly mcpAnalytics: MCPAnalyticsService
+  public readonly jobs: JobService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -1772,6 +1930,7 @@ export class OctoPromptClient {
     this.tickets = new TicketService(config)
     this.git = new GitService(config)
     this.mcpAnalytics = new MCPAnalyticsService(config)
+    this.jobs = new JobService(config)
   }
 }
 

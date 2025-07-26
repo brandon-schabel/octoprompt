@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { projectsSearchSchema, type ProjectsSearch } from '@/lib/search-schemas'
-import { projectRouteMiddleware } from '@/lib/search-middleware'
 import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
@@ -25,11 +24,11 @@ import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectStatsDisplayEnhanced } from '@/components/projects/project-stats-display-enhanced-v2'
-import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
+import { ProjectSettingsTab } from '@/components/projects/project-settings-tab'
 import { AssetsTabWithSidebar } from '@/components/assets/assets-tab-with-sidebar'
-import { GitBranch, BarChart2 } from 'lucide-react'
+import { GitBranch, BarChart2, Settings } from 'lucide-react'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
 import { TicketsTabWithSidebar } from '@/components/tickets/tickets-tab-with-sidebar'
 import { GitTabWithSidebar } from '@/components/projects/git-tab-with-sidebar'
@@ -240,10 +239,14 @@ export function ProjectsPage() {
                   <BarChart2 className='h-3.5 w-3.5' />
                   MCP Analytics
                 </TabsTrigger>
+                <TabsTrigger value='settings' className='flex items-center gap-1'>
+                  <Settings className='h-3.5 w-3.5' />
+                  Settings
+                </TabsTrigger>
               </TabsList>
             </div>
             <div className='flex-shrink-0'>
-              <ProjectSettingsDialog />
+              {/* Settings button removed - now in tabs */}
             </div>
           </div>
 
@@ -341,6 +344,13 @@ export function ProjectsPage() {
               <p className='p-4 md:p-6'>No project selected for MCP Analytics.</p>
             )}
           </TabsContent>
+          <TabsContent value='settings' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId ? (
+              <ProjectSettingsTab />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for Settings.</p>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     )
@@ -376,9 +386,6 @@ export function ProjectsPage() {
 
 export const Route = createFileRoute('/projects')({
   validateSearch: zodValidator(projectsSearchSchema),
-  search: {
-    middlewares: projectRouteMiddleware
-  },
   beforeLoad: async ({ context, search }) => {
     const { queryClient, octoClient } = context
 

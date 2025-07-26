@@ -482,6 +482,7 @@ export class DatabaseManager {
 
   async runMigration(migration: {
     version: number
+    description?: string
     up: (db: Database) => void
     down?: (db: Database) => void
   }): Promise<void> {
@@ -489,6 +490,7 @@ export class DatabaseManager {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS migrations (
         version INTEGER PRIMARY KEY,
+        description TEXT NOT NULL,
         applied_at INTEGER NOT NULL
       )
     `)
@@ -501,8 +503,8 @@ export class DatabaseManager {
       // Run migration in a transaction
       this.db.transaction(() => {
         migration.up(this.db)
-        const insertQuery = this.db.prepare('INSERT INTO migrations (version, applied_at) VALUES (?, ?)')
-        insertQuery.run(migration.version, Date.now())
+        const insertQuery = this.db.prepare('INSERT INTO migrations (version, description, applied_at) VALUES (?, ?, ?)')
+        insertQuery.run(migration.version, migration.description || `Migration ${migration.version}`, Date.now())
       })()
     }
   }
@@ -511,6 +513,7 @@ export class DatabaseManager {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS migrations (
         version INTEGER PRIMARY KEY,
+        description TEXT NOT NULL,
         applied_at INTEGER NOT NULL
       )
     `)

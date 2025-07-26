@@ -206,8 +206,11 @@ export function analyzeCodeImportsExports(content: string, filename: string): Co
     }
 
     return { imports, exports }
-  } catch (error) {
-    console.error(`Failed to analyze file ${filename}:`, error)
+  } catch (error: any) {
+    const isTruncationError = error?.message?.includes('truncated') || error?.message?.includes("Expected ']'")
+    if (!isTruncationError) {
+      console.error(`Failed to analyze file ${filename}:`, error.message || error)
+    }
     return null
   }
 }

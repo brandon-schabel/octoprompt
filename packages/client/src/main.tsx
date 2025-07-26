@@ -23,7 +23,7 @@ export interface RouterContext {
 }
 
 // Create router instance with context
-const router = createRouter<typeof routeTree, 'never', RouterContext>({
+const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   context: {

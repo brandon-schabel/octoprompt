@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { AssetGeneratorDialog } from '@/components/assets/asset-generator-dialog'
+import { DocumentationGeneratorDialog } from '@/components/assets/documentation-generator-dialog'
 import { Building2, Sparkles, Copy, GitBranch, Network, Layers } from 'lucide-react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -409,12 +409,16 @@ export function ArchitectureView({ projectId, projectName = 'Project' }: Archite
         </TabsContent>
       </Tabs>
 
-      <AssetGeneratorDialog
+      <DocumentationGeneratorDialog
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        assetType="mermaid-diagram"
+        documentationType="architecture-doc"
+        projectContext={{
+          name: projectName,
+          description: template.prompt.replace('{projectName}', projectName)
+        }}
         onSuccess={(content, name) => {
-          // Handle success
+          // Handle success - save architecture documentation
         }}
       />
     </div>

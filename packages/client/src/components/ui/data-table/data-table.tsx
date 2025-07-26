@@ -84,7 +84,7 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: manualFiltering ? undefined : getFilteredRowModel(),
     onColumnFiltersChange: onColumnFiltersChange || setColumnFilters,
     onGlobalFilterChange: onGlobalFilterChange || setGlobalFilter,
-    globalFilterFn: 'fuzzy',
+    globalFilterFn: 'includesString',
     manualFiltering,
     // Faceting (for filter options)
     getFacetedRowModel: getFacetedRowModel(),

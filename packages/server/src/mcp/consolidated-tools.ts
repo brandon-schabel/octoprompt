@@ -89,6 +89,13 @@ import {
   getCommitLogEnhanced,
   getBranchesEnhanced,
   getCommitDetail,
+  // Worktree operations
+  getWorktrees,
+  addWorktree,
+  removeWorktree,
+  lockWorktree,
+  unlockWorktree,
+  pruneWorktrees,
   bulkDeleteProjectFiles,
   // Active tab functionality
   getOrCreateDefaultActiveTab,
@@ -167,6 +174,8 @@ export enum ProjectManagerAction {
   UPDATE = 'update',
   DELETE = 'delete',
   GET_SUMMARY = 'get_summary',
+  GET_SUMMARY_ADVANCED = 'get_summary_advanced',
+  GET_SUMMARY_METRICS = 'get_summary_metrics',
   BROWSE_FILES = 'browse_files',
   GET_FILE_CONTENT = 'get_file_content',
   UPDATE_FILE_CONTENT = 'update_file_content',
@@ -228,7 +237,8 @@ export enum TaskManagerAction {
 
 export enum AIAssistantAction {
   OPTIMIZE_PROMPT = 'optimize_prompt',
-  GET_COMPACT_SUMMARY = 'get_compact_summary'
+  GET_COMPACT_SUMMARY = 'get_compact_summary',
+  GET_COMPACT_SUMMARY_WITH_OPTIONS = 'get_compact_summary_with_options'
 }
 
 export enum GitManagerAction {
@@ -271,19 +281,38 @@ export enum GitManagerAction {
   CLEAN = 'clean',
   CONFIG_GET = 'config_get',
   CONFIG_SET = 'config_set',
-  BRANCHES_ENHANCED = 'branches_enhanced'
+  BRANCHES_ENHANCED = 'branches_enhanced',
+  WORKTREE_LIST = 'worktree_list',
+  WORKTREE_ADD = 'worktree_add',
+  WORKTREE_REMOVE = 'worktree_remove',
+  WORKTREE_LOCK = 'worktree_lock',
+  WORKTREE_UNLOCK = 'worktree_unlock',
+  WORKTREE_PRUNE = 'worktree_prune'
 }
 
 export enum TabManagerAction {
   GET_ACTIVE = 'get_active',
   SET_ACTIVE = 'set_active',
-  CLEAR_ACTIVE = 'clear_active'
+  CLEAR_ACTIVE = 'clear_active',
+  GENERATE_NAME = 'generate_name'
 }
 
-export enum TabManagerAction {
-  GET_ACTIVE = 'get_active',
-  SET_ACTIVE = 'set_active',
-  CLEAR_ACTIVE = 'clear_active'
+export enum JobManagerAction {
+  LIST = 'list',
+  GET = 'get',
+  CREATE = 'create',
+  CANCEL = 'cancel',
+  RETRY = 'retry',
+  CLEANUP = 'cleanup'
+}
+
+export enum FileSummarizationManagerAction {
+  IDENTIFY_UNSUMMARIZED = 'identify_unsummarized',
+  GROUP_FILES = 'group_files',
+  SUMMARIZE_BATCH = 'summarize_batch',
+  GET_PROGRESS = 'get_progress',
+  CANCEL_BATCH = 'cancel_batch',
+  GET_SUMMARY_STATS = 'get_summary_stats'
 }
 
 // Consolidated tool schemas
@@ -295,12 +324,15 @@ const ProjectManagerSchema = z.object({
     ProjectManagerAction.UPDATE,
     ProjectManagerAction.DELETE,
     ProjectManagerAction.GET_SUMMARY,
+    ProjectManagerAction.GET_SUMMARY_ADVANCED,
+    ProjectManagerAction.GET_SUMMARY_METRICS,
     ProjectManagerAction.BROWSE_FILES,
     ProjectManagerAction.GET_FILE_CONTENT,
     ProjectManagerAction.UPDATE_FILE_CONTENT,
     ProjectManagerAction.SUGGEST_FILES,
     ProjectManagerAction.GET_SELECTION_CONTEXT,
     ProjectManagerAction.SEARCH,
+    ProjectManagerAction.FAST_SEARCH_FILES,
     ProjectManagerAction.CREATE_FILE,
     ProjectManagerAction.GET_FILE_CONTENT_PARTIAL,
     ProjectManagerAction.DELETE_FILE,
@@ -369,7 +401,11 @@ const TaskManagerSchema = z.object({
 })
 
 const AIAssistantSchema = z.object({
-  action: z.enum([AIAssistantAction.OPTIMIZE_PROMPT, AIAssistantAction.GET_COMPACT_SUMMARY]),
+  action: z.enum([
+    AIAssistantAction.OPTIMIZE_PROMPT, 
+    AIAssistantAction.GET_COMPACT_SUMMARY,
+    AIAssistantAction.GET_COMPACT_SUMMARY_WITH_OPTIONS
+  ]),
   projectId: z.number(),
   data: z.any().optional()
 })
@@ -415,14 +451,47 @@ const GitManagerSchema = z.object({
     GitManagerAction.CLEAN,
     GitManagerAction.CONFIG_GET,
     GitManagerAction.CONFIG_SET,
-    GitManagerAction.BRANCHES_ENHANCED
+    GitManagerAction.BRANCHES_ENHANCED,
+    GitManagerAction.WORKTREE_LIST,
+    GitManagerAction.WORKTREE_ADD,
+    GitManagerAction.WORKTREE_REMOVE,
+    GitManagerAction.WORKTREE_LOCK,
+    GitManagerAction.WORKTREE_UNLOCK,
+    GitManagerAction.WORKTREE_PRUNE
   ]),
   projectId: z.number(),
   data: z.any().optional()
 })
 
 const TabManagerSchema = z.object({
-  action: z.enum([TabManagerAction.GET_ACTIVE, TabManagerAction.SET_ACTIVE, TabManagerAction.CLEAR_ACTIVE]),
+  action: z.enum([TabManagerAction.GET_ACTIVE, TabManagerAction.SET_ACTIVE, TabManagerAction.CLEAR_ACTIVE, TabManagerAction.GENERATE_NAME]),
+  projectId: z.number(),
+  data: z.any().optional()
+})
+
+const JobManagerSchema = z.object({
+  action: z.enum([
+    JobManagerAction.LIST,
+    JobManagerAction.GET,
+    JobManagerAction.CREATE,
+    JobManagerAction.CANCEL,
+    JobManagerAction.RETRY,
+    JobManagerAction.CLEANUP
+  ]),
+  jobId: z.number().optional(),
+  projectId: z.number().optional(),
+  data: z.any().optional()
+})
+
+const FileSummarizationManagerSchema = z.object({
+  action: z.enum([
+    FileSummarizationManagerAction.IDENTIFY_UNSUMMARIZED,
+    FileSummarizationManagerAction.GROUP_FILES,
+    FileSummarizationManagerAction.SUMMARIZE_BATCH,
+    FileSummarizationManagerAction.GET_PROGRESS,
+    FileSummarizationManagerAction.CANCEL_BATCH,
+    FileSummarizationManagerAction.GET_SUMMARY_STATS
+  ]),
   projectId: z.number(),
   data: z.any().optional()
 })
@@ -432,7 +501,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'project_manager',
     description:
-      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, browse_files, get_file_content, update_file_content, suggest_files, get_selection_context (get complete active tab context), search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial, get_file_tree (returns project file structure with file IDs), overview (get essential project context - recommended first tool)',
+      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, get_summary_advanced (with options for depth/format/strategy), get_summary_metrics (summary generation metrics), browse_files, get_file_content, update_file_content, suggest_files, get_selection_context (get complete active tab context), search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial, get_file_tree (returns project file structure with file IDs), overview (get essential project context - recommended first tool)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -448,7 +517,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         data: {
           type: 'object',
           description:
-            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For delete_file: { path: "src/file.ts" }. For fast_search_files: { query: "search term", searchType: "semantic" | "exact" | "fuzzy" | "regex" (default: "semantic"), fileTypes: ["ts", "js"], limit: 20, includeContext: false, scoringMethod: "relevance" | "recency" | "frequency" }. For overview: no data required'
+            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For delete_file: { path: "src/file.ts" }. For fast_search_files: { query: "search term", searchType: "semantic" | "exact" | "fuzzy" | "regex" (default: "semantic"), fileTypes: ["ts", "js"], limit: 20, includeContext: false, scoringMethod: "relevance" | "recency" | "frequency" }. For get_summary_advanced: { depth: "minimal" | "standard" | "detailed", format: "xml" | "json" | "markdown", strategy: "fast" | "balanced" | "thorough", focus: ["api", "frontend"], includeMetrics: true }. For overview: no data required'
         }
       },
       required: ['action']
@@ -536,6 +605,81 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
               const summary = await getCompactProjectSummary(validProjectId)
               return {
                 content: [{ type: 'text', text: summary }]
+              }
+            }
+            
+            case ProjectManagerAction.GET_SUMMARY_ADVANCED: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number')
+              const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
+              const { SummaryOptionsSchema } = await import('@octoprompt/schemas')
+              
+              // Parse and validate options
+              const options = SummaryOptionsSchema.parse(data || {})
+              const result = await getProjectSummaryWithOptions(validProjectId, options)
+              
+              // Format response based on whether metrics were requested
+              if (options.includeMetrics && result.metrics) {
+                const metricsText = `
+Summary Metrics:
+- Generation Time: ${result.metrics.generationTime}ms
+- Files Processed: ${result.metrics.filesProcessed}
+- Original Size: ${result.metrics.originalSize} chars
+- Compressed Size: ${result.metrics.compressedSize} chars
+- Compression Ratio: ${(result.metrics.compressionRatio * 100).toFixed(1)}%
+- Tokens Saved: ~${result.metrics.tokensSaved}
+- Cache Hit: ${result.metrics.cacheHit ? 'Yes' : 'No'}
+
+Summary:
+${result.summary}`
+                return {
+                  content: [{ type: 'text', text: metricsText }]
+                }
+              }
+              
+              return {
+                content: [{ type: 'text', text: result.summary }]
+              }
+            }
+            
+            case ProjectManagerAction.GET_SUMMARY_METRICS: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number')
+              const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
+              
+              // Get summary with metrics for standard options
+              const result = await getProjectSummaryWithOptions(validProjectId, {
+                depth: 'standard',
+                format: 'xml',
+                strategy: 'balanced',
+                includeImports: true,
+                includeExports: true,
+                progressive: false,
+                includeMetrics: true
+              })
+              
+              if (!result.metrics) {
+                return {
+                  content: [{ type: 'text', text: 'No metrics available' }]
+                }
+              }
+              
+              const metricsReport = `
+Project Summary Metrics:
+- Generation Time: ${result.metrics.generationTime}ms
+- Files Processed: ${result.metrics.filesProcessed}
+- Original Size: ${result.metrics.originalSize.toLocaleString()} characters
+- Compressed Size: ${result.metrics.compressedSize.toLocaleString()} characters
+- Compression Ratio: ${(result.metrics.compressionRatio * 100).toFixed(1)}%
+- Estimated Tokens Saved: ~${result.metrics.tokensSaved.toLocaleString()}
+- Cache Status: ${result.metrics.cacheHit ? 'Hit (from cache)' : 'Miss (generated)'}
+- Content Truncated: ${result.metrics.truncated ? 'Yes' : 'No'}
+
+Version Info:
+- Format Version: ${result.version.version}
+- Model Used: ${result.version.model}
+- Generated: ${new Date(result.version.generated).toLocaleString()}`
+              
+              return {
+                content: [{ type: 'text', text: metricsReport }]
               }
             }
 
@@ -1556,24 +1700,90 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
             case TicketManagerAction.AUTO_GENERATE_TASKS: {
               const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
-              const tasks = await autoGenerateTasksFromOverview(ticketId)
-              const taskList = tasks.map((t) => `${t.id}: ${t.content}`).join('\n')
-              return {
-                content: [{ type: 'text', text: `Generated ${tasks.length} tasks:\n${taskList}` }]
+              
+              try {
+                const tasks = await autoGenerateTasksFromOverview(ticketId)
+                const taskList = tasks.map((t) => `${t.id}: ${t.content}`).join('\n')
+                return {
+                  content: [{ type: 'text', text: `Generated ${tasks.length} tasks:\n${taskList}` }]
+                }
+              } catch (error) {
+                if (error instanceof ApiError) {
+                  if (error.status === 404) {
+                    throw createMCPError(
+                      MCPErrorCode.RESOURCE_NOT_FOUND,
+                      error.message || `Ticket ${ticketId} not found or project has no files`,
+                      {
+                        ticketId,
+                        suggestion: 'Ensure the ticket exists and the associated project has files'
+                      }
+                    )
+                  }
+                  throw createMCPError(
+                    MCPErrorCode.SERVICE_ERROR,
+                    error.message || 'Failed to generate tasks',
+                    {
+                      ticketId,
+                      code: error.code,
+                      originalError: error
+                    }
+                  )
+                }
+                throw createMCPError(
+                  MCPErrorCode.SERVICE_ERROR,
+                  'Failed to auto-generate tasks for ticket',
+                  {
+                    ticketId,
+                    originalError: error
+                  }
+                )
               }
             }
 
             case TicketManagerAction.SUGGEST_FILES: {
               const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
               const extraUserInput = data?.extraUserInput as string | undefined
-              const result = await suggestFilesForTicket(ticketId, { extraUserInput })
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: `Suggested files: ${result.recommendedFileIds.join(', ') || 'None'}\n${result.message || ''}`
+              
+              try {
+                const result = await suggestFilesForTicket(ticketId, { extraUserInput })
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: `Suggested files: ${result.recommendedFileIds.join(', ') || 'None'}\n${result.message || ''}`
+                    }
+                  ]
+                }
+              } catch (error) {
+                if (error instanceof ApiError) {
+                  if (error.status === 404) {
+                    throw createMCPError(
+                      MCPErrorCode.RESOURCE_NOT_FOUND,
+                      error.message || `Ticket ${ticketId} not found or project has no files`,
+                      {
+                        ticketId,
+                        suggestion: 'Ensure the ticket exists and the associated project has files'
+                      }
+                    )
                   }
-                ]
+                  throw createMCPError(
+                    MCPErrorCode.SERVICE_ERROR,
+                    error.message || 'Failed to suggest files',
+                    {
+                      ticketId,
+                      code: error.code,
+                      originalError: error
+                    }
+                  )
+                }
+                throw createMCPError(
+                  MCPErrorCode.SERVICE_ERROR,
+                  'Failed to suggest files for ticket',
+                  {
+                    ticketId,
+                    originalError: error
+                  }
+                )
               }
             }
 
@@ -2111,7 +2321,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
   {
     name: 'ai_assistant',
     description:
-      'AI-powered utilities for prompt optimization and project insights. Actions: optimize_prompt, get_compact_summary',
+      'AI-powered utilities for prompt optimization and project insights. Actions: optimize_prompt, get_compact_summary, get_compact_summary_with_options (supports depth/format/strategy options)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2126,7 +2336,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For optimize_prompt: { prompt: "help me fix the authentication" }'
+          description: 'Action-specific data. For optimize_prompt: { prompt: "help me fix the authentication" }. For get_compact_summary_with_options: { depth: "minimal" | "standard" | "detailed", format: "xml" | "json" | "markdown", strategy: "fast" | "balanced" | "thorough", includeMetrics: true }'
         }
       },
       required: ['action', 'projectId']
@@ -2157,6 +2367,39 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
                 content: [{ type: 'text', text: summary }]
               }
             }
+            
+            case AIAssistantAction.GET_COMPACT_SUMMARY_WITH_OPTIONS: {
+              const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
+              const { SummaryOptionsSchema } = await import('@octoprompt/schemas')
+              
+              // Parse and validate options, setting defaults for compact summary
+              const options = SummaryOptionsSchema.parse({
+                ...data,
+                strategy: data?.strategy || 'balanced' // Default to balanced for AI summaries
+              })
+              
+              const result = await getProjectSummaryWithOptions(projectId, options)
+              
+              // Format response based on whether metrics were requested
+              if (options.includeMetrics && result.metrics) {
+                const metricsText = `
+Compact Summary Metrics:
+- Generation Time: ${result.metrics.generationTime}ms
+- Files Processed: ${result.metrics.filesProcessed}
+- Compression Ratio: ${(result.metrics.compressionRatio * 100).toFixed(1)}%
+- Tokens Saved: ~${result.metrics.tokensSaved}
+
+Summary:
+${result.summary}`
+                return {
+                  content: [{ type: 'text', text: metricsText }]
+                }
+              }
+              
+              return {
+                content: [{ type: 'text', text: result.summary }]
+              }
+            }
 
             default:
               throw new Error(`Unknown action: ${action}`)
@@ -2178,7 +2421,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
   {
     name: 'git_manager',
-    description: 'Comprehensive Git operations including status, commits, branches, tags, stash, and more',
+    description: 'Comprehensive Git operations including status, commits, branches, tags, stash, worktrees, and more',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2193,7 +2436,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For log_enhanced: { branch?: "main", author?: "john", search?: "fix", page?: 1, perPage?: 20, since?: "2024-01-01", until?: "2024-12-31", includeStats?: true, includeFileDetails?: true }. For commit_detail: { hash: "abc123", includeFileContents?: true }. For other actions, see git service documentation.'
+          description: 'Action-specific data. For log_enhanced: { branch?: "main", author?: "john", search?: "fix", page?: 1, perPage?: 20, since?: "2024-01-01", until?: "2024-12-31", includeStats?: true, includeFileDetails?: true }. For commit_detail: { hash: "abc123", includeFileContents?: true }. For worktree_add: { path: "../feature-branch", branch?: "existing-branch", newBranch?: "new-branch", commitish?: "HEAD~3", detach?: true }. For worktree_remove: { path: "../feature-branch", force?: true }. For worktree_lock: { path: "../feature-branch", reason?: "work in progress" }. For worktree_unlock: { path: "../feature-branch" }. For worktree_prune: { dryRun?: true }. For other actions, see git service documentation.'
         }
       },
       required: ['action', 'projectId']
@@ -2621,6 +2864,69 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               return { content: [{ type: 'text', text }] }
             }
 
+            case GitManagerAction.WORKTREE_LIST: {
+              const worktrees = await getWorktrees(projectId)
+              if (worktrees.length === 0) {
+                return { content: [{ type: 'text', text: 'No worktrees found' }] }
+              }
+              const text = worktrees
+                .map((wt) => {
+                  let line = wt.isMain ? '* ' : '  '
+                  line += `${wt.path}`
+                  if (wt.branch) line += ` (${wt.branch})`
+                  if (wt.commit) line += ` [${wt.commit.substring(0, 7)}]`
+                  if (wt.isLocked) line += ` [locked${wt.lockReason ? `: ${wt.lockReason}` : ''}]`
+                  if (wt.isPrunable) line += ' [prunable]'
+                  return line
+                })
+                .join('\n')
+              return { content: [{ type: 'text', text }] }
+            }
+
+            case GitManagerAction.WORKTREE_ADD: {
+              const path = validateDataField<string>(data, 'path', 'string', '"../feature-branch"')
+              const options = {
+                branch: data?.branch as string | undefined,
+                newBranch: data?.newBranch as string | undefined,
+                commitish: data?.commitish as string | undefined,
+                detach: data?.detach as boolean | undefined
+              }
+              await addWorktree(projectId, { path, ...options })
+              return { content: [{ type: 'text', text: `Created worktree at: ${path}` }] }
+            }
+
+            case GitManagerAction.WORKTREE_REMOVE: {
+              const path = validateDataField<string>(data, 'path', 'string', '"../feature-branch"')
+              const force = data?.force as boolean | undefined
+              await removeWorktree(projectId, path, force)
+              return { content: [{ type: 'text', text: `Removed worktree: ${path}` }] }
+            }
+
+            case GitManagerAction.WORKTREE_LOCK: {
+              const path = validateDataField<string>(data, 'path', 'string', '"../feature-branch"')
+              const reason = data?.reason as string | undefined
+              await lockWorktree(projectId, path, reason)
+              return { content: [{ type: 'text', text: `Locked worktree: ${path}${reason ? ` (${reason})` : ''}` }] }
+            }
+
+            case GitManagerAction.WORKTREE_UNLOCK: {
+              const path = validateDataField<string>(data, 'path', 'string', '"../feature-branch"')
+              await unlockWorktree(projectId, path)
+              return { content: [{ type: 'text', text: `Unlocked worktree: ${path}` }] }
+            }
+
+            case GitManagerAction.WORKTREE_PRUNE: {
+              const dryRun = data?.dryRun as boolean | undefined
+              const pruned = await pruneWorktrees(projectId, dryRun)
+              if (pruned.length === 0) {
+                return { content: [{ type: 'text', text: dryRun ? 'No worktrees would be pruned' : 'No worktrees pruned' }] }
+              }
+              const text = dryRun 
+                ? `Would prune:\n${pruned.join('\n')}`
+                : `Pruned:\n${pruned.join('\n')}`
+              return { content: [{ type: 'text', text }] }
+            }
+
             default:
               throw new Error(`Unknown action: ${action}`)
           }
@@ -2727,6 +3033,31 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
                     text: success
                       ? `Active tab cleared for project ${validProjectId}`
                       : `No active tab found to clear for project ${validProjectId}`
+                  }
+                ]
+              }
+            }
+
+            case TabManagerAction.GENERATE_NAME: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+              const tabId = validateDataField<number>(data, 'tabId', 'number', '0')
+              const tabData = data?.tabData || {}
+              const existingNames = data?.existingNames || []
+              
+              const { createTabNameGenerationService } = await import('@octoprompt/services')
+              const tabNameService = createTabNameGenerationService()
+              
+              const result = await tabNameService.generateUniqueTabName(
+                validProjectId,
+                tabData,
+                existingNames
+              )
+              
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Generated tab name: "${result.name}"\nStatus: ${result.status}\nGenerated at: ${result.generatedAt.toISOString()}`
                   }
                 ]
               }
@@ -2866,6 +3197,441 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             ],
             isError: true
           }
+        }
+      }
+    )
+  },
+
+  {
+    name: 'job_manager',
+    description: 'Manage background jobs and long-running operations. Actions: list (get jobs with filters), get (get single job status), create (create new job), cancel (cancel running job), retry (retry failed job), cleanup (remove old completed jobs)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(JobManagerAction)
+        },
+        jobId: {
+          type: 'number',
+          description: 'The job ID (required for get, cancel, retry actions)'
+        },
+        projectId: {
+          type: 'number',
+          description: 'The project ID (optional for list, required for create)'
+        },
+        data: {
+          type: 'object',
+          description: 'Action-specific data. For list: { status: ["pending", "running"], limit: 10 }. For create: { type: "git.worktree.add", input: {...}, options: { priority: "high" } }. For cleanup: { olderThanDays: 30 }'
+        }
+      },
+      required: ['action']
+    },
+    handler: createTrackedHandler(
+      'job_manager',
+      async (args: z.infer<typeof JobManagerSchema>): Promise<MCPToolResponse> => {
+        try {
+          const { action, jobId, projectId, data } = args
+          const { getJobQueue } = await import('@octoprompt/services')
+          const jobQueue = getJobQueue()
+
+          switch (action) {
+            case JobManagerAction.LIST: {
+              const filter = data || {}
+              if (projectId) filter.projectId = projectId
+              
+              const jobs = await jobQueue.getJobs(filter)
+              
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Found ${jobs.length} jobs:\n${jobs.map(job => 
+                      `- Job ${job.id}: ${job.type} (${job.status}) - Created ${new Date(job.created).toISOString()}`
+                    ).join('\n')}`
+                  }
+                ]
+              }
+            }
+
+            case JobManagerAction.GET: {
+              const validJobId = validateRequiredParam(jobId, 'jobId', 'number')
+              const job = await jobQueue.getJob(validJobId)
+              
+              if (!job) {
+                return {
+                  content: [{ type: 'text', text: `Job ${validJobId} not found` }]
+                }
+              }
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(job, null, 2)
+                  }
+                ]
+              }
+            }
+
+            case JobManagerAction.CREATE: {
+              const validProjectId = projectId ? validateRequiredParam(projectId, 'projectId', 'number') : undefined
+              const jobType = validateDataField<string>(data, 'type', 'string', '"git.worktree.add"')
+              const jobInput = validateDataField<any>(data, 'input', 'object', '{ path: "/path/to/worktree" }')
+              
+              const job = await jobQueue.createJob({
+                type: jobType,
+                input: jobInput,
+                projectId: validProjectId,
+                options: data.options,
+                metadata: data.metadata
+              })
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Created job ${job.id} of type ${job.type} with status ${job.status}`
+                  }
+                ]
+              }
+            }
+
+            case JobManagerAction.CANCEL: {
+              const validJobId = validateRequiredParam(jobId, 'jobId', 'number')
+              const cancelled = await jobQueue.cancelJob(validJobId)
+              
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: cancelled 
+                      ? `Job ${validJobId} cancelled successfully`
+                      : `Failed to cancel job ${validJobId} (may already be completed)`
+                  }
+                ]
+              }
+            }
+
+            case JobManagerAction.RETRY: {
+              const validJobId = validateRequiredParam(jobId, 'jobId', 'number')
+              const originalJob = await jobQueue.getJob(validJobId)
+              
+              if (!originalJob) {
+                return {
+                  content: [{ type: 'text', text: `Job ${validJobId} not found` }]
+                }
+              }
+
+              if (originalJob.status !== 'failed') {
+                return {
+                  content: [{ type: 'text', text: `Job ${validJobId} is not in failed state (current: ${originalJob.status})` }]
+                }
+              }
+
+              const newJob = await jobQueue.createJob({
+                type: originalJob.type,
+                input: originalJob.input,
+                projectId: originalJob.projectId,
+                metadata: {
+                  ...originalJob.metadata,
+                  retriedFromJobId: validJobId
+                }
+              })
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Created retry job ${newJob.id} based on failed job ${validJobId}`
+                  }
+                ]
+              }
+            }
+
+            case JobManagerAction.CLEANUP: {
+              const olderThanDays = data?.olderThanDays || 30
+              const deletedCount = await jobQueue.cleanupOldJobs(olderThanDays)
+              
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Cleaned up ${deletedCount} jobs older than ${olderThanDays} days`
+                  }
+                ]
+              }
+            }
+
+            default:
+              throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+                action,
+                validActions: Object.values(JobManagerAction)
+              })
+          }
+        } catch (error) {
+          const mcpError =
+            error instanceof MCPError
+              ? error
+              : MCPError.fromError(error, {
+                  tool: 'job_manager',
+                  action: args.action
+                })
+
+          return formatMCPErrorResponse(mcpError)
+        }
+      }
+    )
+  },
+
+  {
+    name: 'file_summarization_manager',
+    description: 'Intelligent file summarization with grouping, batch processing, and progress tracking. Actions: identify_unsummarized (find files needing summaries), group_files (group related files by strategy), summarize_batch (batch summarize with token management), get_progress (track batch progress), cancel_batch (cancel ongoing operation), get_summary_stats (get project summarization statistics)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(FileSummarizationManagerAction)
+        },
+        projectId: {
+          type: 'number',
+          description: 'The project ID (required for all actions)'
+        },
+        data: {
+          type: 'object',
+          description: 'Action-specific data. For identify_unsummarized: { includeStale: true, staleThresholdDays: 30 }. For group_files: { strategy: "imports" | "directory" | "semantic" | "mixed", maxGroupSize: 10, priorityThreshold: 3 }. For summarize_batch: { strategy: "mixed", maxGroupSize: 10, maxTokensPerGroup: 10000, maxConcurrentGroups: 3, includeStaleFiles: true }. For cancel_batch: { batchId: "batch-123-456" }'
+        }
+      },
+      required: ['action', 'projectId']
+    },
+    handler: createTrackedHandler(
+      'file_summarization_manager',
+      async (args: z.infer<typeof FileSummarizationManagerSchema>): Promise<MCPToolResponse> => {
+        try {
+          const { action, projectId, data } = args
+          const {
+            fileSummarizationTracker,
+            fileGroupingService,
+            enhancedSummarizationService,
+            getProjectFiles
+          } = await import('@octoprompt/services')
+
+          switch (action) {
+            case FileSummarizationManagerAction.IDENTIFY_UNSUMMARIZED: {
+              const options = data || {}
+              const unsummarizedFiles = await fileSummarizationTracker.getUnsummarizedFiles(projectId, {
+                includeSkipped: options.includeSkipped || false,
+                includeEmpty: false
+              })
+              
+              const staleFiles = options.includeStale
+                ? await fileSummarizationTracker.getStaleFiles(
+                    projectId,
+                    (options.staleThresholdDays || 30) * 24 * 60 * 60 * 1000
+                  )
+                : []
+              
+              // Combine and deduplicate
+              const fileMap = new Map()
+              const allFiles = [...unsummarizedFiles, ...staleFiles]
+              allFiles.forEach(f => fileMap.set(f.id, f))
+              const totalFiles = fileMap.size
+              
+              return {
+                content: [{
+                  type: 'text',
+                  text: `Found ${totalFiles} files needing summarization:\n` +
+                    `- Unsummarized: ${unsummarizedFiles.length}\n` +
+                    `- Stale: ${staleFiles.length}\n\n` +
+                    `Files:\n${Array.from(fileMap.values()).slice(0, 20).map(f => 
+                      `- ${f.path} (${f.size ? `${(f.size / 1024).toFixed(1)}KB` : 'unknown size'})`
+                    ).join('\n')}${totalFiles > 20 ? `\n... and ${totalFiles - 20} more` : ''}`
+                }]
+              }
+            }
+
+            case FileSummarizationManagerAction.GROUP_FILES: {
+              const options = data || {}
+              const files = await getProjectFiles(projectId)
+              if (!files || files.length === 0) {
+                return {
+                  content: [{ type: 'text', text: 'No files found in project' }]
+                }
+              }
+              
+              const groups = fileGroupingService.groupFilesByStrategy(
+                files,
+                options.strategy || 'mixed',
+                {
+                  maxGroupSize: options.maxGroupSize || 10,
+                  priorityThreshold: options.priorityThreshold || 3
+                }
+              )
+              
+              return {
+                content: [{
+                  type: 'text',
+                  text: `Created ${groups.length} file groups using ${options.strategy || 'mixed'} strategy:\n\n` +
+                    groups.slice(0, 10).map(g => 
+                      `Group: ${g.name}\n` +
+                      `- Files: ${g.fileIds.length}\n` +
+                      `- Priority: ${g.priority.toFixed(2)}\n` +
+                      `- Estimated tokens: ${g.estimatedTokens || 'unknown'}\n`
+                    ).join('\n') +
+                    (groups.length > 10 ? `\n... and ${groups.length - 10} more groups` : '')
+                }]
+              }
+            }
+
+            case FileSummarizationManagerAction.SUMMARIZE_BATCH: {
+              const options = data || {}
+              const batchOptions = {
+                strategy: options.strategy || 'mixed',
+                maxGroupSize: options.maxGroupSize || 10,
+                maxTokensPerGroup: options.maxTokensPerGroup || 10000,
+                maxConcurrentGroups: options.maxConcurrentGroups || 3,
+                priorityThreshold: options.priorityThreshold || 3,
+                includeStaleFiles: options.includeStaleFiles !== false,
+                staleThresholdDays: options.staleThresholdDays || 30,
+                retryFailedFiles: options.retryFailedFiles || false,
+                maxRetries: options.maxRetries || 2
+              }
+              
+              // Start async batch process
+              const iterator = enhancedSummarizationService.batchSummarizeWithProgress(
+                projectId,
+                batchOptions
+              )
+              
+              // Get first progress update
+              const firstProgress = await iterator.next()
+              if (firstProgress.done) {
+                return {
+                  content: [{ type: 'text', text: 'No files to summarize' }]
+                }
+              }
+              
+              const progress = firstProgress.value
+              return {
+                content: [{
+                  type: 'text',
+                  text: `Batch summarization started:\n` +
+                    `- Batch ID: ${progress.batchId}\n` +
+                    `- Total files: ${progress.totalFiles}\n` +
+                    `- Total groups: ${progress.totalGroups}\n` +
+                    `- Status: Processing...\n\n` +
+                    `Use get_progress action with batchId to track progress`
+                }]
+              }
+            }
+
+            case FileSummarizationManagerAction.GET_PROGRESS: {
+              const activeBatches = fileSummarizationTracker.getActiveBatches()
+              const projectProgress = fileSummarizationTracker.getSummarizationProgress(projectId)
+              
+              if (!projectProgress && activeBatches.length === 0) {
+                return {
+                  content: [{ type: 'text', text: 'No active or recent batch operations found' }]
+                }
+              }
+              
+              let text = ''
+              if (projectProgress) {
+                const duration = projectProgress.endTime 
+                  ? projectProgress.endTime - projectProgress.startTime
+                  : Date.now() - projectProgress.startTime
+                
+                text += `Current batch progress:\n` +
+                  `- Batch ID: ${projectProgress.batchId}\n` +
+                  `- Status: ${projectProgress.status}\n` +
+                  `- Files: ${projectProgress.processedFiles}/${projectProgress.totalFiles} (${Math.round(projectProgress.processedFiles / projectProgress.totalFiles * 100)}%)\n` +
+                  `- Groups: ${projectProgress.processedGroups}/${projectProgress.totalGroups}\n` +
+                  `- Duration: ${(duration / 1000).toFixed(1)}s\n` +
+                  `- Tokens used: ~${projectProgress.estimatedTokensUsed.toLocaleString()}\n`
+                
+                if (projectProgress.currentGroup) {
+                  text += `- Current group: ${projectProgress.currentGroup}\n`
+                }
+                
+                if (projectProgress.errors && projectProgress.errors.length > 0) {
+                  text += `\nErrors:\n${projectProgress.errors.slice(0, 5).join('\n')}`
+                }
+              }
+              
+              if (activeBatches.length > 0) {
+                text += `\n\nActive batches:\n`
+                activeBatches.forEach(({ batchId, progress }) => {
+                  text += `- ${batchId}: ${progress.status} (${progress.processedFiles}/${progress.totalFiles} files)\n`
+                })
+              }
+              
+              return {
+                content: [{ type: 'text', text }]
+              }
+            }
+
+            case FileSummarizationManagerAction.CANCEL_BATCH: {
+              const batchId = data?.batchId
+              if (!batchId) {
+                return {
+                  content: [{ type: 'text', text: 'Error: batchId is required in data' }]
+                }
+              }
+              
+              const cancelled = enhancedSummarizationService.cancelBatch(batchId)
+              if (cancelled) {
+                fileSummarizationTracker.cancelBatch(batchId)
+                return {
+                  content: [{ type: 'text', text: `Batch ${batchId} cancelled successfully` }]
+                }
+              }
+              
+              return {
+                content: [{ type: 'text', text: `Batch ${batchId} not found or already completed` }]
+              }
+            }
+
+            case FileSummarizationManagerAction.GET_SUMMARY_STATS: {
+              const stats = await fileSummarizationTracker.getSummarizationStats(projectId)
+              
+              return {
+                content: [{
+                  type: 'text',
+                  text: `File summarization statistics for project ${projectId}:\n\n` +
+                    `Total files: ${stats.totalFiles}\n` +
+                    `Summarized: ${stats.summarizedFiles} (${Math.round(stats.summarizedFiles / stats.totalFiles * 100)}%)\n` +
+                    `Unsummarized: ${stats.unsummarizedFiles}\n` +
+                    `Stale: ${stats.staleFiles}\n` +
+                    `Failed: ${stats.failedFiles}\n\n` +
+                    `Average tokens per file: ${stats.averageTokensPerFile}\n` +
+                    `Last batch run: ${stats.lastBatchRun ? new Date(stats.lastBatchRun).toLocaleString() : 'Never'}\n\n` +
+                    `Files by status:\n` +
+                    Object.entries(stats.filesByStatus)
+                      .map(([status, count]) => `- ${status}: ${count}`)
+                      .join('\n')
+                }]
+              }
+            }
+
+            default:
+              throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+                action,
+                validActions: Object.values(FileSummarizationManagerAction)
+              })
+          }
+        } catch (error) {
+          const mcpError =
+            error instanceof MCPError
+              ? error
+              : MCPError.fromError(error, {
+                  tool: 'file_summarization_manager',
+                  action: args.action
+                })
+
+          return formatMCPErrorResponse(mcpError)
         }
       }
     )

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AssetGeneratorDialog } from '@/components/assets/asset-generator-dialog'
+import { AssetGeneratorWrapper } from '@/components/assets/asset-generator-wrapper'
 import { BookOpen, Sparkles, Copy, Users, GraduationCap, HelpCircle } from 'lucide-react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -546,10 +546,14 @@ export function UserGuidesView({ projectId, projectName = 'Project' }: UserGuide
         </TabsContent>
       </Tabs>
 
-      <AssetGeneratorDialog
+      <AssetGeneratorWrapper
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
         assetType="user-guide"
+        projectContext={{
+          name: projectName,
+          description: `User guides and documentation for ${projectName}`
+        }}
         onSuccess={(content, name) => {
           // Handle success - will add prompt saving here
         }}

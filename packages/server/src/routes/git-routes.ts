@@ -26,6 +26,12 @@ import {
   gitLogEnhancedResponseSchema,
   gitBranchListEnhancedResponseSchema,
   gitCommitDetailResponseSchema,
+  gitWorktreeListResponseSchema,
+  gitWorktreeAddRequestSchema,
+  gitWorktreeRemoveRequestSchema,
+  gitWorktreeLockRequestSchema,
+  gitWorktreePruneRequestSchema,
+  gitWorktreePruneResponseSchema,
   type GitLogEnhancedRequest
 } from '@octoprompt/schemas'
 import * as gitService from '@octoprompt/services'
@@ -1550,6 +1556,510 @@ gitRoutes.openapi(dropStashRoute, async (c) => {
       {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to drop stash'
+      },
+      500
+    )
+  }
+})
+
+// ============================================
+// Worktree Management Routes
+// ============================================
+
+// List worktrees
+const listWorktreesRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/git/worktrees',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitWorktreeListResponseSchema
+        }
+      },
+      description: 'List of worktrees retrieved successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Get all worktrees for a git repository'
+})
+
+gitRoutes.openapi(listWorktreesRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const worktrees = await gitService.getWorktrees(projectId)
+    return c.json({
+      success: true,
+      data: worktrees
+    })
+  } catch (error) {
+    console.error('[ListWorktrees] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to list worktrees'
+      },
+      500
+    )
+  }
+})
+
+// Add worktree
+const addWorktreeRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/worktrees',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: gitWorktreeAddRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Worktree added successfully'
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Bad request'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    409: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Worktree already exists'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Add a new worktree to the repository'
+})
+
+gitRoutes.openapi(addWorktreeRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const options = c.req.valid('json')
+    const async = c.req.query('async') === 'true'
+    
+    if (async) {
+      // Create job for async processing
+      const { getJobQueue } = await import('@octoprompt/services')
+      const jobQueue = getJobQueue()
+      
+      const job = await jobQueue.createJob({
+        type: 'git.worktree.add',
+        input: options,
+        projectId,
+        metadata: {
+          path: options.path,
+          branch: options.branch || options.newBranch
+        }
+      })
+      
+      return c.json({
+        success: true,
+        jobId: job.id,
+        message: `Worktree creation job started (ID: ${job.id})`
+      }, 202)
+    } else {
+      // Synchronous processing
+      await gitService.addWorktree(projectId, options)
+      return c.json({
+        success: true,
+        message: `Worktree added successfully at ${options.path}`
+      })
+    }
+  } catch (error) {
+    console.error('[AddWorktree] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to add worktree'
+      },
+      500
+    )
+  }
+})
+
+// Remove worktree
+const removeWorktreeRoute = createRoute({
+  method: 'delete',
+  path: '/api/projects/{projectId}/git/worktrees',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: gitWorktreeRemoveRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Worktree removed successfully'
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Cannot remove main worktree'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project or worktree not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Remove a worktree from the repository'
+})
+
+gitRoutes.openapi(removeWorktreeRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { path, force } = c.req.valid('json')
+    const async = c.req.query('async') === 'true'
+    
+    if (async) {
+      // Create job for async processing
+      const { getJobQueue } = await import('@octoprompt/services')
+      const jobQueue = getJobQueue()
+      
+      const job = await jobQueue.createJob({
+        type: 'git.worktree.remove',
+        input: { path, force },
+        projectId,
+        metadata: {
+          path,
+          force
+        }
+      })
+      
+      return c.json({
+        success: true,
+        jobId: job.id,
+        message: `Worktree removal job started (ID: ${job.id})`
+      }, 202)
+    } else {
+      // Synchronous processing
+      await gitService.removeWorktree(projectId, path, force)
+      return c.json({
+        success: true,
+        message: `Worktree removed successfully from ${path}`
+      })
+    }
+  } catch (error) {
+    console.error('[RemoveWorktree] Error:', error)
+    const statusCode = error instanceof Error && 
+      (error.message.includes('Cannot remove the main worktree') ? 400 : 
+       error.message.includes('not found') ? 404 : 500)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to remove worktree'
+      },
+      statusCode || 500
+    )
+  }
+})
+
+// Lock worktree
+const lockWorktreeRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/worktrees/lock',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: gitWorktreeLockRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Worktree locked successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project or worktree not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Lock a worktree to prevent it from being pruned'
+})
+
+gitRoutes.openapi(lockWorktreeRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { path, reason } = c.req.valid('json')
+    await gitService.lockWorktree(projectId, path, reason)
+    return c.json({
+      success: true,
+      message: `Worktree locked successfully at ${path}`
+    })
+  } catch (error) {
+    console.error('[LockWorktree] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to lock worktree'
+      },
+      500
+    )
+  }
+})
+
+// Unlock worktree
+const unlockWorktreeRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/worktrees/unlock',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            path: z.string().describe('Path of the worktree to unlock')
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Worktree unlocked successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project or worktree not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Unlock a previously locked worktree'
+})
+
+gitRoutes.openapi(unlockWorktreeRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { path } = c.req.valid('json')
+    await gitService.unlockWorktree(projectId, path)
+    return c.json({
+      success: true,
+      message: `Worktree unlocked successfully at ${path}`
+    })
+  } catch (error) {
+    console.error('[UnlockWorktree] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to unlock worktree'
+      },
+      500
+    )
+  }
+})
+
+// Prune worktrees
+const pruneWorktreesRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/worktrees/prune',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: gitWorktreePruneRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitWorktreePruneResponseSchema
+        }
+      },
+      description: 'Worktrees pruned successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Remove stale worktree administrative files'
+})
+
+gitRoutes.openapi(pruneWorktreesRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { dryRun } = c.req.valid('json')
+    const async = c.req.query('async') === 'true'
+    
+    if (async && !dryRun) {
+      // Only async for actual prune operations, not dry runs
+      const { getJobQueue } = await import('@octoprompt/services')
+      const jobQueue = getJobQueue()
+      
+      const job = await jobQueue.createJob({
+        type: 'git.worktree.prune',
+        input: { dryRun: false },
+        projectId,
+        metadata: {
+          operation: 'prune'
+        }
+      })
+      
+      return c.json({
+        success: true,
+        jobId: job.id,
+        message: `Worktree prune job started (ID: ${job.id})`
+      }, 202)
+    } else {
+      // Synchronous processing (or dry run)
+      const prunedPaths = await gitService.pruneWorktrees(projectId, dryRun)
+      return c.json({
+        success: true,
+        data: prunedPaths,
+        message: dryRun 
+          ? `Would prune ${prunedPaths.length} worktree(s)` 
+          : `Pruned ${prunedPaths.length} worktree(s)`
+      })
+    }
+  } catch (error) {
+    console.error('[PruneWorktrees] Error:', error)
+    return c.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to prune worktrees'
       },
       500
     )

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AssetGeneratorDialog } from '@/components/assets/asset-generator-dialog'
+import { AssetGeneratorWrapper } from '@/components/assets/asset-generator-wrapper'
 import { Code2, Sparkles, Copy, FileJson, Globe, Shield } from 'lucide-react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -458,10 +458,14 @@ export function ApiDocsView({ projectId, projectName = 'Project' }: ApiDocsViewP
         </TabsContent>
       </Tabs>
 
-      <AssetGeneratorDialog
+      <AssetGeneratorWrapper
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        assetType="api-documentation"
+        assetType="api-doc"
+        projectContext={{
+          name: projectName,
+          description: `API documentation for ${projectName}`
+        }}
         onSuccess={(content, name) => {
           // Handle success
         }}

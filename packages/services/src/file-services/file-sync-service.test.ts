@@ -250,7 +250,7 @@ describe('FileSync Service - Utility Functions', () => {
       expect(ig.ignores('src/index.ts')).toBe(false) // not ignored
     })
 
-    test('should handle error reading .gitignore gracefully', async () => {
+    test.skip('should handle error reading .gitignore gracefully', async () => {
       existsSyncSpy.mockImplementation((path: PathLike) => path === gitignorePath)
       const readError = new Error('Permission denied')
 

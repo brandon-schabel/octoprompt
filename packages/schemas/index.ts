@@ -15,6 +15,10 @@ export * from './src/git.schemas'
 export * from './src/selected-files.schemas'
 export * from './src/active-tab.schemas'
 export * from './src/mcp-tracking.schemas'
+export * from './src/file-relevance.schemas'
+export * from './src/job.schemas'
+export * from './src/summary-options.schemas'
+export * from './src/file-summarization.schemas'
 
 // export constants
 export * from './src/constants/models-temp-not-allowed'

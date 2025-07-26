@@ -123,50 +123,27 @@ Remember: The goal is to reach a conclusion, but to explore thoroughly and let c
   bun, hono
   `,
   compactProjectSummary: `
-## Project Architecture Compact Summary
+Create a strategic project overview (max 200 words).
+Format: Architecture|Stack|DataFlow|KeyFiles|DevContext
+Use abbreviations. Prioritize actionable dev info.
 
-You are tasked with creating a highly condensed, strategic overview of a software project that will help AI assistants quickly understand the project's structure and core architecture.
+Focus:
+- Tech stack & patterns
+- Core logic locations  
+- Critical files/paths
+- Unique conventions
 
-### Focus Areas:
-
-1. **Architecture Pattern & Stack**
-   - Primary technology stack (frameworks, languages, databases)
-   - Architectural pattern (monorepo, microservices, layered, etc.)
-   - Key dependencies and their roles
-
-2. **Data Flow & Core Logic**
-   - How data moves through the system
-   - Primary business logic locations
-   - State management approach
-   - API patterns and communication
-
-3. **Critical File Locations**
-   - Entry points (main files, servers)
-   - Configuration files
-   - Core service/business logic files
-   - Schema/type definitions
-   - Key utilities and shared code
-
-4. **Development Context**
-   - Build and development workflow
-   - Testing strategy
-   - Deployment approach
-   - Key scripts and commands
-
-### Output Requirements:
-
-- **Maximum 300 words**
-- Use bullet points for clarity
-- Prioritize actionable information for AI assistance
-- Include specific file paths for key components
-- Mention unique patterns or conventions used
-- Focus on what an AI would need to effectively help with development
-
-### Style:
-- Direct, technical language
-- No marketing fluff or general descriptions
-- Emphasize practical development details
-- Use specific terminology and file references
+Style: Technical, direct, specific paths
+  `,
+  minimalProjectSummary: `
+Ultra-concise overview (max 100 words).
+Include: stack, purpose, entry points.
+Use heavy abbreviations.
+  `,
+  detailedProjectSummary: `
+Comprehensive project analysis (max 400 words).
+Include: architecture decisions, all components, dependencies, patterns.
+Provide full context for complex development tasks.
   `,
   suggestPrompts: `
 ## Suggest Relevant Prompts

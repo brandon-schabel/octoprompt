@@ -141,7 +141,11 @@ export function CommitDetailModal({
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        <span>{format(new Date(commit.authoredDate), 'PPpp')}</span>
+                        <span>
+                          {commit.authoredDate && !isNaN(new Date(commit.authoredDate).getTime())
+                            ? format(new Date(commit.authoredDate), 'PPpp')
+                            : 'Date unavailable'}
+                        </span>
                       </div>
                       {commit.committer && commit.committer.name !== commit.author.name && (
                         <div className="flex items-center gap-1">

@@ -470,3 +470,65 @@ export const gitCompareCommitsResponseSchema = z.object({
 })
 
 export type GitCompareCommitsResponse = z.infer<typeof gitCompareCommitsResponseSchema>
+
+// ============================================================================
+// Git Worktree Schemas
+// ============================================================================
+
+export const gitWorktreeSchema = z.object({
+  path: z.string().describe('Absolute path to the worktree'),
+  branch: z.string().describe('Branch checked out in this worktree'),
+  commit: z.string().describe('Current commit hash'),
+  isMain: z.boolean().describe('Whether this is the main worktree'),
+  isLocked: z.boolean().describe('Whether the worktree is locked'),
+  lockReason: z.string().optional().describe('Reason for locking if locked'),
+  prunable: z.boolean().optional().describe('Whether the worktree can be pruned')
+})
+
+export type GitWorktree = z.infer<typeof gitWorktreeSchema>
+
+export const gitWorktreeListResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.array(gitWorktreeSchema).optional(),
+  message: z.string().optional()
+})
+
+export type GitWorktreeListResponse = z.infer<typeof gitWorktreeListResponseSchema>
+
+export const gitWorktreeAddRequestSchema = z.object({
+  path: z.string().describe('Path where to create the worktree'),
+  branch: z.string().optional().describe('Branch to check out'),
+  newBranch: z.string().optional().describe('Create new branch with this name'),
+  commitish: z.string().optional().describe('Commit/tag to check out'),
+  detach: z.boolean().optional().describe('Detach HEAD at specified commit')
+})
+
+export type GitWorktreeAddRequest = z.infer<typeof gitWorktreeAddRequestSchema>
+
+export const gitWorktreeRemoveRequestSchema = z.object({
+  path: z.string().describe('Path of the worktree to remove'),
+  force: z.boolean().optional().describe('Force removal even with uncommitted changes')
+})
+
+export type GitWorktreeRemoveRequest = z.infer<typeof gitWorktreeRemoveRequestSchema>
+
+export const gitWorktreeLockRequestSchema = z.object({
+  path: z.string().describe('Path of the worktree to lock'),
+  reason: z.string().optional().describe('Reason for locking')
+})
+
+export type GitWorktreeLockRequest = z.infer<typeof gitWorktreeLockRequestSchema>
+
+export const gitWorktreePruneRequestSchema = z.object({
+  dryRun: z.boolean().optional().describe('Only show what would be pruned')
+})
+
+export type GitWorktreePruneRequest = z.infer<typeof gitWorktreePruneRequestSchema>
+
+export const gitWorktreePruneResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.array(z.string()).optional().describe('Paths that were pruned or would be pruned'),
+  message: z.string().optional()
+})
+
+export type GitWorktreePruneResponse = z.infer<typeof gitWorktreePruneResponseSchema>

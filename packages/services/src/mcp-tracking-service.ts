@@ -11,6 +11,9 @@ import {
   type MCPExecutionStatus
 } from '@octoprompt/schemas'
 import { ApiError } from '@octoprompt/shared'
+import { createLogger } from './utils/logger'
+
+const logger = createLogger('MCPTracking')
 
 // Global tracking state for active executions
 const activeExecutions = new Map<
@@ -53,7 +56,7 @@ export async function startMCPToolExecution(
 
     return executionId
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to start execution tracking:', error)
+    logger.error('Failed to start execution tracking:', error)
     throw new ApiError(500, 'Failed to start MCP tool execution tracking', 'MCP_TRACKING_START_FAILED')
   }
 }
@@ -92,7 +95,7 @@ export async function completeMCPToolExecution(
     // Update statistics asynchronously
     updateStatisticsAsync(activeExecution.toolName, activeExecution.projectId, status, durationMs, outputSize).catch(
       (error) => {
-        console.error('[MCPTrackingService] Failed to update statistics:', error)
+        logger.error('Failed to update statistics:', error)
       }
     )
 
@@ -100,7 +103,7 @@ export async function completeMCPToolExecution(
     if (status === 'error' && errorMessage) {
       recordErrorPatternAsync(activeExecution.projectId ?? null, activeExecution.toolName, errorMessage).catch(
         (error) => {
-          console.error('[MCPTrackingService] Failed to record error pattern:', error)
+          logger.error('Failed to record error pattern:', error)
         }
       )
     }
@@ -108,7 +111,7 @@ export async function completeMCPToolExecution(
     // Clean up active execution
     activeExecutions.delete(executionId)
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to complete execution tracking:', error)
+    logger.error('Failed to complete execution tracking:', error)
     // Don't throw to avoid disrupting the actual tool execution
   }
 }
@@ -163,7 +166,7 @@ export async function getMCPToolExecutions(query: MCPExecutionQuery): Promise<{
       pageSize: query.limit ?? 100
     }
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to get executions:', error)
+    logger.error('Failed to get executions:', error)
     throw new ApiError(500, 'Failed to retrieve MCP tool executions', 'MCP_TRACKING_QUERY_FAILED')
   }
 }
@@ -225,7 +228,7 @@ export async function getMCPAnalyticsOverview(
       }))
     }
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to get analytics overview:', error)
+    logger.error('Failed to get analytics overview:', error)
     throw new ApiError(500, 'Failed to retrieve MCP analytics overview', 'MCP_ANALYTICS_OVERVIEW_FAILED')
   }
 }
@@ -237,7 +240,7 @@ export async function getMCPToolStatistics(request: MCPAnalyticsRequest): Promis
   try {
     return await mcpTrackingStorage.getToolSummaries(request.projectId)
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to get tool statistics:', error)
+    logger.error('Failed to get tool statistics:', error)
     throw new ApiError(500, 'Failed to retrieve MCP tool statistics', 'MCP_TOOL_STATISTICS_FAILED')
   }
 }
@@ -254,7 +257,7 @@ export async function getMCPExecutionTimeline(
   try {
     return await mcpTrackingStorage.getExecutionTimeline(projectId, period, startDate, endDate)
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to get execution timeline:', error)
+    logger.error('Failed to get execution timeline:', error)
     throw new ApiError(500, 'Failed to retrieve MCP execution timeline', 'MCP_TIMELINE_FAILED')
   }
 }
@@ -278,7 +281,7 @@ export async function addExecutionToChain(
   try {
     await mcpTrackingStorage.createChain(chainId, executionId, parentExecutionId, position)
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to add execution to chain:', error)
+    logger.error('Failed to add execution to chain:', error)
     // Don't throw to avoid disrupting execution
   }
 }
@@ -290,7 +293,7 @@ export async function getChainExecutions(chainId: string): Promise<MCPToolExecut
   try {
     return await mcpTrackingStorage.getChainExecutions(chainId)
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to get chain executions:', error)
+    logger.error('Failed to get chain executions:', error)
     throw new ApiError(500, 'Failed to retrieve chain executions', 'MCP_CHAIN_QUERY_FAILED')
   }
 }
@@ -363,7 +366,7 @@ export async function getTopErrorPatterns(
   try {
     return await mcpTrackingStorage.getTopPatterns(projectId, 'error', limit)
   } catch (error) {
-    console.error('[MCPTrackingService] Failed to get error patterns:', error)
+    logger.error('Failed to get error patterns:', error)
     throw new ApiError(500, 'Failed to retrieve error patterns', 'MCP_ERROR_PATTERNS_FAILED')
   }
 }

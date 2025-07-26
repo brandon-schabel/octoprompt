@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, useNavigate, type LinkProps } from '@tanstack/react-router'
+import { Link, useNavigate, type LinkProps, type NavigateOptions } from '@tanstack/react-router'
 import type { ProjectsSearch, ChatSearch, TicketsSearch, AssetsSearch } from './search-schemas'
 
 /**
@@ -20,19 +20,11 @@ export const routes = {
 } as const
 
 // Type-safe Link components with proper search param types
-export const ProjectsLink = (
-  props: Omit<LinkProps, 'to' | 'search'> & {
-    search?: ProjectsSearch | ((prev: ProjectsSearch) => ProjectsSearch)
-  }
-) => {
+export const ProjectsLink = (props: any) => {
   return React.createElement(Link, { to: '/projects', ...props })
 }
 
-export const ChatLink = (
-  props: Omit<LinkProps, 'to' | 'search'> & {
-    search?: ChatSearch | ((prev: ChatSearch) => ChatSearch)
-  }
-) => {
+export const ChatLink = (props: any) => {
   return React.createElement(Link, { to: '/chat', ...props })
 }
 
@@ -41,44 +33,44 @@ export function useTypedNavigate() {
   const navigate = useNavigate()
 
   return {
-    toProjects: (search?: ProjectsSearch, options?: { replace?: boolean }) => {
-      navigate({ to: routes.projects, search, ...options })
+    toProjects: (search?: ProjectsSearch, options?: NavigateOptions) => {
+      navigate({ to: routes.projects, search, ...options } as any)
     },
 
-    toChat: (search?: ChatSearch, options?: { replace?: boolean }) => {
-      navigate({ to: routes.chat, search, ...options })
+    toChat: (search?: ChatSearch, options?: NavigateOptions) => {
+      navigate({ to: routes.chat, search, ...options } as any)
     },
 
-    toProjectsWithTab: (tabId: number | string, options?: { replace?: boolean }) => {
+    toProjectsWithTab: (tabId: number | string, options?: NavigateOptions) => {
       navigate({
         to: routes.projects,
-        search: (prev) => ({ ...prev, tab: tabId.toString() }),
+        search: (prev: ProjectsSearch) => ({ ...prev, tab: tabId.toString() }),
         ...options
-      })
+      } as any)
     },
 
-    toProjectsWithView: (activeView: ProjectsSearch['activeView'], options?: { replace?: boolean }) => {
+    toProjectsWithView: (activeView: ProjectsSearch['activeView'], options?: NavigateOptions) => {
       navigate({
         to: routes.projects,
-        search: (prev) => ({ ...prev, activeView }),
+        search: (prev: ProjectsSearch) => ({ ...prev, activeView }),
         ...options
-      })
+      } as any)
     },
 
     updateProjectView: (activeView: ProjectsSearch['activeView']) => {
       navigate({
         to: routes.projects,
-        search: (prev) => ({ ...prev, activeView }),
+        search: (prev: ProjectsSearch) => ({ ...prev, activeView }),
         replace: true
-      })
+      } as any)
     },
 
-    toChatWithProject: (projectId: number, prefill?: boolean, options?: { replace?: boolean }) => {
+    toChatWithProject: (projectId: number, prefill?: boolean, options?: NavigateOptions) => {
       navigate({
         to: routes.chat,
-        search: { projectId, prefill: prefill ?? false },
+        search: { projectId, prefill: prefill ?? false } as ChatSearch,
         ...options
-      })
+      } as any)
     }
   }
 }
@@ -93,7 +85,7 @@ export function updateSearchParams<T extends Record<string, any>>(updates: Parti
       if (value === undefined) {
         delete updated[key]
       } else {
-        updated[key] = value
+        (updated as any)[key] = value
       }
     })
 

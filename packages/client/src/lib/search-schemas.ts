@@ -22,11 +22,12 @@ export const projectViewSchema = z.enum([
   'summarization',
   'assets',
   'git',
-  'mcp-analytics'
+  'mcp-analytics',
+  'settings'
 ]).catch('context').optional()
 
 // Git view sub-tabs enum
-export const gitViewSchema = z.enum(['changes', 'history', 'branches', 'stashes']).catch('changes').optional()
+export const gitViewSchema = z.enum(['changes', 'history', 'branches', 'stashes', 'worktrees']).catch('changes').optional()
 
 // Ticket view sub-tabs enum
 export const ticketViewSchema = z.enum(['all', 'active', 'completed', 'analytics']).catch('all').optional()
@@ -40,7 +41,8 @@ export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema)
   gitView: gitViewSchema,
   ticketView: ticketViewSchema,
   assetView: assetViewSchema,
-  selectedTicketId: z.coerce.number().optional().catch(undefined)
+  selectedTicketId: z.coerce.number().optional().catch(undefined),
+  gitBranch: z.string().optional().catch(undefined)
 })
 
 export const chatSearchSchema = z.object({

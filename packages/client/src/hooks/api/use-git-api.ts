@@ -611,3 +611,138 @@ export function useGitReset(projectId: number | undefined) {
     }
   })
 }
+
+// ============================================
+// Worktree Operations Hooks
+// ============================================
+
+export function useGitWorktrees(projectId: number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'git', 'worktrees'],
+    queryFn: async () => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      const response = await octoClient.git.worktrees.list(projectId)
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch worktrees')
+      }
+      return response.data
+    },
+    enabled: enabled && !!projectId
+  })
+}
+
+export function useAddGitWorktree(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (params: { path: string; branch?: string; newBranch?: string; commitish?: string; detach?: boolean }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.add(projectId, params)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      toast.success('Worktree created successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create worktree: ${error.message}`)
+    }
+  })
+}
+
+export function useRemoveGitWorktree(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ path, force }: { path: string; force?: boolean }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.remove(projectId, { path, force })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      toast.success('Worktree removed successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to remove worktree: ${error.message}`)
+    }
+  })
+}
+
+export function useLockGitWorktree(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ path, reason }: { path: string; reason?: string }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.lock(projectId, { path, reason })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      toast.success('Worktree locked successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to lock worktree: ${error.message}`)
+    }
+  })
+}
+
+export function useUnlockGitWorktree(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ path }: { path: string }) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.unlock(projectId, { path })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      toast.success('Worktree unlocked successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to unlock worktree: ${error.message}`)
+    }
+  })
+}
+
+export function usePruneGitWorktrees(projectId: number | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ dryRun }: { dryRun?: boolean } = {}) => {
+      if (!projectId) {
+        throw new Error('Project ID is required')
+      }
+      return octoClient.git.worktrees.prune(projectId, { dryRun })
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
+      if (variables?.dryRun) {
+        const prunedPaths = data.data || []
+        if (prunedPaths.length === 0) {
+          toast.info('No worktrees to prune')
+        } else {
+          toast.info(`Would prune ${prunedPaths.length} worktree(s):\n${prunedPaths.join('\n')}`)
+        }
+      } else {
+        const prunedPaths = data.data || []
+        if (prunedPaths.length === 0) {
+          toast.success('No worktrees needed pruning')
+        } else {
+          toast.success(`Pruned ${prunedPaths.length} worktree(s)`)
+        }
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to prune worktrees: ${error.message}`)
+    }
+  })
+}

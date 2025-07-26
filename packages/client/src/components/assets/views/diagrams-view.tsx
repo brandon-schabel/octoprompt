@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AssetGeneratorDialog } from '@/components/assets/asset-generator-dialog'
+import { DocumentationGeneratorDialog } from '@/components/assets/documentation-generator-dialog'
 import { GitBranch, Sparkles, Copy, Workflow, Activity, Share2, Layers3 } from 'lucide-react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -229,6 +229,7 @@ export function DiagramsView({ projectId, projectName = 'Project' }: DiagramsVie
   const [diagramTheme, setDiagramTheme] = useState('default')
   const [diagramDirection, setDiagramDirection] = useState('TD')
   const [generatorOpen, setGeneratorOpen] = useState(false)
+  const [diagramPrompt, setDiagramPrompt] = useState('')
   const { copyToClipboard } = useCopyClipboard()
 
   const template = diagramTemplates[selectedTemplate]
@@ -444,12 +445,16 @@ export function DiagramsView({ projectId, projectName = 'Project' }: DiagramsVie
         </TabsContent>
       </Tabs>
 
-      <AssetGeneratorDialog
+      <DocumentationGeneratorDialog
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        assetType="mermaid-diagram"
+        documentationType="mermaid-diagram"
+        projectContext={{
+          name: projectName,
+          description: diagramPrompt || template.prompt.replace('{projectName}', projectName || 'Project')
+        }}
         onSuccess={(content, name) => {
-          // Handle success - will add prompt saving here
+          // Handle success - diagram generated
         }}
       />
     </div>

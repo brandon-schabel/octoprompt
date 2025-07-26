@@ -14,9 +14,10 @@ interface UseAIChatProps {
   provider: APIProviders | string
   model: string
   systemMessage?: string
+  enableChatAutoNaming?: boolean
 }
 
-export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatProps) {
+export function useAIChat({ chatId, provider, model, systemMessage, enableChatAutoNaming = false }: UseAIChatProps) {
   // Track if initial messages have been loaded to prevent infinite loops
   const initialMessagesLoadedRef = useRef(false)
 
@@ -152,7 +153,8 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
         tempId: userMessageId, // Optional: Useful for correlating requests/responses
         ...(systemMessage && { systemMessage: systemMessage }), // Include systemMessage from props if provided
         // options: sdkOptions,
-        ...(sdkOptions ? { options: sdkOptions } : {})
+        ...(sdkOptions ? { options: sdkOptions } : {}),
+        enableChatAutoNaming: enableChatAutoNaming
       }
 
       setInput('') // Clear input field immediately
@@ -163,7 +165,7 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
       await append(messageForSdkState, { body: requestBody })
     },
     // Dependencies: Ensure all values used inside useCallback are listed
-    [append, chatId, provider, model, systemMessage, setInput, setParsedError]
+    [append, chatId, provider, model, systemMessage, setInput, setParsedError, enableChatAutoNaming]
   )
 
   // Create a form handler that uses our enhanced `sendMessage`

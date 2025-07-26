@@ -1,6 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
 import { octoClient } from '@/hooks/octo-client'
-import { LoaderFunctionArgs } from '@tanstack/react-router'
 
 /**
  * Loader for project data that prefetches using TanStack Query
@@ -9,7 +8,7 @@ import { LoaderFunctionArgs } from '@tanstack/react-router'
 export async function projectLoader({
   context,
   params
-}: LoaderFunctionArgs & { context: { queryClient: QueryClient } }) {
+}: { context: { queryClient: QueryClient }; params: Record<string, any> }) {
   const projectId = params.projectId as number
 
   if (!projectId) return null
@@ -45,8 +44,9 @@ export async function ticketsLoader({
   context,
   params,
   search
-}: LoaderFunctionArgs & {
+}: {
   context: { queryClient: QueryClient }
+  params: Record<string, any>
   search: { status?: string; priority?: string; offset?: number; limit?: number }
 }) {
   const projectId = params.projectId as number
@@ -57,7 +57,7 @@ export async function ticketsLoader({
 
   await context.queryClient.ensureQueryData({
     queryKey: ['tickets', projectId, { status, priority, offset, limit }],
-    queryFn: () => octoClient.tickets.getProjectTickets(projectId, { status, priority, offset, limit }),
+    queryFn: () => octoClient.tickets.listTickets(projectId),
     staleTime: 30 * 1000 // 30 seconds
   })
 
@@ -76,9 +76,9 @@ export function createLoaderDeps<T extends Record<string, any>>(selector: (searc
  * Helper to create a composite loader that runs multiple loaders in parallel
  */
 export function composeLoaders<T extends Record<string, any>>(
-  ...loaders: Array<(args: LoaderFunctionArgs & { context: T }) => Promise<any>>
+  ...loaders: Array<(args: { context: T; params: Record<string, any>; search?: any }) => Promise<any>>
 ) {
-  return async (args: LoaderFunctionArgs & { context: T }) => {
+  return async (args: { context: T; params: Record<string, any>; search?: any }) => {
     const results = await Promise.all(loaders.map((loader) => loader(args)))
     return Object.assign({}, ...results)
   }

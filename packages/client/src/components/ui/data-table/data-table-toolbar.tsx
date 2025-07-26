@@ -20,7 +20,10 @@ export function DataTableToolbar<TData>({
         <Input
           placeholder='Search...'
           value={globalFilter ?? ''}
-          onChange={(event) => onGlobalFilterChange?.(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value
+            onGlobalFilterChange?.(value)
+          }}
           className='h-8 w-[150px] lg:w-[250px]'
         />
 

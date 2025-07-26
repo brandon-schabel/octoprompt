@@ -583,6 +583,40 @@ The output should be a markdown code block containing the mermaid diagram that c
       maxTokens: 2000
     },
     schema: MermaidDiagramGeneratorSchema
+  },
+  chatNaming: {
+    name: 'Chat Name Generation',
+    description: 'Generates a concise, meaningful name for a chat based on its initial content.',
+    promptTemplate: 'Based on the following chat content, generate a concise and descriptive name (max 40 characters) that captures the main topic or purpose: {userInput}',
+    systemPrompt: 'You are an expert at creating clear, concise titles that accurately represent the content. Focus on the main topic or action requested.',
+    modelSettings: {
+      model: 'gpt-4o-mini',
+      temperature: 0.5,
+      maxTokens: 100
+    },
+    schema: z.object({
+      chatName: z.string().max(40).openapi({
+        description: 'A concise, descriptive name for the chat',
+        example: 'Fix Authentication Bug'
+      })
+    })
+  },
+  tabNaming: {
+    name: 'Tab Name Generation',
+    description: 'Generates a meaningful name for a project tab based on project details and content.',
+    promptTemplate: 'Based on the following project information, generate a descriptive tab name (max 30 characters) that captures the main purpose or focus: Project Name: {projectName}, Selected Files: {selectedFiles}, Context: {context}',
+    systemPrompt: 'You are an expert at creating clear, concise tab names that accurately represent the project focus. Consider the project name, selected files, and any additional context.',
+    modelSettings: {
+      model: 'gpt-4o-mini',
+      temperature: 0.5,
+      maxTokens: 100
+    },
+    schema: z.object({
+      tabName: z.string().max(30).openapi({
+        description: 'A concise, descriptive name for the project tab',
+        example: 'Auth Service Refactor'
+      })
+    })
   }
   // Add more structured tasks here...
 } satisfies Record<string, StructuredDataSchemaConfig<any>>

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useNavigate } from '@tanstack/react-router'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +46,7 @@ interface GitBranchesViewProps {
 }
 
 export function GitBranchesView({ projectId, className }: GitBranchesViewProps) {
+  const navigate = useNavigate()
   const { data: branchesResponse, isLoading, error } = useBranchesEnhanced(projectId)
   const switchBranch = useSwitchBranch(projectId)
   const deleteBranch = useDeleteBranch(projectId)
@@ -133,11 +135,27 @@ export function GitBranchesView({ projectId, className }: GitBranchesViewProps) 
     )
   }
 
-  const BranchCard = ({ branch }: { branch: GitBranchEnhanced }) => (
-    <Card className={cn(
-      'transition-colors',
-      branch.current && 'border-primary'
-    )}>
+  const BranchCard = ({ branch }: { branch: GitBranchEnhanced }) => {
+    const handleCardClick = () => {
+      navigate({
+        to: '/projects',
+        search: (prev) => ({ 
+          ...prev, 
+          activeView: 'git',
+          gitView: 'history',
+          gitBranch: branch.name 
+        })
+      })
+    }
+
+    return (
+      <Card 
+        className={cn(
+          'transition-colors cursor-pointer hover:bg-accent/50',
+          branch.current && 'border-primary'
+        )}
+        onClick={handleCardClick}
+      >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -182,7 +200,10 @@ export function GitBranchesView({ projectId, className }: GitBranchesViewProps) 
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleCheckout(branch.name)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCheckout(branch.name)
+                }}
                 disabled={switchBranch.isPending}
               >
                 <ArrowRightLeft className="h-3 w-3 mr-1" />
@@ -193,7 +214,10 @@ export function GitBranchesView({ projectId, className }: GitBranchesViewProps) 
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setDeletingBranch(branch.name)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDeletingBranch(branch.name)
+                }}
                 disabled={deleteBranch.isPending}
               >
                 <Trash2 className="h-3 w-3" />
@@ -222,7 +246,8 @@ export function GitBranchesView({ projectId, className }: GitBranchesViewProps) 
         </CardContent>
       )}
     </Card>
-  )
+    )
+  }
 
   return (
     <TooltipProvider>

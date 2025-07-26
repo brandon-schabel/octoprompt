@@ -61,7 +61,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
     isLoading: overviewLoading,
     refetch: refetchOverview
   } = useGetMCPAnalyticsOverview(projectId, analyticsRequest)
-  const { data: statistics, isLoading: statsLoading } = useGetMCPToolStatistics(projectId, analyticsRequest)
+  const { data: statistics, isLoading: statsLoading, refetch: refetchStatistics } = useGetMCPToolStatistics(projectId, analyticsRequest)
 
   const { data: timeline, isLoading: timelineLoading } = useGetMCPExecutionTimeline(projectId, analyticsRequest)
   const { data: errorPatterns, isLoading: errorPatternsLoading } = useGetMCPErrorPatterns(projectId, analyticsRequest)
@@ -90,7 +90,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
 
   // Use statistics data as fallback if overview.topTools is empty
   const topToolsData =
-    overviewData.topTools && overviewData.topTools.length > 0 ? overviewData.topTools : statistics?.data || []
+    overviewData.topTools && overviewData.topTools.length > 0 ? overviewData.topTools : statistics || []
 
   return (
     <div className='h-full flex flex-col p-4 md:p-6 overflow-hidden'>
@@ -123,8 +123,8 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
             onClick={() => {
               refetchOverview()
               // Also refetch statistics if being used as fallback
-              if (statistics && statistics.refetch) {
-                statistics.refetch()
+              if (refetchStatistics) {
+                refetchStatistics()
               }
             }}
             disabled={overviewLoading}

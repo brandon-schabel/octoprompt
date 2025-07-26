@@ -22,8 +22,8 @@ export function MCPExecutionsTable({ projectId, defaultPageSize = 20 }: MCPExecu
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'startedAt', desc: true }])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = React.useState('')
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [columnVisibility, setColumnVisibility] = React.useState(defaultColumnVisibility)
+  const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
+  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>(defaultColumnVisibility)
 
   // Build query for API
   const query: MCPExecutionQuery = React.useMemo(() => {

@@ -13,8 +13,9 @@ import { TaskSuggestionsSchema, FileSuggestionsZodSchema } from '@octoprompt/sch
 import { MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/config'
 import { ticketStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
-import { getFullProjectSummary, getCompactProjectSummary } from './utils/get-full-project-summary'
+import { getFullProjectSummary, getCompactProjectSummary } from './utils/project-summary-service'
 import { generateStructuredData } from './gen-ai-services'
+import { fileSuggestionStrategyService } from './file-suggestion-strategy-service'
 import { z } from 'zod'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
@@ -63,7 +64,22 @@ export async function fetchTaskSuggestionsForTicket(
   ticket: Ticket,
   userContext: string | undefined
 ): Promise<TaskSuggestions> {
-  const projectSummary = await getFullProjectSummary(ticket.projectId)
+  let projectSummary: string
+  
+  try {
+    projectSummary = await getFullProjectSummary(ticket.projectId)
+  } catch (error) {
+    // Handle case where project doesn't exist or has no files
+    if (error instanceof ApiError && error.status === 404) {
+      throw new ApiError(
+        404,
+        `Cannot generate tasks: Project ${ticket.projectId} not found or has no files`,
+        'PROJECT_NOT_FOUND',
+        { ticketId: ticket.id, projectId: ticket.projectId }
+      )
+    }
+    throw error
+  }
 
   const userMessage = `
   <goal>
@@ -95,14 +111,26 @@ export async function fetchTaskSuggestionsForTicket(
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, 'CONFIG_ERROR')
   }
 
-  const result = await generateStructuredData({
-    prompt: userMessage,
-    systemMessage: defaultTaskPrompt,
-    schema: TaskSuggestionsSchema,
-    options: MEDIUM_MODEL_CONFIG
-  })
+  try {
+    const result = await generateStructuredData({
+      prompt: userMessage,
+      systemMessage: defaultTaskPrompt,
+      schema: TaskSuggestionsSchema,
+      options: MEDIUM_MODEL_CONFIG
+    })
 
-  return result.object
+    return result.object
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error
+    }
+    throw new ApiError(
+      500,
+      `Failed to generate task suggestions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      'TASK_GENERATION_FAILED',
+      { ticketId: ticket.id, originalError: error }
+    )
+  }
 }
 
 // --- Ticket CRUD Operations ---
@@ -369,47 +397,29 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
 
 export async function suggestFilesForTicket(
   ticketId: number,
-  options: { extraUserInput?: string } = {}
+  options: { 
+    extraUserInput?: string,
+    strategy?: 'fast' | 'balanced' | 'thorough',
+    maxResults?: number 
+  } = {}
 ): Promise<{ recommendedFileIds: string[]; combinedSummaries?: string; message?: string }> {
   const ticket = await getTicketById(ticketId)
 
   try {
-    // Get full project summary for context (includes file IDs needed for suggestion)
-    const projectSummary = await getFullProjectSummary(ticket.projectId)
+    // Determine strategy based on project size if not specified
+    const { FileSuggestionStrategyService } = await import('./file-suggestion-strategy-service')
+    const strategy = options.strategy || await FileSuggestionStrategyService.recommendStrategy(ticket.projectId)
+    
+    // Use the new file suggestion strategy service
+    const suggestionResponse = await fileSuggestionStrategyService.suggestFiles(
+      ticket,
+      strategy,
+      options.maxResults || 10,
+      options.extraUserInput
+    )
 
-    // Prepare system prompt for file suggestion
-    const systemPrompt = `You are a code assistant that recommends relevant files from a project based on a ticket's content.
-
-Analyze the ticket information and project structure to suggest the most relevant files that would need to be modified or reviewed to complete the ticket.
-
-Focus on:
-- Files directly related to the functionality mentioned in the ticket
-- Configuration files that might need updates
-- Test files that should be created or modified
-- Related components or modules that interact with the main functionality
-
-Return file IDs as numbers only.`
-
-    // Prepare user prompt with ticket details and project context
-    const userPrompt = `Ticket Title: ${ticket.title}
-
-Ticket Overview: ${ticket.overview || 'No overview provided'}
-
-${options.extraUserInput ? `Additional Context: ${options.extraUserInput}\n\n` : ''}Project Summary:
-${projectSummary}
-
-Based on this ticket and project structure, suggest the most relevant file IDs that would need to be examined or modified to complete this ticket. Focus on files that are directly related to the functionality described.`
-
-    // Use AI to suggest relevant files
-    const result = await generateStructuredData({
-      prompt: userPrompt,
-      schema: FileSuggestionsZodSchema,
-      systemMessage: systemPrompt,
-      options: HIGH_MODEL_CONFIG
-    })
-
-    // Get the suggested file IDs and convert to strings
-    const suggestedFileIds = result.object.fileIds.map((id) => id.toString())
+    // Convert file IDs to strings
+    const suggestedFileIds = suggestionResponse.suggestions.map(id => id.toString())
 
     // Merge with existing suggestions to preserve any manually added files
     const allFileIds = [...new Set([...ticket.suggestedFileIds, ...suggestedFileIds])]
@@ -421,12 +431,16 @@ Based on this ticket and project structure, suggest the most relevant file IDs t
       })
     }
 
+    // Create summary message with performance info
+    const { metadata } = suggestionResponse
+    const performanceInfo = `(${metadata.analyzedFiles} files analyzed in ${metadata.processingTime}ms, ~${Math.round(metadata.tokensSaved || 0).toLocaleString()} tokens saved)`
+
     return {
       recommendedFileIds: allFileIds,
-      combinedSummaries: `AI-suggested ${suggestedFileIds.length} relevant files based on ticket: "${ticket.title}"`,
+      combinedSummaries: `AI-suggested ${suggestedFileIds.length} relevant files using ${strategy} strategy ${performanceInfo}`,
       message:
         suggestedFileIds.length > 0
-          ? `Found ${suggestedFileIds.length} relevant files for this ticket`
+          ? `Found ${suggestedFileIds.length} relevant files for this ticket ${performanceInfo}`
           : 'No additional files suggested beyond existing selections'
     }
   } catch (error) {

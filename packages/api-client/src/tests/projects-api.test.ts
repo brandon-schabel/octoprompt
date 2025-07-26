@@ -173,7 +173,8 @@ describe('Project API Tests', () => {
     }
   })
 
-  test('POST /api/projects/{projectId}/files/bulk - Bulk create files', async () => {
+  // NOTE: Bulk file creation endpoint doesn't exist - files are created via the refresh endpoint
+  test.skip('POST /api/projects/{projectId}/files/bulk - Bulk create files', async () => {
     const project = testProjects[0]
     if (!project) {
       console.warn('Skipping bulk create files test as no project is available.')
@@ -217,7 +218,8 @@ describe('Project API Tests', () => {
     })
   })
 
-  test('PUT /api/projects/{projectId}/files/{fileId} - Update single file content', async () => {
+  // Skipping as it depends on bulk file creation which doesn't exist
+  test.skip('PUT /api/projects/{projectId}/files/{fileId} - Update single file content', async () => {
     if (createdFileIdsForBulkOps.length === 0) {
       console.warn('Skipping single file update test: no files created by bulk op')
       return
@@ -248,7 +250,8 @@ describe('Project API Tests', () => {
     }
   })
 
-  test('PUT /api/projects/{projectId}/files/bulk - Bulk update files content', async () => {
+  // Skipping as it depends on bulk file creation which doesn't exist
+  test.skip('PUT /api/projects/{projectId}/files/bulk - Bulk update files content', async () => {
     if (createdFileIdsForBulkOps.length < 2) {
       console.warn('Skipping bulk update test: insufficient files from bulk create op')
       return

@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AssetGeneratorDialog } from '@/components/assets/asset-generator-dialog'
+import { DocumentationGeneratorDialog } from '@/components/assets/documentation-generator-dialog'
 import { toast } from 'sonner'
 import { FileText, Sparkles, Settings, Copy, Download } from 'lucide-react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
@@ -286,12 +286,17 @@ export function ProjectDocsView({ projectId, projectName = 'Project' }: ProjectD
         </TabsContent>
       </Tabs>
 
-      <AssetGeneratorDialog
+      <DocumentationGeneratorDialog
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        assetType="project-documentation"
+        documentationType="project-readme"
+        projectContext={{
+          name: projectName,
+          description: "OctoPrompt project" // You can enhance this with actual project context
+        }}
         onSuccess={(content, name) => {
           toast.success('Documentation generated successfully!')
+          // Here you could save the generated documentation
         }}
       />
     </div>

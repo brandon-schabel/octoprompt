@@ -74,7 +74,7 @@ describe('Global State Schema', () => {
       expect(state.appSettings.language).toBe('en')
       expect(state.appSettings.theme).toBe('light')
       expect(state.appSettings.temperature).toBe(0.7)
-      expect(state.appSettings.maxTokens).toBe(10000)
+      expect(state.appSettings.maxTokens).toBe(20000)
 
       // Check project tab
       const defaultTab = state.projectTabs.defaultTab
@@ -210,7 +210,7 @@ describe('Global State Schema', () => {
       expect(validSettings.theme).toBe('dark')
       expect(validSettings.language).toBe('en') // Should use default
       expect(validSettings.temperature).toBe(0.7) // Should use default
-      expect(validSettings.maxTokens).toBe(10000) // Should use default
+      expect(validSettings.maxTokens).toBe(20000) // Should use default
     })
 
     it('should validate ID fields correctly', () => {

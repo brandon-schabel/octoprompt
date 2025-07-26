@@ -27,12 +27,16 @@ import type {
   GitBranchListEnhancedResponse,
   GitFileStats,
   GitFileDiff,
-  GitCommitDetailResponse
+  GitCommitDetailResponse,
+  GitWorktree
 } from '@octoprompt/schemas'
 import { getProjectById } from './project-service'
 import { ApiError } from '@octoprompt/shared'
 import path from 'path'
 import { retryOperation } from './utils/retry-operation'
+import { createLogger } from './utils/logger'
+
+const logger = createLogger('GitService')
 
 interface GitStatusCache {
   status: GitStatus
@@ -1432,6 +1436,286 @@ export async function setConfig(
 }
 
 // ============================================
+// Worktree Management
+// ============================================
+
+export async function getWorktrees(projectId: number): Promise<GitWorktree[]> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+
+    // Get worktrees using porcelain format for easier parsing
+    const worktreeList = await git.raw(['worktree', 'list', '--porcelain'])
+    
+    const worktrees: GitWorktree[] = []
+    const lines = worktreeList.split('\n')
+    
+    let currentWorktree: Partial<GitWorktree> = {}
+    
+    for (const line of lines) {
+      if (!line.trim()) {
+        // Empty line indicates end of worktree entry
+        if (currentWorktree.path) {
+          worktrees.push({
+            path: currentWorktree.path,
+            branch: currentWorktree.branch || 'HEAD',
+            commit: currentWorktree.commit || '',
+            isMain: currentWorktree.isMain || false,
+            isLocked: currentWorktree.isLocked || false,
+            lockReason: currentWorktree.lockReason,
+            prunable: currentWorktree.prunable
+          })
+          currentWorktree = {}
+        }
+        continue
+      }
+      
+      const [key, ...valueParts] = line.split(' ')
+      const value = valueParts.join(' ')
+      
+      switch (key) {
+        case 'worktree':
+          currentWorktree.path = value
+          // Check if this is the main worktree
+          currentWorktree.isMain = path.resolve(value) === projectPath
+          break
+        case 'HEAD':
+          currentWorktree.commit = value
+          break
+        case 'branch':
+          // branch refs/heads/branch-name
+          currentWorktree.branch = value.replace('refs/heads/', '')
+          break
+        case 'detached':
+          // If detached, there's no branch
+          currentWorktree.branch = 'HEAD'
+          break
+        case 'locked':
+          currentWorktree.isLocked = true
+          if (value) {
+            currentWorktree.lockReason = value
+          }
+          break
+        case 'prunable':
+          currentWorktree.prunable = true
+          break
+      }
+    }
+    
+    // Add the last worktree if exists
+    if (currentWorktree.path) {
+      worktrees.push({
+        path: currentWorktree.path,
+        branch: currentWorktree.branch || 'HEAD',
+        commit: currentWorktree.commit || '',
+        isMain: currentWorktree.isMain || false,
+        isLocked: currentWorktree.isLocked || false,
+        lockReason: currentWorktree.lockReason,
+        prunable: currentWorktree.prunable
+      })
+    }
+    
+    return worktrees
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to get worktrees: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_WORKTREES_FAILED'
+    )
+  }
+}
+
+export async function addWorktree(
+  projectId: number,
+  options: {
+    path: string
+    branch?: string
+    newBranch?: string
+    commitish?: string
+    detach?: boolean
+  }
+): Promise<void> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    // Resolve the worktree path to absolute
+    const worktreePath = path.resolve(options.path)
+    
+    const args = ['worktree', 'add']
+    
+    // Add options
+    if (options.newBranch) {
+      args.push('-b', options.newBranch)
+    } else if (options.detach) {
+      args.push('--detach')
+    }
+    
+    args.push(worktreePath)
+    
+    // Add branch/commit to checkout
+    if (options.commitish) {
+      args.push(options.commitish)
+    } else if (options.branch && !options.newBranch) {
+      args.push(options.branch)
+    }
+    
+    await git.raw(args)
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to add worktree: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_ADD_WORKTREE_FAILED'
+    )
+  }
+}
+
+export async function removeWorktree(projectId: number, worktreePath: string, force: boolean = false): Promise<void> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    // Get current worktrees to validate
+    const worktrees = await getWorktrees(projectId)
+    const targetPath = path.resolve(worktreePath)
+    const worktree = worktrees.find(w => path.resolve(w.path) === targetPath)
+    
+    if (!worktree) {
+      throw new ApiError(404, 'Worktree not found', 'WORKTREE_NOT_FOUND')
+    }
+    
+    if (worktree.isMain) {
+      throw new ApiError(400, 'Cannot remove the main worktree', 'CANNOT_REMOVE_MAIN_WORKTREE')
+    }
+    
+    const args = ['worktree', 'remove']
+    if (force) {
+      args.push('--force')
+    }
+    args.push(targetPath)
+    
+    await git.raw(args)
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to remove worktree: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_REMOVE_WORKTREE_FAILED'
+    )
+  }
+}
+
+export async function lockWorktree(projectId: number, worktreePath: string, reason?: string): Promise<void> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    const targetPath = path.resolve(worktreePath)
+    
+    const args = ['worktree', 'lock']
+    if (reason) {
+      args.push('--reason', reason)
+    }
+    args.push(targetPath)
+    
+    await git.raw(args)
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to lock worktree: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_LOCK_WORKTREE_FAILED'
+    )
+  }
+}
+
+export async function unlockWorktree(projectId: number, worktreePath: string): Promise<void> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    const targetPath = path.resolve(worktreePath)
+    
+    await git.raw(['worktree', 'unlock', targetPath])
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to unlock worktree: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_UNLOCK_WORKTREE_FAILED'
+    )
+  }
+}
+
+export async function pruneWorktrees(projectId: number, dryRun: boolean = false): Promise<string[]> {
+  try {
+    const project = await getProjectById(projectId)
+    if (!project.path) {
+      throw new ApiError(400, 'Project does not have a path associated with it', 'NO_PROJECT_PATH')
+    }
+
+    const projectPath = path.resolve(project.path)
+    const git: SimpleGit = simpleGit(projectPath)
+    
+    const args = ['worktree', 'prune']
+    if (dryRun) {
+      args.push('--dry-run')
+    }
+    args.push('--verbose')
+    
+    const result = await git.raw(args)
+    
+    // Parse the output to get pruned worktree paths
+    const prunedPaths: string[] = []
+    const lines = result.split('\n').filter(Boolean)
+    
+    for (const line of lines) {
+      // Git outputs lines like "Removing worktrees/branch-name: gitdir file points to non-existent location"
+      const match = line.match(/^Removing (.+?):|^Would remove (.+?):/)
+      if (match) {
+        prunedPaths.push(match[1] || match[2])
+      }
+    }
+    
+    return prunedPaths
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to prune worktrees: ${error instanceof Error ? error.message : String(error)}`,
+      'GIT_PRUNE_WORKTREES_FAILED'
+    )
+  }
+}
+
+// ============================================
 // Enhanced Commit History Features
 // ============================================
 
@@ -1733,7 +2017,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
           const showResult = await git.show([branch.commit, '--format=%aI', '--no-patch'])
           authorDate = showResult.trim()
         } catch (err) {
-          console.error(`Failed to get date for commit ${branch.commit}:`, err)
+          logger.debug(`Failed to get date for commit ${branch.commit}`, err)
         }
       }
       
@@ -1810,7 +2094,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
           const showResult = await git.show([branch.commit, '--format=%aI', '--no-patch'])
           authorDate = showResult.trim()
         } catch (err) {
-          console.error(`Failed to get date for commit ${branch.commit}:`, err)
+          logger.debug(`Failed to get date for commit ${branch.commit}`, err)
         }
       }
 

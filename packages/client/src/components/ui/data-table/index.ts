@@ -12,7 +12,7 @@ export type {
   DataTableColumnHeaderProps,
   DataTableToolbarProps,
   DataTableFilterProps,
-  DataTableViewOptions,
+  DataTableViewOptions as DataTableViewOptionsProps,
   DataTableColumnConfig,
   FilterType,
   ColumnFilter,

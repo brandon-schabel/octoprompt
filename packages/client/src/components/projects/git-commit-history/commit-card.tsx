@@ -34,8 +34,15 @@ export function CommitCard({ commit, onClick }: CommitCardProps) {
   }
 
   const shortHash = commit.hash.slice(0, 7)
-  const relativeTime = commit.relativeTime || formatDistanceToNow(new Date(commit.authoredDate), { addSuffix: true })
-  const fullDate = format(new Date(commit.authoredDate), 'PPpp')
+  
+  // Safely handle date formatting
+  const dateIsValid = commit.authoredDate && !isNaN(new Date(commit.authoredDate).getTime())
+  const relativeTime = commit.relativeTime || (dateIsValid 
+    ? formatDistanceToNow(new Date(commit.authoredDate), { addSuffix: true })
+    : 'Date unavailable')
+  const fullDate = dateIsValid 
+    ? format(new Date(commit.authoredDate), 'PPpp')
+    : 'Date unavailable'
   
   // Use subject and body from schema
   const subject = commit.subject

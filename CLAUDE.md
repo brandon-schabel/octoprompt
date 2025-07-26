@@ -20,6 +20,66 @@ Generally a fullstack feature consists of the follow
 - Explorer if there are current components that meet current uses cases, if not add ShadCN components or compose new components based on the foundations of the primitive componets in the repo
 - Integrate components and data hooks into a page to complete the feature
 
+## File Suggestions Feature
+
+The AI file suggestion feature has been optimized to use 90-95% fewer tokens. Three MCP methods are available:
+
+### 1. Project-Level Suggestions (General Discovery)
+Use when exploring files based on a text prompt:
+```
+mcp__OctoPrompt__project_manager(
+  action: "suggest_files",
+  projectId: 1750564533014,
+  data: {
+    prompt: "authentication flow",
+    limit: 10
+  }
+)
+```
+
+### 2. Ticket-Level Suggestions (Optimized with Strategies)
+Use when working on a specific ticket - supports the new optimization strategies:
+```
+mcp__OctoPrompt__ticket_manager(
+  action: "suggest_files",
+  ticketId: 456,
+  data: {
+    strategy: "balanced",     // "fast" | "balanced" | "thorough"
+    maxResults: 10,
+    extraUserInput: "focus on authentication components"
+  }
+)
+```
+
+### 3. Task-Level Suggestions
+Use when working on a specific task within a ticket:
+```
+mcp__OctoPrompt__task_manager(
+  action: "suggest_files",
+  ticketId: 456,
+  data: {
+    taskId: 789,
+    context: "include related test files"
+  }
+)
+```
+
+### Strategies (Ticket-Level Only)
+- **`fast`**: No AI, pure relevance scoring (best for large projects or quick suggestions)
+- **`balanced`**: Pre-filters 50 files, AI refines (default, good for most cases) 
+- **`thorough`**: Pre-filters 100 files, high-quality AI model (best for complex tickets)
+
+### When to Use Each Method
+- **Project-level**: Initial exploration, understanding codebase structure, finding files by concept
+- **Ticket-level**: Starting work on a ticket, finding all files that need changes
+- **Task-level**: Focused work on a specific task, finding implementation details
+
+### Tips
+- Always use file suggestions before manually searching - it saves significant time
+- Add contextual hints (e.g., "include test files", "focus on API routes", "find UI components")
+- The feature automatically considers keywords, file paths, types, recency, and import relationships
+- Ticket-level suggestions include performance metrics showing tokens saved (90-95% reduction)
+
 ## Agents Feature
 
 Make strong use of the agents feature, make use of specialized agents to handle task that are relevant to the list of specialized agents. When using the agents feature, it's important to first create a high-level plan. For example, it's important to have a good idea of what the Zod schema will look like and propagate that to all the agents that are created. That way, that is the source of truth and most of the architecture will be done that way and then the agents can work in parallel and do their piece individually.

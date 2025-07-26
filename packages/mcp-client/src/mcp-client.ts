@@ -55,7 +55,7 @@ export class MCPClient {
       this.client = new Client(
         {
           name: `octoprompt-${this.config.id}`,
-          version: '0.7.2'
+          version: '0.8.0'
         },
         {
           capabilities: {
@@ -97,7 +97,7 @@ export class MCPClient {
             capabilities: {},
             clientInfo: {
               name: `octoprompt-client-${this.config.id}`,
-              version: '0.7.2'
+              version: '0.8.0'
             }
           }
         })

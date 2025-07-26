@@ -12,6 +12,8 @@ import { mcpRoutes } from './routes/mcp-routes'
 import { gitRoutes } from './routes/git-routes'
 import { gitAdvancedRoutes } from './routes/git-advanced-routes'
 import { activeTabRoutes } from './routes/active-tab-routes'
+import { jobApp } from './routes/job-routes'
+import { projectTabRoutes } from './routes/project-tab-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { getServerConfig, getRateLimitConfig } from '@octoprompt/config'
@@ -178,6 +180,8 @@ app.route('/', mcpRoutes)
 app.route('/', gitRoutes)
 app.route('/', gitAdvancedRoutes)
 app.route('/', activeTabRoutes)
+app.route('/api/jobs', jobApp)
+app.route('/', projectTabRoutes)
 
 // Global error handler
 app.onError((err, c) => {

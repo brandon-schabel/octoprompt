@@ -12,7 +12,7 @@ import {
 import { ApiError, promptsMap } from '@octoprompt/shared'
 import { ZodError } from 'zod'
 import { generateStructuredData } from './gen-ai-services'
-import { getCompactProjectSummary } from './utils/get-full-project-summary'
+import { getCompactProjectSummary } from './utils/project-summary-service'
 
 // Utility function to populate projectId on prompts from associations
 async function populatePromptProjectId(prompt: Prompt): Promise<Prompt> {
@@ -320,9 +320,6 @@ Based on the user's input and project context, suggest the most relevant prompts
       schema: PromptSuggestionsZodSchema,
       systemMessage: systemPrompt
     })
-
-    // Extract the suggestions from the result object
-    const suggestions = result.object
 
     // Extract the suggestions from the result object
     const suggestions = result.object

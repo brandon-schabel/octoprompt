@@ -218,7 +218,7 @@ describe('Project Service (File Storage)', () => {
     test('updateProject updates fields and returns updated project', async () => {
       const created = await createProject({ name: 'Before', path: '/old' })
       const updates: UpdateProjectBody = { name: 'After', description: 'New Desc' }
-      await new Promise((resolve) => setTimeout(resolve, 1))
+      await new Promise((resolve) => setTimeout(resolve, 10))
       const updated = await updateProject(created.id, updates)
 
       expect(updated).toBeDefined()

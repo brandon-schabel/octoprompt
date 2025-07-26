@@ -24,7 +24,7 @@ describe('Config Package', () => {
   it('should export app config', () => {
     const app = getAppConfig()
     expect(app.name).toBe('OctoPrompt')
-    expect(app.version).toBe('0.7.2')
+    expect(app.version).toBe('0.8.0')
   })
 
   it('should export model configs', () => {

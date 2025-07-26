@@ -17,17 +17,20 @@ import { CommitCard } from './commit-card'
 import { CommitDetailModal } from './commit-detail-modal'
 import { BranchSelectorSearchable } from './branch-selector-searchable'
 import type { GitLogEnhancedRequest } from '@octoprompt/schemas'
+import { Route } from '@/routes/projects'
 
 interface CommitListProps {
   projectId: number
 }
 
 export function CommitList({ projectId }: CommitListProps) {
+  const search = Route.useSearch()
+  
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null)
   const [pageSize, setPageSize] = useState(20)
-  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined)
+  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(search.gitBranch || undefined)
 
   const params: GitLogEnhancedRequest = {
     page,
@@ -42,7 +45,9 @@ export function CommitList({ projectId }: CommitListProps) {
 
   const commits = response?.data?.commits || []
   const pagination = response?.data?.pagination
-  const totalPages = pagination?.totalPages || 1
+  const totalPages = pagination?.totalCount && pagination?.perPage 
+    ? Math.ceil(pagination.totalCount / pagination.perPage) 
+    : 1
   const totalCount = pagination?.totalCount || 0
 
   if (!projectId) {

@@ -1287,7 +1287,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
             },
             clientInfo: {
               name: 'octoprompt-tester',
-              version: '0.7.2'
+              version: '0.8.0'
             }
           }
         }),
@@ -1826,7 +1826,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             },
             clientInfo: {
               name: 'octoprompt-tester',
-              version: '0.7.2'
+              version: '0.8.0'
             }
           },
           example: {
@@ -1836,7 +1836,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             params: {
               protocolVersion: '2024-11-05',
               capabilities: { tools: true, resources: true },
-              clientInfo: { name: 'octoprompt-tester', version: '0.7.2' }
+              clientInfo: { name: 'octoprompt-tester', version: '0.8.0' }
             }
           }
         },

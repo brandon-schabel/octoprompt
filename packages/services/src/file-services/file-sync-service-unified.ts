@@ -22,6 +22,12 @@ import {
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
 import { summarizeSingleFile } from '@octoprompt/services'
 import { analyzeCodeImportsExports } from '../utils/code-analysis'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('FileSync')
+const watcherLogger = logger.child('Watcher')
+const pluginLogger = logger.child('Plugin')
+const cleanupLogger = logger.child('Cleanup')
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //
@@ -131,7 +137,7 @@ export function createFileChangeWatcher() {
     const resolvedDir = resolvePath(directory)
 
     if (watcherInstance && watchingDirectory === resolvedDir) {
-      console.warn(`[FileChangeWatcher] Already watching: ${resolvedDir}`)
+      watcherLogger.warn(`Already watching: ${resolvedDir}`)
       return
     }
     if (watcherInstance) {
@@ -141,7 +147,7 @@ export function createFileChangeWatcher() {
 
     if (!nodeFsExistsSync(resolvedDir)) {
       // Use nodeFsExistsSync for general FS checks
-      console.warn(`[FileChangeWatcher] Directory does not exist, cannot watch: ${resolvedDir}`)
+      watcherLogger.warn(`Directory does not exist, cannot watch: ${resolvedDir}`)
       return
     }
 
@@ -162,7 +168,6 @@ export function createFileChangeWatcher() {
 
         const changeType = inferChangeType(eventType, fullPath)
         if (!changeType) {
-          // console.debug(`[FileChangeWatcher] Unknown event type '${eventType}' for ${filename}`);
           return
         }
 
@@ -171,19 +176,19 @@ export function createFileChangeWatcher() {
           const result = listener.onFileChanged(changeType, fullPath)
           if (result && typeof result.then === 'function') {
             result.catch((err: unknown) => {
-              console.error('[FileChangeWatcher] Error in listener onFileChanged:', err)
+              watcherLogger.error('Error in listener onFileChanged', err)
             })
           }
         }
       })
       watchingDirectory = resolvedDir // Store the currently watched directory
       watcherInstance.on('error', (err) => {
-        console.error(`[FileChangeWatcher] Watcher error for ${resolvedDir}:`, err)
+        watcherLogger.error(`Watcher error for ${resolvedDir}`, err)
         stopWatching() // Attempt to stop on error
       })
-      console.log(`[FileChangeWatcher] Started watching directory: ${resolvedDir}`)
+      watcherLogger.debug(`Started watching directory: ${resolvedDir}`)
     } catch (err) {
-      console.error(`[FileChangeWatcher] Error starting watch on ${resolvedDir}:`, err)
+      watcherLogger.error(`Error starting watch on ${resolvedDir}`, err)
       watcherInstance = null
       watchingDirectory = null
     }
@@ -193,7 +198,7 @@ export function createFileChangeWatcher() {
     if (watcherInstance) {
       watcherInstance.close()
       watcherInstance = null
-      console.log(`[FileChangeWatcher] Stopped watching directory: ${watchingDirectory}`)
+      watcherLogger.debug(`Stopped watching directory: ${watchingDirectory}`)
       watchingDirectory = null
     }
   }
@@ -202,7 +207,7 @@ export function createFileChangeWatcher() {
   function stopAllAndClearListeners(): void {
     stopWatching()
     listeners.length = 0 // Clear listeners array
-    console.log(`[FileChangeWatcher] All listeners cleared.`)
+    watcherLogger.debug(`All listeners cleared`)
   }
 
   return {
@@ -267,14 +272,9 @@ export async function loadIgnoreRules(projectRoot: string): Promise<Ignore> {
     if (nodeFsExistsSync(gitignorePath)) {
       const gitignoreContent = await Bun.file(gitignorePath).text()
       ignoreInstance.add(gitignoreContent)
-      // console.log(`[FileSync] Loaded .gitignore rules from: ${gitignorePath}`);
-    } else {
-      // console.log(`[FileSync] No .gitignore file found at: ${gitignorePath}. Using only default exclusions.`);
     }
   } catch (error: any) {
-    console.error(
-      `[FileSync] Error reading .gitignore file at ${gitignorePath}: ${error.message}. Using only default exclusions.`
-    )
+    logger.error(`Error reading .gitignore file at ${gitignorePath}`, error)
   }
   return ignoreInstance
 }
@@ -305,11 +305,11 @@ export function getTextFiles(
     entries = readdirSync(dir, { withFileTypes: true })
   } catch (error: any) {
     if (error.code === 'EACCES' || error.code === 'EPERM') {
-      // console.warn(`[FileSync] Permission denied reading directory ${dir}. Skipping.`);
+      logger.debug(`Permission denied reading directory ${dir}. Skipping.`)
     } else if (error.code === 'ENOENT') {
-      // console.warn(`[FileSync] Directory disappeared before reading: ${dir}. Skipping.`);
+      logger.debug(`Directory disappeared before reading: ${dir}. Skipping.`)
     } else {
-      console.error(`[FileSync] Error reading directory ${dir}: ${error.message}`)
+      logger.error(`Error reading directory ${dir}`, error)
     }
     return []
   }
@@ -339,9 +339,9 @@ export function getTextFiles(
           filesFound.push(fullPath)
         } catch (statError: any) {
           if (statError.code === 'ENOENT') {
-            // console.warn(`[FileSync] File disappeared before stating: ${fullPath}`);
+            logger.debug(`File disappeared before stating: ${fullPath}`)
           } else {
-            console.error(`[FileSync] Error stating file ${fullPath}: ${statError.message}`)
+            logger.error(`Error stating file ${fullPath}`, statError)
           }
         }
       }
@@ -366,7 +366,7 @@ export async function syncFileSet(
   absoluteFilePathsOnDisk: string[],
   ignoreFilter: Ignore
 ): Promise<{ created: number; updated: number; deleted: number; skipped: number }> {
-  // console.log(`[FileSync] Starting syncFileSet for project ${project.id} with ${absoluteFilePathsOnDisk.length} disk files.`);
+  logger.verbose(`Starting syncFileSet for project ${project.id} with ${absoluteFilePathsOnDisk.length} disk files`)
 
   let filesToCreate: FileSyncData[] = []
   let filesToUpdate: { fileId: number; data: FileSyncData }[] = []
@@ -375,7 +375,7 @@ export async function syncFileSet(
 
   const existingDbFiles = await getProjectFiles(project.id) // From project-service
   if (existingDbFiles === null) {
-    console.error(`[FileSync] Failed to retrieve existing files for project ${project.id}. Aborting syncFileSet.`)
+    logger.error(`Failed to retrieve existing files for project ${project.id}. Aborting syncFileSet.`)
     throw new Error(`Could not retrieve existing files for project ${project.id}`)
   }
 
@@ -401,15 +401,14 @@ export async function syncFileSet(
       content = truncationResult.content
 
       if (truncationResult.wasTruncated) {
-        console.log(
-          `[FileSync] File truncated for summarization:\n` +
-            `  Path: ${normalizedRelativePath}\n` +
-            `  Project: ${project.name} (ID: ${project.id})\n` +
-            `  File size: ${stats.size.toLocaleString()} bytes\n` +
-            `  Original length: ${truncationResult.originalLength.toLocaleString()} chars\n` +
-            `  Truncated to: ${content.length.toLocaleString()} chars\n` +
-            `  Reduction: ${Math.round((1 - content.length / truncationResult.originalLength) * 100)}%`
-        )
+        logger.debug(`File truncated for summarization`, {
+          path: normalizedRelativePath,
+          project: `${project.name} (ID: ${project.id})`,
+          fileSize: stats.size,
+          originalLength: truncationResult.originalLength,
+          truncatedLength: content.length,
+          reduction: `${Math.round((1 - content.length / truncationResult.originalLength) * 100)}%`
+        })
       }
 
       const fileName = basename(normalizedRelativePath)
@@ -418,9 +417,9 @@ export async function syncFileSet(
         extension = fileName // e.g., '.env'
       }
 
-      // Analyze imports/exports for supported file types
+      // Analyze imports/exports for supported file types (skip if truncated)
       let codeAnalysis = null
-      if (['.js', '.jsx', '.ts', '.tsx', '.py'].includes(extension)) {
+      if (['.js', '.jsx', '.ts', '.tsx', '.py'].includes(extension) && !truncationResult.wasTruncated) {
         codeAnalysis = analyzeCodeImportsExports(content, fileName)
       }
 
@@ -448,9 +447,10 @@ export async function syncFileSet(
         filesToCreate.push(fileData)
       }
     } catch (fileError: any) {
-      console.error(
-        `[FileSync] Error processing file ${absFilePath} (relative: ${normalizedRelativePath}): ${fileError.message}. Skipping.`
-      )
+      const isTruncationRelated = fileError?.message?.includes('truncated') || fileError?.message?.includes("Expected ']'")
+      if (!isTruncationRelated) {
+        logger.error(`Error processing ${normalizedRelativePath}`, fileError)
+      }
       dbFileMap.delete(normalizedRelativePath) // Remove if it was in DB but couldn't be processed
     }
   }
@@ -461,10 +461,10 @@ export async function syncFileSet(
     // This could be because it was deleted from disk, or it's now ignored by getTextFiles.
     // We also need to check if a file that *was* tracked is *now* explicitly ignored by current rules.
     if (ignoreFilter.ignores(normalizedDbPath)) {
-      // console.log(`[FileSync] Queuing for deletion (now ignored by ignoreFilter): ${normalizedDbPath}`);
+      logger.verbose(`Queuing for deletion (now ignored by ignoreFilter): ${normalizedDbPath}`)
       fileIdsToDelete.push(dbFile.id)
     } else {
-      // console.log(`[FileSync] Queuing for deletion (not found on disk and not caught by current ignoreFilter): ${normalizedDbPath}`);
+      logger.verbose(`Queuing for deletion (not found on disk): ${normalizedDbPath}`)
       fileIdsToDelete.push(dbFile.id)
     }
   }
@@ -475,21 +475,21 @@ export async function syncFileSet(
 
   try {
     if (filesToCreate.length > 0) {
-      // console.log(`[FileSync] Creating ${filesToCreate.length} new file records...`);
+      logger.verbose(`Creating ${filesToCreate.length} new file records`)
       const createdResult = await bulkCreateProjectFiles(project.id, filesToCreate)
       createdCount = createdResult.length
     }
     if (filesToUpdate.length > 0) {
-      // console.log(`[FileSync] Updating ${filesToUpdate.length} existing file records...`);
+      logger.verbose(`Updating ${filesToUpdate.length} existing file records`)
       const updatedResult = await bulkUpdateProjectFiles(project.id, filesToUpdate)
       updatedCount = updatedResult.length
     }
     if (fileIdsToDelete.length > 0) {
-      // console.log(`[FileSync] Deleting ${fileIdsToDelete.length} file records...`);
+      logger.verbose(`Deleting ${fileIdsToDelete.length} file records`)
       const deleteResult = await bulkDeleteProjectFiles(project.id, fileIdsToDelete)
       deletedCount = deleteResult.deletedCount
     }
-    // console.log(`[FileSync] SyncFileSet results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped: ${skippedCount}`);
+    logger.info(`SyncFileSet results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped: ${skippedCount}`)
 
     // Index new and updated files in the background
     if (createdCount > 0 || updatedCount > 0) {
@@ -505,11 +505,11 @@ export async function syncFileSet(
           })
 
           const indexResult = await fileIndexingService.indexFiles(projectFiles)
-          console.log(
-            `[FileSync] Background indexing completed - Indexed: ${indexResult.indexed}, Skipped: ${indexResult.skipped}, Failed: ${indexResult.failed}`
+          logger.info(
+            `Background indexing completed - Indexed: ${indexResult.indexed}, Skipped: ${indexResult.skipped}, Failed: ${indexResult.failed}`
           )
         } catch (error) {
-          console.error('[FileSync] Background indexing failed:', error)
+          logger.error('Background indexing failed', error)
         }
       }, 1000) // Delay by 1 second to let the main operation complete
     }
@@ -520,15 +520,15 @@ export async function syncFileSet(
           for (const fileId of fileIdsToDelete) {
             await fileIndexingService.removeFileFromIndex(fileId)
           }
-          console.log(`[FileSync] Removed ${fileIdsToDelete.length} files from search index`)
+          logger.info(`Removed ${fileIdsToDelete.length} files from search index`)
         } catch (error) {
-          console.error('[FileSync] Failed to remove files from index:', error)
+          logger.error('Failed to remove files from index', error)
         }
       }, 1000)
     }
     return { created: createdCount, updated: updatedCount, deleted: deletedCount, skipped: skippedCount }
   } catch (error) {
-    console.error(`[FileSync] Error during DB batch operations for project ${project.id}:`, error)
+    logger.error(`Error during DB batch operations for project ${project.id}`, error)
     throw new Error(`SyncFileSet failed during storage operations for project ${project.id}`)
   }
 }
@@ -546,12 +546,12 @@ export async function syncProject(
   try {
     const absoluteProjectPath = resolvePath(project.path)
     if (!nodeFsExistsSync(absoluteProjectPath) || !statSync(absoluteProjectPath).isDirectory()) {
-      console.error(`[FileSync] Project path is not a valid directory: ${absoluteProjectPath}`)
+      logger.error(`Project path is not a valid directory: ${absoluteProjectPath}`)
       throw new Error(`Project path is not a valid directory: ${project.path}`)
     }
 
     const ignoreFilter = await loadIgnoreRules(absoluteProjectPath)
-    // console.log(`[FileSync] Starting full sync for project ${project.name} (${project.id}) at path: ${absoluteProjectPath}`);
+    logger.debug(`Starting full sync for project ${project.name} (${project.id}) at path: ${absoluteProjectPath}`)
 
     const projectFilesOnDisk = getTextFiles(
       absoluteProjectPath,
@@ -559,13 +559,13 @@ export async function syncProject(
       ignoreFilter,
       ALLOWED_FILE_CONFIGS
     )
-    // console.log(`[FileSync] Found ${projectFilesOnDisk.length} files on disk to potentially sync after applying ignore rules.`);
+    logger.verbose(`Found ${projectFilesOnDisk.length} files on disk to potentially sync after applying ignore rules`)
 
     const results = await syncFileSet(project, absoluteProjectPath, projectFilesOnDisk, ignoreFilter)
-    // console.log(`[FileSync] Successfully completed sync for project ${project.id}.`);
+    logger.debug(`Successfully completed sync for project ${project.id}`)
     return results
   } catch (error: any) {
-    console.error(`[FileSync] Failed to sync project ${project.id} ${project.name}: ${error.message}`)
+    logger.error(`Failed to sync project ${project.id} ${project.name}`, error)
     throw error
   }
 }
@@ -586,12 +586,12 @@ export async function syncProjectFolder(
     const absoluteFolderToSync = pathResolve(absoluteProjectPath, folderPath) // Use pathResolve for safety
 
     if (!nodeFsExistsSync(absoluteFolderToSync) || !statSync(absoluteFolderToSync).isDirectory()) {
-      console.error(`[FileSync] Folder path is not a valid directory: ${absoluteFolderToSync}`)
+      logger.error(`Folder path is not a valid directory: ${absoluteFolderToSync}`)
       throw new Error(`Folder path is not a valid directory: ${folderPath}`)
     }
 
     const ignoreFilter = await loadIgnoreRules(absoluteProjectPath) // Project-level ignore rules
-    // console.log(`[FileSync] Starting sync for project folder '${folderPath}' in project ${project.name} (${project.id}) at path: ${absoluteFolderToSync}`);
+    logger.debug(`Starting sync for project folder '${folderPath}' in project ${project.name} (${project.id})`)
 
     // Get files only within the specific folder, but use projectRoot for relative path calculations in getTextFiles
     const folderFilesOnDisk = getTextFiles(
@@ -600,18 +600,16 @@ export async function syncProjectFolder(
       ignoreFilter,
       ALLOWED_FILE_CONFIGS
     )
-    // console.log(`[FileSync] Found ${folderFilesOnDisk.length} files in folder '${folderPath}' to potentially sync.`);
+    logger.verbose(`Found ${folderFilesOnDisk.length} files in folder '${folderPath}' to potentially sync`)
 
     // syncFileSet will compare these folderFilesOnDisk against the *entire* DB list for the project,
     // and correctly identify deletions *within this folder's scope* or files that became ignored.
     const results = await syncFileSet(project, absoluteProjectPath, folderFilesOnDisk, ignoreFilter)
 
-    // console.log(`[FileSync] Successfully completed sync for folder '${folderPath}' in project ${project.id}.`);
+    logger.debug(`Successfully completed sync for folder '${folderPath}' in project ${project.id}`)
     return results
   } catch (error: any) {
-    console.error(
-      `[FileSync] Failed to sync folder '${folderPath}' for project ${project.id} ${project.name}: ${error.message}`
-    )
+    logger.error(`Failed to sync folder '${folderPath}' for project ${project.id} ${project.name}`, error)
     throw error
   }
 }
@@ -632,10 +630,10 @@ export function createFileChangePlugin() {
 
   async function handleFileChange(event: FileChangeEvent, changedFilePath: string): Promise<void> {
     if (!currentProject) {
-      console.warn('[FileChangePlugin] Project not set, cannot handle file change.')
+      pluginLogger.warn('Project not set, cannot handle file change.')
       return
     }
-    // console.log(`[FileChangePlugin] Detected ${event} for ${changedFilePath} in project ${currentProject.id}`);
+    pluginLogger.verbose(`Detected ${event} for ${changedFilePath} in project ${currentProject.id}`)
     try {
       // Re-sync the entire project to update DB based on the change
       // For performance on very large projects, a more targeted sync might be considered,
@@ -645,7 +643,7 @@ export function createFileChangePlugin() {
       // After sync, the DB should reflect the file's current state (or its absence if deleted)
       const allFiles = await getProjectFiles(currentProject.id) // From project-service
       if (!allFiles) {
-        // console.warn(`[FileChangePlugin] No files found for project ${currentProject.id} after sync.`);
+        pluginLogger.warn(`No files found for project ${currentProject.id} after sync.`)
         return
       }
 
@@ -655,7 +653,7 @@ export function createFileChangePlugin() {
       const updatedFile = allFiles.find((f) => normalizePathForDbUtil(f.path) === relativeChangedPath)
 
       if (event === 'deleted') {
-        // console.log(`[FileChangePlugin] File ${relativeChangedPath} was deleted. No summarization needed.`);
+        pluginLogger.verbose(`File ${relativeChangedPath} was deleted. No summarization needed.`)
         // Potentially trigger other cleanup actions for deleted files if necessary.
         return
       }
@@ -663,16 +661,16 @@ export function createFileChangePlugin() {
       if (!updatedFile) {
         // This might happen if the file was immediately deleted after a create/modify event,
         // or if syncProject determined it shouldn't be tracked.
-        // console.warn(`[FileChangePlugin] File ${relativeChangedPath} not found in project records after sync. Event was ${event}.`);
+        pluginLogger.verbose(`File ${relativeChangedPath} not found in project records after sync. Event was ${event}.`)
         return
       }
 
       // Re-summarize the (created or modified) file
-      // console.log(`[FileChangePlugin] Summarizing ${updatedFile.path}...`);
+      pluginLogger.verbose(`Summarizing ${updatedFile.path}...`)
       await summarizeSingleFile(updatedFile, true) // From summarize-files-agent - force=true for new/updated files
-      // console.log(`[FileChangePlugin] Finished processing ${event} for ${changedFilePath}`);
+      pluginLogger.verbose(`Finished processing ${event} for ${changedFilePath}`)
     } catch (err) {
-      console.error('[FileChangePlugin] Error handling file change:', err)
+      pluginLogger.error('Error handling file change', err)
     }
   }
 
@@ -681,7 +679,7 @@ export function createFileChangePlugin() {
     internalWatcher.registerListener({ onFileChanged: handleFileChange })
 
     const projectAbsPath = resolvePath(project.path)
-    // console.log(`[FileChangePlugin] Starting watcher for project ${project.id} at ${projectAbsPath}`);
+    pluginLogger.debug(`Starting watcher for project ${project.id} at ${projectAbsPath}`)
     internalWatcher.startWatching({
       directory: projectAbsPath,
       ignorePatterns, // Pass along ignore patterns
@@ -690,7 +688,7 @@ export function createFileChangePlugin() {
   }
 
   function stop(): void {
-    // console.log(`[FileChangePlugin] Stopping watcher for project ${currentProject?.id}`);
+    pluginLogger.debug(`Stopping watcher for project ${currentProject?.id}`)
     internalWatcher.stopAllAndClearListeners() // Fully stop and clear listeners for this plugin's watcher
     currentProject = null
   }
@@ -714,25 +712,25 @@ export function createWatchersManager() {
 
   async function startWatchingProject(project: Project, ignorePatterns: string[] = []): Promise<void> {
     if (activePlugins.has(project.id)) {
-      console.warn(`[WatchersManager] Already watching project: ${project.id}. To reconfigure, stop and start again.`)
+      logger.warn(`Already watching project: ${project.id}. To reconfigure, stop and start again.`)
       return
     }
 
     const resolvedProjectPath = resolvePath(project.path)
     if (!nodeFsExistsSync(resolvedProjectPath)) {
       // Use nodeFsExistsSync
-      console.error(`[WatchersManager] Project path for ${project.id} doesn't exist: ${resolvedProjectPath}`)
+      logger.error(`Project path for ${project.id} doesn't exist: ${resolvedProjectPath}`)
       return
     }
 
-    // console.log(`[WatchersManager] Initializing file change plugin for project: ${project.id} (${resolvedProjectPath})`);
+    logger.debug(`Initializing file change plugin for project: ${project.id} (${resolvedProjectPath})`)
     const plugin = createFileChangePlugin() // Uses the createFileChangePlugin defined in this file
     try {
       await plugin.start(project, ignorePatterns)
       activePlugins.set(project.id, plugin)
-      // console.log(`[WatchersManager] Successfully started watching project: ${project.id}`);
+      logger.debug(`Successfully started watching project: ${project.id}`)
     } catch (error) {
-      console.error(`[WatchersManager] Error starting plugin for project ${project.id}:`, error)
+      logger.error(`Error starting plugin for project ${project.id}`, error)
       plugin.stop() // Ensure cleanup if start fails
     }
   }
@@ -740,27 +738,27 @@ export function createWatchersManager() {
   function stopWatchingProject(projectId: number): void {
     const plugin = activePlugins.get(projectId)
     if (!plugin) {
-      // console.warn(`[WatchersManager] Not currently watching project: ${projectId}. Cannot stop.`);
+      logger.warn(`Not currently watching project: ${projectId}. Cannot stop.`)
       return
     }
-    // console.log(`[WatchersManager] Stopping watching for project: ${projectId}`);
+    logger.debug(`Stopping watching for project: ${projectId}`)
     plugin.stop()
     activePlugins.delete(projectId)
-    // console.log(`[WatchersManager] Successfully stopped watching project: ${projectId}`);
+    logger.debug(`Successfully stopped watching project: ${projectId}`)
   }
 
   function stopAllWatchers(): void {
-    // console.log(`[WatchersManager] Stopping all project watchers...`);
+    logger.debug(`Stopping all project watchers...`)
     if (activePlugins.size === 0) {
-      // console.log("[WatchersManager] No active watchers to stop.");
+      logger.debug("No active watchers to stop.")
       return
     }
     for (const [projectId, plugin] of activePlugins.entries()) {
-      // console.log(`[WatchersManager] Stopping watcher for project: ${projectId}`);
+      logger.debug(`Stopping watcher for project: ${projectId}`)
       plugin.stop()
     }
     activePlugins.clear()
-    // console.log("[WatchersManager] All project watchers have been stopped.");
+    logger.debug("All project watchers have been stopped.")
   }
 
   return {
@@ -784,19 +782,19 @@ export function createCleanupService(options: CleanupOptions) {
   let intervalId: ReturnType<typeof setInterval> | null = null
 
   async function cleanupAllProjects(): Promise<CleanupResult[]> {
-    // console.log('[CleanupService] Starting cleanupAllProjects...');
+    cleanupLogger.debug('Starting cleanupAllProjects...')
     try {
       const projectsToClean = await listProjects() // From project-service
       if (!projectsToClean || projectsToClean.length === 0) {
-        // console.log('[CleanupService] No projects found to clean up.');
+        cleanupLogger.debug('No projects found to clean up.')
         return []
       }
-      // console.log(`[CleanupService] Found ${projectsToClean.length} projects to process.`);
+      cleanupLogger.debug(`Found ${projectsToClean.length} projects to process.`)
 
       const results: CleanupResult[] = []
 
       for (const project of projectsToClean) {
-        // console.log(`[CleanupService] Processing project ${project.id} (${project.name})`);
+        cleanupLogger.verbose(`Processing project ${project.id} (${project.name})`)
         try {
           // The core "cleanup" action is to sync the project.
           await syncProject(project) // Uses the syncProject defined in this file
@@ -810,9 +808,9 @@ export function createCleanupService(options: CleanupOptions) {
             // For now, keeping it as 0 to match original behavior.
             // To get actual counts, syncProject's return could be used.
           })
-          // console.log(`[CleanupService] Successfully processed project ${project.id}.`);
+          cleanupLogger.verbose(`Successfully processed project ${project.id}.`)
         } catch (error) {
-          console.error(`[CleanupService] Error cleaning project ${project.id}:`, error)
+          cleanupLogger.error(`Error cleaning project ${project.id}`, error)
           results.push({
             projectId: project.id,
             status: 'error',
@@ -820,39 +818,39 @@ export function createCleanupService(options: CleanupOptions) {
           })
         }
       }
-      // console.log('[CleanupService] Finished cleanupAllProjects.');
+      cleanupLogger.debug('Finished cleanupAllProjects.')
       return results
     } catch (error) {
-      console.error('[CleanupService] Fatal error fetching projects during cleanupAllProjects:', error)
+      cleanupLogger.error('Fatal error fetching projects during cleanupAllProjects', error)
       return [] // Return empty array on fatal error fetching projects
     }
   }
 
   function start(): void {
     if (intervalId) {
-      console.warn('[CleanupService] Cleanup service already started.')
+      cleanupLogger.warn('Cleanup service already started.')
       return
     }
-    // console.log(`[CleanupService] Starting periodic cleanup every ${options.intervalMs}ms.`);
+    cleanupLogger.debug(`Starting periodic cleanup every ${options.intervalMs}ms.`)
     intervalId = setInterval(() => {
-      // console.log('[CleanupService] Periodic cleanup task triggered.');
+      cleanupLogger.verbose('Periodic cleanup task triggered.')
       cleanupAllProjects().catch((err) => {
         // Catch errors from the async cleanupAllProjects promise
-        console.error('[CleanupService] Unhandled error during periodic cleanupAllProjects execution:', err)
+        cleanupLogger.error('Unhandled error during periodic cleanupAllProjects execution', err)
       })
     }, options.intervalMs)
-    // console.log(`[CleanupService] Periodic cleanup started with interval ID: ${intervalId}.`);
+    cleanupLogger.debug(`Periodic cleanup started with interval ID: ${intervalId}.`)
   }
 
   function stop(): void {
     if (!intervalId) {
-      // console.warn("[CleanupService] Cleanup service is not running, cannot stop.");
+      cleanupLogger.warn("Cleanup service is not running, cannot stop.")
       return
     }
-    // console.log(`[CleanupService] Stopping periodic cleanup (interval ID: ${intervalId}).`);
+    cleanupLogger.debug(`Stopping periodic cleanup (interval ID: ${intervalId}).`)
     clearInterval(intervalId)
     intervalId = null
-    // console.log("[CleanupService] Periodic cleanup stopped.");
+    cleanupLogger.debug("Periodic cleanup stopped.")
   }
 
   return {

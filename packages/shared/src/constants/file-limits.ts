@@ -11,6 +11,15 @@ export const FILE_SUMMARIZATION_LIMITS = {
   MAX_CHARACTERS: 100_000,
 
   /**
+   * Dynamic limits based on summary depth
+   */
+  MAX_CHARACTERS_BY_DEPTH: {
+    minimal: 25_000,   // ~6.25k tokens
+    standard: 100_000, // ~25k tokens
+    detailed: 200_000  // ~50k tokens
+  },
+
+  /**
    * Suffix added to truncated content to indicate truncation
    */
   TRUNCATION_SUFFIX: '\n\n[File truncated for summarization...]',
@@ -24,16 +33,27 @@ export const FILE_SUMMARIZATION_LIMITS = {
 } as const
 
 /**
+ * Get maximum characters based on summary depth
+ */
+export function getMaxCharactersForDepth(depth: 'minimal' | 'standard' | 'detailed' = 'standard'): number {
+  return FILE_SUMMARIZATION_LIMITS.MAX_CHARACTERS_BY_DEPTH[depth] || FILE_SUMMARIZATION_LIMITS.MAX_CHARACTERS
+}
+
+/**
  * Helper function to truncate content if it exceeds the character limit
  */
-export function truncateForSummarization(content: string): {
+export function truncateForSummarization(
+  content: string, 
+  depth: 'minimal' | 'standard' | 'detailed' = 'standard'
+): {
   content: string
   wasTruncated: boolean
   originalLength: number
 } {
   const originalLength = content.length
+  const maxChars = getMaxCharactersForDepth(depth)
 
-  if (originalLength <= FILE_SUMMARIZATION_LIMITS.MAX_CHARACTERS) {
+  if (originalLength <= maxChars) {
     return {
       content,
       wasTruncated: false,
@@ -42,7 +62,7 @@ export function truncateForSummarization(content: string): {
   }
 
   const truncatedContent =
-    content.substring(0, FILE_SUMMARIZATION_LIMITS.MAX_CHARACTERS) + FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX
+    content.substring(0, maxChars) + FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX
 
   return {
     content: truncatedContent,

@@ -1,9 +1,9 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { GitBranch, History, Package2, FileSignature } from 'lucide-react'
+import { GitBranch, History, Package2, FileSignature, FolderTree } from 'lucide-react'
 
-export type GitView = 'changes' | 'history' | 'branches' | 'stashes'
+export type GitView = 'changes' | 'history' | 'branches' | 'stashes' | 'worktrees'
 
 interface GitSidebarNavProps {
   activeView: GitView
@@ -36,6 +36,12 @@ export function GitSidebarNav({ activeView, onViewChange, className }: GitSideba
       label: 'Stashes',
       icon: Package2,
       description: 'Manage stashed changes'
+    },
+    {
+      id: 'worktrees' as GitView,
+      label: 'Worktrees',
+      icon: FolderTree,
+      description: 'Manage git worktrees'
     }
   ]
 

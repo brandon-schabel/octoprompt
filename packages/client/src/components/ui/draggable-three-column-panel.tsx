@@ -121,9 +121,13 @@ export function DraggableThreeColumnPanel({
     // Clear active ID
     setActiveId(null)
 
+    // Clear panel dragging state for any panel drag operation
+    if (active.id && !active.id.toString().includes('resizer')) {
+      setIsDraggingPanel(false)
+    }
+
     // Handle panel reordering
     if (active.id && over?.id && active.id !== over.id && !active.id.toString().includes('resizer')) {
-      setIsDraggingPanel(false)
       setPanels((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id)
         const newIndex = items.findIndex((item) => item.id === over.id)

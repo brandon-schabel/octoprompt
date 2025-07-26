@@ -10,18 +10,28 @@ import {
   type ImportInfo,
   type ExportInfo
 } from '@octoprompt/schemas'
-import { MAX_FILE_SIZE_FOR_SUMMARY, MAX_TOKENS_FOR_SUMMARY, CHARS_PER_TOKEN_ESTIMATE } from '@octoprompt/config'
+import {
+  MAX_FILE_SIZE_FOR_SUMMARY,
+  MAX_TOKENS_FOR_SUMMARY,
+  CHARS_PER_TOKEN_ESTIMATE,
+  MEDIUM_MODEL_CONFIG
+} from '@octoprompt/config'
 import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/config'
 import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@octoprompt/shared'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
 import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { generateStructuredData, generateSingleText } from './gen-ai-services'
-import { getFullProjectSummary, invalidateProjectSummaryCache } from './utils/get-full-project-summary'
+import { getFullProjectSummary, invalidateProjectSummaryCache } from './utils/project-summary-service'
 import { resolvePath } from './utils/path-utils'
+import { fileRelevanceService } from './file-relevance-service'
+import { CompactFileFormatter } from './utils/compact-file-formatter'
 import path from 'node:path'
 import { removeDeletedFileIdsFromTickets } from './ticket-service'
 import { retryOperation } from './utils/retry-operation'
+import { createLogger } from './utils/logger'
+
+const logger = createLogger('ProjectService')
 
 // Helper function to retry file system operations
 async function retryFileOperation<T>(operation: () => Promise<T>): Promise<T> {
@@ -290,7 +300,7 @@ export async function resummarizeAllFiles(projectId: number): Promise<void> {
       allFiles.map((f) => f.id)
     )
 
-    console.log(`[ProjectService] Completed resummarizeAllFiles and saved updates for project ${projectId}`)
+    logger.info(`Completed resummarizeAllFiles and saved updates for project ${projectId}`)
   } catch (error) {
     if (error instanceof ApiError) throw error
     throw new ApiError(
@@ -473,7 +483,7 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
 
       const fileId = fileIds[idIndex++]
       if (!fileId) {
-        console.error(`[ProjectService] No file ID available for ${fileData.path}`)
+        logger.error(`No file ID available for ${fileData.path}`)
         continue
       }
 
@@ -501,8 +511,8 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         filesMap[validatedFile.id] = validatedFile
         createdFiles.push(validatedFile)
       } catch (validationError) {
-        console.error(
-          `[ProjectService] Validation failed for file ${fileData.path} during bulk create:`,
+        logger.error(
+          `Validation failed for file ${fileData.path} during bulk create`,
           validationError instanceof ZodError ? validationError.flatten().fieldErrors : validationError
         )
         continue
@@ -576,8 +586,8 @@ export async function bulkUpdateProjectFiles(
         updatedFilesResult.push(validatedFile)
         changesMade = true
       } catch (validationError) {
-        console.error(
-          `[ProjectService] Validation failed for file ${fileId} (${existingFile.path}) during bulk update:`,
+        logger.error(
+          `Validation failed for file ${fileId} (${existingFile.path}) during bulk update`,
           validationError instanceof ZodError ? validationError.flatten().fieldErrors : validationError
         )
         continue
@@ -646,8 +656,8 @@ export async function bulkDeleteProjectFiles(
       // Clean up file references in tickets
       const ticketCleanupResult = await removeDeletedFileIdsFromTickets(projectId, fileIdsToDelete)
       if (ticketCleanupResult.updatedTickets > 0) {
-        console.log(
-          `[ProjectService] Cleaned up file references in ${ticketCleanupResult.updatedTickets} tickets for project ${projectId}`
+        logger.info(
+          `Cleaned up file references in ${ticketCleanupResult.updatedTickets} tickets for project ${projectId}`
         )
       }
     }
@@ -705,13 +715,13 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
   const summarizationCheck = needsResummarization(file.summaryLastUpdated, force)
 
   if (!summarizationCheck.needsSummarization) {
-    console.log(
-      `[SummarizeSingleFile] Skipping file ${file.path} (ID: ${file.id}) in project ${file.projectId}: ${summarizationCheck.reason}`
+    logger.debug(
+      `Skipping file ${file.path} (ID: ${file.id}) in project ${file.projectId}: ${summarizationCheck.reason}`
     )
     return null
   }
 
-  console.log(`[SummarizeSingleFile] Processing file ${file.path} (ID: ${file.id}): ${summarizationCheck.reason}`)
+  logger.debug(`Processing file ${file.path} (ID: ${file.id}): ${summarizationCheck.reason}`)
 
   const fileContent = file.content || ''
 
@@ -774,7 +784,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
   const modelId = cfg.model
 
   if (!modelId) {
-    console.error(`[SummarizeSingleFile] Model not configured for summarize-file task for file ${file.path}.`)
+    logger.error(`Model not configured for summarize-file task for file ${file.path}.`)
     throw new ApiError(
       500,
       `AI Model not configured for summarize-file task (file ${file.path}).`,
@@ -801,9 +811,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
       summaryLastUpdated: Date.now()
     })
 
-    console.log(
-      `[SummarizeSingleFile] Successfully summarized and updated file: ${file.path} in project ${file.projectId}`
-    )
+    logger.info(`Successfully summarized and updated file: ${file.path} in project ${file.projectId}`)
     return updatedFile
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -831,7 +839,7 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
   const modelId = cfg.model
 
   if (!modelId) {
-    console.error(`[SummarizeTruncatedFile] Model not configured for summarize-file task for file ${file.path}.`)
+    logger.error(`Model not configured for summarize-file task for file ${file.path}.`)
     throw new ApiError(
       500,
       `AI Model not configured for summarize-file task (file ${file.path}).`,
@@ -858,9 +866,7 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
       summaryLastUpdated: Date.now()
     })
 
-    console.log(
-      `[SummarizeTruncatedFile] Successfully summarized truncated file: ${file.path} in project ${file.projectId}`
-    )
+    logger.info(`Successfully summarized truncated file: ${file.path} in project ${file.projectId}`)
     return updatedFile
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -904,7 +910,7 @@ export async function summarizeFiles(
       // Check size before attempting summarization
       if (file.size > MAX_FILE_SIZE_FOR_SUMMARY) {
         skippedBySizeCount++
-        console.log(`[BatchSummarize] Skipping file ${file.path} due to size (${file.size} bytes)`)
+        logger.debug(`Skipping file ${file.path} due to size (${file.size} bytes)`)
         continue
       }
 
@@ -916,9 +922,9 @@ export async function summarizeFiles(
         skippedByEmptyCount++
       }
     } catch (error) {
-      console.error(
-        `[BatchSummarize] Error processing file ${file.path} (ID: ${file.id}) in project ${projectId} for summarization: ${error instanceof Error ? error.message : String(error)}`,
-        error instanceof ApiError ? error.details : ''
+      logger.error(
+        `Error processing file ${file.path} (ID: ${file.id}) in project ${projectId} for summarization`,
+        error
       )
       errorCount++
     }
@@ -927,8 +933,8 @@ export async function summarizeFiles(
   const totalProcessed = filesToProcess.length
   const finalSkippedCount = skippedByEmptyCount + skippedBySizeCount + errorCount
 
-  console.log(
-    `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
+  logger.info(
+    `File summarization batch complete for project ${projectId}. ` +
       `Total to process: ${totalProcessed}, ` +
       `Successfully summarized: ${summarizedCount}, ` +
       `Skipped (empty): ${skippedByEmptyCount}, ` +
@@ -988,7 +994,7 @@ ${promptsMap.contemplativePrompt}
 
     return optimizedPrompt.trim()
   } catch (error: any) {
-    console.error('[PromptimizerService] Failed to optimize prompt:', error)
+    logger.error('Failed to optimize prompt', error)
     if (error instanceof ApiError) {
       throw error
     }
@@ -1004,53 +1010,71 @@ ${promptsMap.contemplativePrompt}
 /**
  * Suggests relevant files based on user input and project context using AI
  */
-export async function suggestFiles(projectId: number, prompt: string, limit: number = 10): Promise<ProjectFile[]> {
+export async function suggestFiles(
+  projectId: number,
+  prompt: string,
+  limit: number = 10,
+  options: {
+    strategy?: 'fast' | 'balanced' | 'thorough'
+    includeScores?: boolean
+  } = {}
+): Promise<ProjectFile[]> {
   try {
     await getProjectById(projectId) // Validate project exists
 
-    const projectSummary = await getFullProjectSummary(projectId)
-    const systemPrompt = `
-<role>
-You are a code assistant that recommends relevant files based on user input.
-You have a list of file summaries and a user request.
-</role>
+    // Step 1: Pre-filter files using relevance scoring
+    const relevanceScores = await fileRelevanceService.scoreFilesForText(prompt, projectId)
 
-<response_format>
-    {"fileIds": [1234567890123, 1234567890124]}
-</response_format>
+    // Determine how many files to analyze based on strategy
+    const strategy = options.strategy || 'balanced'
+    const maxPreFilterFiles = strategy === 'fast' ? 30 : strategy === 'balanced' ? 50 : 100
+    const topScores = relevanceScores.slice(0, maxPreFilterFiles)
 
-<guidelines>
-- Return file IDs as numbers (unix timestamps in milliseconds)
-- For simple tasks: return max 5 files
-- For complex tasks: return max ${Math.min(limit, 10)} files
-- For very complex tasks: return max ${Math.min(limit, 20)} files
-- Do not add comments in your response
-- Strictly follow the JSON schema, do not add any additional properties or comments
-- DO NOT RETURN THE FILE NAME UNDER ANY CIRCUMSTANCES, JUST THE FILE ID
-</guidelines>
-`
+    // If fast mode or very few files, return top scored files directly
+    if (strategy === 'fast' || topScores.length <= limit) {
+      const fileIds = topScores.slice(0, limit).map((score) => score.fileId)
+      const allFiles = await getProjectFiles(projectId)
+      return allFiles?.filter((file) => fileIds.includes(file.id)) || []
+    }
 
-    const userPrompt = `
-<project_summary>
-${projectSummary}
-</project_summary>
+    // Step 2: Get candidate files for AI refinement
+    const candidateFileIds = topScores.map((score) => score.fileId)
+    const allFiles = await getProjectFiles(projectId)
+    const candidateFiles = allFiles?.filter((file) => candidateFileIds.includes(file.id)) || []
 
-<user_query>
-${prompt}
-</user_query>
-`
+    // Step 3: Use AI to refine selection from pre-filtered set
+    const compactSummary = CompactFileFormatter.toAIPrompt(candidateFiles, 'compact')
+
+    const systemPrompt = `You are a code assistant that selects the most relevant files from a pre-filtered list.
+Given a user query and a list of potentially relevant files, select the ${limit} most relevant files.
+
+Return only file IDs as numbers in order of relevance.`
+
+    const userPrompt = `User Query: ${prompt}
+
+Pre-filtered files (${candidateFiles.length} files):
+${compactSummary}
+
+Select the ${limit} most relevant file IDs from the above list.`
 
     const result = await generateStructuredData({
       prompt: userPrompt,
       schema: FileSuggestionsZodSchema,
       systemMessage: systemPrompt,
-      options: HIGH_MODEL_CONFIG
+      options: strategy === 'thorough' ? HIGH_MODEL_CONFIG : MEDIUM_MODEL_CONFIG
     })
 
-    // Fetch the actual file objects based on the recommended file IDs
-    const fileIds = result.object.fileIds
-    const allFiles = await getProjectFiles(projectId)
-    const recommendedFiles = allFiles?.filter((file) => fileIds.includes(file.id)) || []
+    // Fetch the actual file objects based on the AI-refined file IDs
+    const refinedFileIds = result.object.fileIds.slice(0, limit)
+    const recommendedFiles = allFiles?.filter((file) => refinedFileIds.includes(file.id)) || []
+
+    // Log performance metrics
+    const oldFormatSize = allFiles.length * 500 // Estimate old XML format size
+    const newFormatSize = compactSummary.length
+    const tokensSaved = Math.round((oldFormatSize - newFormatSize) / 4)
+    logger.debug(
+      `Strategy: ${strategy}, Files analyzed: ${candidateFiles.length}/${allFiles.length}, Tokens saved: ~${tokensSaved.toLocaleString()}`
+    )
 
     return recommendedFiles
   } catch (error) {
@@ -1149,17 +1173,20 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     const { listTicketsByProject, listTicketsWithTaskCount } = await import('./ticket-service')
     const { getProjectStatistics } = await import('./project-statistics-service')
     const { getProjectGitStatus, getCurrentBranch } = await import('./git-service')
+    const { fileSummarizationTracker } = await import('./file-summarization-tracker')
 
     // Get all data in parallel for performance
-    const [activeTab, prompts, ticketsWithTaskCount, statistics, gitStatus, gitBranch, fileTree] = await Promise.all([
-      getActiveTab(projectId).catch(() => null),
-      listPromptsByProject(projectId).catch(() => []),
-      listTicketsWithTaskCount(projectId).catch(() => []),
-      getProjectStatistics(projectId).catch(() => null),
-      getProjectGitStatus(projectId).catch(() => null),
-      getCurrentBranch(projectId).catch(() => 'unknown'),
-      getProjectFileTree(projectId).catch(() => 'Unable to load file tree')
-    ])
+    const [activeTab, prompts, ticketsWithTaskCount, statistics, gitStatus, gitBranch, fileTree, unsummarizedFiles] =
+      await Promise.all([
+        getActiveTab(projectId).catch(() => null),
+        listPromptsByProject(projectId).catch(() => []),
+        listTicketsWithTaskCount(projectId).catch(() => []),
+        getProjectStatistics(projectId).catch(() => null),
+        getProjectGitStatus(projectId).catch(() => null),
+        getCurrentBranch(projectId).catch(() => 'unknown'),
+        getProjectFileTree(projectId).catch(() => 'Unable to load file tree'),
+        fileSummarizationTracker.getUnsummarizedFilesWithImportance(projectId, 20).catch(() => [])
+      ])
 
     // Build the overview sections
     const lines: string[] = []
@@ -1219,19 +1246,60 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     lines.push('')
 
     // Tickets section
-    const openTickets = ticketsWithTaskCount.filter((t) => t.ticket.status !== 'closed')
+    let openTickets = []
+    try {
+      openTickets = ticketsWithTaskCount.filter((t) => t && t.status && t.status !== 'closed')
+    } catch (error) {
+      console.error('Error filtering tickets:', error)
+      openTickets = []
+    }
     lines.push(`=== RECENT TICKETS (${openTickets.length} open) ===`)
     if (openTickets.length > 0) {
-      openTickets.slice(0, 5).forEach(({ ticket, taskCount }) => {
+      openTickets.slice(0, 5).forEach((ticket) => {
+        if (!ticket) return
         const priority = ticket.priority ? `[${ticket.priority.toUpperCase()}]` : ''
         const updated = new Date(ticket.updated).toLocaleString()
-        lines.push(`#${ticket.id}: ${ticket.title} ${priority} - ${taskCount} tasks (Updated: ${updated})`)
+        lines.push(`#${ticket.id}: ${ticket.title} ${priority} - ${ticket.taskCount || 0} tasks (Updated: ${updated})`)
       })
       if (openTickets.length > 5) {
         lines.push(`... and ${openTickets.length - 5} more open tickets`)
       }
     } else {
       lines.push('No open tickets')
+    }
+    lines.push('')
+
+    // Files needing summarization section
+    lines.push('=== FILES NEEDING SUMMARIZATION ===')
+    if (unsummarizedFiles && unsummarizedFiles.length > 0) {
+      // Get total count of unsummarized files (not just top 20)
+      const { getSummarizationStats } = await import('./file-summarization-tracker')
+      const stats = await fileSummarizationTracker.getSummarizationStats(projectId).catch(() => null)
+      const totalUnsummarized = stats?.unsummarizedFiles || unsummarizedFiles.length
+
+      lines.push(`Total unsummarized files: ${totalUnsummarized}`)
+      lines.push(`Showing top ${unsummarizedFiles.length} by importance:`)
+      lines.push('')
+
+      unsummarizedFiles.forEach(({ file, score }) => {
+        lines.push(`  [Score: ${score.toFixed(1)}] ${file.path}`)
+      })
+
+      lines.push('')
+      lines.push('To summarize these files, use the file_summarization_manager tool:')
+      lines.push('```')
+      lines.push('mcp__OctoPrompt__file_summarization_manager(')
+      lines.push('  action: "summarize_batch",')
+      lines.push(`  projectId: ${projectId},`)
+      lines.push('  data: {')
+      lines.push('    strategy: "balanced",')
+      lines.push('    maxGroupSize: 10,')
+      lines.push('    includeStaleFiles: true')
+      lines.push('  }')
+      lines.push(')')
+      lines.push('```')
+    } else {
+      lines.push('All files have been summarized!')
     }
     lines.push('')
 
