@@ -15,7 +15,8 @@ import {
   getProjectById,
   suggestFiles,
   startMCPToolExecution,
-  completeMCPToolExecution
+  completeMCPToolExecution,
+  ensureProjectServersInitialized
 } from '@octoprompt/services'
 import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './tools-registry'
 
@@ -225,6 +226,19 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
   const { capabilities, clientInfo } = params || {}
 
   const sessionId = generateSessionId()
+
+  // Initialize project-level MCP servers if project ID is provided
+  if (projectId) {
+    try {
+      const projectIdNum = parseInt(projectId, 10)
+      if (!isNaN(projectIdNum)) {
+        await ensureProjectServersInitialized(projectIdNum)
+        console.log(`[MCP] Initialized project servers for project ${projectIdNum}`)
+      }
+    } catch (error) {
+      console.error('[MCP] Failed to initialize project servers:', error)
+    }
+  }
 
   // Validate client capabilities and create server capabilities
   const serverCapabilities = {

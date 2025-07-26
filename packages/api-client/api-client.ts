@@ -2008,19 +2008,135 @@ export class AgentFilesService extends BaseApiClient {
   }
 }
 
+export class MCPProjectConfigService extends BaseApiClient {
+  async getConfigLocations(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/config/locations`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          locations: z.array(z.object({
+            path: z.string(),
+            exists: z.boolean(),
+            priority: z.number()
+          }))
+        })
+      })
+    })
+    return result
+  }
+
+  async getMergedConfig(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/config/merged`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          config: z.object({
+            servers: z.record(z.object({
+              type: z.enum(['stdio', 'http']).default('stdio'),
+              command: z.string(),
+              args: z.array(z.string()).optional(),
+              env: z.record(z.string()).optional(),
+              timeout: z.number().optional()
+            })),
+            inputs: z.array(z.object({
+              type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
+              id: z.string(),
+              description: z.string(),
+              default: z.any().optional(),
+              password: z.boolean().optional()
+            })).optional(),
+            extends: z.union([z.string(), z.array(z.string())]).optional()
+          })
+        })
+      })
+    })
+    return result
+  }
+
+  async getExpandedConfig(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/config/expanded`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          config: z.object({
+            servers: z.record(z.object({
+              type: z.enum(['stdio', 'http']).default('stdio'),
+              command: z.string(),
+              args: z.array(z.string()).optional(),
+              env: z.record(z.string()).optional(),
+              timeout: z.number().optional()
+            })),
+            inputs: z.array(z.object({
+              type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
+              id: z.string(),
+              description: z.string(),
+              default: z.any().optional(),
+              password: z.boolean().optional()
+            })).optional(),
+            extends: z.union([z.string(), z.array(z.string())]).optional()
+          })
+        })
+      })
+    })
+    return result
+  }
+
+  async loadProjectConfig(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/config`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          config: z.object({
+            servers: z.record(z.object({
+              type: z.enum(['stdio', 'http']).default('stdio'),
+              command: z.string(),
+              args: z.array(z.string()).optional(),
+              env: z.record(z.string()).optional(),
+              timeout: z.number().optional()
+            })),
+            inputs: z.array(z.object({
+              type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
+              id: z.string(),
+              description: z.string(),
+              default: z.any().optional(),
+              password: z.boolean().optional()
+            })).optional(),
+            extends: z.union([z.string(), z.array(z.string())]).optional()
+          }).nullable(),
+          source: z.string().optional()
+        })
+      })
+    })
+    return result
+  }
+
+  async saveProjectConfig(projectId: number, config: any) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/config`, {
+      body: { config },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          success: z.boolean()
+        })
+      })
+    })
+    return result
+  }
+}
+
 export class MCPInstallationService extends BaseApiClient {
   async detectTools() {
     const result = await this.request('GET', '/mcp/installation/detect', {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          detectedAgents: z.array(z.object({
+          tools: z.array(z.object({
+            tool: z.string(),
             name: z.string(),
-            displayName: z.string(),
-            detected: z.boolean(),
+            installed: z.boolean(),
             configPath: z.string().optional(),
-            executable: z.string().optional(),
-            version: z.string().optional()
+            configExists: z.boolean().optional(),
+            hasOctoPrompt: z.boolean().optional()
           })),
           platform: z.string()
         })
@@ -2034,34 +2150,87 @@ export class MCPInstallationService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          installed: z.boolean(),
-          configPath: z.string().optional(),
-          isConnected: z.boolean(),
-          lastActivity: z.string().optional(),
-          activeSessions: z.number(),
-          projectId: z.number(),
-          platform: z.string(),
-          detectedAgents: z.array(z.any()),
-          mcpSessions: z.array(z.any()),
-          serverRunning: z.boolean()
+          projectConfig: z.object({
+            projectId: z.number(),
+            projectName: z.string(),
+            mcpEnabled: z.boolean(),
+            installedTools: z.array(z.object({
+              tool: z.string(),
+              installedAt: z.number(),
+              configPath: z.string().optional(),
+              serverName: z.string()
+            })),
+            customInstructions: z.string().optional()
+          }).nullable(),
+          connectionStatus: z.object({
+            connected: z.boolean(),
+            sessionId: z.string().optional(),
+            lastActivity: z.number().optional(),
+            projectId: z.number().optional()
+          })
         })
       })
     })
     return result
   }
 
-  async install(projectId: number, data: { platform?: string, backup?: boolean }) {
+  async install(projectId: number, data: { platform?: string, debug?: boolean }) {
     const result = await this.request('POST', `/projects/${projectId}/mcp/installation/install`, {
       body: {
         tool: data.platform,
-        backup: data.backup
+        debug: data.debug
       },
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          success: z.boolean(),
           message: z.string(),
           configPath: z.string().optional(),
+          backedUp: z.boolean().optional(),
+          backupPath: z.string().optional()
+        })
+      })
+    })
+    return result
+  }
+
+  async batchInstall(projectId: number, data: { tools: string[], debug?: boolean }) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/installation/batch-install`, {
+      body: {
+        tools: data.tools,
+        debug: data.debug
+      },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          results: z.array(z.object({
+            tool: z.string(),
+            success: z.boolean(),
+            message: z.string(),
+            configPath: z.string().optional(),
+            backedUp: z.boolean().optional(),
+            backupPath: z.string().optional()
+          })),
+          summary: z.object({
+            total: z.number(),
+            succeeded: z.number(),
+            failed: z.number()
+          })
+        })
+      })
+    })
+    return result
+  }
+  async installProjectConfig(projectId: number, serverUrl?: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/install-project-config`, {
+      body: {
+        serverUrl
+      },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          message: z.string(),
+          configPath: z.string(),
+          backedUp: z.boolean(),
           backupPath: z.string().optional()
         })
       })
@@ -2204,6 +2373,7 @@ export class OctoPromptClient {
   public readonly jobs: JobService
   public readonly agentFiles: AgentFilesService
   public readonly mcpInstallation: MCPInstallationService
+  public readonly mcpProjectConfig: MCPProjectConfigService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -2219,6 +2389,7 @@ export class OctoPromptClient {
     this.jobs = new JobService(config)
     this.agentFiles = new AgentFilesService(config)
     this.mcpInstallation = new MCPInstallationService(config)
+    this.mcpProjectConfig = new MCPProjectConfigService(config)
   }
 }
 

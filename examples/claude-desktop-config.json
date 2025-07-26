@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "octoprompt": {
+      "command": "node",
+      "args": ["REPLACE_WITH_PATH/octoprompt/packages/server/mcp-universal.js"],
+      "env": {
+        "MCP_HTTP_URL": "http://localhost:3147/api/mcp",
+        "MCP_DEBUG": "false"
+      }
+    },
+    "octoprompt-with-project": {
+      "command": "node",
+      "args": ["REPLACE_WITH_PATH/octoprompt/packages/server/mcp-universal.js"],
+      "env": {
+        "MCP_HTTP_URL": "http://localhost:3147/api/mcp",
+        "OCTOPROMPT_PROJECT_ID": "REPLACE_WITH_YOUR_PROJECT_ID",
+        "MCP_DEBUG": "false"
+      }
+    }
+  }
+}

@@ -10,6 +10,7 @@ import * as path from 'path'
 import * as os from 'os'
 import { z } from 'zod'
 import { getActiveSessions } from '../../server/src/mcp/transport'
+import { mcpProjectConfigService, type ProjectMCPConfig } from './mcp-project-config-service'
 
 export const MCPStatusSchema = z.object({
   connected: z.boolean(),
@@ -41,6 +42,11 @@ export class MCPConfigManager {
 
   constructor() {
     this.configDir = path.join(os.homedir(), '.octoprompt', 'mcp-configs')
+    
+    // Listen for project config changes
+    mcpProjectConfigService.on('configChanged', (projectId: number, config: ProjectMCPConfig) => {
+      this.handleProjectConfigChange(projectId, config)
+    })
   }
 
   async initialize(): Promise<void> {
@@ -194,6 +200,48 @@ export class MCPConfigManager {
 
   private getProjectConfigPath(projectId: number): string {
     return path.join(this.configDir, `project-${projectId}.json`)
+  }
+
+  /**
+   * Get merged MCP configuration for a project
+   * Combines project-level .mcp.json with platform-specific configs
+   */
+  async getMergedProjectMCPConfig(projectId: number): Promise<ProjectMCPConfig | null> {
+    try {
+      // Get the merged config from project config service
+      const projectMCPConfig = await mcpProjectConfigService.getMergedConfig(projectId)
+      
+      // Expand variables
+      const expandedConfig = await mcpProjectConfigService.expandVariables(projectMCPConfig, projectId)
+      
+      return expandedConfig
+    } catch (error) {
+      console.error('Failed to get merged MCP config:', error)
+      return null
+    }
+  }
+
+  /**
+   * Get project-level config locations
+   */
+  async getProjectConfigLocations(projectId: number) {
+    return mcpProjectConfigService.getConfigLocations(projectId)
+  }
+
+  /**
+   * Save project-level MCP configuration
+   */
+  async saveProjectMCPConfig(projectId: number, config: ProjectMCPConfig): Promise<void> {
+    await mcpProjectConfigService.saveProjectConfig(projectId, config)
+  }
+
+  /**
+   * Handle project config changes
+   */
+  private async handleProjectConfigChange(projectId: number, config: ProjectMCPConfig): Promise<void> {
+    // Emit event for other services to react
+    // This could trigger MCP server restarts, UI updates, etc.
+    console.log(`Project ${projectId} MCP config changed:`, config)
   }
 
   async migrateOldConfigs(): Promise<void> {

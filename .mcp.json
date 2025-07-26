@@ -1,0 +1,17 @@
+{
+  "servers": {
+    "octoprompt": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "/Users/brandon/Programming/octoprompt/packages/server/packages/server/mcp-start.sh"
+      ],
+      "env": {
+        "OCTOPROMPT_PROJECT_ID": "1753220774680",
+        "OCTOPROMPT_PROJECT_PATH": "/Users/brandon/Programming/octoprompt",
+        "OCTOPROMPT_API_URL": "http://localhost:3147/api/mcp",
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

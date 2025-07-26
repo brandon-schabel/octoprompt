@@ -16,6 +16,7 @@ import { jobApp } from './routes/job-routes'
 import { projectTabRoutes } from './routes/project-tab-routes'
 import { agentFilesRoutes } from './routes/agent-files-routes'
 import { mcpInstallationRoutes } from './routes/mcp-installation-routes'
+import { mcpProjectConfigApp } from './routes/mcp-project-config-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { getServerConfig, getRateLimitConfig } from '@octoprompt/config'
@@ -186,6 +187,7 @@ app.route('/api/jobs', jobApp)
 app.route('/', projectTabRoutes)
 app.route('/', agentFilesRoutes)
 app.route('/', mcpInstallationRoutes)
+app.route('/', mcpProjectConfigApp)
 
 // Global error handler
 app.onError((err, c) => {

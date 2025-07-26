@@ -4,25 +4,15 @@ import { EditorType, EDITOR_OPTIONS } from '@octoprompt/schemas'
 import { Button, Input, Slider, Switch, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { Copy, RefreshCw, Loader2, Download, Settings } from 'lucide-react'
+import { Copy, RefreshCw, Settings, HelpCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { MCPStatusIndicator } from './mcp-status-indicator'
 import { AgentFilesManager } from './agent-files-manager'
-import { useMutation } from '@tanstack/react-query'
-import { octoClient } from '@/hooks/octo-client'
-import { toast } from 'sonner'
-
-const MCP_PLATFORMS = [
-  { value: 'claude-desktop', label: 'Claude Desktop' },
-  { value: 'vscode', label: 'VS Code' },
-  { value: 'cursor', label: 'Cursor' },
-  { value: 'continue', label: 'Continue' }
-] as const
-
-const getPlatformDisplayName = (platform: string): string => {
-  return MCP_PLATFORMS.find((p) => p.value === platform)?.label || platform
-}
+import { MCPPlatformDetector } from './mcp-platform-detector'
+import { MCPTroubleshooting } from './mcp-troubleshooting'
+import { MCPProjectInstaller } from './mcp-project-installer'
+import { MCPProjectConfigEditor } from './mcp-project-config-editor'
 
 export function ProjectSettingsTab() {
   const updateActiveProjectTab = useUpdateActiveProjectTab()
@@ -32,43 +22,14 @@ export function ProjectSettingsTab() {
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
   const { data: projectId } = useProjectTabField('selectedProjectId')
   const { data: enableChatAutoNaming } = useProjectTabField('enableChatAutoNaming')
-  const [selectedMCPPlatform, setSelectedMCPPlatform] = useState<'claude-desktop' | 'vscode' | 'cursor' | 'continue'>(
-    'claude-desktop'
-  )
 
   const { data: projectResponse } = useGetProject(projectId!)
   const projectData = projectResponse?.data
   const { copyToClipboard } = useCopyClipboard()
   const [showAgentFiles, setShowAgentFiles] = useState(false)
+  const [showTroubleshooting, setShowTroubleshooting] = useState(false)
 
   const { isPending: isSyncing, mutate: syncProject } = useSyncProject()
-
-  const installMCPMutation = useMutation({
-    mutationFn: async () => {
-      if (!projectId) throw new Error('No project selected')
-      const response = await octoClient.mcpInstallation.install(projectId, {
-        platform: selectedMCPPlatform,
-        backup: true
-      })
-      return response
-    },
-    onSuccess: (data) => {
-      if (data.success) {
-        toast.success('MCP Installed', {
-          description: `OctoPrompt MCP has been installed for ${getPlatformDisplayName(selectedMCPPlatform)}. Please restart the application to activate.`
-        })
-      } else {
-        toast.error('Installation Failed', {
-          description: data.data.message
-        })
-      }
-    },
-    onError: (error) => {
-      toast.error('Installation Error', {
-        description: error.message
-      })
-    }
-  })
 
   useEffect(() => {
     if (projectId) {
@@ -260,62 +221,45 @@ export function ProjectSettingsTab() {
           </CardContent>
         </Card>
 
+        {projectId && projectData && (
+          <MCPProjectInstaller 
+            projectId={projectId} 
+            projectName={projectData.name}
+            projectPath={projectData.path}
+          />
+        )}
+
+        {projectId && <MCPPlatformDetector projectId={projectId} />}
+
         <Card>
           <CardHeader>
             <div className='flex items-center justify-between'>
               <div>
-                <CardTitle>MCP Integration</CardTitle>
-                <CardDescription>Model Context Protocol configuration for AI assistants</CardDescription>
+                <CardTitle>Additional MCP Options</CardTitle>
+                <CardDescription>Advanced settings and troubleshooting</CardDescription>
               </div>
               {projectId && <MCPStatusIndicator projectId={projectId} />}
             </div>
           </CardHeader>
           <CardContent className='space-y-4'>
-            <div className='space-y-2'>
-              <label className='text-sm font-medium'>Install to Platform</label>
-              <Select
-                value={selectedMCPPlatform}
-                onValueChange={(value) => setSelectedMCPPlatform(value as typeof selectedMCPPlatform)}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MCP_PLATFORMS.map((platform) => (
-                    <SelectItem key={platform.value} value={platform.value}>
-                      {platform.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='flex gap-2'>
-              <Button onClick={() => installMCPMutation.mutate()} disabled={installMCPMutation.isPending}>
-                {installMCPMutation.isPending ? (
-                  <>
-                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                    Installing...
-                  </>
-                ) : (
-                  <>
-                    <Download className='h-4 w-4 mr-2' />
-                    Install to {getPlatformDisplayName(selectedMCPPlatform)}
-                  </>
-                )}
-              </Button>
+            <div className='flex gap-2 flex-wrap'>
               <Button variant='outline' onClick={() => setShowAgentFiles(!showAgentFiles)}>
                 <Settings className='h-4 w-4 mr-2' />
                 {showAgentFiles ? 'Hide' : 'Manage'} Agent Files
               </Button>
+              <Button variant='outline' onClick={() => setShowTroubleshooting(!showTroubleshooting)}>
+                <HelpCircle className='h-4 w-4 mr-2' />
+                {showTroubleshooting ? 'Hide' : 'Show'} Troubleshooting
+              </Button>
             </div>
-            <p className='text-sm text-muted-foreground'>
-              Install OctoPrompt MCP to enable AI assistants to directly access your project context, files, and tools.
-              Works with Claude Desktop, VS Code, and other MCP-compatible tools.
-            </p>
           </CardContent>
         </Card>
 
         {showAgentFiles && projectId && <AgentFilesManager projectId={projectId} />}
+
+        {showTroubleshooting && <MCPTroubleshooting />}
+
+        {projectId && <MCPProjectConfigEditor projectId={projectId} />}
       </div>
     </TooltipProvider>
   )

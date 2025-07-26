@@ -1,0 +1,354 @@
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { octoClient } from '@/hooks/octo-client'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
+import { Button } from '@ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
+import { Alert, AlertDescription, AlertTitle } from '@ui'
+import { Badge } from '@/components/ui/badge'
+import { FileIcon, FolderIcon, CheckCircle2, XCircle, Edit, Save, X, Plus, Trash2, Copy, Code } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { Editor } from '@monaco-editor/react'
+import { Input } from '@ui'
+import { Label } from '@ui'
+import { Switch } from '@ui'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui'
+
+interface MCPProjectConfigEditorProps {
+  projectId: number
+}
+
+interface MCPConfigLocation {
+  path: string
+  exists: boolean
+  priority: number
+}
+
+interface MCPServerConfig {
+  type: 'stdio' | 'http'
+  command: string
+  args?: string[]
+  env?: Record<string, string>
+  timeout?: number
+}
+
+interface ProjectMCPConfig {
+  servers: Record<string, MCPServerConfig>
+  inputs?: Array<{
+    type: 'promptString' | 'promptNumber' | 'promptBoolean'
+    id: string
+    description: string
+    default?: any
+    password?: boolean
+  }>
+  extends?: string | string[]
+}
+
+export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProps) {
+  const queryClient = useQueryClient()
+  const [editMode, setEditMode] = useState(false)
+  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [configJson, setConfigJson] = useState<string>('')
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+
+  // Get config locations
+  const { data: locationsData, isLoading: isLoadingLocations } = useQuery({
+    queryKey: ['mcp-project-config-locations', projectId],
+    queryFn: async () => {
+      const result = await octoClient.mcpProjectConfig.getConfigLocations(projectId)
+      return result.data
+    }
+  })
+
+  // Get current project config
+  const { data: configData, isLoading: isLoadingConfig } = useQuery({
+    queryKey: ['mcp-project-config', projectId],
+    queryFn: async () => {
+      const result = await octoClient.mcpProjectConfig.loadProjectConfig(projectId)
+      return result.data
+    }
+  })
+
+  // Get merged config (with hierarchy)
+  const { data: mergedConfigData } = useQuery({
+    queryKey: ['mcp-merged-config', projectId],
+    queryFn: async () => {
+      const result = await octoClient.mcpProjectConfig.getMergedConfig(projectId)
+      return result.data
+    }
+  })
+
+  // Get expanded config (with variables resolved)
+  const { data: expandedConfigData } = useQuery({
+    queryKey: ['mcp-expanded-config', projectId],
+    queryFn: async () => {
+      const result = await octoClient.mcpProjectConfig.getExpandedConfig(projectId)
+      return result.data
+    }
+  })
+
+  // Save config mutation
+  const saveConfigMutation = useMutation({
+    mutationFn: async (config: ProjectMCPConfig) => {
+      await octoClient.mcpProjectConfig.saveProjectConfig(projectId, config)
+    },
+    onSuccess: () => {
+      toast.success('MCP configuration saved successfully')
+      setEditMode(false)
+      queryClient.invalidateQueries({ queryKey: ['mcp-project-config', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['mcp-merged-config', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['mcp-expanded-config', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['mcp-project-config-locations', projectId] })
+    },
+    onError: (error) => {
+      toast.error('Failed to save configuration', {
+        description: error.message
+      })
+    }
+  })
+
+  // Initialize JSON editor with current config
+  useEffect(() => {
+    if (configData?.config) {
+      setConfigJson(JSON.stringify(configData.config, null, 2))
+    } else if (!configData?.config && !isLoadingConfig) {
+      // No config exists, provide a template
+      const template: ProjectMCPConfig = {
+        servers: {
+          "example-server": {
+            type: "stdio",
+            command: "node",
+            args: ["./path/to/server.js"]
+          }
+        }
+      }
+      setConfigJson(JSON.stringify(template, null, 2))
+    }
+  }, [configData, isLoadingConfig])
+
+  const handleSave = () => {
+    try {
+      const parsedConfig = JSON.parse(configJson) as ProjectMCPConfig
+      setJsonError(null)
+      saveConfigMutation.mutate(parsedConfig)
+    } catch (error) {
+      setJsonError(error instanceof Error ? error.message : 'Invalid JSON')
+    }
+  }
+
+  const handleCancel = () => {
+    setEditMode(false)
+    setJsonError(null)
+    // Reset to original config
+    if (configData?.config) {
+      setConfigJson(JSON.stringify(configData.config, null, 2))
+    }
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard')
+  }
+
+  if (isLoadingLocations || isLoadingConfig) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-muted-foreground">Loading configuration...</div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const locations = locationsData?.locations || []
+  const currentConfig = configData?.config
+  const currentSource = configData?.source
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Project MCP Configuration</CardTitle>
+            <CardDescription>
+              Configure Model Context Protocol servers for this project
+            </CardDescription>
+          </div>
+          {!editMode && (
+            <Button onClick={() => setEditMode(true)} variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Configuration
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Config Locations */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Configuration Locations</h4>
+          <div className="space-y-1">
+            {locations.map((location, index) => (
+              <div
+                key={location.path}
+                className={cn(
+                  "flex items-center justify-between p-2 rounded-md text-sm",
+                  location.exists ? "bg-muted" : "bg-background",
+                  currentSource === location.path && "ring-2 ring-primary"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  {location.exists ? (
+                    <FileIcon className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <FolderIcon className="h-4 w-4 text-muted-foreground opacity-50" />
+                  )}
+                  <span className={cn(!location.exists && "text-muted-foreground")}>
+                    {location.path.replace(new RegExp(`^.*/${projectId}/`), '')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={location.exists ? "default" : "outline"} className="text-xs">
+                    Priority {location.priority}
+                  </Badge>
+                  {location.exists && (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  )}
+                  {currentSource === location.path && (
+                    <Badge variant="secondary" className="text-xs">Active</Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Edit Mode */}
+        {editMode ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Configuration JSON</Label>
+              <div className="border rounded-md overflow-hidden">
+                <Editor
+                  height="400px"
+                  defaultLanguage="json"
+                  value={configJson}
+                  onChange={(value) => {
+                    setConfigJson(value || '')
+                    setJsonError(null)
+                  }}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    wordWrap: 'on',
+                    formatOnPaste: true,
+                    formatOnType: true
+                  }}
+                  theme="vs-dark"
+                />
+              </div>
+              {jsonError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{jsonError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSave} disabled={saveConfigMutation.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Configuration
+              </Button>
+              <Button onClick={handleCancel} variant="outline">
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* View Mode */
+          <Tabs defaultValue="current" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="current">Current</TabsTrigger>
+              <TabsTrigger value="merged">Merged</TabsTrigger>
+              <TabsTrigger value="expanded">Expanded</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="current" className="space-y-4">
+              {currentConfig ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Project Configuration</Label>
+                    <Button
+                      onClick={() => copyToClipboard(JSON.stringify(currentConfig, null, 2))}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy
+                    </Button>
+                  </div>
+                  <pre className="p-4 bg-muted rounded-md overflow-auto text-sm">
+                    {JSON.stringify(currentConfig, null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <Alert>
+                  <AlertDescription>
+                    No project-level configuration found. Click "Edit Configuration" to create one.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+
+            <TabsContent value="merged" className="space-y-4">
+              {mergedConfigData?.config && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Merged Configuration (Project {'>'} User {'>'} Global)</Label>
+                    <Button
+                      onClick={() => copyToClipboard(JSON.stringify(mergedConfigData.config, null, 2))}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy
+                    </Button>
+                  </div>
+                  <pre className="p-4 bg-muted rounded-md overflow-auto text-sm">
+                    {JSON.stringify(mergedConfigData.config, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="expanded" className="space-y-4">
+              {expandedConfigData?.config && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Expanded Configuration (Variables Resolved)</Label>
+                    <Button
+                      onClick={() => copyToClipboard(JSON.stringify(expandedConfigData.config, null, 2))}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy
+                    </Button>
+                  </div>
+                  <Alert>
+                    <AlertDescription>
+                      Variables like ${'{workspaceFolder}'}, ${'{projectId}'}, and ${'{userHome}'} have been expanded.
+                    </AlertDescription>
+                  </Alert>
+                  <pre className="p-4 bg-muted rounded-md overflow-auto text-sm">
+                    {JSON.stringify(expandedConfigData.config, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

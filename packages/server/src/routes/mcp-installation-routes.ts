@@ -26,13 +26,19 @@ const MCPToolInfoSchema = z.object({
 })
 
 const MCPInstallBodySchema = z.object({
-  tool: z.enum(['claude-desktop', 'vscode', 'cursor', 'continue']),
+  tool: z.enum(['claude-desktop', 'vscode', 'cursor', 'continue', 'claude-code', 'windsurf']),
   serverUrl: z.string().optional(),
   debug: z.boolean().optional()
 })
 
 const MCPUninstallBodySchema = z.object({
-  tool: z.enum(['claude-desktop', 'vscode', 'cursor', 'continue'])
+  tool: z.enum(['claude-desktop', 'vscode', 'cursor', 'continue', 'claude-code', 'windsurf'])
+})
+
+const MCPBatchInstallBodySchema = z.object({
+  tools: z.array(z.enum(['claude-desktop', 'vscode', 'cursor', 'continue', 'claude-code', 'windsurf'])),
+  serverUrl: z.string().optional(),
+  debug: z.boolean().optional()
 })
 
 // Routes
@@ -246,6 +252,92 @@ const updateProjectMCPConfigRoute = createRoute({
   description: 'Update project MCP configuration'
 })
 
+const batchInstallMCPRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/installation/batch-install',
+  request: {
+    params: z.object({
+      projectId: z.coerce.number().int().positive()
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: MCPBatchInstallBodySchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Batch installation results',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              results: z.array(z.object({
+                tool: z.string(),
+                success: z.boolean(),
+                message: z.string(),
+                configPath: z.string().optional(),
+                backedUp: z.boolean().optional(),
+                backupPath: z.string().optional()
+              })),
+              summary: z.object({
+                total: z.number(),
+                succeeded: z.number(),
+                failed: z.number()
+              })
+            })
+          })
+        }
+      }
+    }
+  },
+  tags: ['MCP Installation'],
+  description: 'Install OctoPrompt MCP for multiple tools at once'
+})
+
+// Create route for project-level MCP installation
+const installProjectConfigRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/install-project-config',
+  request: {
+    params: z.object({
+      projectId: z.coerce.number().int().positive()
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            serverUrl: z.string().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Project MCP configuration installed',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              message: z.string(),
+              configPath: z.string(),
+              backedUp: z.boolean(),
+              backupPath: z.string().optional()
+            })
+          })
+        }
+      }
+    }
+  },
+  tags: ['MCP Installation'],
+  description: 'Install MCP configuration at the project level (.mcp.json)'
+})
+
 // Handlers
 export const mcpInstallationRoutes = new OpenAPIHono()
   .openapi(detectInstalledToolsRoute, async (c) => {
@@ -426,5 +518,120 @@ export const mcpInstallationRoutes = new OpenAPIHono()
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(500, `Failed to update project config: ${error}`)
+    }
+  })
+  .openapi(batchInstallMCPRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { tools, serverUrl, debug } = c.req.valid('json')
+
+    try {
+      const project = await getProjectById(projectId)
+      if (!project) {
+        throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
+      }
+
+      await mcpConfigManager.initialize()
+
+      const results = []
+      let succeeded = 0
+      let failed = 0
+
+      // Install for each tool
+      for (const tool of tools) {
+        try {
+          const result = await mcpInstallationService.installMCP({
+            tool,
+            projectId,
+            projectName: project.name,
+            projectPath: project.path,
+            serverUrl,
+            debug
+          })
+
+          results.push({
+            tool,
+            ...result
+          })
+
+          if (result.success) {
+            succeeded++
+            // Update project config
+            const serverName = `octoprompt-${project.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+            await mcpConfigManager.addInstalledTool(
+              projectId,
+              tool,
+              result.configPath,
+              serverName
+            )
+          } else {
+            failed++
+          }
+        } catch (error) {
+          failed++
+          results.push({
+            tool,
+            success: false,
+            message: `Installation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+          })
+        }
+      }
+
+      return c.json({
+        success: true,
+        data: {
+          results,
+          summary: {
+            total: tools.length,
+            succeeded,
+            failed
+          }
+        }
+      })
+    } catch (error) {
+      if (error instanceof ApiError) throw error
+      throw new ApiError(500, `Failed to batch install MCP: ${error}`)
+    }
+  })
+  .openapi(installProjectConfigRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { serverUrl } = c.req.valid('json')
+
+    try {
+      const project = await getProjectById(projectId)
+      if (!project) {
+        throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
+      }
+
+      // Install project-level MCP configuration
+      const result = await mcpInstallationService.installProjectConfig(
+        projectId,
+        project.path,
+        serverUrl
+      )
+
+      if (!result.success) {
+        throw new ApiError(500, result.message, 'INSTALL_FAILED')
+      }
+
+      // Update project config to track this installation
+      await mcpConfigManager.initialize()
+      await mcpConfigManager.updateProjectConfig(projectId, {
+        projectName: project.name,
+        mcpEnabled: true,
+        customInstructions: `Project-level MCP configuration installed at .mcp.json`
+      })
+
+      return c.json({
+        success: true,
+        data: {
+          message: result.message,
+          configPath: result.configPath!,
+          backedUp: result.backedUp || false,
+          backupPath: result.backupPath
+        }
+      })
+    } catch (error) {
+      if (error instanceof ApiError) throw error
+      throw new ApiError(500, `Failed to install project MCP config: ${error}`)
     }
   })
