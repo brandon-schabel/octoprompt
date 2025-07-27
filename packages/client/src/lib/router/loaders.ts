@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import { octoClient } from '@/hooks/octo-client'
+import { promptlianoClient } from '@/hooks/promptliano-client'
 
 /**
  * Loader for project data that prefetches using TanStack Query
@@ -16,7 +16,7 @@ export async function projectLoader({
   // Prefetch project data
   await context.queryClient.ensureQueryData({
     queryKey: ['project', projectId],
-    queryFn: () => octoClient.projects.getProject(projectId),
+    queryFn: () => promptlianoClient.projects.getProject(projectId),
     staleTime: 5 * 60 * 1000 // 5 minutes
   })
 
@@ -24,12 +24,12 @@ export async function projectLoader({
   await Promise.all([
     context.queryClient.prefetchQuery({
       queryKey: ['projectFiles', projectId],
-      queryFn: () => octoClient.projects.getProjectFiles(projectId),
+      queryFn: () => promptlianoClient.projects.getProjectFiles(projectId),
       staleTime: 2 * 60 * 1000 // 2 minutes
     }),
     context.queryClient.prefetchQuery({
       queryKey: ['projectSummary', projectId],
-      queryFn: () => octoClient.projects.getProjectSummary(projectId),
+      queryFn: () => promptlianoClient.projects.getProjectSummary(projectId),
       staleTime: 10 * 60 * 1000 // 10 minutes
     })
   ])
@@ -57,7 +57,7 @@ export async function ticketsLoader({
 
   await context.queryClient.ensureQueryData({
     queryKey: ['tickets', projectId, { status, priority, offset, limit }],
-    queryFn: () => octoClient.tickets.listTickets(projectId),
+    queryFn: () => promptlianoClient.tickets.listTickets(projectId),
     staleTime: 30 * 1000 // 30 seconds
   })
 

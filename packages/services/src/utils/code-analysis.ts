@@ -8,7 +8,7 @@ import type {
   ExportDefaultDeclaration,
   ModuleItem
 } from '@swc/core'
-import type { ImportInfo, ExportInfo } from '@octoprompt/schemas'
+import type { ImportInfo, ExportInfo } from '@promptliano/schemas'
 
 export interface CodeAnalysisResult {
   imports: ImportInfo[]

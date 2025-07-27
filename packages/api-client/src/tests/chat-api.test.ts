@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
 import { z } from 'zod'
-import { createOctoPromptClient, OctoPromptError } from '@octoprompt/api-client'
-import type { OctoPromptClient } from '@octoprompt/api-client'
+import { createPromptlianoClient, PromptlianoError } from '@promptliano/api-client'
+import type { PromptlianoClient } from '@promptliano/api-client'
 
 import {
   ChatSchema,
@@ -11,19 +11,19 @@ import {
   ForkChatBodySchema,
   ForkChatFromMessageBodySchema,
   MessageRoleEnum
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import { TEST_API_URL } from './test-config'
 
 const BASE_URL = TEST_API_URL
 
 describe('Chat API Tests', () => {
-  let client: OctoPromptClient
+  let client: PromptlianoClient
   let testChats: Chat[] = []
   let testMessages: ChatMessage[] = []
 
   beforeAll(() => {
     console.log('Starting Chat API Tests...')
-    client = createOctoPromptClient({ baseUrl: BASE_URL })
+    client = createPromptlianoClient({ baseUrl: BASE_URL })
   })
 
   afterAll(async () => {
@@ -32,7 +32,7 @@ describe('Chat API Tests', () => {
       try {
         await client.chats.deleteChat(chat.id)
       } catch (err) {
-        if (err instanceof OctoPromptError && err.statusCode === 404) {
+        if (err instanceof PromptlianoError && err.statusCode === 404) {
           // Already deleted
         } else {
           console.error(`Failed to delete chat ${chat.id}:`, err)
@@ -118,7 +118,7 @@ describe('Chat API Tests', () => {
       expect(result.data.updated).toBe(updatedChat.updated)
     } catch (error) {
       // If we get a 404, log the error and check if the chat still exists in the list
-      if (error instanceof OctoPromptError && error.statusCode === 404) {
+      if (error instanceof PromptlianoError && error.statusCode === 404) {
         console.warn(`Chat ${updatedChat.id} not found, checking if it exists in list...`)
 
         // Re-fetch the chat list to see if our chat still exists
@@ -175,7 +175,7 @@ describe('Chat API Tests', () => {
       expect(receivedText.length).toBeGreaterThan(0)
     } catch (error) {
       if (
-        error instanceof OctoPromptError &&
+        error instanceof PromptlianoError &&
         (error.statusCode === 503 || error.message.includes('Failed to get model interface'))
       ) {
         console.warn('AI Service unavailable, skipping full stream content verification.')
@@ -308,8 +308,8 @@ describe('Chat API Tests', () => {
       await client.chats.getChat(chatToDelete.id)
       expect(true).toBe(false)
     } catch (error) {
-      expect(error).toBeInstanceOf(OctoPromptError)
-      if (error instanceof OctoPromptError) {
+      expect(error).toBeInstanceOf(PromptlianoError)
+      if (error instanceof PromptlianoError) {
         expect(error.statusCode).toBe(404)
       }
     }

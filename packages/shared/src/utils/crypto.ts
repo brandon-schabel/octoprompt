@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer'
-import { encryptionKeyStorage } from '@octoprompt/storage'
+import { encryptionKeyStorage } from '@promptliano/storage'
 
 const KEY_LENGTH = 32 // 256 bits
 const IV_LENGTH = 16 // 128 bits

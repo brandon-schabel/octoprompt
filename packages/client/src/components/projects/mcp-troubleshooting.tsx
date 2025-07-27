@@ -106,9 +106,9 @@ export function MCPTroubleshooting({ platform, showGeneral = true }: MCPTroubles
               <AccordionContent className='space-y-4'>
                 <Alert>
                   <AlertCircle className='h-4 w-4' />
-                  <AlertTitle>OctoPrompt Server Not Running</AlertTitle>
+                  <AlertTitle>Promptliano Server Not Running</AlertTitle>
                   <AlertDescription>
-                    Ensure the OctoPrompt server is running on port 3147. Start it with `npm run dev` in the project
+                    Ensure the Promptliano server is running on port 3147. Start it with `npm run dev` in the project
                     root.
                   </AlertDescription>
                 </Alert>
@@ -125,7 +125,7 @@ export function MCPTroubleshooting({ platform, showGeneral = true }: MCPTroubles
                   <CheckCircle2 className='h-4 w-4' />
                   <AlertTitle>Verify Installation</AlertTitle>
                   <AlertDescription>
-                    After installation, look for the green connection indicator in OctoPrompt's project settings.
+                    After installation, look for the green connection indicator in Promptliano's project settings.
                   </AlertDescription>
                 </Alert>
               </AccordionContent>
@@ -179,7 +179,7 @@ export function MCPTroubleshooting({ platform, showGeneral = true }: MCPTroubles
                   <div>
                     <p className='font-medium'>Test MCP Commands</p>
                     <p className='text-sm text-muted-foreground'>
-                      Try using an OctoPrompt command in your AI tool to verify the connection
+                      Try using an Promptliano command in your AI tool to verify the connection
                     </p>
                   </div>
                 </div>
@@ -189,7 +189,7 @@ export function MCPTroubleshooting({ platform, showGeneral = true }: MCPTroubles
                   <div>
                     <p className='font-medium'>Check Configuration File</p>
                     <p className='text-sm text-muted-foreground'>
-                      Verify the configuration file contains the OctoPrompt server entry
+                      Verify the configuration file contains the Promptliano server entry
                     </p>
                   </div>
                 </div>

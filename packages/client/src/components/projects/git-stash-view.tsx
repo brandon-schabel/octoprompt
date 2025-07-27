@@ -25,7 +25,7 @@ import {
   useGitStashDrop,
   useProjectGitStatus
 } from '@/hooks/api/use-git-api'
-import type { GitStash } from '@octoprompt/schemas'
+import type { GitStash } from '@promptliano/schemas'
 
 interface GitStashViewProps {
   projectId: number
@@ -46,16 +46,14 @@ export function GitStashView({ projectId }: GitStashViewProps) {
   const stashList = stashResponse?.data || []
   const hasChanges =
     gitStatus?.success && gitStatus.data.files.some((f) => f.status !== 'unchanged' && f.status !== 'ignored')
-  
+
   // Calculate stash statistics
-  const trackedChanges = gitStatus?.success 
-    ? gitStatus.data.files.filter(f => f.status !== 'unchanged' && f.status !== 'ignored' && f.status !== 'untracked')
+  const trackedChanges = gitStatus?.success
+    ? gitStatus.data.files.filter((f) => f.status !== 'unchanged' && f.status !== 'ignored' && f.status !== 'untracked')
     : []
-  const stagedCount = trackedChanges.filter(f => f.staged).length
-  const unstagedCount = trackedChanges.filter(f => !f.staged).length
-  const untrackedCount = gitStatus?.success
-    ? gitStatus.data.files.filter(f => f.status === 'untracked').length
-    : 0
+  const stagedCount = trackedChanges.filter((f) => f.staged).length
+  const unstagedCount = trackedChanges.filter((f) => !f.staged).length
+  const untrackedCount = gitStatus?.success ? gitStatus.data.files.filter((f) => f.status === 'untracked').length : 0
 
   const handleCreateStash = async () => {
     await createStash.mutateAsync(stashMessage || undefined)
@@ -144,7 +142,7 @@ export function GitStashView({ projectId }: GitStashViewProps) {
               )}
             </Button>
           </div>
-          
+
           {/* Stash Information */}
           {hasChanges ? (
             <div className='mt-3 space-y-2'>
@@ -154,17 +152,20 @@ export function GitStashView({ projectId }: GitStashViewProps) {
                   <p>Git stash will save all tracked changes (both staged and unstaged).</p>
                   {untrackedCount > 0 && (
                     <p className='text-amber-600 dark:text-amber-500'>
-                      Note: {untrackedCount} untracked file{untrackedCount !== 1 ? 's' : ''} will not be included in the stash.
+                      Note: {untrackedCount} untracked file{untrackedCount !== 1 ? 's' : ''} will not be included in the
+                      stash.
                     </p>
                   )}
                 </div>
               </div>
-              
+
               <div className='flex flex-wrap gap-3 text-sm'>
                 <div className='flex items-center gap-1.5'>
                   <FileText className='h-3.5 w-3.5' />
                   <span className='font-medium'>{trackedChanges.length}</span>
-                  <span className='text-muted-foreground'>file{trackedChanges.length !== 1 ? 's' : ''} will be stashed</span>
+                  <span className='text-muted-foreground'>
+                    file{trackedChanges.length !== 1 ? 's' : ''} will be stashed
+                  </span>
                 </div>
                 {stagedCount > 0 && (
                   <Badge variant='secondary' className='text-xs'>

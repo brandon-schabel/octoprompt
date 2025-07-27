@@ -3,10 +3,10 @@ import { join } from 'node:path'
 import { statSync } from 'node:fs'
 import { app } from './src/app'
 
-import { listProjects, getJobQueue, createLogger } from '@octoprompt/services'
-import { getServerConfig } from '@octoprompt/config'
-import { watchersManager, createCleanupService } from '@octoprompt/services'
-import { gitWorktreeHandlers } from '@octoprompt/services/src/job-handlers/git-worktree-handlers'
+import { listProjects, getJobQueue, createLogger } from '@promptliano/services'
+import { getServerConfig } from '@promptliano/config'
+import { watchersManager, createCleanupService } from '@promptliano/services'
+import { gitWorktreeHandlers } from '@promptliano/services/src/job-handlers/git-worktree-handlers'
 import { getWebSocketManager } from './src/services/websocket-manager'
 
 const logger = createLogger('Server')
@@ -165,7 +165,7 @@ if (import.meta.main) {
     // Check if we should start in MCP stdio mode
     if (args.includes('--mcp-stdio')) {
       // Import and start MCP stdio server directly
-      logger.info('Starting OctoPrompt MCP server in stdio mode...');
+      logger.info('Starting Promptliano MCP server in stdio mode...');
       if (process.platform === 'win32') {
         logger.info('Running on Windows - ensuring compatible stdio handling');
       }

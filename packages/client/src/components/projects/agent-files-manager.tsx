@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { octoClient } from '@/hooks/octo-client'
+import { promptlianoClient } from '@/hooks/promptliano-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -37,7 +37,7 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
   } = useQuery({
     queryKey: ['agent-files', projectId],
     queryFn: async () => {
-      const response = await octoClient.agentFiles.detectFiles(projectId)
+      const response = await promptlianoClient.agentFiles.detectFiles(projectId)
       return response.data
     }
   })
@@ -45,14 +45,14 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
   const { data: statusData } = useQuery({
     queryKey: ['agent-files-status', projectId],
     queryFn: async () => {
-      const response = await octoClient.agentFiles.getStatus(projectId)
+      const response = await promptlianoClient.agentFiles.getStatus(projectId)
       return response.data
     }
   })
 
   const updateMutation = useMutation({
     mutationFn: async (files?: { path: string; update: boolean }[]) => {
-      const response = await octoClient.agentFiles.updateFile(projectId, {
+      const response = await promptlianoClient.agentFiles.updateFile(projectId, {
         files
       })
       return response
@@ -146,7 +146,7 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
         <div className='flex items-center justify-between'>
           <div>
             <CardTitle>Agent Configuration Files</CardTitle>
-            <CardDescription>Manage OctoPrompt MCP instructions in your agent configuration files</CardDescription>
+            <CardDescription>Manage Promptliano MCP instructions in your agent configuration files</CardDescription>
           </div>
           <div className='flex items-center gap-2'>
             {needsUpdateCount > 0 && (

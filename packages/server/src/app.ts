@@ -1,6 +1,6 @@
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import { chatRoutes } from './routes/chat-routes'
 import { genAiRoutes } from './routes/gen-ai-routes'
 import { projectRoutes } from './routes/project-routes'
@@ -20,7 +20,7 @@ import { mcpProjectConfigApp } from './routes/mcp-project-config-routes'
 import { mcpGlobalConfigRoutes } from './routes/mcp-global-config-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
-import { getServerConfig, getRateLimitConfig } from '@octoprompt/config'
+import { getServerConfig, getRateLimitConfig } from '@promptliano/config'
 import { rateLimiter } from 'hono-rate-limiter'
 
 const serverConfig = getServerConfig()
@@ -33,7 +33,7 @@ const RATE_LIMIT_MAX_REQUESTS = rateLimitConfig.maxRequests
 const AI_RATE_LIMIT_WINDOW_MS = rateLimitConfig.aiWindowMs
 const AI_RATE_LIMIT_MAX_REQUESTS = rateLimitConfig.aiMaxRequests
 import { swaggerUI } from '@hono/swagger-ui'
-import { ApiErrorResponseSchema } from '@octoprompt/schemas'
+import { ApiErrorResponseSchema } from '@promptliano/schemas'
 
 // Helper to format Zod errors for more readable responses
 const formatZodErrors = (error: z.ZodError) => {
@@ -268,7 +268,7 @@ app.get('/swagger', swaggerUI({ url: '/doc' }))
 app.doc('/doc', {
   openapi: '3.1.1',
   info: {
-    description: 'OctoPrompt OpenAPI Server Spec',
+    description: 'Promptliano OpenAPI Server Spec',
     version: packageJson.version,
     title: packageJson.name
   }

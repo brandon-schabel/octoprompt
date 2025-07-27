@@ -18,8 +18,8 @@ import {
   summarizeFiles,
   type FileSyncData
 } from './project-service'
-import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody } from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody } from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 import { z } from 'zod'
 
 // Set test environment to use in-memory database
@@ -88,7 +88,7 @@ const randomString = (length = 8) =>
 describe('Project Service (File Storage)', () => {
   beforeEach(async () => {
     // Reset the database manager before each test
-    const { DatabaseManager } = await import('@octoprompt/storage')
+    const { DatabaseManager } = await import('@promptliano/storage')
     DatabaseManager.reset()
 
     // Get a fresh instance and clear all data
@@ -102,7 +102,7 @@ describe('Project Service (File Storage)', () => {
 
   afterEach(async () => {
     // Clean up after each test
-    const { DatabaseManager } = await import('@octoprompt/storage')
+    const { DatabaseManager } = await import('@promptliano/storage')
     const db = DatabaseManager.getInstance()
     await db.clearAllTables()
     DatabaseManager.reset()

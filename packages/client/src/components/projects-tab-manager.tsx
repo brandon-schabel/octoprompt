@@ -6,7 +6,7 @@ import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
 import { Input } from '@ui'
 import { Badge } from '@ui'
-import { OctoTooltip } from './octo/octo-tooltip'
+import { PromptlianoTooltip } from './promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from './app-shortcut-display'
 import { LinkIcon, Plus, Pencil, Trash2, Settings } from 'lucide-react'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
@@ -26,7 +26,7 @@ import { useGetProjects, useGetProjectFiles } from '@/hooks/api/use-projects-api
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { useGenerateTabName } from '@/hooks/api/use-tab-naming'
 import { Sparkles } from 'lucide-react'
-import type { ProjectFile } from '@octoprompt/schemas'
+import type { ProjectFile } from '@promptliano/schemas'
 
 export type ProjectsTabManagerProps = {
   className?: string
@@ -52,7 +52,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
 
   const scrollableTabsRef = useRef<HTMLDivElement>(null)
   const [showFade, setShowFade] = useState(false)
-  
+
   const generateTabNameMutation = useGenerateTabName()
 
   const calculateInitialOrder = (): number[] => {
@@ -162,10 +162,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
 
   const handleCreateTab = async () => {
     const newTabId = createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
-    
+
     // Auto-generate name for the new tab
     if (projectId && projects?.data) {
-      const project = projects.data.find(p => p.id === projectId)
+      const project = projects.data.find((p) => p.id === projectId)
       if (project) {
         try {
           const generatedName = await generateTabNameMutation.mutateAsync({
@@ -173,8 +173,8 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
             selectedFiles: [],
             context: undefined
           })
-          
-          updateProjectTabById(newTabId, { 
+
+          updateProjectTabById(newTabId, {
             displayName: generatedName,
             nameGenerationStatus: 'success',
             nameGeneratedAt: new Date()
@@ -222,34 +222,35 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     setDialogEditingTab(null)
     setDialogEditingName('')
   }
-  
+
   const handleGenerateTabName = async (tabId: number, projectFiles?: ProjectFile[]) => {
     const tabData = tabs?.[tabId]
     if (!tabData) return
-    
-    const project = projects?.data.find(p => p.id === tabData.selectedProjectId)
+
+    const project = projects?.data.find((p) => p.id === tabData.selectedProjectId)
     if (!project) return
-    
+
     try {
       // Get file names from the selected file IDs
-      const selectedFileNames = tabData.selectedFiles?.map(fileId => {
-        const file = projectFiles?.find(f => f.id === fileId)
-        return file?.path || file?.name || `file_${fileId}`
-      }) || []
-      
+      const selectedFileNames =
+        tabData.selectedFiles?.map((fileId) => {
+          const file = projectFiles?.find((f) => f.id === fileId)
+          return file?.path || file?.name || `file_${fileId}`
+        }) || []
+
       const generatedName = await generateTabNameMutation.mutateAsync({
         projectName: project.name,
         selectedFiles: selectedFileNames,
         context: tabData.userPrompt || undefined
       })
-      
-      updateProjectTabById(tabId, { 
+
+      updateProjectTabById(tabId, {
         displayName: generatedName,
         nameGenerationStatus: 'success',
         nameGeneratedAt: new Date()
       })
       toast.success('Tab name generated')
-      
+
       // If we're in editing mode, update the dialog
       if (dialogEditingTab === tabId) {
         setDialogEditingName(generatedName)
@@ -317,7 +318,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
           <TabsList className='h-auto bg-background justify-start rounded-none p-1'>
             <div className='text-xs lg:text-sm px-2 font-semibold flex items-center gap-1 mr-2 whitespace-nowrap'>
               Project Tabs
-              <OctoTooltip>{titleTooltipContent}</OctoTooltip>
+              <PromptlianoTooltip>{titleTooltipContent}</PromptlianoTooltip>
               <Button
                 variant='ghost'
                 size='icon'
@@ -445,7 +446,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                           <Pencil className='h-3.5 w-3.5' />
                         </Button>
                       )}
-                      
+
                       <Button
                         variant='ghost'
                         size='icon'

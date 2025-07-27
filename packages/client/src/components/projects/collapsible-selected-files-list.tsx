@@ -3,7 +3,7 @@ import { Badge } from '@ui'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { OctoTooltip } from '@/components/octo/octo-tooltip'
+import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { SelectedFilesList, SelectedFilesListRef } from './selected-files-list'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
@@ -47,7 +47,7 @@ export const CollapsibleSelectedFilesList = forwardRef<SelectedFilesListRef, Col
                   {isCollapsed && selectedFiles.length > 0 && (
                     <span className='text-xs text-muted-foreground'>({selectedFiles.length} selected)</span>
                   )}
-                  <OctoTooltip>
+                  <PromptlianoTooltip>
                     <div>
                       Selected files will be included with your prompt.
                       <ul className='mt-2 list-disc list-inside'>
@@ -61,7 +61,7 @@ export const CollapsibleSelectedFilesList = forwardRef<SelectedFilesListRef, Col
                         </li>
                       </ul>
                     </div>
-                  </OctoTooltip>
+                  </PromptlianoTooltip>
                 </div>
               </div>
             </div>

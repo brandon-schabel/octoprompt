@@ -1,11 +1,11 @@
 import { SelectedFilesListRef } from '../../selected-files-list'
 import { SelectedFilesList } from '../../selected-files-list'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
-import { OctoTooltip } from '@/components/octo/octo-tooltip'
+import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
 import { Badge } from '@ui'
 import { ScrollArea } from '@ui'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { ProjectFileMap } from '@octoprompt/schemas'
+import { ProjectFileMap } from '@promptliano/schemas'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type SelectedFilesSidebarProps = {
@@ -27,7 +27,7 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
         <div className='flex text-sm font-medium items-center space-x-2'>
           <Badge variant='secondary'>{selectedFiles.length}</Badge>
           <span>Selected Files</span>
-          <OctoTooltip>
+          <PromptlianoTooltip>
             Selected files will be included with your prompt.
             <ul className='mt-2 list-disc list-inside'>
               <li>
@@ -41,7 +41,7 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
                 Press <ShortcutDisplay shortcut={['mod', 'b']} /> to show/hide this panel.
               </li>
             </ul>
-          </OctoTooltip>
+          </PromptlianoTooltip>
         </div>
       </div>
       <ScrollArea className='flex-1 min-h-0 border rounded-md' type='auto'>

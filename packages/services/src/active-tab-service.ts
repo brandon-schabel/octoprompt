@@ -1,6 +1,6 @@
-import { ApiError } from '@octoprompt/shared'
-import { type ActiveTab, type ActiveTabData, type UpdateActiveTabBody, activeTabSchema } from '@octoprompt/schemas'
-import { activeTabStorage } from '@octoprompt/storage'
+import { ApiError } from '@promptliano/shared'
+import { type ActiveTab, type ActiveTabData, type UpdateActiveTabBody, activeTabSchema } from '@promptliano/schemas'
+import { activeTabStorage } from '@promptliano/storage'
 import { getProjectById } from './project-service'
 
 /**

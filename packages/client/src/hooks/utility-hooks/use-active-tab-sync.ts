@@ -2,8 +2,8 @@ import { useEffect, useCallback, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useGetActiveProjectTabId, useProjectTabById } from '@/hooks/use-kv-local-storage'
 import { useDebounceCallback } from './use-debounce'
-import { octoClient } from '../octo-client'
-import type { ProjectTabState } from '@octoprompt/schemas'
+import { promptlianoClient } from '../promptliano-client'
+import type { ProjectTabState } from '@promptliano/schemas'
 
 export function useActiveTabSync(projectId: number | undefined) {
   const [activeTabId] = useGetActiveProjectTabId()
@@ -44,7 +44,7 @@ export function useActiveTabSync(projectId: number | undefined) {
     queryKey: ['activeTab', projectId],
     queryFn: async () => {
       if (!projectId || projectId === -1) return null
-      const response = await octoClient.projects.getActiveTab(projectId)
+      const response = await promptlianoClient.projects.getActiveTab(projectId)
       return response.data
     },
     enabled: !!projectId && projectId !== -1,
@@ -64,7 +64,7 @@ export function useActiveTabSync(projectId: number | undefined) {
       tabId: number
       tabMetadata?: ReturnType<typeof getTabMetadata>
     }) => {
-      return await octoClient.projects.setActiveTab(projectId, { tabId, tabMetadata })
+      return await promptlianoClient.projects.setActiveTab(projectId, { tabId, tabMetadata })
     },
     onSuccess: () => {
       // Invalidate queries to refresh data
@@ -136,7 +136,7 @@ export function useActiveTabSync(projectId: number | undefined) {
   // Function to clear active tab
   const clearActiveTab = useMutation({
     mutationFn: async (projectId: number) => {
-      return await octoClient.projects.clearActiveTab(projectId)
+      return await promptlianoClient.projects.clearActiveTab(projectId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activeTab', projectId] })

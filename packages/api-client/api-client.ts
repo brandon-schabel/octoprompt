@@ -1,13 +1,13 @@
 import { z } from 'zod'
 
 // Import only the actual types we need (not response schemas)
-import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage } from '@octoprompt/schemas'
+import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage } from '@promptliano/schemas'
 
-import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody, ProjectStatistics } from '@octoprompt/schemas'
+import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody, ProjectStatistics } from '@promptliano/schemas'
 
-import type { CreatePromptBody, UpdatePromptBody, OptimizePromptRequest, Prompt } from '@octoprompt/schemas'
+import type { CreatePromptBody, UpdatePromptBody, OptimizePromptRequest, Prompt } from '@promptliano/schemas'
 
-import type { CreateProviderKeyBody, ProviderKey, UpdateProviderKeyBody } from '@octoprompt/schemas'
+import type { CreateProviderKeyBody, ProviderKey, UpdateProviderKeyBody } from '@promptliano/schemas'
 
 // Import the actual schemas for validation
 import {
@@ -19,7 +19,7 @@ import {
   ForkChatBodySchema,
   ForkChatFromMessageBodySchema,
   AiChatStreamRequestSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import {
   ProjectResponseSchema as ProjectResponseSchemaZ,
@@ -32,7 +32,7 @@ import {
   CreateProjectBodySchema,
   UpdateProjectBodySchema,
   RefreshQuerySchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import {
   PromptResponseSchema as PromptResponseSchemaZ,
@@ -43,19 +43,19 @@ import {
   CreatePromptBodySchema,
   UpdatePromptBodySchema,
   OptimizeUserInputRequestSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import {
   ProviderKeyResponseSchema as ProviderKeyResponseSchemaZ,
   ProviderKeyListResponseSchema as ProviderKeyListResponseSchemaZ,
   CreateProviderKeyBodySchema,
   UpdateProviderKeyBodySchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import {
   OperationSuccessResponseSchema as OperationSuccessResponseSchemaZ,
   ApiErrorResponseSchema as ApiErrorResponseSchemaZ
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import {
   AiGenerateTextRequestSchema,
@@ -65,11 +65,11 @@ import {
   ModelsListResponseSchema,
   type AiGenerateTextRequest,
   type UnifiedModel
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 // Browse Directory imports
-import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@octoprompt/schemas'
-import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@octoprompt/schemas'
+import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@promptliano/schemas'
+import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@promptliano/schemas'
 
 // MCP imports
 import type {
@@ -81,7 +81,7 @@ import type {
   MCPResource,
   MCPToolExecutionRequest,
   MCPToolExecutionResult
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import {
   CreateMCPServerConfigBodySchema,
   UpdateMCPServerConfigBodySchema,
@@ -92,7 +92,7 @@ import {
   MCPToolExecutionRequestSchema,
   MCPToolExecutionResultResponseSchema,
   MCPServerStateSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 // Ticket imports
 import type {
@@ -105,7 +105,7 @@ import type {
   TicketTask,
   TicketWithTasks,
   TicketWithTaskCount
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import {
   CreateTicketBodySchema,
   UpdateTicketBodySchema,
@@ -119,7 +119,7 @@ import {
   SuggestTasksBodySchema,
   TicketSuggestFilesBodySchema,
   SuggestFilesBodySchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 // Git imports
 import type {
@@ -146,7 +146,7 @@ import type {
   GitWorktreeLockRequest,
   GitWorktreePruneRequest,
   GitWorktreePruneResponse
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import {
   getProjectGitStatusResponseSchema,
@@ -177,7 +177,7 @@ import {
   gitWorktreeLockRequestSchema,
   gitWorktreePruneRequestSchema,
   gitWorktreePruneResponseSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 // MCP Analytics imports
 import type {
@@ -188,7 +188,7 @@ import type {
   MCPToolStatistics,
   MCPExecutionTimeline,
   MCPToolPattern
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import {
   mcpExecutionQuerySchema,
@@ -198,7 +198,7 @@ import {
   mcpToolStatisticsSchema,
   mcpExecutionTimelineSchema,
   mcpToolPatternSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 export type DataResponseSchema<T> = {
   success: boolean
@@ -206,7 +206,7 @@ export type DataResponseSchema<T> = {
 }
 
 // Custom error class for API errors
-export class OctoPromptError extends Error {
+export class PromptlianoError extends Error {
   constructor(
     message: string,
     public readonly statusCode?: number,
@@ -214,7 +214,7 @@ export class OctoPromptError extends Error {
     public readonly details?: any
   ) {
     super(message)
-    this.name = 'OctoPromptError'
+    this.name = 'PromptlianoError'
   }
 }
 
@@ -250,7 +250,7 @@ class BaseApiClient {
       this.customFetch =
         typeof window !== 'undefined' && window.fetch
           ? // @ts-ignore
-            window.fetch.bind(window)
+          window.fetch.bind(window)
           : fetch
     }
   }
@@ -295,20 +295,20 @@ class BaseApiClient {
       try {
         responseData = JSON.parse(responseText)
       } catch (e) {
-        throw new OctoPromptError(`Invalid JSON response: ${responseText}`, response.status)
+        throw new PromptlianoError(`Invalid JSON response: ${responseText}`, response.status)
       }
 
       // Handle error responses
       if (!response.ok) {
         if (responseData?.error) {
-          throw new OctoPromptError(
+          throw new PromptlianoError(
             responseData.error.message || 'Unknown error',
             response.status,
             responseData.error.code,
             responseData.error.details
           )
         }
-        throw new OctoPromptError(`HTTP ${response.status}: ${response.statusText}`, response.status)
+        throw new PromptlianoError(`HTTP ${response.status}: ${response.statusText}`, response.status)
       }
 
       // Validate response if schema provided
@@ -317,7 +317,7 @@ class BaseApiClient {
           return options.responseSchema.parse(responseData)
         } catch (e) {
           if (e instanceof z.ZodError) {
-            throw new OctoPromptError(
+            throw new PromptlianoError(
               `Response validation failed: ${e.message}`,
               undefined,
               'VALIDATION_ERROR',
@@ -330,14 +330,14 @@ class BaseApiClient {
 
       return responseData as TResponse
     } catch (e) {
-      if (e instanceof OctoPromptError) throw e
+      if (e instanceof PromptlianoError) throw e
       if (e instanceof Error) {
         if (e.name === 'AbortError') {
-          throw new OctoPromptError('Request timeout', undefined, 'TIMEOUT')
+          throw new PromptlianoError('Request timeout', undefined, 'TIMEOUT')
         }
-        throw new OctoPromptError(`Request failed: ${e.message}`)
+        throw new PromptlianoError(`Request failed: ${e.message}`)
       }
-      throw new OctoPromptError('Unknown error occurred')
+      throw new PromptlianoError('Unknown error occurred')
     }
   }
 
@@ -347,7 +347,7 @@ class BaseApiClient {
       return schema.parse(data)
     } catch (e) {
       if (e instanceof z.ZodError) {
-        throw new OctoPromptError(`Request validation failed: ${e.message}`, undefined, 'VALIDATION_ERROR', e.errors)
+        throw new PromptlianoError(`Request validation failed: ${e.message}`, undefined, 'VALIDATION_ERROR', e.errors)
       }
       throw e
     }
@@ -461,34 +461,34 @@ export class ChatService extends BaseApiClient {
         try {
           errorData = JSON.parse(errorText)
         } catch (e) {
-          throw new OctoPromptError(`Stream request failed: ${response.status}`, response.status)
+          throw new PromptlianoError(`Stream request failed: ${response.status}`, response.status)
         }
 
         if (errorData?.error) {
-          throw new OctoPromptError(
+          throw new PromptlianoError(
             errorData.error.message || 'Stream request failed',
             response.status,
             errorData.error.code,
             errorData.error.details
           )
         }
-        throw new OctoPromptError(`Stream request failed: ${response.status}`, response.status)
+        throw new PromptlianoError(`Stream request failed: ${response.status}`, response.status)
       }
 
       if (!response.body) {
-        throw new OctoPromptError('No response body for stream')
+        throw new PromptlianoError('No response body for stream')
       }
 
       return response.body
     } catch (e) {
-      if (e instanceof OctoPromptError) throw e
+      if (e instanceof PromptlianoError) throw e
       if (e instanceof Error) {
         if (e.name === 'AbortError') {
-          throw new OctoPromptError('Stream request timeout', undefined, 'TIMEOUT')
+          throw new PromptlianoError('Stream request timeout', undefined, 'TIMEOUT')
         }
-        throw new OctoPromptError(`Stream request failed: ${e.message}`)
+        throw new PromptlianoError(`Stream request failed: ${e.message}`)
       }
-      throw new OctoPromptError('Unknown error occurred during stream request')
+      throw new PromptlianoError('Unknown error occurred during stream request')
     }
   }
 }
@@ -801,7 +801,7 @@ export class ProjectService extends BaseApiClient {
       }).optional(),
       existingNames: z.array(z.string()).optional()
     }), data)
-    
+
     const result = await this.request('POST', `/project-tabs/${tabId}/generate-name`, {
       body: validatedData,
       responseSchema: z.object({
@@ -1036,23 +1036,23 @@ export class GenAiService extends BaseApiClient {
 
       if (!response.ok) {
         const errorText = await response.text()
-        throw new OctoPromptError(`Stream request failed: ${response.status}`, response.status)
+        throw new PromptlianoError(`Stream request failed: ${response.status}`, response.status)
       }
 
       if (!response.body) {
-        throw new OctoPromptError('No response body for stream')
+        throw new PromptlianoError('No response body for stream')
       }
 
       return response.body
     } catch (e) {
-      if (e instanceof OctoPromptError) throw e
+      if (e instanceof PromptlianoError) throw e
       if (e instanceof Error) {
         if (e.name === 'AbortError') {
-          throw new OctoPromptError('Stream request timeout', undefined, 'TIMEOUT')
+          throw new PromptlianoError('Stream request timeout', undefined, 'TIMEOUT')
         }
-        throw new OctoPromptError(`Stream request failed: ${e.message}`)
+        throw new PromptlianoError(`Stream request failed: ${e.message}`)
       }
-      throw new OctoPromptError('Unknown error occurred during stream request')
+      throw new PromptlianoError('Unknown error occurred during stream request')
     }
   }
 }
@@ -2133,7 +2133,7 @@ export class MCPInstallationService extends BaseApiClient {
             installed: z.boolean(),
             configPath: z.string().optional(),
             configExists: z.boolean().optional(),
-            hasOctoPrompt: z.boolean().optional()
+            hasPromptliano: z.boolean().optional()
           })),
           platform: z.string()
         })
@@ -2434,7 +2434,7 @@ export class MCPGlobalConfigService extends BaseApiClient {
             tool: z.string(),
             name: z.string(),
             installed: z.boolean(),
-            hasGlobalOctoPrompt: z.boolean(),
+            hasGlobalPromptliano: z.boolean(),
             configPath: z.string().optional()
           }))
         })
@@ -2452,7 +2452,7 @@ export class MCPGlobalConfigService extends BaseApiClient {
         tool: string
         name: string
         installed: boolean
-        hasGlobalOctoPrompt: boolean
+        hasGlobalPromptliano: boolean
         configPath?: string
       }>
     }>
@@ -2531,8 +2531,8 @@ export class MCPGlobalConfigService extends BaseApiClient {
   }
 }
 
-// Main OctoPrompt Client
-export class OctoPromptClient {
+// Main Promptliano Client
+export class PromptlianoClient {
   public readonly chats: ChatService
   public readonly projects: ProjectService
   public readonly prompts: PromptService
@@ -2569,13 +2569,13 @@ export class OctoPromptClient {
 }
 
 // Factory function for creating client
-export function createOctoPromptClient(config: ApiConfig): OctoPromptClient {
-  return new OctoPromptClient(config)
+export function createPromptlianoClient(config: ApiConfig): PromptlianoClient {
+  return new PromptlianoClient(config)
 }
 
 // Example usage:
 /*
-const client = createOctoPromptClient({
+const client = createPromptlianoClient({
   baseUrl: 'http://localhost:3000',
   timeout: 30000,
   headers: {
@@ -2620,7 +2620,7 @@ try {
   }
 
 } catch (error) {
-  if (error instanceof OctoPromptError) {
+  if (error instanceof PromptlianoError) {
     console.error('API Error:', error.message)
     console.error('Status:', error.statusCode)
     console.error('Error Code:', error.errorCode)

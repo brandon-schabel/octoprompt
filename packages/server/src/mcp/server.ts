@@ -10,7 +10,7 @@ import {
   CallToolResult,
   ReadResourceResult
 } from '@modelcontextprotocol/sdk/types.js'
-import { listProjects, getProjectCompactSummary } from '@octoprompt/services'
+import { listProjects, getProjectCompactSummary } from '@promptliano/services'
 import { CONSOLIDATED_TOOLS } from './consolidated-tools'
 
 // MCP Server instance - singleton
@@ -23,7 +23,7 @@ export function getMCPServer(): Server {
   if (!mcpServer) {
     mcpServer = new Server(
       {
-        name: 'octoprompt-mcp',
+        name: 'promptliano-mcp',
         version: '1.0.0'
       },
       {
@@ -97,9 +97,9 @@ function registerResources(server: Server) {
 
       // Add a general projects list resource
       resources.push({
-        uri: 'octoprompt://projects',
+        uri: 'promptliano://projects',
         name: 'All Projects',
-        description: 'List of all available projects in OctoPrompt',
+        description: 'List of all available projects in Promptliano',
         mimeType: 'application/json'
       })
 
@@ -107,7 +107,7 @@ function registerResources(server: Server) {
       for (const project of projects) {
         // Project summary resource
         resources.push({
-          uri: `octoprompt://project/${project.id}/summary`,
+          uri: `promptliano://project/${project.id}/summary`,
           name: `${project.name} Summary`,
           description: `Compact summary of ${project.name} project structure and content`,
           mimeType: 'text/plain'
@@ -115,7 +115,7 @@ function registerResources(server: Server) {
 
         // Project files resource
         resources.push({
-          uri: `octoprompt://project/${project.id}/files`,
+          uri: `promptliano://project/${project.id}/files`,
           name: `${project.name} Files`,
           description: `List of files in ${project.name} project`,
           mimeType: 'application/json'
@@ -134,7 +134,7 @@ function registerResources(server: Server) {
 
     try {
       // Handle projects list
-      if (uri === 'octoprompt://projects') {
+      if (uri === 'promptliano://projects') {
         const projects = await listProjects()
         return {
           contents: [
@@ -148,7 +148,7 @@ function registerResources(server: Server) {
       }
 
       // Handle project summary
-      const summaryMatch = uri.match(/^octoprompt:\/\/project\/(\d+)\/summary$/)
+      const summaryMatch = uri.match(/^promptliano:\/\/project\/(\d+)\/summary$/)
       if (summaryMatch) {
         const projectId = parseInt(summaryMatch[1], 10)
         const summary = await getProjectCompactSummary(projectId)
@@ -165,10 +165,10 @@ function registerResources(server: Server) {
       }
 
       // Handle project files list
-      const filesMatch = uri.match(/^octoprompt:\/\/project\/(\d+)\/files$/)
+      const filesMatch = uri.match(/^promptliano:\/\/project\/(\d+)\/files$/)
       if (filesMatch) {
         const projectId = parseInt(filesMatch[1], 10)
-        const { getProjectFiles } = await import('@octoprompt/services')
+        const { getProjectFiles } = await import('@promptliano/services')
         const files = await getProjectFiles(projectId)
 
         return {

@@ -1,9 +1,9 @@
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import { getProjectById, getProjectFiles } from './project-service'
 import { listTicketsByProject, getTasks } from './ticket-service'
 import { listPromptsByProject } from './prompt-service'
-import { type Ticket } from '@octoprompt/schemas'
-import { MAX_FILE_SIZE_FOR_SUMMARY } from '@octoprompt/config'
+import { type Ticket } from '@promptliano/schemas'
+import { MAX_FILE_SIZE_FOR_SUMMARY } from '@promptliano/config'
 
 export interface ProjectStatistics {
   // File Statistics

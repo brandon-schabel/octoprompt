@@ -1,6 +1,6 @@
-import { ProjectFile, Ticket } from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
-import { DatabaseManager } from '@octoprompt/storage'
+import { ProjectFile, Ticket } from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
+import { DatabaseManager } from '@promptliano/storage'
 import type { Database, Statement } from 'bun:sqlite'
 import { getProjectFiles } from './project-service'
 import { fileIndexingService } from './file-indexing-service'
@@ -194,7 +194,7 @@ export class FileSearchService {
     // Extract keywords from ticket
     const ticketText = `${ticket.title} ${ticket.overview || ''}`
     const keywords = this.extractQueryKeywords(ticketText)
-    
+
     // Build search query from keywords
     const searchOptions: SearchOptions = {
       query: keywords.join(' '),

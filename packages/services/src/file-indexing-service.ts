@@ -1,6 +1,6 @@
-import { ProjectFile } from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
-import { DatabaseManager } from '@octoprompt/storage'
+import { ProjectFile } from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
+import { DatabaseManager } from '@promptliano/storage'
 import type { Database, Statement } from 'bun:sqlite'
 
 /**

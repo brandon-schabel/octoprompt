@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { ChatSchema, ChatMessageSchema, type Chat, type ChatMessage } from '@octoprompt/schemas'
-import { normalizeToUnixMs } from '@octoprompt/shared/src/utils/parse-timestamp'
+import { ChatSchema, ChatMessageSchema, type Chat, type ChatMessage } from '@promptliano/schemas'
+import { normalizeToUnixMs } from '@promptliano/shared/src/utils/parse-timestamp'
 import { DatabaseManager, getDb } from './database-manager'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 
 // Table names for database storage
 const CHATS_TABLE = 'chats'

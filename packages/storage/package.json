@@ -1,5 +1,5 @@
 {
-  "name": "@octoprompt/storage",
+  "name": "@promptliano/storage",
   "version": "0.8.0",
   "module": "index.ts",
   "type": "module",

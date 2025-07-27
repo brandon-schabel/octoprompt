@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { Pencil, Trash2, Icon } from 'lucide-react'
 import { tab } from '@lucide/lab'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
-import { ProjectResponse } from '@octoprompt/schemas'
+import { ProjectResponse } from '@promptliano/schemas'
 import {
   useActiveProjectTab,
   useDeleteProjectTabById,

@@ -1,6 +1,6 @@
 import { MCPClient, type MCPClientState } from './mcp-client'
-import type { MCPServerConfig, MCPServerState, MCPTool, MCPResource } from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+import type { MCPServerConfig, MCPServerState, MCPTool, MCPResource } from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 
 export interface MCPClientManagerOptions {
   onServerStateChange?: (serverId: number, state: MCPClientState) => void

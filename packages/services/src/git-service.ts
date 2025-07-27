@@ -29,9 +29,9 @@ import type {
   GitFileDiff,
   GitCommitDetailResponse,
   GitWorktree
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import { getProjectById } from './project-service'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import path from 'path'
 import { retryOperation } from './utils/retry-operation'
 import { createLogger } from './utils/logger'
@@ -593,7 +593,7 @@ export async function getCommitLog(
 
     // Use simple-git's log method with built-in options
     // Pass branch as first argument if specified
-    const logResult = options?.branch 
+    const logResult = options?.branch
       ? await git.log([options.branch], logOptions)
       : await git.log(logOptions)
 
@@ -1451,12 +1451,12 @@ export async function getWorktrees(projectId: number): Promise<GitWorktree[]> {
 
     // Get worktrees using porcelain format for easier parsing
     const worktreeList = await git.raw(['worktree', 'list', '--porcelain'])
-    
+
     const worktrees: GitWorktree[] = []
     const lines = worktreeList.split('\n')
-    
+
     let currentWorktree: Partial<GitWorktree> = {}
-    
+
     for (const line of lines) {
       if (!line.trim()) {
         // Empty line indicates end of worktree entry
@@ -1474,10 +1474,10 @@ export async function getWorktrees(projectId: number): Promise<GitWorktree[]> {
         }
         continue
       }
-      
+
       const [key, ...valueParts] = line.split(' ')
       const value = valueParts.join(' ')
-      
+
       switch (key) {
         case 'worktree':
           currentWorktree.path = value
@@ -1506,7 +1506,7 @@ export async function getWorktrees(projectId: number): Promise<GitWorktree[]> {
           break
       }
     }
-    
+
     // Add the last worktree if exists
     if (currentWorktree.path) {
       worktrees.push({
@@ -1519,7 +1519,7 @@ export async function getWorktrees(projectId: number): Promise<GitWorktree[]> {
         prunable: currentWorktree.prunable
       })
     }
-    
+
     return worktrees
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1549,28 +1549,28 @@ export async function addWorktree(
 
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
-    
+
     // Resolve the worktree path to absolute
     const worktreePath = path.resolve(options.path)
-    
+
     const args = ['worktree', 'add']
-    
+
     // Add options
     if (options.newBranch) {
       args.push('-b', options.newBranch)
     } else if (options.detach) {
       args.push('--detach')
     }
-    
+
     args.push(worktreePath)
-    
+
     // Add branch/commit to checkout
     if (options.commitish) {
       args.push(options.commitish)
     } else if (options.branch && !options.newBranch) {
       args.push(options.branch)
     }
-    
+
     await git.raw(args)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1591,26 +1591,26 @@ export async function removeWorktree(projectId: number, worktreePath: string, fo
 
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
-    
+
     // Get current worktrees to validate
     const worktrees = await getWorktrees(projectId)
     const targetPath = path.resolve(worktreePath)
     const worktree = worktrees.find(w => path.resolve(w.path) === targetPath)
-    
+
     if (!worktree) {
       throw new ApiError(404, 'Worktree not found', 'WORKTREE_NOT_FOUND')
     }
-    
+
     if (worktree.isMain) {
       throw new ApiError(400, 'Cannot remove the main worktree', 'CANNOT_REMOVE_MAIN_WORKTREE')
     }
-    
+
     const args = ['worktree', 'remove']
     if (force) {
       args.push('--force')
     }
     args.push(targetPath)
-    
+
     await git.raw(args)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1631,15 +1631,15 @@ export async function lockWorktree(projectId: number, worktreePath: string, reas
 
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
-    
+
     const targetPath = path.resolve(worktreePath)
-    
+
     const args = ['worktree', 'lock']
     if (reason) {
       args.push('--reason', reason)
     }
     args.push(targetPath)
-    
+
     await git.raw(args)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1660,9 +1660,9 @@ export async function unlockWorktree(projectId: number, worktreePath: string): P
 
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
-    
+
     const targetPath = path.resolve(worktreePath)
-    
+
     await git.raw(['worktree', 'unlock', targetPath])
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1683,19 +1683,19 @@ export async function pruneWorktrees(projectId: number, dryRun: boolean = false)
 
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
-    
+
     const args = ['worktree', 'prune']
     if (dryRun) {
       args.push('--dry-run')
     }
     args.push('--verbose')
-    
+
     const result = await git.raw(args)
-    
+
     // Parse the output to get pruned worktree paths
     const prunedPaths: string[] = []
     const lines = result.split('\n').filter(Boolean)
-    
+
     for (const line of lines) {
       // Git outputs lines like "Removing worktrees/branch-name: gitdir file points to non-existent location"
       const match = line.match(/^Removing (.+?):|^Would remove (.+?):/)
@@ -1703,7 +1703,7 @@ export async function pruneWorktrees(projectId: number, dryRun: boolean = false)
         prunedPaths.push(match[1] || match[2])
       }
     }
-    
+
     return prunedPaths
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1728,22 +1728,22 @@ function getRelativeTime(dateString: string): string {
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
   if (seconds < 60) return `${seconds} second${seconds !== 1 ? 's' : ''} ago`
-  
+
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
-  
+
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
-  
+
   const days = Math.floor(hours / 24)
   if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`
-  
+
   const weeks = Math.floor(days / 7)
   if (weeks < 4) return `${weeks} week${weeks !== 1 ? 's' : ''} ago`
-  
+
   const months = Math.floor(days / 30)
   if (months < 12) return `${months} month${months !== 1 ? 's' : ''} ago`
-  
+
   const years = Math.floor(days / 365)
   return `${years} year${years !== 1 ? 's' : ''} ago`
 }
@@ -1753,11 +1753,11 @@ function getRelativeTime(dateString: string): string {
  */
 function parseRefs(refsString: string): string[] {
   if (!refsString) return []
-  
+
   // Remove HEAD -> prefix and split by comma
   const cleaned = refsString.replace(/HEAD\s*->\s*/, '')
   if (!cleaned) return []
-  
+
   return cleaned.split(',').map(ref => ref.trim()).filter(Boolean)
 }
 
@@ -1818,7 +1818,7 @@ export async function getCommitLogEnhanced(
     }
 
     // Get commit log - pass branch as first argument if specified
-    const logResult = request.branch 
+    const logResult = request.branch
       ? await git.log([request.branch], logOptions)
       : await git.log(logOptions)
     const allCommits = logResult.all
@@ -1992,7 +1992,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
     for (const [name, branch] of Object.entries(localBranches.branches)) {
       let latestCommit: any = null
       let authorDate: string | undefined
-      
+
       try {
         // Get the latest commit info for this branch
         const logResult = await git.log([name, '-1'], {
@@ -2004,13 +2004,13 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
             authorDate: '%aI'
           }
         })
-        
+
         latestCommit = logResult.latest
         authorDate = latestCommit?.authorDate
       } catch (error) {
         console.error(`Failed to get log for branch ${name}:`, error)
       }
-      
+
       // Fallback: use git show if log failed or no date
       if (!authorDate && branch.commit) {
         try {
@@ -2020,11 +2020,11 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
           logger.debug(`Failed to get date for commit ${branch.commit}`, err)
         }
       }
-      
+
       // Calculate ahead/behind relative to default branch
       let ahead = 0
       let behind = 0
-      
+
       if (name !== defaultBranch) {
         try {
           // Get ahead/behind counts
@@ -2034,7 +2034,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
             '--count',
             `${defaultBranch}...${name}`
           ])
-          
+
           const [behindStr, aheadStr] = revList.trim().split('\t')
           behind = parseInt(behindStr, 10) || 0
           ahead = parseInt(aheadStr, 10) || 0
@@ -2069,7 +2069,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
 
       let latestCommit: any = null
       let authorDate: string | undefined
-      
+
       try {
         // Get the latest commit info for this branch
         const logResult = await git.log([name, '-1'], {
@@ -2081,13 +2081,13 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
             authorDate: '%aI'
           }
         })
-        
+
         latestCommit = logResult.latest
         authorDate = latestCommit?.authorDate
       } catch (error) {
         console.error(`Failed to get log for remote branch ${name}:`, error)
       }
-      
+
       // Fallback: use git show if log failed or no date
       if (!authorDate && branch.commit) {
         try {
@@ -2221,19 +2221,19 @@ export async function getCommitDetail(
     let totalDeletions = 0
 
     const numstatLines = numstatResult.trim().split('\n').filter(Boolean)
-    
+
     for (const line of numstatLines) {
       const parts = line.split('\t')
       if (parts.length >= 3) {
         const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10) || 0
         const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10) || 0
         const filePath = parts[2]
-        
+
         // Determine file status
         let status: GitFileDiff['status'] = 'modified'
         let path = filePath
         let oldPath: string | undefined
-        
+
         // Handle renames (format: "oldname => newname" or "{oldname => newname}")
         if (filePath.includes('=>')) {
           const renameParts = filePath.match(/^(?:\{(.+?)\s*=>\s*(.+?)\}|(.+?)\s*=>\s*(.+))$/)

@@ -1,22 +1,22 @@
 import { describe, test, expect, beforeAll, beforeEach, afterAll } from 'bun:test'
 import { createProviderKeyService } from './provider-key-service'
-import { providerKeyStorage, encryptionKeyStorage } from '@octoprompt/storage'
-import type { ProviderKey } from '@octoprompt/schemas'
+import { providerKeyStorage, encryptionKeyStorage } from '@promptliano/storage'
+import type { ProviderKey } from '@promptliano/schemas'
 
 describe('Provider Key Service Encryption', () => {
   let service: ReturnType<typeof createProviderKeyService>
-  const originalEnv = process.env.OCTOPROMPT_ENCRYPTION_KEY
+  const originalEnv = process.env.PROMPTLIANO_ENCRYPTION_KEY
 
   beforeAll(() => {
     // Clear env and cache for tests
-    delete process.env.OCTOPROMPT_ENCRYPTION_KEY
+    delete process.env.PROMPTLIANO_ENCRYPTION_KEY
     encryptionKeyStorage.clearCache()
   })
-  
+
   afterAll(() => {
     // Restore original env if it existed
     if (originalEnv) {
-      process.env.OCTOPROMPT_ENCRYPTION_KEY = originalEnv
+      process.env.PROMPTLIANO_ENCRYPTION_KEY = originalEnv
     }
   })
 

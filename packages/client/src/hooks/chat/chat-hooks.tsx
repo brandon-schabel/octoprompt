@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useGetMessages, useCreateChat, useForkChat } from '@/hooks/api/use-chat-api'
-import { ForkChatRequestBody } from '@octoprompt/schemas'
+import { ForkChatRequestBody } from '@promptliano/schemas'
 
 export function useCreateChatHandler() {
   const createChatMutation = useCreateChat()

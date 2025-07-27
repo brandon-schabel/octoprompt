@@ -1,14 +1,14 @@
-import { providerKeyStorage } from '@octoprompt/storage'
+import { providerKeyStorage } from '@promptliano/storage'
 import {
   CreateProviderKeyInputSchema,
   type ProviderKey,
   ProviderKeySchema,
   type UpdateProviderKeyInput
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 import { z } from '@hono/zod-openapi'
-import { normalizeToUnixMs } from '@octoprompt/shared'
-import { encryptKey, decryptKey, isEncrypted, type EncryptedData } from '@octoprompt/shared/src/utils/crypto'
+import { normalizeToUnixMs } from '@promptliano/shared'
+import { encryptKey, decryptKey, isEncrypted, type EncryptedData } from '@promptliano/shared/src/utils/crypto'
 
 // The mapDbRowToProviderKey function is no longer needed as we store objects directly
 // that should conform to the ProviderKey schema.
@@ -51,7 +51,7 @@ export function createProviderKeyService() {
 
     // Encrypt the API key
     const encryptedData = await encryptKey(data.key)
-    
+
     const newKeyData: ProviderKey = {
       id,
       name: data.name,
@@ -155,7 +155,7 @@ export function createProviderKeyService() {
     if (!foundKeyData) {
       return null
     }
-    
+
     // Decrypt key if encrypted
     if (foundKeyData.encrypted && foundKeyData.iv && foundKeyData.tag && foundKeyData.salt) {
       try {
@@ -176,7 +176,7 @@ export function createProviderKeyService() {
         )
       }
     }
-    
+
     return foundKeyData
   }
 
@@ -211,7 +211,7 @@ export function createProviderKeyService() {
       isDefault: data.isDefault !== undefined ? data.isDefault : existingKey.isDefault,
       updated: now
     }
-    
+
     // If key is being updated, encrypt it
     if (data.key) {
       const encryptedData = await encryptKey(data.key)

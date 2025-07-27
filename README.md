@@ -1,47 +1,47 @@
-# OctoPrompt
+# Promptliano
 
 Your AI toolkit for context engineering.
 
 ## Introduction
 
-If you've worked with LLMs and code you know how much quality drops off with more code in the context. OctoPrompt helps with quality dropoff by helping you find and select the files from your codebase for your desired changes. OctoPrompt is a dev tool without AI first, and uses AI to enhance its abilities. The long term goal of OctoPrompt is to make building codebases with AI as easy as possible and to increasingly automate the manual work of planning changes, editing code, and testing the result.
+If you've worked with LLMs and code you know how much quality drops off with more code in the context. Promptliano helps with quality dropoff by helping you find and select the files from your codebase for your desired changes. Promptliano is a dev tool without AI first, and uses AI to enhance its abilities. The long term goal of Promptliano is to make building codebases with AI as easy as possible and to increasingly automate the manual work of planning changes, editing code, and testing the result.
 
 ## Quick Start
 
 If you have [Bun](https://bun.sh/) installed then I'd recommend downloading the prebuilt Server/UI Bundle.
 
-[Download OctoPrompt's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/octoprompt/releases/download/v0.8.0/octoprompt-0.8.0-bun-bundle.zip)
+[Download Promptliano's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-bun-bundle.zip)
 
-[Download OctoPrompt For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/octoprompt/releases/download/v0.8.0/octoprompt-0.8.0-macos-arm64.zip)
+[Download Promptliano For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-macos-arm64.zip)
 
-[Download OctoPrompt For Windows x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.8.0/octoprompt-0.8.0-windows-x64.zip)
+[Download Promptliano For Windows x64 Binary](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-windows-x64.zip)
 
-[Download OctoPrompt For Linux x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.8.0/octoprompt-0.8.0-linux-x64.zip)
+[Download Promptliano For Linux x64 Binary](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-linux-x64.zip)
 
-> Once you have downloaded OctoPrompt for your platform please read "Running Binaries", especially for MacOS
+> Once you have downloaded Promptliano for your platform please read "Running Binaries", especially for MacOS
 
-[View More Releases and Downloads](https://github.com/brandon-schabel/octoprompt/releases)
+[View More Releases and Downloads](https://github.com/brandon-schabel/promptliano/releases)
 
 Don't have Bun but have NPM? Install Bun using NPM: `npm install -g bun`
 
 Don't have NPM or Bun? Install Bun with curl on Mac/Linux `curl -fsSL https://bun.sh/install | bash` on Windows Powershell: `powershell -c "irm bun.sh/install.ps1 | iex"`
 
-Extract the zip file and cd into the extracted zip file and run the OctoPrompt server.
+Extract the zip file and cd into the extracted zip file and run the Promptliano server.
 
 ```bash
-cd octoprompt-0.8.0-bun-bundle && bun run start
+cd promptliano-0.8.0-bun-bundle && bun run start
 ```
 
-[View Your Local OctoPrompt UI](http://localhost:3579/)
+[View Your Local Promptliano UI](http://localhost:3579/)
 
 ## MCP Setup Quick Start
 
-Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
+Connect Promptliano to Claude Desktop or Cursor for AI-powered codebase access.
 
 ### Prerequisites
 
-1. Have OctoPrompt running (`bun run start` or `bun run dev`)
-2. Create a project in OctoPrompt and note the Project ID
+1. Have Promptliano running (`bun run start` or `bun run dev`)
+2. Create a project in Promptliano and note the Project ID
 
 ### Claude Desktop Setup
 
@@ -50,13 +50,13 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-2. **Add OctoPrompt server:**
+2. **Add Promptliano server:**
 
 ```json
 {
   "mcpServers": {
-    "octoprompt": {
-      "command": "/absolute/path/to/octoprompt/packages/server/mcp-start.sh"
+    "promptliano": {
+      "command": "/absolute/path/to/promptliano/packages/server/mcp-start.sh"
     }
   }
 }
@@ -69,8 +69,8 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
 1. **Open Cursor Settings** → **Features** → **Model Context Protocol**
 2. **Add server:**
 
-   - **Name**: `octoprompt`
-   - **Command**: `/absolute/path/to/octoprompt/packages/server/mcp-start.sh`
+   - **Name**: `promptliano`
+   - **Command**: `/absolute/path/to/promptliano/packages/server/mcp-start.sh`
 
 3. **Restart Cursor**
 
@@ -78,22 +78,22 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
 
 Ask Claude/Cursor: _"What files are in this project?"_ or _"Give me a project summary"_
 
-> **Note**: Replace `/absolute/path/to/octoprompt` with your actual OctoPrompt installation path and `YOUR_PROJECT_ID` with your project ID.
+> **Note**: Replace `/absolute/path/to/promptliano` with your actual Promptliano installation path and `YOUR_PROJECT_ID` with your project ID.
 
 For detailed setup instructions, see [MCP-SETUP.md](./MCP-SETUP.md).
 
-## OctoPrompt Project Overview page
+## Promptliano Project Overview page
 
-![octoprompt-0-5-0-project-overview](https://github.com/user-attachments/assets/f92680e4-2877-488a-b336-79533c3999d4)
+![promptliano-0-5-0-project-overview](https://github.com/user-attachments/assets/f92680e4-2877-488a-b336-79533c3999d4)
 
 ---
 
 ## Zero Config Dev Environment Setup
 
-### Step 1 - Clone OctoPrompt
+### Step 1 - Clone Promptliano
 
 ```bash
-git clone https://github.com/brandon-schabel/octoprompt
+git clone https://github.com/brandon-schabel/promptliano
 ```
 
 ### Step 2 - Install Bun with NPM
@@ -101,7 +101,7 @@ git clone https://github.com/brandon-schabel/octoprompt
 Note: Only needed if Bun isn't already installed.
 
 ```bash
-cd octoprompt && npm install -g bun
+cd promptliano && npm install -g bun
 ```
 
 ### Step 3 - Install Repo Packages
@@ -124,16 +124,16 @@ View the [Dev UI here](http://localhost:1420)
 
 ### Running on Linux
 
-On Linux you should be able to just navigate to the octoprompt binary file in the terminal and run it for example:
+On Linux you should be able to just navigate to the promptliano binary file in the terminal and run it for example:
 
 ```bash
-cd ~/Downloads/octoprompt-v0.8.0
+cd ~/Downloads/promptliano-v0.8.0
 ```
 
 Run the linux binary file:
 
 ```bash
-./octoprompt
+./promptliano
 ```
 
 ### Running on MacOS
@@ -141,41 +141,41 @@ Run the linux binary file:
 Currently I don't have MacOS code signing, so it just says the binary is damaged, but really it is quarntined. In order to run the binary on Mac you would have to do the following
 
 ```bash
-cd ~/Downloads/octoprompt-v0.8.0
+cd ~/Downloads/promptliano-v0.8.0
 ```
 
 Then run to remove the quarantine:
 
 ```bash
-sudo xattr -r -d com.apple.quarantine ./octoprompt
+sudo xattr -r -d com.apple.quarantine ./promptliano
 ```
 
-Finally you can run the Octoprompt app by running the binary file as you normally would
+Finally you can run the Promptliano app by running the binary file as you normally would
 
 ```bash
-./octoprompt
+./promptliano
 ```
 
 ### Running on Windows
 
-After downloading and extracting the appropriate zip file (e.g., `octoprompt-v0.8.0-windows-x64.zip`), open Command Prompt or PowerShell.
+After downloading and extracting the appropriate zip file (e.g., `promptliano-v0.8.0-windows-x64.zip`), open Command Prompt or PowerShell.
 
 Navigate to the extracted folder. For example, if you extracted it to your Downloads folder:
 
 ```batch
-cd %USERPROFILE%\Downloads\octoprompt-v0.8.0-windows-x64
+cd %USERPROFILE%\Downloads\promptliano-v0.8.0-windows-x64
 ```
 
 Or using PowerShell:
 
 ```powershell
-cd $env:USERPROFILE\Downloads\octoprompt-v0.8.0-windows-x64
+cd $env:USERPROFILE\Downloads\promptliano-v0.8.0-windows-x64
 ```
 
 Then, run the executable:
 
 ```batch
-.\octoprompt.exe
+.\promptliano.exe
 ```
 
 ### Documentation Quick Links
@@ -204,39 +204,39 @@ Then, run the executable:
 
 ### Repo Management Made Easy
 
-Throwing in an entire codebase into LLMs will get you diminishing retuns as the codebase grows, however with OctoPrompt Your code will never be too complex. Instead of taking the spray and pray approach, OctoPrompt helps users be quick but precise with the built-in tools. OctoPrompt takes advantage of AI agents to perform everyday tasks with built in coding, planning, file summarization, and file search. OctoPrompt will help you maximize the quality of the code results from the AI models you're working with by providing the models with the precise context they need.
+Throwing in an entire codebase into LLMs will get you diminishing retuns as the codebase grows, however with Promptliano Your code will never be too complex. Instead of taking the spray and pray approach, Promptliano helps users be quick but precise with the built-in tools. Promptliano takes advantage of AI agents to perform everyday tasks with built in coding, planning, file summarization, and file search. Promptliano will help you maximize the quality of the code results from the AI models you're working with by providing the models with the precise context they need.
 
-Save, manage, and include all your favorite prompts with the built-in prompt manager. Copy all context to clipboard with a single click to use with any AI API provider or use OctoPrompt built-in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. OctoPrompt is an AI sandbox for your codebase and allows you to make architectural changes to your code faster than before, all without the hassle of an agent running up your API bill running around your repo. OctoPrompt works completely without AI models as well, it is a great AI context builder without the use of agents. Using OctoPrompt to build out context works really well because you are providing the AI with all the context it needs, but not overloading it with things it doesn't need - other tools suggest loading your repo into context which can be costly if using API and diminishes model output quality.
+Save, manage, and include all your favorite prompts with the built-in prompt manager. Copy all context to clipboard with a single click to use with any AI API provider or use Promptliano built-in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. Promptliano is an AI sandbox for your codebase and allows you to make architectural changes to your code faster than before, all without the hassle of an agent running up your API bill running around your repo. Promptliano works completely without AI models as well, it is a great AI context builder without the use of agents. Using Promptliano to build out context works really well because you are providing the AI with all the context it needs, but not overloading it with things it doesn't need - other tools suggest loading your repo into context which can be costly if using API and diminishes model output quality.
 
 Thank you for checking out the project. If you have any questions please feel free to reach out and support Open Source by leaving a star.
 
-You are always in control of your data. By default, everything runs locally, and the AI features are entirely optional, however you can run the AI features locally using on machine providers like Ollama and LM Studio. OctoPrompt AI can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt's local file watchers, built-in ticket system, quick file searching, and prompt management.
+You are always in control of your data. By default, everything runs locally, and the AI features are entirely optional, however you can run the AI features locally using on machine providers like Ollama and LM Studio. Promptliano AI can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from Promptliano's local file watchers, built-in ticket system, quick file searching, and prompt management.
 
 ## Key User Features
 
 ### **🏛️ Project Management View**
 
-Manage and sync multiple projects in OctoPrompt. In the Projects view you can open several tabs, and each tab will hold its own state. This allows you to build multiple features in parallel or even just quickly switch between projects. OctoPrompt will always persist the state, even on page reload, because saving your work is important.
+Manage and sync multiple projects in Promptliano. In the Projects view you can open several tabs, and each tab will hold its own state. This allows you to build multiple features in parallel or even just quickly switch between projects. Promptliano will always persist the state, even on page reload, because saving your work is important.
 
 ### **🛠️ Context Building Tools**
 
-OctoPrompt has a great file search and file picking interface. As you pick files you will see files populate in the "Selected Files", and everything you add including files, prompts, and of course user input will be counted toward the context and you will be informed of how many tokens you are using. Context length is important for improved accuracy and cost, so you want to provide just what is needed.
+Promptliano has a great file search and file picking interface. As you pick files you will see files populate in the "Selected Files", and everything you add including files, prompts, and of course user input will be counted toward the context and you will be informed of how many tokens you are using. Context length is important for improved accuracy and cost, so you want to provide just what is needed.
 
 ### **🤖🕵️‍♂️ AI Agents**
 
-OctoPrompt implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. OctoPrompt creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help generate tasks for your tickets, suggest files to select based on your "user input".
+Promptliano implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. Promptliano creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help generate tasks for your tickets, suggest files to select based on your "user input".
 
 ### **🎟️ Ticket and Task Planning**
 
-Write a ticket with an overview and let AI generate the ticket tasks for you. Because OctoPrompt has a built-in file summarization agent, it can use the full project summary context to help plan your next big feature.
+Write a ticket with an overview and let AI generate the ticket tasks for you. Because Promptliano has a built-in file summarization agent, it can use the full project summary context to help plan your next big feature.
 
 ### **💬 Built-In AI Chat**
 
-Chat with any AI model. Configure and get started with using AI Chats built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
+Chat with any AI model. Configure and get started with using AI Chats built right into Promptliano, Promptliano supports numerous providers, and can support just about anything thanks to Promptliano using [AI SDK](https://sdk.vercel.ai/docs)
 
 ### **📚 Prompt Library**
 
-Save your favorite prompts directly into OctoPrompt and import them into any project. This allows you to import and use prompts in any project. Importing prompts into project just creates an association so things don't get cluttered between projects.
+Save your favorite prompts directly into Promptliano and import them into any project. This allows you to import and use prompts in any project. Importing prompts into project just creates an association so things don't get cluttered between projects.
 
 ### **⌨️ Key Bindings**
 
@@ -244,11 +244,11 @@ Quickly navigate through the navigation using keyboard commands, use the help bu
 
 ## Configuration Options
 
-OctoPrompt uses a centralized configuration system that allows customization through environment variables.
+Promptliano uses a centralized configuration system that allows customization through environment variables.
 
 ### Environment Variables
 
-Configure OctoPrompt behavior by setting these environment variables:
+Configure Promptliano behavior by setting these environment variables:
 
 - `NODE_ENV` - Set to `development`, `test`, or `production` (affects server port and behavior)
 - `SERVER_PORT` - Override the default server port (default: 3147 for dev, 3579 for production)
@@ -265,7 +265,7 @@ Configure OctoPrompt behavior by setting these environment variables:
 
 ### Default Model Configurations
 
-OctoPrompt provides three preset model configurations:
+Promptliano provides three preset model configurations:
 
 - **LOW**: Fast, cost-effective model (10k max tokens)
 - **MEDIUM**: Balanced performance (25k max tokens)
@@ -277,15 +277,15 @@ All models default to using Google's Gemini 2.5 Flash via OpenRouter. You can ch
 
 ### **📝 Bun Server with OpenAPI Spec**
 
-No guessing about what is going on, every OctoPrompt endpoint can be test using the [Swagger Endpoint](http://localhost:3147/swagger)
+No guessing about what is going on, every Promptliano endpoint can be test using the [Swagger Endpoint](http://localhost:3147/swagger)
 
 ### **🏠 Local-First**
 
-Operates entirely on your local machine—no mandatory cloud dependencies—letting you keep your data where you want it. Run OctoPrompt on your machine, and use local AI Models with Ollama or LM Studio
+Operates entirely on your local machine—no mandatory cloud dependencies—letting you keep your data where you want it. Run Promptliano on your machine, and use local AI Models with Ollama or LM Studio
 
 ### **🔌 Customizable**
 
-Built with proven technologies such as Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
+Built with proven technologies such as Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Vite. Promptliano is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
 
 ### **🛟 Type Safe & Modular**
 
@@ -317,27 +317,27 @@ Thank you to the following projects - and everything that came before
 
 ### Chat with LLMs
 
-OctoPrompt has a built-in chat, experiment with different LLMs, get help with your programming problems.
+Promptliano has a built-in chat, experiment with different LLMs, get help with your programming problems.
 
-![octoprompt-chat-page](https://github.com/user-attachments/assets/1a82618c-6e52-4956-92ef-95170447beb9)
+![promptliano-chat-page](https://github.com/user-attachments/assets/1a82618c-6e52-4956-92ef-95170447beb9)
 
 ### Project View
 
 Select Files, Prompts, and Provide Instructions
 
-![octoprompt-projects-view](https://github.com/user-attachments/assets/53f76bf9-c730-45f0-a602-59c845b6ff9d)
+![promptliano-projects-view](https://github.com/user-attachments/assets/53f76bf9-c730-45f0-a602-59c845b6ff9d)
 
 ### Copy File Or Folder Contents, Summaries, and File Structures (Project Page)
 
 With LLMs context is everything, sometimes you just need the file structured, sometimes you need the entire folder contents, copy whatever you need
 
-![octoprompt-project-copy-folder-summary](https://github.com/user-attachments/assets/fa1f8a05-d6c9-41b0-b368-06e17931af07)
+![promptliano-project-copy-folder-summary](https://github.com/user-attachments/assets/fa1f8a05-d6c9-41b0-b368-06e17931af07)
 
 ### AI File Suggestions (Project Page)
 
 Let AI take the wheel and have it provide you suggested files based on your user input. This feature will take in your full project summary into considerdation and suggest files to you.
 
-![octoprompt-suggested-files-view](https://github.com/user-attachments/assets/9a955bcd-d58c-40c3-90f0-b06c1e3a2582)
+![promptliano-suggested-files-view](https://github.com/user-attachments/assets/9a955bcd-d58c-40c3-90f0-b06c1e3a2582)
 
 ### Project Summary Page
 
@@ -345,43 +345,43 @@ Project summary page which has various settings for configuring which files shou
 if you have large documents in your file you should exclude them. They likely wont get summarized anyway because they would likely
 exceed the context limit, but better safe than sorry.
 
-![octoprompt-project-summary-page](https://github.com/user-attachments/assets/1212a7eb-7a58-489d-b206-adca83e7f811)
+![promptliano-project-summary-page](https://github.com/user-attachments/assets/1212a7eb-7a58-489d-b206-adca83e7f811)
 
 ### View Project Compiled Summary (Project Summary Page)
 
 View the compiled full project summary in the projects summary page, used in the file suggestions and task generation.
 
-![octoprompt-project-summary-overview-dialog](https://github.com/user-attachments/assets/e99c11ff-280e-4af7-b12e-6725dea16d5c)
+![promptliano-project-summary-overview-dialog](https://github.com/user-attachments/assets/e99c11ff-280e-4af7-b12e-6725dea16d5c)
 
 ### Prompt Management Page
 
 Save and manage all your prompts on the prompt management page. Prompts are configured per project to not over crowd project prompts.
 
-![octoprompt-prompts-page](https://github.com/user-attachments/assets/01777d7f-86d2-4aac-bd06-d1377971def1)
+![promptliano-prompts-page](https://github.com/user-attachments/assets/01777d7f-86d2-4aac-bd06-d1377971def1)
 
 ### Provider Keys Page
 
 Save your API keys for each provider. Set limits on your API keys, set reasonable limits especially for development.
 
-![octoprompt-provider-keys-page](https://github.com/user-attachments/assets/4869df1b-c1f6-4f7e-a5da-b3a584c0d178)
+![promptliano-provider-keys-page](https://github.com/user-attachments/assets/4869df1b-c1f6-4f7e-a5da-b3a584c0d178)
 
 ### Project Tickets Management Page
 
 Use the ticket management page to plan your next features, tickets are scope per project.
 
-![octoprompt-tickets-overview](https://github.com/user-attachments/assets/9950ae1e-3770-40a7-bb63-cddd2f3c03eb)
+![promptliano-tickets-overview](https://github.com/user-attachments/assets/9950ae1e-3770-40a7-bb63-cddd2f3c03eb)
 
 ### Auto Generate Tasks (Tickets Page)
 
 Generate tasks with AI with project specfic context using the full project summaries.
 
-![octoprompt-generated-tasks-ticket-dialog](https://github.com/user-attachments/assets/b4d42880-1a36-4043-8ebc-6fe1c094cf76)
+![promptliano-generated-tasks-ticket-dialog](https://github.com/user-attachments/assets/b4d42880-1a36-4043-8ebc-6fe1c094cf76)
 
 ### Keyboard Shortcuts Dialog
 
-Selected the wrong folder? Undo your select with `control/cmd + z` and redo with `control/cmd + shift +z`. Find other shortcuts in the top right of the app, there is a "?" which brings up a Dialog with various shortcuts that can be used throughout OctoPrompt
+Selected the wrong folder? Undo your select with `control/cmd + z` and redo with `control/cmd + shift +z`. Find other shortcuts in the top right of the app, there is a "?" which brings up a Dialog with various shortcuts that can be used throughout Promptliano
 
-![octoprompt-keyboard-shortcuts-help-dialog](https://github.com/user-attachments/assets/cee0ecf2-21b0-4822-91cf-06f691258b88)
+![promptliano-keyboard-shortcuts-help-dialog](https://github.com/user-attachments/assets/cee0ecf2-21b0-4822-91cf-06f691258b88)
 
 ## Videos
 
@@ -418,7 +418,7 @@ If you choose to enable AI features, click the **"Keys"** button in the navbar a
 For example:  
 ![Xnapper-2025-01-13-20 25 41](https://github.com/user-attachments/assets/3b87ca3e-3182-4271-8235-b98477f182ac)
 
-Then select the appropriate provider. OpenRouter is recommended because it will give you access to many providers and models, however OctoPrompt supports other API Providers direct.
+Then select the appropriate provider. OpenRouter is recommended because it will give you access to many providers and models, however Promptliano supports other API Providers direct.
 Lastly input the API key from your providers.
 
 #### Supported Providers Keys Pages Links
@@ -441,9 +441,9 @@ You can always install local models with software like:
 - **Open** your web client at [localhost:1420](http://localhost:1420).
 - Click "Chat" in the Navbar.
 - Click the chat icon and **New Chat** in the top-left.
-- **Type** a question — OctoPrompt will respond in real-time. If you have a project synced, it can reference your local files in its responses.
+- **Type** a question — Promptliano will respond in real-time. If you have a project synced, it can reference your local files in its responses.
 
-Configure your model defaults for the OctoPrompt AI Features
+Configure your model defaults for the Promptliano AI Features
 
 The default AI model configurations for various services are maintained in the file [shared/constants/model-default-configs.ts](./packages/shared/constants/model-default-configs.ts). This file centralizes settings such as the model to use, the response temperature, and the provider for each AI-related service, with more configurations to come.
 
@@ -451,7 +451,7 @@ The default AI model configurations for various services are maintained in the f
 
 ## Tauri Desktop App Builds
 
-OctoPrompt now includes a native desktop app built with Tauri for better performance and OS integration.
+Promptliano now includes a native desktop app built with Tauri for better performance and OS integration.
 
 ### Quick Build Commands
 
@@ -496,7 +496,7 @@ For detailed setup instructions, see [docs/TAURI_BUILD_GUIDE.md](./docs/TAURI_BU
 
 ## Production Build (Server Binaries)
 
-OctoPrompt is designed with a streamlined production build process where the client is bundled and served directly from the server.
+Promptliano is designed with a streamlined production build process where the client is bundled and served directly from the server.
 
 ### Build Process
 
@@ -527,13 +527,13 @@ bun run build-binaries
 then navigate to the built binaries in `/dist` - in this case for MacOS arm64
 
 ```bash
-cd dist/octoprompt-0.8.0-macos
+cd dist/promptliano-0.8.0-macos
 ```
 
 then run the binary file for your platforms directory:
 
 ```bash
-./octoprompt
+./promptliano
 ```
 
 ## Contributing
@@ -546,18 +546,18 @@ General guidelines:
 3. **Implement** & Test
 4. **Open** a Pull Request
 
-Let's make OctoPrompt even better together!
+Let's make Promptliano even better together!
 
 ---
 
 ## License
 
-OctoPrompt is **open-source** under the [MIT License](./LICENSE). See [LICENSE](./LICENSE) for more details.
+Promptliano is **open-source** under the [MIT License](./LICENSE). See [LICENSE](./LICENSE) for more details.
 
 ---
 
 ### Need Help or Have Questions?
 
-Join our **[OctoPrompt Discord](https://discord.gg/dTSy42g8bV)** community for real-time support, feature requests, or casual chit-chat.
+Join our **[Promptliano Discord](https://discord.gg/dTSy42g8bV)** community for real-time support, feature requests, or casual chit-chat.
 
-Stay local, stay customizable, and have fun building with **OctoPrompt**! Enjoy!
+Stay local, stay customizable, and have fun building with **Promptliano**! Enjoy!

@@ -1,15 +1,15 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 
-import type { ProviderKeysStorage } from '@octoprompt/storage' // ADDED
-import { ApiError } from '@octoprompt/shared'
-import { normalizeToUnixMs } from '@octoprompt/shared'
+import type { ProviderKeysStorage } from '@promptliano/storage' // ADDED
+import { ApiError } from '@promptliano/shared'
+import { normalizeToUnixMs } from '@promptliano/shared'
 import { createProviderKeyService } from './provider-key-service'
 
 // In-memory store for our mock
 let mockProviderKeysDb: ProviderKeysStorage = {}
 
 // Mock the crypto functions to return plain text for testing
-mock.module('@octoprompt/shared/src/utils/crypto', () => ({
+mock.module('@promptliano/shared/src/utils/crypto', () => ({
   encryptKey: async (plaintext: string) => ({
     encrypted: plaintext, // Store plain text for testing
     iv: 'mock-iv',
@@ -32,8 +32,8 @@ mock.module('@octoprompt/shared/src/utils/crypto', () => ({
 
 // Mock the providerKeyStorage utility
 // Ensure the path to the module is correct based on your project structure.
-// If provider-key-storage.ts is in '@octoprompt/storage/', this path should be correct.
-mock.module('@octoprompt/storage', () => ({
+// If provider-key-storage.ts is in '@promptliano/storage/', this path should be correct.
+mock.module('@promptliano/storage', () => ({
   providerKeyStorage: {
     readProviderKeys: async () => JSON.parse(JSON.stringify(mockProviderKeysDb)),
     writeProviderKeys: async (data: ProviderKeysStorage) => {
@@ -46,7 +46,7 @@ mock.module('@octoprompt/storage', () => ({
   encryptionKeyStorage: {
     getKey: () => 'mock-encryption-key',
     hasKey: () => true,
-    clearCache: () => {}
+    clearCache: () => { }
   }
 }))
 

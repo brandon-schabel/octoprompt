@@ -7,8 +7,8 @@ import type {
   MCPToolStatistics,
   MCPExecutionTimeline,
   MCPToolPattern
-} from '@octoprompt/schemas'
-import { octoClient } from '../octo-client'
+} from '@promptliano/schemas'
+import { promptlianoClient } from '../promptliano-client'
 
 // Get MCP tool executions
 export function useGetMCPExecutions(projectId: number | undefined, query?: MCPExecutionQuery) {
@@ -16,7 +16,7 @@ export function useGetMCPExecutions(projectId: number | undefined, query?: MCPEx
     queryKey: ['mcp-executions', projectId, query],
     queryFn: async () => {
       if (!projectId) return null
-      const response = await octoClient.mcpAnalytics.getExecutions(projectId, query)
+      const response = await promptlianoClient.mcpAnalytics.getExecutions(projectId, query)
       return response.data
     },
     enabled: !!projectId
@@ -29,7 +29,7 @@ export function useGetMCPAnalyticsOverview(projectId: number | undefined, reques
     queryKey: ['mcp-analytics-overview', projectId, request],
     queryFn: async () => {
       if (!projectId) return null
-      const response = await octoClient.mcpAnalytics.getOverview(projectId, request)
+      const response = await promptlianoClient.mcpAnalytics.getOverview(projectId, request)
       return response.data
     },
     enabled: !!projectId,
@@ -43,7 +43,7 @@ export function useGetMCPToolStatistics(projectId: number | undefined, request?:
     queryKey: ['mcp-tool-statistics', projectId, request],
     queryFn: async () => {
       if (!projectId) return null
-      const response = await octoClient.mcpAnalytics.getStatistics(projectId, request)
+      const response = await promptlianoClient.mcpAnalytics.getStatistics(projectId, request)
       return response.data
     },
     enabled: !!projectId
@@ -56,7 +56,7 @@ export function useGetMCPExecutionTimeline(projectId: number | undefined, reques
     queryKey: ['mcp-execution-timeline', projectId, request],
     queryFn: async () => {
       if (!projectId) return null
-      const response = await octoClient.mcpAnalytics.getTimeline(projectId, request)
+      const response = await promptlianoClient.mcpAnalytics.getTimeline(projectId, request)
       return response.data
     },
     enabled: !!projectId
@@ -69,7 +69,7 @@ export function useGetMCPErrorPatterns(projectId: number | undefined, request?: 
     queryKey: ['mcp-error-patterns', projectId, request],
     queryFn: async () => {
       if (!projectId) return null
-      const response = await octoClient.mcpAnalytics.getErrorPatterns(projectId, request)
+      const response = await promptlianoClient.mcpAnalytics.getErrorPatterns(projectId, request)
       return response.data
     },
     enabled: !!projectId

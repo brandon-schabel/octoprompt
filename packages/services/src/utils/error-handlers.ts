@@ -1,4 +1,4 @@
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import { ZodError } from 'zod'
 
 /**

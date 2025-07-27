@@ -1,5 +1,5 @@
 import { z, ZodError } from 'zod'
-import { PromptSchema, PromptProjectSchema, type Prompt, type PromptProject } from '@octoprompt/schemas'
+import { PromptSchema, PromptProjectSchema, type Prompt, type PromptProject } from '@promptliano/schemas'
 import { DatabaseManager, getDb } from './database-manager'
 
 // --- Schemas for Storage ---

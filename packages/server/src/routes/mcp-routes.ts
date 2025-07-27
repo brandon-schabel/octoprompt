@@ -11,7 +11,7 @@ import {
   MCPToolExecutionResultResponseSchema,
   MCPServerStateSchema,
   ApiErrorResponseSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import {
   createMCPServerConfig,
   getMCPServerConfigById,
@@ -26,10 +26,10 @@ import {
   listMCPResources,
   readMCPResource,
   getMCPClientManager
-} from '@octoprompt/services'
+} from '@promptliano/services'
 import { handleHTTPTransport, getActiveSessions, closeSession } from '../mcp/transport'
-import * as projectService from '@octoprompt/services'
-import { ApiError } from '@octoprompt/shared'
+import * as projectService from '@promptliano/services'
+import { ApiError } from '@promptliano/shared'
 import { CONSOLIDATED_TOOLS, getAllConsolidatedToolNames } from '../mcp/tools-registry'
 import {
   getMCPToolExecutions,
@@ -37,14 +37,14 @@ import {
   getMCPToolStatistics,
   getMCPExecutionTimeline,
   getTopErrorPatterns
-} from '@octoprompt/services'
+} from '@promptliano/services'
 import {
   mcpExecutionQuerySchema,
   mcpAnalyticsRequestSchema,
   type MCPExecutionQuery,
   type MCPAnalyticsRequest,
   mcpExecutionQueryRequestSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 export const mcpRoutes = new OpenAPIHono()
 
@@ -876,7 +876,7 @@ mcpRoutes.openapi(suggestFilesResourceRoute, async (c) => {
     const suggestedFiles = await projectService.suggestFiles(projectId, prompt, limit)
 
     const resourceContent = {
-      uri: `octoprompt://projects/${projectId}/suggest-files`,
+      uri: `promptliano://projects/${projectId}/suggest-files`,
       name: 'File Suggestions',
       description: `AI-suggested files based on: "${prompt}"`,
       mimeType: 'application/json',
@@ -949,7 +949,7 @@ mcpRoutes.openapi(getCompactProjectSummaryRoute, async (c) => {
     const compactSummary = await projectService.getProjectCompactSummary(projectId)
 
     const resourceContent = {
-      uri: `octoprompt://projects/${projectId}/compact-summary`,
+      uri: `promptliano://projects/${projectId}/compact-summary`,
       name: 'Compact Project Summary',
       description: 'AI-generated compact overview of project architecture and structure',
       mimeType: 'text/markdown',
@@ -1017,11 +1017,11 @@ mcpRoutes.openapi(listTicketsResourceRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { status } = c.req.valid('query')
 
-    const { listTicketsWithTaskCount } = await import('@octoprompt/services')
+    const { listTicketsWithTaskCount } = await import('@promptliano/services')
     const tickets = await listTicketsWithTaskCount(projectId, status)
 
     const resourceContent = {
-      uri: `octoprompt://projects/${projectId}/tickets`,
+      uri: `promptliano://projects/${projectId}/tickets`,
       name: 'Project Tickets',
       description: `Tickets for project ${projectId}${status ? ` filtered by status: ${status}` : ''}`,
       mimeType: 'application/json',
@@ -1085,7 +1085,7 @@ mcpRoutes.openapi(suggestTicketTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { userContext } = c.req.valid('json')
 
-    const { suggestTasksForTicket } = await import('@octoprompt/services')
+    const { suggestTasksForTicket } = await import('@promptliano/services')
     const suggestions = await suggestTasksForTicket(ticketId, userContext)
 
     return c.json({
@@ -1156,7 +1156,7 @@ mcpRoutes.openapi(testMCPConnectionRoute, async (c) => {
         method: 'GET',
         headers: {
           Accept: 'text/event-stream',
-          'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
+          'User-Agent': 'Promptliano-MCP-Tester/1.0'
         },
         signal: AbortSignal.timeout(5000) // 5 second timeout
       })
@@ -1272,7 +1272,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
+          'User-Agent': 'Promptliano-MCP-Tester/1.0'
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -1286,7 +1286,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
               prompts: false
             },
             clientInfo: {
-              name: 'octoprompt-tester',
+              name: 'promptliano-tester',
               version: '0.8.0'
             }
           }
@@ -1696,7 +1696,7 @@ mcpRoutes.openapi(testMCPMethodRoute, async (c) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
+        'User-Agent': 'Promptliano-MCP-Tester/1.0'
       }
 
       if (sessionId) {
@@ -1825,7 +1825,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
               prompts: false
             },
             clientInfo: {
-              name: 'octoprompt-tester',
+              name: 'promptliano-tester',
               version: '0.8.0'
             }
           },
@@ -1836,7 +1836,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             params: {
               protocolVersion: '2024-11-05',
               capabilities: { tools: true, resources: true },
-              clientInfo: { name: 'octoprompt-tester', version: '0.8.0' }
+              clientInfo: { name: 'promptliano-tester', version: '0.8.0' }
             }
           }
         },

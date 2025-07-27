@@ -1,6 +1,6 @@
 import { useProjectTabField, useUpdateActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 import { useSyncProject, useGetProject } from '@/hooks/api/use-projects-api'
-import { EditorType, EDITOR_OPTIONS } from '@octoprompt/schemas'
+import { EditorType, EDITOR_OPTIONS } from '@promptliano/schemas'
 import { Button, Input, Slider, Switch, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'

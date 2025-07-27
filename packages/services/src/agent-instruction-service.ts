@@ -10,8 +10,8 @@ import * as path from 'path'
 import { z } from 'zod'
 
 const INSTRUCTION_VERSION = '1.0'
-const INSTRUCTION_START_MARKER = '<!-- OCTOPROMPT_MCP_INSTRUCTIONS_START'
-const INSTRUCTION_END_MARKER = '<!-- OCTOPROMPT_MCP_INSTRUCTIONS_END -->'
+const INSTRUCTION_START_MARKER = '<!-- PROMPTLIANO_MCP_INSTRUCTIONS_START'
+const INSTRUCTION_END_MARKER = '<!-- PROMPTLIANO_MCP_INSTRUCTIONS_END -->'
 
 export const AgentFileTypeSchema = z.enum([
   'claude',
@@ -45,15 +45,15 @@ export class AgentInstructionService {
     const { projectId, projectName, includeExamples, customInstructions } = options
 
     let template = `${INSTRUCTION_START_MARKER} v${INSTRUCTION_VERSION} -->
-# OctoPrompt MCP Integration
+# Promptliano MCP Integration
 
-OctoPrompt MCP provides direct access to project context, files, and intelligent tools for the "${projectName}" project.
+Promptliano MCP provides direct access to project context, files, and intelligent tools for the "${projectName}" project.
 
 ## Quick Start
 
 First, get an overview of the current project:
 \`\`\`
-mcp__OctoPrompt__project_manager(
+mcp__Promptliano__project_manager(
   action: "overview",
   projectId: ${projectId}
 )
@@ -97,7 +97,7 @@ mcp__OctoPrompt__project_manager(
 
 ### Find relevant files for a feature:
 \`\`\`
-mcp__OctoPrompt__project_manager(
+mcp__Promptliano__project_manager(
   action: "suggest_files",
   projectId: ${projectId},
   data: {
@@ -109,7 +109,7 @@ mcp__OctoPrompt__project_manager(
 
 ### Create a new ticket with tasks:
 \`\`\`
-mcp__OctoPrompt__ticket_manager(
+mcp__Promptliano__ticket_manager(
   action: "create",
   projectId: ${projectId},
   data: {
@@ -148,7 +148,7 @@ ${INSTRUCTION_END_MARKER}`
 
       if (fileExists) {
         content = await fs.readFile(filePath, 'utf-8')
-        
+
         // Create backup
         const backupPath = `${filePath}.backup-${Date.now()}`
         await fs.writeFile(backupPath, content)
@@ -176,8 +176,8 @@ ${INSTRUCTION_END_MARKER}`
 
       return {
         success: true,
-        message: fileExists 
-          ? 'Successfully updated agent instructions' 
+        message: fileExists
+          ? 'Successfully updated agent instructions'
           : 'Successfully created agent file with instructions',
         backedUp
       }
@@ -212,7 +212,7 @@ ${INSTRUCTION_END_MARKER}`
       if (exists) {
         const content = await fs.readFile(fullPath, 'utf-8')
         hasInstructions = content.includes(INSTRUCTION_START_MARKER)
-        
+
         if (hasInstructions) {
           const versionMatch = content.match(new RegExp(`${INSTRUCTION_START_MARKER} v([\\d.]+)`))
           instructionVersion = versionMatch ? versionMatch[1] : undefined
@@ -240,7 +240,7 @@ ${INSTRUCTION_END_MARKER}`
       if (startIndex === -1 || endIndex === -1) {
         return {
           success: false,
-          message: 'No OctoPrompt instructions found in file'
+          message: 'No Promptliano instructions found in file'
         }
       }
 
@@ -252,7 +252,7 @@ ${INSTRUCTION_END_MARKER}`
 
       return {
         success: true,
-        message: 'Successfully removed OctoPrompt instructions'
+        message: 'Successfully removed Promptliano instructions'
       }
     } catch (error) {
       return {

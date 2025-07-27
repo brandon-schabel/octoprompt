@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { Command, Child } from '@tauri-apps/plugin-shell'
 
-export class OctoPromptSidecarManager {
+export class PromptlianoSidecarManager {
   private isReady = false
   private startupPromise: Promise<void> | null = null
   private unsubscribeReady: (() => void) | null = null
@@ -23,19 +23,19 @@ export class OctoPromptSidecarManager {
       console.log('[SidecarManager] Setting up event listeners...')
 
       // Set up event listeners before starting
-      this.unsubscribeReady = await listen('octoprompt-server-ready', () => {
+      this.unsubscribeReady = await listen('promptliano-server-ready', () => {
         console.log('[SidecarManager] Server ready event received')
         this.isReady = true
       })
 
-      this.unsubscribeTerminated = await listen<number | null>('octoprompt-server-terminated', (event) => {
+      this.unsubscribeTerminated = await listen<number | null>('promptliano-server-terminated', (event) => {
         console.error('[SidecarManager] Server terminated with code:', event.payload)
         this.isReady = false
       })
 
       // Start the server via Rust command
-      console.log('[SidecarManager] Invoking start_octoprompt_server...')
-      const result = await invoke<string>('start_octoprompt_server')
+      console.log('[SidecarManager] Invoking start_promptliano_server...')
+      const result = await invoke<string>('start_promptliano_server')
       console.log('[SidecarManager] Start command result:', result)
 
       // Wait for server to be ready or timeout
@@ -93,7 +93,7 @@ export class OctoPromptSidecarManager {
 
   async stop(): Promise<void> {
     try {
-      const result = await invoke<string>('stop_octoprompt_server')
+      const result = await invoke<string>('stop_promptliano_server')
       console.log(result)
       this.isReady = false
       this.startupPromise = null
@@ -131,7 +131,7 @@ export class OctoPromptSidecarManager {
 
   // Alternative method using Command directly (if needed)
   async startWithCommand(): Promise<Child> {
-    const command = Command.sidecar('octoprompt-server', ['--port', '3147'])
+    const command = Command.sidecar('promptliano-server', ['--port', '3147'])
 
     const child = await command.spawn()
 
@@ -164,4 +164,4 @@ export class OctoPromptSidecarManager {
 }
 
 // Singleton instance
-export const sidecarManager = new OctoPromptSidecarManager()
+export const sidecarManager = new PromptlianoSidecarManager()

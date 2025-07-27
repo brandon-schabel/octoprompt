@@ -1,4 +1,4 @@
-# TanStack Router Advanced Patterns in OctoPrompt
+# TanStack Router Advanced Patterns in Promptliano
 
 This directory contains utilities and patterns for leveraging TanStack Router v1's advanced features.
 

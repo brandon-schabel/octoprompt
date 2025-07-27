@@ -1,4 +1,4 @@
-// Define types locally to avoid circular dependency with @octoprompt/schemas
+// Define types locally to avoid circular dependency with @promptliano/schemas
 
 export type APIProviders =
   | 'openai'

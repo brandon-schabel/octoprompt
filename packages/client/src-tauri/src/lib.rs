@@ -14,11 +14,11 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-async fn start_octoprompt_server(
+async fn start_promptliano_server(
     app: tauri::AppHandle,
     state: tauri::State<'_, Mutex<ServerState>>
 ) -> Result<String, String> {
-    println!("[Tauri] start_octoprompt_server called");
+    println!("[Tauri] start_promptliano_server called");
     let shell = app.shell();
     
     // Check if server is already running
@@ -26,13 +26,13 @@ async fn start_octoprompt_server(
         let state_guard = state.lock().unwrap();
         if state_guard.child.is_some() {
             println!("[Tauri] Server already running");
-            return Ok("OctoPrompt server is already running".to_string());
+            return Ok("Promptliano server is already running".to_string());
         }
     }
     
     println!("[Tauri] Spawning server sidecar...");
     let (mut rx, child) = shell
-        .sidecar("octoprompt-server")
+        .sidecar("promptliano-server")
         .map_err(|e| {
             eprintln!("[Tauri] Failed to spawn sidecar: {}", e);
             e.to_string()
@@ -73,7 +73,7 @@ async fn start_octoprompt_server(
                         println!("[Tauri] Server ready detected!");
                         server_ready = true;
                         // Emit event to frontend
-                        app_handle.emit("octoprompt-server-ready", ()).unwrap();
+                        app_handle.emit("promptliano-server-ready", ()).unwrap();
                     }
                 }
                 CommandEvent::Stderr(line) => {
@@ -83,7 +83,7 @@ async fn start_octoprompt_server(
                 CommandEvent::Terminated(payload) => {
                     println!("[Tauri] Server terminated with code: {:?}", payload.code);
                     // Emit event to frontend
-                    app_handle.emit("octoprompt-server-terminated", payload.code).unwrap();
+                    app_handle.emit("promptliano-server-terminated", payload.code).unwrap();
                     break;
                 }
                 _ => {}
@@ -91,20 +91,20 @@ async fn start_octoprompt_server(
         }
     });
 
-    Ok("OctoPrompt server starting on port 3147".to_string())
+    Ok("Promptliano server starting on port 3147".to_string())
 }
 
 #[tauri::command]
-async fn stop_octoprompt_server(
+async fn stop_promptliano_server(
     state: tauri::State<'_, Mutex<ServerState>>
 ) -> Result<String, String> {
     let mut state_guard = state.lock().unwrap();
     
     if let Some(child) = state_guard.child.take() {
         child.kill().map_err(|e| e.to_string())?;
-        Ok("OctoPrompt server stopped".to_string())
+        Ok("Promptliano server stopped".to_string())
     } else {
-        Ok("OctoPrompt server was not running".to_string())
+        Ok("Promptliano server was not running".to_string())
     }
 }
 
@@ -133,8 +133,8 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            start_octoprompt_server,
-            stop_octoprompt_server,
+            start_promptliano_server,
+            stop_promptliano_server,
             check_server_status
         ])
         .manage(Mutex::new(ServerState { child: None }))

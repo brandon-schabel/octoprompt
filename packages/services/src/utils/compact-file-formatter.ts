@@ -1,4 +1,4 @@
-import type { ProjectFile } from '@octoprompt/schemas'
+import type { ProjectFile } from '@promptliano/schemas'
 
 export type CompactLevel = 'ultra' | 'compact' | 'standard'
 

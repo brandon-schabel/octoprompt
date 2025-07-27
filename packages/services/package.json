@@ -1,5 +1,5 @@
 {
-  "name": "@octoprompt/services",
+  "name": "@promptliano/services",
   "version": "0.8.0",
   "module": "index.ts",
   "type": "module",
@@ -7,7 +7,7 @@
     "test": "bun test src/ --timeout 5000"
   },
   "dependencies": {
-    "@octoprompt/config": "workspace:*"
+    "@promptliano/config": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

@@ -1,4 +1,4 @@
-import type { ProjectFile, SummaryFormat, SummaryOptions } from '@octoprompt/schemas'
+import type { ProjectFile, SummaryFormat, SummaryOptions } from '@promptliano/schemas'
 import { buildCombinedFileSummariesXml } from './project-summary-formatter'
 
 /**
@@ -38,7 +38,7 @@ function buildJsonSummary(files: ProjectFile[], options?: Partial<SummaryOptions
         path: file.path,
         summary: file.summary || getDefaultSummary(file)
       }
-      
+
       // Conditionally include imports/exports
       if (options?.includeImports !== false && file.imports?.length) {
         fileSummary.imports = file.imports.map(imp => ({
@@ -46,7 +46,7 @@ function buildJsonSummary(files: ProjectFile[], options?: Partial<SummaryOptions
           specifiers: imp.specifiers
         }))
       }
-      
+
       if (options?.includeExports !== false && file.exports?.length) {
         fileSummary.exports = file.exports.map(exp => ({
           type: exp.type,
@@ -54,11 +54,11 @@ function buildJsonSummary(files: ProjectFile[], options?: Partial<SummaryOptions
           specifiers: exp.specifiers
         }))
       }
-      
+
       return fileSummary
     })
   }
-  
+
   return JSON.stringify(summary, null, 2)
 }
 
@@ -73,24 +73,24 @@ function buildMarkdownSummary(files: ProjectFile[], options?: Partial<SummaryOpt
     `Total Files: ${files.length}`,
     ''
   ]
-  
+
   // Group files by directory for better organization
   const filesByDir = groupFilesByDirectory(files)
-  
+
   for (const [dir, dirFiles] of Object.entries(filesByDir)) {
     lines.push(`## ${dir || 'Root'}`)
     lines.push('')
-    
+
     for (const file of dirFiles) {
       const fileType = getFileTypeDescription(file.name)
       lines.push(`### ${file.name}`)
       lines.push(`- **Type**: ${fileType}`)
       lines.push(`- **Path**: \`${file.path}\``)
-      
+
       if (file.summary) {
         lines.push(`- **Summary**: ${file.summary}`)
       }
-      
+
       // Include imports if requested
       if (options?.includeImports !== false && file.imports?.length) {
         lines.push('- **Imports**:')
@@ -101,7 +101,7 @@ function buildMarkdownSummary(files: ProjectFile[], options?: Partial<SummaryOpt
           lines.push(`  - ... and ${file.imports.length - 5} more`)
         }
       }
-      
+
       // Include exports if requested
       if (options?.includeExports !== false && file.exports?.length) {
         lines.push('- **Exports**:')
@@ -109,7 +109,7 @@ function buildMarkdownSummary(files: ProjectFile[], options?: Partial<SummaryOpt
           .flatMap(exp => exp.specifiers?.map(s => s.exported) || [])
           .filter(Boolean)
           .slice(0, 5)
-        
+
         for (const name of exportNames) {
           lines.push(`  - ${name}`)
         }
@@ -117,11 +117,11 @@ function buildMarkdownSummary(files: ProjectFile[], options?: Partial<SummaryOpt
           lines.push(`  - ... and more`)
         }
       }
-      
+
       lines.push('')
     }
   }
-  
+
   return lines.join('\n')
 }
 
@@ -130,7 +130,7 @@ function buildMarkdownSummary(files: ProjectFile[], options?: Partial<SummaryOpt
  */
 function groupFilesByDirectory(files: ProjectFile[]): Record<string, ProjectFile[]> {
   const groups: Record<string, ProjectFile[]> = {}
-  
+
   for (const file of files) {
     const dir = file.path.substring(0, file.path.lastIndexOf('/'))
     if (!groups[dir]) {
@@ -138,15 +138,15 @@ function groupFilesByDirectory(files: ProjectFile[]): Record<string, ProjectFile
     }
     groups[dir].push(file)
   }
-  
+
   // Sort directories and files within each directory
   const sortedGroups: Record<string, ProjectFile[]> = {}
   const sortedDirs = Object.keys(groups).sort()
-  
+
   for (const dir of sortedDirs) {
     sortedGroups[dir] = groups[dir].sort((a, b) => a.name.localeCompare(b.name))
   }
-  
+
   return sortedGroups
 }
 
@@ -164,10 +164,10 @@ function getDefaultSummary(file: ProjectFile): string {
  * Get human-readable file type description
  */
 function getFileTypeDescription(fileOrExt: string): string {
-  const ext = fileOrExt.includes('.') 
+  const ext = fileOrExt.includes('.')
     ? fileOrExt.split('.').pop()?.toLowerCase() || 'unknown'
     : fileOrExt.toLowerCase()
-    
+
   const fileTypeMap: Record<string, string> = {
     ts: 'TypeScript',
     tsx: 'TypeScript React',
@@ -199,7 +199,7 @@ function getFileTypeDescription(fileOrExt: string): string {
     gitignore: 'Git Ignore',
     env: 'Environment Config'
   }
-  
+
   return fileTypeMap[ext] || 'Unknown'
 }
 
@@ -208,18 +208,18 @@ function getFileTypeDescription(fileOrExt: string): string {
  */
 export function compressSummary(summary: string, options?: Partial<SummaryOptions>): string {
   let compressed = summary
-  
+
   // Apply abbreviations
   compressed = applyAbbreviations(compressed)
-  
+
   // Compress paths if in minimal mode
   if (options?.depth === 'minimal') {
     compressed = compressPaths(compressed)
   }
-  
+
   // Remove redundant whitespace
   compressed = compressed.replace(/\s+/g, ' ').trim()
-  
+
   return compressed
 }
 
@@ -243,12 +243,12 @@ function applyAbbreviations(text: string): string {
     'database': 'db',
     'application': 'app'
   }
-  
+
   let result = text
   for (const [full, abbr] of Object.entries(abbreviations)) {
     result = result.replace(new RegExp(full, 'gi'), abbr)
   }
-  
+
   return result
 }
 
@@ -259,17 +259,17 @@ function compressPaths(text: string): string {
   // Find common path prefix
   const pathRegex = /(?:^|\s)\/[\w\-\/\.]+/g
   const paths = text.match(pathRegex) || []
-  
+
   if (paths.length < 2) return text
-  
+
   // Find common prefix
   const commonPrefix = findCommonPrefix(paths)
-  
+
   if (commonPrefix.length > 3) {
     // Replace common prefix with ...
     return text.replace(new RegExp(commonPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '...')
   }
-  
+
   return text
 }
 
@@ -278,7 +278,7 @@ function compressPaths(text: string): string {
  */
 function findCommonPrefix(paths: string[]): string {
   if (!paths.length) return ''
-  
+
   let prefix = paths[0]
   for (let i = 1; i < paths.length; i++) {
     while (!paths[i].startsWith(prefix)) {
@@ -286,6 +286,6 @@ function findCommonPrefix(paths: string[]): string {
       if (!prefix) break
     }
   }
-  
+
   return prefix
 }

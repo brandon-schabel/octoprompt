@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import {
   ProjectIdParamsSchema,
   CreateProjectBodySchema,
@@ -14,15 +14,15 @@ import {
   ProjectSummaryResponseSchema,
   ProjectFileSchema,
   ProjectFile
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
 
 import { existsSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
 import { homedir as getHomedir } from 'node:os'
 
-import * as projectService from '@octoprompt/services'
+import * as projectService from '@promptliano/services'
 import {
   getFullProjectSummary,
   getProjectStatistics,
@@ -30,8 +30,8 @@ import {
   syncProject,
   syncProjectFolder,
   watchersManager
-} from '@octoprompt/services'
-import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
+} from '@promptliano/services'
+import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@promptliano/schemas'
 
 // File operation schemas
 const FileIdParamsSchema = z.object({
@@ -400,7 +400,7 @@ const getProjectSummaryAdvancedRoute = createRoute({
   path: '/api/projects/{projectId}/summary/advanced',
   tags: ['Projects', 'Files', 'AI'],
   summary: 'Get an advanced project summary with customizable options',
-  request: { 
+  request: {
     params: ProjectIdParamsSchema,
     body: {
       content: {
@@ -959,21 +959,21 @@ export const projectRoutes = new OpenAPIHono()
       )
     }
   })
-  
+
   .openapi(getProjectSummaryAdvancedRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const options = c.req.valid('json')
-    
+
     try {
-      const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
-      const { SummaryOptionsSchema } = await import('@octoprompt/schemas')
-      
+      const { getProjectSummaryWithOptions } = await import('@promptliano/services')
+      const { SummaryOptionsSchema } = await import('@promptliano/schemas')
+
       // Validate options
       const validatedOptions = SummaryOptionsSchema.parse(options)
-      
+
       // Get summary with options
       const result = await getProjectSummaryWithOptions(projectId, validatedOptions)
-      
+
       return c.json(result, 200)
     } catch (error) {
       if (error instanceof ApiError) {
@@ -986,13 +986,13 @@ export const projectRoutes = new OpenAPIHono()
       )
     }
   })
-  
+
   .openapi(getProjectSummaryMetricsRoute, async (c) => {
     const { projectId } = c.req.valid('param')
-    
+
     try {
-      const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
-      
+      const { getProjectSummaryWithOptions } = await import('@promptliano/services')
+
       // Get summary with metrics enabled
       const result = await getProjectSummaryWithOptions(projectId, {
         depth: 'standard',
@@ -1003,11 +1003,11 @@ export const projectRoutes = new OpenAPIHono()
         progressive: false,
         includeMetrics: true
       })
-      
+
       if (!result.metrics) {
         throw new ApiError(500, 'Failed to generate metrics', 'METRICS_GENERATION_ERROR')
       }
-      
+
       const payload = {
         success: true,
         data: {
@@ -1015,7 +1015,7 @@ export const projectRoutes = new OpenAPIHono()
           version: result.version
         }
       }
-      
+
       return c.json(payload, 200)
     } catch (error) {
       if (error instanceof ApiError) {
@@ -1028,25 +1028,25 @@ export const projectRoutes = new OpenAPIHono()
       )
     }
   })
-  
+
   .openapi(invalidateProjectSummaryCacheRoute, async (c) => {
     const { projectId } = c.req.valid('param')
-    
+
     try {
       // Verify project exists
       const project = await projectService.getProjectById(projectId)
       if (!project) {
         throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
       }
-      
-      const { invalidateProjectSummaryCache } = await import('@octoprompt/services')
+
+      const { invalidateProjectSummaryCache } = await import('@promptliano/services')
       invalidateProjectSummaryCache(projectId)
-      
+
       const payload: z.infer<typeof OperationSuccessResponseSchema> = {
         success: true,
         message: 'Project summary cache invalidated successfully'
       }
-      
+
       return c.json(payload, 200)
     } catch (error) {
       if (error instanceof ApiError) {
@@ -1059,7 +1059,7 @@ export const projectRoutes = new OpenAPIHono()
       )
     }
   })
-  
+
   .openapi(optimizeUserInputRoute, async (c) => {
     const { userContext, projectId } = c.req.valid('json')
     const optimized = await optimizeUserInput(projectId, userContext)
@@ -1237,41 +1237,41 @@ export const projectRoutes = new OpenAPIHono()
   .openapi(startBatchSummarizationRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { strategy, options } = c.req.valid('json')
-    
+
     const project = await projectService.getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    
+
     try {
-      const { enhancedSummarizationService } = await import('@octoprompt/services')
-      const { BatchSummaryOptionsSchema } = await import('@octoprompt/schemas')
-      
+      const { enhancedSummarizationService } = await import('@promptliano/services')
+      const { BatchSummaryOptionsSchema } = await import('@promptliano/schemas')
+
       // Prepare batch options
       const batchOptions = BatchSummaryOptionsSchema.parse({
         strategy,
         ...options
       })
-      
+
       // Start batch summarization (async iterator)
       const progressIterator = enhancedSummarizationService.batchSummarizeWithProgress(
         projectId,
         batchOptions
       )
-      
+
       // Get first progress update
       const firstProgress = await progressIterator.next()
       if (firstProgress.done || !firstProgress.value) {
         throw new ApiError(500, 'Failed to start batch summarization', 'BATCH_START_ERROR')
       }
-      
+
       // Store iterator for streaming updates (would need WebSocket or SSE for real-time)
       // For now, just return initial progress
       const payload = {
         success: true as const,
         data: firstProgress.value
       }
-      
+
       return c.json(payload, 200)
     } catch (error) {
       if (error instanceof ApiError) {
@@ -1286,16 +1286,16 @@ export const projectRoutes = new OpenAPIHono()
   })
   .openapi(getBatchProgressRoute, async (c) => {
     const { projectId, batchId } = c.req.valid('param')
-    
+
     try {
-      const { fileSummarizationTracker } = await import('@octoprompt/services')
-      
+      const { fileSummarizationTracker } = await import('@promptliano/services')
+
       const progress = fileSummarizationTracker.getSummarizationProgress(projectId)
-      
+
       if (!progress || progress.batchId !== batchId) {
         throw new ApiError(404, `Batch ${batchId} not found`, 'BATCH_NOT_FOUND')
       }
-      
+
       const payload = {
         success: true as const,
         data: {
@@ -1309,7 +1309,7 @@ export const projectRoutes = new OpenAPIHono()
           errors: progress.errors || []
         }
       }
-      
+
       return c.json(payload, 200)
     } catch (error) {
       if (error instanceof ApiError) {
@@ -1324,25 +1324,25 @@ export const projectRoutes = new OpenAPIHono()
   })
   .openapi(cancelBatchSummarizationRoute, async (c) => {
     const { projectId, batchId } = c.req.valid('param')
-    
+
     try {
-      const { fileSummarizationTracker, enhancedSummarizationService } = await import('@octoprompt/services')
-      
+      const { fileSummarizationTracker, enhancedSummarizationService } = await import('@promptliano/services')
+
       // Cancel in tracker
       const cancelledInTracker = fileSummarizationTracker.cancelBatch(batchId)
-      
+
       // Cancel in service
       const cancelledInService = enhancedSummarizationService.cancelBatch(batchId)
-      
+
       if (!cancelledInTracker && !cancelledInService) {
         throw new ApiError(404, `Batch ${batchId} not found or already completed`, 'BATCH_NOT_FOUND')
       }
-      
+
       const payload: z.infer<typeof OperationSuccessResponseSchema> = {
         success: true,
         message: 'Batch summarization cancelled successfully'
       }
-      
+
       return c.json(payload, 200)
     } catch (error) {
       if (error instanceof ApiError) {
@@ -1357,22 +1357,22 @@ export const projectRoutes = new OpenAPIHono()
   })
   .openapi(getSummarizationStatsRoute, async (c) => {
     const { projectId } = c.req.valid('param')
-    
+
     const project = await projectService.getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    
+
     try {
-      const { fileSummarizationTracker } = await import('@octoprompt/services')
-      
+      const { fileSummarizationTracker } = await import('@promptliano/services')
+
       const stats = await fileSummarizationTracker.getSummarizationStats(projectId)
-      
+
       const payload = {
         success: true as const,
         data: stats
       }
-      
+
       return c.json(payload, 200)
     } catch (error) {
       if (error instanceof ApiError) {
@@ -1388,27 +1388,27 @@ export const projectRoutes = new OpenAPIHono()
   .openapi(previewFileGroupsRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { strategy, maxGroupSize, includeStaleFiles } = c.req.valid('json')
-    
+
     const project = await projectService.getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    
+
     try {
-      const { fileSummarizationTracker, fileGroupingService } = await import('@octoprompt/services')
-      
+      const { fileSummarizationTracker, fileGroupingService } = await import('@promptliano/services')
+
       // Get files to group
       const unsummarizedFiles = await fileSummarizationTracker.getUnsummarizedFiles(projectId)
       const staleFiles = includeStaleFiles
         ? await fileSummarizationTracker.getStaleFiles(projectId)
         : []
-      
+
       // Combine and deduplicate
       const fileMap = new Map()
       const allFilesToGroup = [...unsummarizedFiles, ...staleFiles]
       allFilesToGroup.forEach(f => fileMap.set(f.id, f))
       const filesToGroup = Array.from(fileMap.values())
-      
+
       if (filesToGroup.length === 0) {
         const payload = {
           success: true as const,
@@ -1421,14 +1421,14 @@ export const projectRoutes = new OpenAPIHono()
         }
         return c.json(payload, 200)
       }
-      
+
       // Group files
       const groups = fileGroupingService.groupFilesByStrategy(
         filesToGroup,
         strategy,
         { maxGroupSize }
       )
-      
+
       // Estimate tokens
       let totalTokens = 0
       const groupsWithTokens = groups.map(group => {
@@ -1442,7 +1442,7 @@ export const projectRoutes = new OpenAPIHono()
           estimatedTokens
         }
       })
-      
+
       const payload = {
         success: true as const,
         data: {
@@ -1452,7 +1452,7 @@ export const projectRoutes = new OpenAPIHono()
           estimatedTotalTokens: totalTokens
         }
       }
-      
+
       return c.json(payload, 200)
     } catch (error) {
       if (error instanceof ApiError) {

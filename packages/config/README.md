@@ -1,10 +1,10 @@
-# @octoprompt/config
+# @promptliano/config
 
-Centralized configuration management for OctoPrompt.
+Centralized configuration management for Promptliano.
 
 ## Overview
 
-This package provides a single source of truth for all global configuration in the OctoPrompt application. It consolidates settings that were previously scattered across multiple files and packages.
+This package provides a single source of truth for all global configuration in the Promptliano application. It consolidates settings that were previously scattered across multiple files and packages.
 
 ## Configuration Domains
 
@@ -40,7 +40,7 @@ This package provides a single source of truth for all global configuration in t
 ## Usage
 
 ```typescript
-import { getGlobalConfig, getModelsConfig, LOW_MODEL_CONFIG, filesConfig, providersConfig } from '@octoprompt/config'
+import { getGlobalConfig, getModelsConfig, LOW_MODEL_CONFIG, filesConfig, providersConfig } from '@promptliano/config'
 
 // Get entire configuration
 const config = getGlobalConfig()
@@ -61,8 +61,8 @@ The following environment variables can override default settings:
 - `CORS_ORIGIN` - CORS origin (default: \*)
 - `SERVER_HOST` - Server host (default: localhost)
 - `SERVER_PORT` - Server port (default: 3147)
-- `CLIENT_URL` - Client URL (default: http://localhost:1420)
-- `API_URL` - API URL (default: http://localhost:3147)
+- `CLIENT_URL` - Client URL (default: <http://localhost:1420>)
+- `API_URL` - API URL (default: <http://localhost:3147>)
 
 ## Configuration Validation
 
@@ -78,7 +78,7 @@ The configuration package is designed to work in both Node.js and browser enviro
 
 ## Package Independence
 
-This package is designed to be independent and does not depend on other @octoprompt packages. All necessary types are defined locally to avoid circular dependencies. This allows the config package to be the foundation that other packages can depend on.
+This package is designed to be independent and does not depend on other @promptliano packages. All necessary types are defined locally to avoid circular dependencies. This allows the config package to be the foundation that other packages can depend on.
 
 ## Future Enhancements
 

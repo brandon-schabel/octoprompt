@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi'
 import type { MCPToolDefinition, MCPToolResponse } from './tools-registry'
 import { MCPError, MCPErrorCode, createMCPError, formatMCPErrorResponse } from './mcp-errors'
 import { executeTransaction, createTransactionStep } from './mcp-transaction'
-import { trackMCPToolExecution } from '@octoprompt/services'
+import { trackMCPToolExecution } from '@promptliano/services'
 import {
   listProjects,
   getProjectById,
@@ -103,7 +103,7 @@ import {
   setActiveTab,
   clearActiveTab,
   fileSearchService
-} from '@octoprompt/services'
+} from '@promptliano/services'
 import type {
   CreateProjectBody,
   UpdateProjectBody,
@@ -112,7 +112,7 @@ import type {
   CreateTicketBody,
   UpdateTicketBody,
   UpdateTaskBody
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
 
@@ -402,7 +402,7 @@ const TaskManagerSchema = z.object({
 
 const AIAssistantSchema = z.object({
   action: z.enum([
-    AIAssistantAction.OPTIMIZE_PROMPT, 
+    AIAssistantAction.OPTIMIZE_PROMPT,
     AIAssistantAction.GET_COMPACT_SUMMARY,
     AIAssistantAction.GET_COMPACT_SUMMARY_WITH_OPTIONS
   ]),
@@ -607,16 +607,16 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
                 content: [{ type: 'text', text: summary }]
               }
             }
-            
+
             case ProjectManagerAction.GET_SUMMARY_ADVANCED: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number')
-              const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
-              const { SummaryOptionsSchema } = await import('@octoprompt/schemas')
-              
+              const { getProjectSummaryWithOptions } = await import('@promptliano/services')
+              const { SummaryOptionsSchema } = await import('@promptliano/schemas')
+
               // Parse and validate options
               const options = SummaryOptionsSchema.parse(data || {})
               const result = await getProjectSummaryWithOptions(validProjectId, options)
-              
+
               // Format response based on whether metrics were requested
               if (options.includeMetrics && result.metrics) {
                 const metricsText = `
@@ -635,16 +635,16 @@ ${result.summary}`
                   content: [{ type: 'text', text: metricsText }]
                 }
               }
-              
+
               return {
                 content: [{ type: 'text', text: result.summary }]
               }
             }
-            
+
             case ProjectManagerAction.GET_SUMMARY_METRICS: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number')
-              const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
-              
+              const { getProjectSummaryWithOptions } = await import('@promptliano/services')
+
               // Get summary with metrics for standard options
               const result = await getProjectSummaryWithOptions(validProjectId, {
                 depth: 'standard',
@@ -655,13 +655,13 @@ ${result.summary}`
                 progressive: false,
                 includeMetrics: true
               })
-              
+
               if (!result.metrics) {
                 return {
                   content: [{ type: 'text', text: 'No metrics available' }]
                 }
               }
-              
+
               const metricsReport = `
 Project Summary Metrics:
 - Generation Time: ${result.metrics.generationTime}ms
@@ -677,7 +677,7 @@ Version Info:
 - Format Version: ${result.version.version}
 - Model Used: ${result.version.model}
 - Generated: ${new Date(result.version.generated).toLocaleString()}`
-              
+
               return {
                 content: [{ type: 'text', text: metricsReport }]
               }
@@ -1127,11 +1127,11 @@ Version Info:
                 throw firstError instanceof MCPError
                   ? firstError
                   : MCPError.fromError(firstError, {
-                      tool: 'project_manager',
-                      action: ProjectManagerAction.CREATE_FILE,
-                      parameter: 'path',
-                      value: filePath
-                    })
+                    tool: 'project_manager',
+                    action: ProjectManagerAction.CREATE_FILE,
+                    parameter: 'path',
+                    value: filePath
+                  })
               }
 
               const syncResult = transaction.results.get('sync-project') as any
@@ -1254,11 +1254,11 @@ Version Info:
               }
 
               // Clean up file references in tickets
-              const { removeDeletedFileIdsFromTickets } = await import('@octoprompt/services')
+              const { removeDeletedFileIdsFromTickets } = await import('@promptliano/services')
               await removeDeletedFileIdsFromTickets(validProjectId, [file.id])
 
               // Clean up file references in selected files
-              const { removeDeletedFileIdsFromSelectedFiles } = await import('@octoprompt/services')
+              const { removeDeletedFileIdsFromSelectedFiles } = await import('@promptliano/services')
               await removeDeletedFileIdsFromSelectedFiles(validProjectId, [file.id])
 
               // Delete the file from disk
@@ -1279,7 +1279,7 @@ Version Info:
 
             case ProjectManagerAction.GET_FILE_TREE: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              const { getProjectFileTree } = await import('@octoprompt/services')
+              const { getProjectFileTree } = await import('@promptliano/services')
               const fileTree = await getProjectFileTree(validProjectId)
               return {
                 content: [{ type: 'text', text: fileTree }]
@@ -1288,7 +1288,7 @@ Version Info:
 
             case ProjectManagerAction.OVERVIEW: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              const { getProjectOverview } = await import('@octoprompt/services')
+              const { getProjectOverview } = await import('@promptliano/services')
               const overview = await getProjectOverview(validProjectId)
               return {
                 content: [{ type: 'text', text: overview }]
@@ -1307,9 +1307,9 @@ Version Info:
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'project_manager',
-                  action: args.action
-                })
+                tool: 'project_manager',
+                action: args.action
+              })
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
@@ -1556,9 +1556,9 @@ Version Info:
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'prompt_manager',
-                  action: args.action
-                })
+                tool: 'prompt_manager',
+                action: args.action
+              })
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
@@ -1700,7 +1700,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
             case TicketManagerAction.AUTO_GENERATE_TASKS: {
               const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
-              
+
               try {
                 const tasks = await autoGenerateTasksFromOverview(ticketId)
                 const taskList = tasks.map((t) => `${t.id}: ${t.content}`).join('\n')
@@ -1743,7 +1743,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             case TicketManagerAction.SUGGEST_FILES: {
               const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
               const extraUserInput = data?.extraUserInput as string | undefined
-              
+
               try {
                 const result = await suggestFilesForTicket(ticketId, { extraUserInput })
                 return {
@@ -1942,9 +1942,9 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'ticket_manager',
-                  action: args.action
-                })
+                tool: 'ticket_manager',
+                action: args.action
+              })
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
@@ -2051,7 +2051,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             }
 
             case TaskManagerAction.SUGGEST_FILES: {
-              const { suggestFilesForTask } = await import('@octoprompt/services')
+              const { suggestFilesForTask } = await import('@promptliano/services')
               const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
               const context = data.context as string | undefined
               const suggestedFiles = await suggestFilesForTask(taskId, context)
@@ -2088,7 +2088,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             }
 
             case TaskManagerAction.GET_WITH_CONTEXT: {
-              const { getTaskWithContext } = await import('@octoprompt/services')
+              const { getTaskWithContext } = await import('@promptliano/services')
               const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
               const taskWithContext = await getTaskWithContext(taskId)
               const contextInfo = {
@@ -2110,7 +2110,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             }
 
             case TaskManagerAction.ANALYZE_COMPLEXITY: {
-              const { analyzeTaskComplexity } = await import('@octoprompt/services')
+              const { analyzeTaskComplexity } = await import('@promptliano/services')
               const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
               const analysis = await analyzeTaskComplexity(taskId)
               return {
@@ -2367,19 +2367,19 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
                 content: [{ type: 'text', text: summary }]
               }
             }
-            
+
             case AIAssistantAction.GET_COMPACT_SUMMARY_WITH_OPTIONS: {
-              const { getProjectSummaryWithOptions } = await import('@octoprompt/services')
-              const { SummaryOptionsSchema } = await import('@octoprompt/schemas')
-              
+              const { getProjectSummaryWithOptions } = await import('@promptliano/services')
+              const { SummaryOptionsSchema } = await import('@promptliano/schemas')
+
               // Parse and validate options, setting defaults for compact summary
               const options = SummaryOptionsSchema.parse({
                 ...data,
                 strategy: data?.strategy || 'balanced' // Default to balanced for AI summaries
               })
-              
+
               const result = await getProjectSummaryWithOptions(projectId, options)
-              
+
               // Format response based on whether metrics were requested
               if (options.includeMetrics && result.metrics) {
                 const metricsText = `
@@ -2395,7 +2395,7 @@ ${result.summary}`
                   content: [{ type: 'text', text: metricsText }]
                 }
               }
-              
+
               return {
                 content: [{ type: 'text', text: result.summary }]
               }
@@ -2731,8 +2731,8 @@ ${result.summary}`
                 typeof config === 'string'
                   ? `${key}: ${config}`
                   : Object.entries(config)
-                      .map(([k, v]) => `${k}: ${v}`)
-                      .join('\n')
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join('\n')
               return { content: [{ type: 'text', text }] }
             }
 
@@ -2921,7 +2921,7 @@ ${result.summary}`
               if (pruned.length === 0) {
                 return { content: [{ type: 'text', text: dryRun ? 'No worktrees would be pruned' : 'No worktrees pruned' }] }
               }
-              const text = dryRun 
+              const text = dryRun
                 ? `Would prune:\n${pruned.join('\n')}`
                 : `Pruned:\n${pruned.join('\n')}`
               return { content: [{ type: 'text', text }] }
@@ -3043,16 +3043,16 @@ ${result.summary}`
               const tabId = validateDataField<number>(data, 'tabId', 'number', '0')
               const tabData = data?.tabData || {}
               const existingNames = data?.existingNames || []
-              
-              const { createTabNameGenerationService } = await import('@octoprompt/services')
+
+              const { createTabNameGenerationService } = await import('@promptliano/services')
               const tabNameService = createTabNameGenerationService()
-              
+
               const result = await tabNameService.generateUniqueTabName(
                 validProjectId,
                 tabData,
                 existingNames
               )
-              
+
               return {
                 content: [
                   {
@@ -3075,9 +3075,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'tab_manager',
-                  action: args.action
-                })
+                tool: 'tab_manager',
+                action: args.action
+              })
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
@@ -3233,21 +3233,21 @@ ${result.summary}`
       async (args: z.infer<typeof JobManagerSchema>): Promise<MCPToolResponse> => {
         try {
           const { action, jobId, projectId, data } = args
-          const { getJobQueue } = await import('@octoprompt/services')
+          const { getJobQueue } = await import('@promptliano/services')
           const jobQueue = getJobQueue()
 
           switch (action) {
             case JobManagerAction.LIST: {
               const filter = data || {}
               if (projectId) filter.projectId = projectId
-              
+
               const jobs = await jobQueue.getJobs(filter)
-              
+
               return {
                 content: [
                   {
                     type: 'text',
-                    text: `Found ${jobs.length} jobs:\n${jobs.map(job => 
+                    text: `Found ${jobs.length} jobs:\n${jobs.map(job =>
                       `- Job ${job.id}: ${job.type} (${job.status}) - Created ${new Date(job.created).toISOString()}`
                     ).join('\n')}`
                   }
@@ -3258,7 +3258,7 @@ ${result.summary}`
             case JobManagerAction.GET: {
               const validJobId = validateRequiredParam(jobId, 'jobId', 'number')
               const job = await jobQueue.getJob(validJobId)
-              
+
               if (!job) {
                 return {
                   content: [{ type: 'text', text: `Job ${validJobId} not found` }]
@@ -3279,7 +3279,7 @@ ${result.summary}`
               const validProjectId = projectId ? validateRequiredParam(projectId, 'projectId', 'number') : undefined
               const jobType = validateDataField<string>(data, 'type', 'string', '"git.worktree.add"')
               const jobInput = validateDataField<any>(data, 'input', 'object', '{ path: "/path/to/worktree" }')
-              
+
               const job = await jobQueue.createJob({
                 type: jobType,
                 input: jobInput,
@@ -3301,12 +3301,12 @@ ${result.summary}`
             case JobManagerAction.CANCEL: {
               const validJobId = validateRequiredParam(jobId, 'jobId', 'number')
               const cancelled = await jobQueue.cancelJob(validJobId)
-              
+
               return {
                 content: [
                   {
                     type: 'text',
-                    text: cancelled 
+                    text: cancelled
                       ? `Job ${validJobId} cancelled successfully`
                       : `Failed to cancel job ${validJobId} (may already be completed)`
                   }
@@ -3317,7 +3317,7 @@ ${result.summary}`
             case JobManagerAction.RETRY: {
               const validJobId = validateRequiredParam(jobId, 'jobId', 'number')
               const originalJob = await jobQueue.getJob(validJobId)
-              
+
               if (!originalJob) {
                 return {
                   content: [{ type: 'text', text: `Job ${validJobId} not found` }]
@@ -3353,7 +3353,7 @@ ${result.summary}`
             case JobManagerAction.CLEANUP: {
               const olderThanDays = data?.olderThanDays || 30
               const deletedCount = await jobQueue.cleanupOldJobs(olderThanDays)
-              
+
               return {
                 content: [
                   {
@@ -3375,9 +3375,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'job_manager',
-                  action: args.action
-                })
+                tool: 'job_manager',
+                action: args.action
+              })
 
           return formatMCPErrorResponse(mcpError)
         }
@@ -3417,7 +3417,7 @@ ${result.summary}`
             fileGroupingService,
             enhancedSummarizationService,
             getProjectFiles
-          } = await import('@octoprompt/services')
+          } = await import('@promptliano/services')
 
           switch (action) {
             case FileSummarizationManagerAction.IDENTIFY_UNSUMMARIZED: {
@@ -3426,27 +3426,27 @@ ${result.summary}`
                 includeSkipped: options.includeSkipped || false,
                 includeEmpty: false
               })
-              
+
               const staleFiles = options.includeStale
                 ? await fileSummarizationTracker.getStaleFiles(
-                    projectId,
-                    (options.staleThresholdDays || 30) * 24 * 60 * 60 * 1000
-                  )
+                  projectId,
+                  (options.staleThresholdDays || 30) * 24 * 60 * 60 * 1000
+                )
                 : []
-              
+
               // Combine and deduplicate
               const fileMap = new Map()
               const allFiles = [...unsummarizedFiles, ...staleFiles]
               allFiles.forEach(f => fileMap.set(f.id, f))
               const totalFiles = fileMap.size
-              
+
               return {
                 content: [{
                   type: 'text',
                   text: `Found ${totalFiles} files needing summarization:\n` +
                     `- Unsummarized: ${unsummarizedFiles.length}\n` +
                     `- Stale: ${staleFiles.length}\n\n` +
-                    `Files:\n${Array.from(fileMap.values()).slice(0, 20).map(f => 
+                    `Files:\n${Array.from(fileMap.values()).slice(0, 20).map(f =>
                       `- ${f.path} (${f.size ? `${(f.size / 1024).toFixed(1)}KB` : 'unknown size'})`
                     ).join('\n')}${totalFiles > 20 ? `\n... and ${totalFiles - 20} more` : ''}`
                 }]
@@ -3461,7 +3461,7 @@ ${result.summary}`
                   content: [{ type: 'text', text: 'No files found in project' }]
                 }
               }
-              
+
               const groups = fileGroupingService.groupFilesByStrategy(
                 files,
                 options.strategy || 'mixed',
@@ -3470,12 +3470,12 @@ ${result.summary}`
                   priorityThreshold: options.priorityThreshold || 3
                 }
               )
-              
+
               return {
                 content: [{
                   type: 'text',
                   text: `Created ${groups.length} file groups using ${options.strategy || 'mixed'} strategy:\n\n` +
-                    groups.slice(0, 10).map(g => 
+                    groups.slice(0, 10).map(g =>
                       `Group: ${g.name}\n` +
                       `- Files: ${g.fileIds.length}\n` +
                       `- Priority: ${g.priority.toFixed(2)}\n` +
@@ -3499,13 +3499,13 @@ ${result.summary}`
                 retryFailedFiles: options.retryFailedFiles || false,
                 maxRetries: options.maxRetries || 2
               }
-              
+
               // Start async batch process
               const iterator = enhancedSummarizationService.batchSummarizeWithProgress(
                 projectId,
                 batchOptions
               )
-              
+
               // Get first progress update
               const firstProgress = await iterator.next()
               if (firstProgress.done) {
@@ -3513,7 +3513,7 @@ ${result.summary}`
                   content: [{ type: 'text', text: 'No files to summarize' }]
                 }
               }
-              
+
               const progress = firstProgress.value
               return {
                 content: [{
@@ -3531,19 +3531,19 @@ ${result.summary}`
             case FileSummarizationManagerAction.GET_PROGRESS: {
               const activeBatches = fileSummarizationTracker.getActiveBatches()
               const projectProgress = fileSummarizationTracker.getSummarizationProgress(projectId)
-              
+
               if (!projectProgress && activeBatches.length === 0) {
                 return {
                   content: [{ type: 'text', text: 'No active or recent batch operations found' }]
                 }
               }
-              
+
               let text = ''
               if (projectProgress) {
-                const duration = projectProgress.endTime 
+                const duration = projectProgress.endTime
                   ? projectProgress.endTime - projectProgress.startTime
                   : Date.now() - projectProgress.startTime
-                
+
                 text += `Current batch progress:\n` +
                   `- Batch ID: ${projectProgress.batchId}\n` +
                   `- Status: ${projectProgress.status}\n` +
@@ -3551,23 +3551,23 @@ ${result.summary}`
                   `- Groups: ${projectProgress.processedGroups}/${projectProgress.totalGroups}\n` +
                   `- Duration: ${(duration / 1000).toFixed(1)}s\n` +
                   `- Tokens used: ~${projectProgress.estimatedTokensUsed.toLocaleString()}\n`
-                
+
                 if (projectProgress.currentGroup) {
                   text += `- Current group: ${projectProgress.currentGroup}\n`
                 }
-                
+
                 if (projectProgress.errors && projectProgress.errors.length > 0) {
                   text += `\nErrors:\n${projectProgress.errors.slice(0, 5).join('\n')}`
                 }
               }
-              
+
               if (activeBatches.length > 0) {
                 text += `\n\nActive batches:\n`
                 activeBatches.forEach(({ batchId, progress }) => {
                   text += `- ${batchId}: ${progress.status} (${progress.processedFiles}/${progress.totalFiles} files)\n`
                 })
               }
-              
+
               return {
                 content: [{ type: 'text', text }]
               }
@@ -3580,7 +3580,7 @@ ${result.summary}`
                   content: [{ type: 'text', text: 'Error: batchId is required in data' }]
                 }
               }
-              
+
               const cancelled = enhancedSummarizationService.cancelBatch(batchId)
               if (cancelled) {
                 fileSummarizationTracker.cancelBatch(batchId)
@@ -3588,7 +3588,7 @@ ${result.summary}`
                   content: [{ type: 'text', text: `Batch ${batchId} cancelled successfully` }]
                 }
               }
-              
+
               return {
                 content: [{ type: 'text', text: `Batch ${batchId} not found or already completed` }]
               }
@@ -3596,7 +3596,7 @@ ${result.summary}`
 
             case FileSummarizationManagerAction.GET_SUMMARY_STATS: {
               const stats = await fileSummarizationTracker.getSummarizationStats(projectId)
-              
+
               return {
                 content: [{
                   type: 'text',
@@ -3627,9 +3627,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'file_summarization_manager',
-                  action: args.action
-                })
+                tool: 'file_summarization_manager',
+                action: args.action
+              })
 
           return formatMCPErrorResponse(mcpError)
         }

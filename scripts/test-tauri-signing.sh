@@ -105,9 +105,9 @@ else
     
     # Create dummy binary for testing
     mkdir -p dist
-    echo '#!/bin/bash' > dist/octoprompt-bundle
-    echo 'echo "Dummy server for signing test"' >> dist/octoprompt-bundle
-    chmod +x dist/octoprompt-bundle
+    echo '#!/bin/bash' > dist/promptliano-bundle
+    echo 'echo "Dummy server for signing test"' >> dist/promptliano-bundle
+    chmod +x dist/promptliano-bundle
 fi
 
 echo -e "\n${YELLOW}5. Preparing Tauri sidecars...${NC}"

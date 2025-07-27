@@ -8,7 +8,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import type { Context } from 'hono'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import {
   getMCPClientManager,
   getProjectFiles,
@@ -17,7 +17,7 @@ import {
   startMCPToolExecution,
   completeMCPToolExecution,
   ensureProjectServersInitialized
-} from '@octoprompt/services'
+} from '@promptliano/services'
 import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './tools-registry'
 
 // JSON-RPC 2.0 message types
@@ -269,7 +269,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       protocolVersion: '2024-11-05',
       capabilities: serverCapabilities,
       serverInfo: {
-        name: 'octoprompt-mcp',
+        name: 'promptliano-mcp',
         version: '0.8.0'
       },
       _meta: { sessionId } // Include session ID for client reference
@@ -285,7 +285,7 @@ async function handleToolsList(
   sessionId?: string
 ): Promise<JSONRPCResponse> {
   try {
-    // Return OctoPrompt's consolidated MCP tools
+    // Return Promptliano's consolidated MCP tools
     const mcpTools = CONSOLIDATED_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
@@ -365,7 +365,7 @@ async function handleToolsCall(
       }
     }
 
-    // Handle built-in OctoPrompt tools
+    // Handle built-in Promptliano tools
     if (name.startsWith('external_')) {
       // Handle external MCP server tools
       if (!projectId) {
@@ -526,28 +526,28 @@ async function handleResourcesList(
 
     // Add global resources (available without projectId)
     try {
-      const { listProjects } = await import('@octoprompt/services')
+      const { listProjects } = await import('@promptliano/services')
       const projects = await listProjects()
 
       // Add all projects resource
       mcpResources.push({
-        uri: 'octoprompt://projects',
+        uri: 'promptliano://projects',
         name: 'All Projects',
-        description: 'List of all available projects in OctoPrompt',
+        description: 'List of all available projects in Promptliano',
         mimeType: 'application/json'
       })
 
       // Add resources for each project
       for (const project of projects) {
         mcpResources.push({
-          uri: `octoprompt://projects/${project.id}/summary`,
+          uri: `promptliano://projects/${project.id}/summary`,
           name: `${project.name} Summary`,
           description: `Compact summary of project "${project.name}"`,
           mimeType: 'text/plain'
         })
 
         mcpResources.push({
-          uri: `octoprompt://projects/${project.id}/files`,
+          uri: `promptliano://projects/${project.id}/files`,
           name: `${project.name} Files`,
           description: `List of files in project "${project.name}"`,
           mimeType: 'application/json'
@@ -565,7 +565,7 @@ async function handleResourcesList(
 
         // Add file suggestion resource
         mcpResources.push({
-          uri: `octoprompt://projects/${projectId}/suggest-files`,
+          uri: `promptliano://projects/${projectId}/suggest-files`,
           name: 'File Suggestions',
           description: 'AI-powered file suggestions based on prompts',
           mimeType: 'application/json'
@@ -573,7 +573,7 @@ async function handleResourcesList(
 
         // Add individual file resources (limit to first 10 for performance)
         const fileResources = (files || []).slice(0, 10).map((file) => ({
-          uri: `octoprompt://projects/${projectId}/files/${file.id}`,
+          uri: `promptliano://projects/${projectId}/files/${file.id}`,
           name: file.name,
           description: `File: ${file.path} (${file.size} bytes)`,
           mimeType:
@@ -694,13 +694,13 @@ async function handleResourcesRead(
       }
     }
 
-    // Handle built-in OctoPrompt resources
-    if (uri.startsWith('octoprompt://')) {
-      const urlParts = uri.replace('octoprompt://', '').split('/')
+    // Handle built-in Promptliano resources
+    if (uri.startsWith('promptliano://')) {
+      const urlParts = uri.replace('promptliano://', '').split('/')
 
       // Handle global projects list
-      if (uri === 'octoprompt://projects') {
-        const { listProjects } = await import('@octoprompt/services')
+      if (uri === 'promptliano://projects') {
+        const { listProjects } = await import('@promptliano/services')
         const projects = await listProjects()
         return {
           jsonrpc: '2.0',
@@ -723,7 +723,7 @@ async function handleResourcesRead(
 
         if (urlParts[2] === 'summary') {
           // Project summary resource - use compact summary
-          const { getProjectCompactSummary } = await import('@octoprompt/services')
+          const { getProjectCompactSummary } = await import('@promptliano/services')
           const summary = await getProjectCompactSummary(parseInt(resourceProjectId))
 
           return {
@@ -1049,7 +1049,7 @@ async function handleGETRequest(c: Context): Promise<Response> {
     jsonrpc: '2.0',
     id: 'welcome',
     result: {
-      message: 'OctoPrompt MCP Server - Streamable HTTP Transport',
+      message: 'Promptliano MCP Server - Streamable HTTP Transport',
       projectId: projectId || null,
       timestamp: Date.now(),
       protocolVersion: '2024-11-05'

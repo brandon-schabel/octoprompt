@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import type { StorageAdapter } from '../storage-v2'
 
 // --- Types ---
@@ -365,12 +365,12 @@ export function createTransformMigration(
     },
     reverseTransform
       ? async (adapter) => {
-          const all = await adapter.readAll()
-          for (const [id, record] of all) {
-            const reversed = reverseTransform(record)
-            await adapter.write(id, reversed)
-          }
+        const all = await adapter.readAll()
+        for (const [id, record] of all) {
+          const reversed = reverseTransform(record)
+          await adapter.write(id, reversed)
         }
+      }
       : undefined
   )
 }

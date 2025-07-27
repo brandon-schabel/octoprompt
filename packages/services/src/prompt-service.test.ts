@@ -11,9 +11,9 @@ import {
   getPromptProjects,
   getPromptsByIds
 } from './prompt-service'
-import type { Prompt, PromptProject, CreatePromptBody, UpdatePromptBody } from '@octoprompt/schemas'
-import type { PromptsStorage } from '@octoprompt/storage'
-import { ApiError } from '@octoprompt/shared'
+import type { Prompt, PromptProject, CreatePromptBody, UpdatePromptBody } from '@promptliano/schemas'
+import type { PromptsStorage } from '@promptliano/storage'
+import { ApiError } from '@promptliano/shared'
 
 // In-memory stores for our mocks
 let mockPromptsDb: PromptsStorage = {}
@@ -43,7 +43,7 @@ const mockPromptStorage = {
   generateId: () => generateTestId()
 }
 
-mock.module('@octoprompt/storage', () => ({
+mock.module('@promptliano/storage', () => ({
   promptStorage: mockPromptStorage
 }))
 

@@ -11,7 +11,7 @@ import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/f
 import { UserInputPanel, type UserInputPanelRef } from '@/components/projects/user-input-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
 import { DraggableThreeColumnPanel, type PanelConfig } from '@/components/ui/draggable-three-column-panel'
-import { ProjectResponse } from '@octoprompt/schemas'
+import { ProjectResponse } from '@promptliano/schemas'
 import {
   useActiveProjectTab,
   useGetProjectTabs,
@@ -45,7 +45,7 @@ export function ProjectsPage() {
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectResponse } = useGetProject(selectedProjectId!)
   const projectData = projectResponse?.data
-  
+
   // Sync active tab with backend
   useActiveTabSync(selectedProjectId)
 
@@ -153,7 +153,7 @@ export function ProjectsPage() {
     content = (
       <div className='flex flex-col items-center justify-center h-full w-full p-4 text-center'>
         <p className='text-lg font-semibold text-foreground mb-2'>
-          To get started, sync your first project to Octoprompt.
+          To get started, sync your first project to Promptliano.
         </p>
 
         <Tooltip>
@@ -203,8 +203,8 @@ export function ProjectsPage() {
         <div className='flex-none'>
           <ProjectsTabManager />
         </div>
-        <Tabs 
-          value={search.activeView || 'context'} 
+        <Tabs
+          value={search.activeView || 'context'}
           onValueChange={(value) => {
             navigate({
               to: '/projects',
@@ -214,13 +214,13 @@ export function ProjectsPage() {
           }}
           className='flex-1 flex flex-col min-h-0'
         >
-          <div className='flex-none px-4 py-2 border-b dark:border-slate-700 flex items-center justify-between'>
+          <div className='flex-none px-4 py-2 border-b dark:border-slate-700 grid grid-cols-3 items-center'>
             <ProjectSwitcher
               currentProject={projectData ?? null}
-              className='flex-shrink-0'
+              className='justify-self-start'
               onManageProjects={() => setProjectModalOpen(true)}
             />
-            <div className='flex-1 flex justify-center'>
+            <div className='justify-self-center'>
               <TabsList>
                 <TabsTrigger value='context'>Context</TabsTrigger>
                 <TabsTrigger value='stats'>Statistics</TabsTrigger>
@@ -245,9 +245,7 @@ export function ProjectsPage() {
                 </TabsTrigger>
               </TabsList>
             </div>
-            <div className='flex-shrink-0'>
-              {/* Settings button removed - now in tabs */}
-            </div>
+            <div>{/* Right column - empty for balance */}</div>
           </div>
 
           <TabsContent value='context' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
@@ -304,7 +302,7 @@ export function ProjectsPage() {
 
           <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData ? (
-              <AssetsTabWithSidebar 
+              <AssetsTabWithSidebar
                 projectId={selectedProjectId}
                 projectName={projectData.name}
                 assetView={search.assetView}
@@ -322,7 +320,7 @@ export function ProjectsPage() {
           </TabsContent>
           <TabsContent value='git' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId ? (
-              <GitTabWithSidebar 
+              <GitTabWithSidebar
                 projectId={selectedProjectId}
                 gitView={search.gitView}
                 onGitViewChange={(view) => {
@@ -387,12 +385,12 @@ export function ProjectsPage() {
 export const Route = createFileRoute('/projects')({
   validateSearch: zodValidator(projectsSearchSchema),
   beforeLoad: async ({ context, search }) => {
-    const { queryClient, octoClient } = context
+    const { queryClient, promptlianoClient } = context
 
     // Prefetch projects list if not already cached
     await queryClient.prefetchQuery({
       queryKey: ['projects'],
-      queryFn: () => octoClient.projects.listProjects(),
+      queryFn: () => promptlianoClient.projects.listProjects(),
       staleTime: 5 * 60 * 1000 // 5 minutes
     })
 
@@ -400,7 +398,7 @@ export const Route = createFileRoute('/projects')({
     if (search.projectId) {
       await queryClient.prefetchQuery({
         queryKey: ['project', search.projectId],
-        queryFn: () => octoClient.projects.getProject(search.projectId!),
+        queryFn: () => promptlianoClient.projects.getProject(search.projectId!),
         staleTime: 5 * 60 * 1000
       })
     }

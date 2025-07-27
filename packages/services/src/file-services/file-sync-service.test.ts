@@ -1,18 +1,18 @@
 import { describe, test, expect, spyOn, beforeEach, afterEach, Mock, mock } from 'bun:test'
 import * as fileSyncService from './file-sync-service-unified'
-import * as projectService from '@octoprompt/services'
+import * as projectService from '@promptliano/services'
 import * as fs from 'node:fs'
 import { join } from 'node:path'
 import ignore, { type Ignore } from 'ignore'
-import { getFilesConfig } from '@octoprompt/config'
-import type { Project } from '@octoprompt/schemas'
+import { getFilesConfig } from '@promptliano/config'
+import type { Project } from '@promptliano/schemas'
 
 const { defaultExclusions: DEFAULT_FILE_EXCLUSIONS } = getFilesConfig()
 import type { PathLike, Dirent, Stats } from 'node:fs'
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
 import { createCleanupService } from './file-sync-service-unified'
 import { normalizePathForDb } from '../utils/path-utils'
-import { normalizeToUnixMs } from '@octoprompt/shared'
+import { normalizeToUnixMs } from '@promptliano/shared'
 
 // --- Mocks/Spies for external dependencies (fs, projectService, console, Bun) ---
 let getProjectFilesSpy: Mock<typeof projectService.getProjectFiles>
@@ -97,8 +97,8 @@ describe('FileSync Service - Utility Functions', () => {
     readdirSyncSpy = spyOn(fs, 'readdirSync') as Mock<typeof fs.readdirSync>
     readFileSyncSpy = spyOn(fs, 'readFileSync') as Mock<typeof fs.readFileSync>
 
-    consoleWarnSpy = spyOn(console, 'warn').mockImplementation(() => {})
-    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {})
+    consoleWarnSpy = spyOn(console, 'warn').mockImplementation(() => { })
+    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => { })
 
     if (typeof Bun !== 'undefined') {
       bunFileTextSpy = spyOn(Bun, 'file').mockReturnValue({ text: async () => '' } as any)
@@ -363,10 +363,10 @@ describe('FileSync Service - Utility Functions', () => {
         if (pathString === dir) {
           return withFileTypes
             ? [
-                createDirent('file.ts', false, dir),
-                createDirent('image.png', false, dir),
-                createDirent('src', true, dir)
-              ]
+              createDirent('file.ts', false, dir),
+              createDirent('image.png', false, dir),
+              createDirent('src', true, dir)
+            ]
             : ['file.ts', 'image.png', 'src']
         }
         if (pathString === subDir) {
@@ -408,11 +408,11 @@ describe('FileSync Service - Utility Functions', () => {
         if (pathStr === dir) {
           return withFileTypes
             ? [
-                createDirent('src', true, dir),
-                createDirent('build.log', false, dir),
-                createDirent('dist', true, dir),
-                createDirent('node_modules', true, dir)
-              ]
+              createDirent('src', true, dir),
+              createDirent('build.log', false, dir),
+              createDirent('dist', true, dir),
+              createDirent('node_modules', true, dir)
+            ]
             : ['src', 'build.log', 'dist', 'node_modules']
         }
         if (pathStr === srcDir) {
@@ -458,13 +458,13 @@ describe('FileSync Service - Utility Functions', () => {
         if (pathString === dir) {
           return withFileTypes
             ? [
-                createDirent('script.js', false, dir),
-                createDirent('types.ts', false, dir),
-                createDirent('config.json', false, dir),
-                createDirent('README.md', false, dir),
-                createDirent('fake-file.ts', false, dir),
-                createDirent('image.jpg', false, dir)
-              ]
+              createDirent('script.js', false, dir),
+              createDirent('types.ts', false, dir),
+              createDirent('config.json', false, dir),
+              createDirent('README.md', false, dir),
+              createDirent('fake-file.ts', false, dir),
+              createDirent('image.jpg', false, dir)
+            ]
             : ['script.js', 'types.ts', 'config.json', 'README.md', '.env', 'image.jpg']
         }
         throw new Error(`Unexpected readdirSync call: ${pathString}`)

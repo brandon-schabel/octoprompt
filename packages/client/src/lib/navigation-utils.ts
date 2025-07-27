@@ -3,7 +3,7 @@ import { Link, useNavigate, type LinkProps, type NavigateOptions } from '@tansta
 import type { ProjectsSearch, ChatSearch, TicketsSearch, AssetsSearch } from './search-schemas'
 
 /**
- * Type-safe navigation utilities for OctoPrompt
+ * Type-safe navigation utilities for Promptliano
  * These provide better type inference and developer experience
  */
 

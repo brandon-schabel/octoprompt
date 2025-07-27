@@ -12,8 +12,8 @@ import {
   getProjectById,
   type AgentFileInfo,
   type DetectedAgentFile
-} from '@octoprompt/services'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/services'
+import { ApiError } from '@promptliano/shared'
 
 // Schemas
 const DetectedAgentFileResponseSchema = z.object({
@@ -107,7 +107,7 @@ const updateAgentFileRoute = createRoute({
     }
   },
   tags: ['Agent Files'],
-  description: 'Update an agent file with OctoPrompt instructions'
+  description: 'Update an agent file with Promptliano instructions'
 })
 
 const removeInstructionsRoute = createRoute({
@@ -143,7 +143,7 @@ const removeInstructionsRoute = createRoute({
     }
   },
   tags: ['Agent Files'],
-  description: 'Remove OctoPrompt instructions from an agent file'
+  description: 'Remove Promptliano instructions from an agent file'
 })
 
 const getAgentFileStatusRoute = createRoute({
@@ -234,9 +234,9 @@ export const agentFilesRoutes = new OpenAPIHono()
       const enhancedProjectFiles = await Promise.all(
         projectFiles.map(async (file) => {
           if (file.exists && file.content) {
-            const hasInstructions = file.content.includes('OCTOPROMPT_MCP_INSTRUCTIONS_START')
-            const versionMatch = file.content.match(/OCTOPROMPT_MCP_INSTRUCTIONS_START v([\d.]+)/)
-            
+            const hasInstructions = file.content.includes('PROMPTLIANO_MCP_INSTRUCTIONS_START')
+            const versionMatch = file.content.match(/PROMPTLIANO_MCP_INSTRUCTIONS_START v([\d.]+)/)
+
             return {
               ...file,
               hasInstructions,

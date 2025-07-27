@@ -1,4 +1,4 @@
-# @octoprompt/schemas
+# @promptliano/schemas
 
 To install dependencies:
 

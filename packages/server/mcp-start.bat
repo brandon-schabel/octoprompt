@@ -1,5 +1,5 @@
 @echo off
-REM MCP Server startup script for OctoPrompt on Windows
+REM MCP Server startup script for Promptliano on Windows
 REM This script ensures the correct environment is set up
 
 REM Project ID is optional - if not set, server runs without project context
@@ -21,9 +21,9 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-if not defined OCTOPROMPT_PROJECT_ID (
-    echo Starting OctoPrompt MCP server (no project context^)
+if not defined PROMPTLIANO_PROJECT_ID (
+    echo Starting Promptliano MCP server (no project context^)
 ) else (
-    echo Starting OctoPrompt MCP server with project ID: %OCTOPROMPT_PROJECT_ID%
+    echo Starting Promptliano MCP server with project ID: %PROMPTLIANO_PROJECT_ID%
 )
 bun run mcp 

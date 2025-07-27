@@ -1,4 +1,4 @@
-# @octoprompt/storage
+# @promptliano/storage
 
 To install dependencies:
 

@@ -5,13 +5,13 @@ import type {
   RelevanceConfig,
   FileSuggestionResponse,
   RelevanceScore
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 import { fileSearchService } from './file-search-service'
 import { fileRelevanceService } from './file-relevance-service'
 import { CompactFileFormatter } from './utils/compact-file-formatter'
 import { generateStructuredData } from './gen-ai-services'
-import { HIGH_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from '@octoprompt/config'
+import { HIGH_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from '@promptliano/config'
 import { z } from 'zod'
 
 export interface StrategyConfig {
@@ -151,7 +151,7 @@ export class FileSuggestionStrategyService {
   ): Promise<ProjectFile[]> {
     const { getProjectFiles } = await import('./project-service')
     const allFiles = await getProjectFiles(projectId)
-    
+
     // Handle case where project doesn't exist or has no files
     if (!allFiles) {
       console.warn(`[FileSuggestionStrategy] Project ${projectId} not found or has no files`)
@@ -234,7 +234,7 @@ Select the ${maxResults} most relevant file IDs from the above list.`
   ): Promise<number> {
     const { getProjectFiles } = await import('./project-service')
     const allFiles = await getProjectFiles(projectId)
-    
+
     // Handle case where project doesn't exist or has no files
     if (!allFiles) {
       return 0
@@ -257,13 +257,13 @@ Select the ${maxResults} most relevant file IDs from the above list.`
   static async recommendStrategy(projectId: number): Promise<FileSuggestionStrategy> {
     const { getProjectFiles } = await import('./project-service')
     const files = await getProjectFiles(projectId)
-    
+
     // Default to balanced strategy if project doesn't exist
     if (!files) {
       console.warn(`[FileSuggestionStrategy] Project ${projectId} not found, using balanced strategy`)
       return 'balanced'
     }
-    
+
     const fileCount = files.length
 
     if (fileCount < 50) return 'thorough'

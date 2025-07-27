@@ -7,7 +7,7 @@ import {
 } from '@/hooks/use-kv-local-storage'
 import { useGetProjectFilesWithoutContent, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
-import { buildProjectFileMapWithoutContent, buildProjectFileMap } from '@octoprompt/shared'
+import { buildProjectFileMapWithoutContent, buildProjectFileMap } from '@promptliano/shared'
 
 const MAX_HISTORY_SIZE = 50
 

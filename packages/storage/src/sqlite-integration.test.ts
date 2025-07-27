@@ -32,7 +32,7 @@ import type {
   MCPTool,
   MCPResource,
   MCPToolExecutionResult
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 describe('SQLite Storage Integration Tests', () => {
   let db: DatabaseManager

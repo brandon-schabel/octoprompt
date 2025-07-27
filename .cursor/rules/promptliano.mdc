@@ -3,9 +3,9 @@ description:
 globs: 
 alwaysApply: true
 ---
-# OctoPrompt Development Guide
+# Promptliano Development Guide
 
-OctoPrompt guidance for Claude Code (claude.ai/code).
+Promptliano guidance for Claude Code (claude.ai/code).
 
 ## Commands
 
@@ -34,17 +34,15 @@ OctoPrompt guidance for Claude Code (claude.ai/code).
 
 - **Workspace**: BS Projects (Team ID: `2868a346-2a0d-4953-af4e-4b695aa5a981`)
 - **Projects**:
-  - **OctoPrompt** (Project ID: `9e96fe84-c58e-47d3-8402-3552cdf0bf3b`)
+  - **Promptliano** (Project ID: `9e96fe84-c58e-47d3-8402-3552cdf0bf3b`)
 
 ### Linear MCP Integration
 
 The Linear MCP (Model Context Protocol) integration is built into Claude Code and provides direct access to Linear's API for project management. No additional setup or configuration is required - the MCP commands are available out of the box.
 
-### OctoPrompt MCP Usage
+### Promptliano MCP Usage
 
-OctoPrompt is my personal project, so make heavy use of it. Write a feedback file (octo-feedback.md) on what can be improved.
-
-Use the OctoPrompt MCP for the following
+Use the Promptliano MCP for the following
 
 - Creating Tickets and Tasks when planning
 - Save and retrieve relevant prompts for later used (retrieve when it would help the context)
@@ -52,15 +50,15 @@ Use the OctoPrompt MCP for the following
 - Retrieve compact project summary to gain quick insights into the architecture of the project.
 - Optimize a prompt using the context of the project, for example it can be helpful to upgrade a project by adding project specific context
 
-The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system, allowing you to manage projects, files, prompts, and AI-powered workflows directly from Claude.
+The Promptliano MCP provides seamless integration with the Promptliano project management system, allowing you to manage projects, files, prompts, and AI-powered workflows directly from Claude.
 
-**OctoPrompt Project Details:**
+**Promptliano Project Details:**
 
 - **Project ID**: `1750564533014`
 
 ## Creating New MCP Tools
 
-Follow this step-by-step process to add new MCP tools to OctoPrompt:
+Follow this step-by-step process to add new MCP tools to Promptliano:
 
 ### 1. Add AI Prompt (if needed)
 
@@ -273,7 +271,7 @@ This tool takes a full project summary and uses AI to create a compact, architec
 
 - Format: `username/project-issueNumber-description`
 - Examples:
-  - OctoPrompt: `brandonschabel/op-456-implement-feature`
+  - Promptliano: `brandonschabel/op-456-implement-feature`
 
 ### Build
 
@@ -301,7 +299,7 @@ This tool takes a full project summary and uses AI to create a compact, architec
 5. **Single Responsibility**: One concept per file
 6. **Clear Documentation**: Concise docstrings for complex logic
 
-## OctoPrompt Specifics
+## Promptliano Specifics
 
 - **IDs & Timestamps**: Unix timestamps in milliseconds, `-1` = null
 - **Maps**: Use `Map()` for numeric keys (not plain objects)
@@ -322,7 +320,7 @@ packages/
   storage/               # V2 storage with caching/indexing
 
 data/                    # Runtime storage
-  octoprompt.db          # SQLite database (production)
+  promptliano.db          # SQLite database (production)
 scripts/                 # Build scripts
 docs/                    # Documentation
 ```
@@ -361,7 +359,7 @@ const storage = new StorageV2<Project>({
 
 ### Overview
 
-- **Database Location**: `data/octoprompt.db` (production)
+- **Database Location**: `data/promptliano.db` (production)
 - **Test Mode**: Automatically uses `:memory:` database for tests
 - **Migration Command**: `bun run migrate:sqlite`
 - **Performance**: 10-50x faster than file-based storage
@@ -376,7 +374,7 @@ const storage = new StorageV2<Project>({
 ### Usage
 
 ```typescript
-import { DatabaseManager } from '@octoprompt/storage'
+import { DatabaseManager } from '@promptliano/storage'
 
 // Initialize database (runs migrations automatically)
 const db = DatabaseManager.getInstance()
@@ -438,7 +436,7 @@ export const migrations = [
 export function useCreateChat() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
+    mutationFn: (data: CreateChatBody) => promptlianoClient.chats.createChat(data),
     onSuccess: () => {
       /* invalidate queries */
     }
@@ -485,12 +483,12 @@ Order routes from most to least specific:
 
 ## Utilities
 
-**Schemas (`@octoprompt/schemas`)**
+**Schemas (`@promptliano/schemas`)**
 
 - `unixTSSchemaSpec` - Unix timestamp validation
 - Model configs: `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`
 
-**Shared (`@octoprompt/shared`)**
+**Shared (`@promptliano/shared`)**
 
 - `mergeDeep()` - Recursive object merge
 - `writeJson()` - Write with optional Zod validation

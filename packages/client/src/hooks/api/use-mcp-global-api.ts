@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { octoClient } from '../octo-client'
+import { promptlianoClient } from '../promptliano-client'
 
 // Query Keys
 const MCP_GLOBAL_KEYS = {
@@ -15,7 +15,7 @@ const MCP_GLOBAL_KEYS = {
 export function useGetGlobalMCPConfig() {
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.config(),
-    queryFn: () => octoClient.mcpGlobalConfig.getGlobalConfig(),
+    queryFn: () => promptlianoClient.mcpGlobalConfig.getGlobalConfig(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2
   })
@@ -24,7 +24,7 @@ export function useGetGlobalMCPConfig() {
 export function useGetGlobalInstallations() {
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.installations(),
-    queryFn: () => octoClient.mcpGlobalConfig.getGlobalInstallations(),
+    queryFn: () => promptlianoClient.mcpGlobalConfig.getGlobalInstallations(),
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: true
   })
@@ -33,7 +33,7 @@ export function useGetGlobalInstallations() {
 export function useGetGlobalMCPStatus() {
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.status(),
-    queryFn: () => octoClient.mcpGlobalConfig.getGlobalStatus(),
+    queryFn: () => promptlianoClient.mcpGlobalConfig.getGlobalStatus(),
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: true
   })
@@ -43,10 +43,10 @@ export function useGetGlobalMCPStatus() {
 
 export function useUpdateGlobalMCPConfig() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: (updates: any) => 
-      octoClient.mcpGlobalConfig.updateGlobalConfig(updates),
+    mutationFn: (updates: any) =>
+      promptlianoClient.mcpGlobalConfig.updateGlobalConfig(updates),
     onSuccess: (data) => {
       // Invalidate all MCP global queries
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.all })
@@ -60,13 +60,13 @@ export function useUpdateGlobalMCPConfig() {
 
 export function useInstallGlobalMCP() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: (data: { 
+    mutationFn: (data: {
       tool: string
       serverName?: string
-      debug?: boolean 
-    }) => octoClient.mcpGlobalConfig.installGlobalMCP(data),
+      debug?: boolean
+    }) => promptlianoClient.mcpGlobalConfig.installGlobalMCP(data),
     onSuccess: (data) => {
       // Invalidate installations and status
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })
@@ -82,10 +82,10 @@ export function useInstallGlobalMCP() {
 
 export function useUninstallGlobalMCP() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: (data: { tool: string }) => 
-      octoClient.mcpGlobalConfig.uninstallGlobalMCP(data),
+    mutationFn: (data: { tool: string }) =>
+      promptlianoClient.mcpGlobalConfig.uninstallGlobalMCP(data),
     onSuccess: (data) => {
       // Invalidate installations and status
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })
@@ -136,7 +136,7 @@ export function useGlobalMCPManager() {
   const { data: config, isLoading: configLoading } = useGetGlobalMCPConfig()
   const { data: installations, isLoading: installationsLoading } = useGetGlobalInstallations()
   const { data: status, isLoading: statusLoading } = useGetGlobalMCPStatus()
-  
+
   const updateConfig = useUpdateGlobalMCPConfig()
   const install = useInstallGlobalMCP()
   const uninstall = useUninstallGlobalMCP()
@@ -148,24 +148,24 @@ export function useGlobalMCPManager() {
     toolStatuses: installations?.data?.toolStatuses || [],
     status: status?.data,
     isLoading: configLoading || installationsLoading || statusLoading,
-    
+
     // Mutations
     updateConfig: updateConfig.mutate,
     install: install.mutate,
     uninstall: uninstall.mutate,
-    
+
     // Mutation states
     isUpdating: updateConfig.isPending,
     isInstalling: install.isPending,
     isUninstalling: uninstall.isPending,
-    
+
     // Helper methods
     isToolInstalled: (tool: string) => {
       return installations?.data?.installations?.some(
         (installation: any) => installation.tool === tool
       ) ?? false
     },
-    
+
     getInstallation: (tool: string) => {
       return installations?.data?.installations?.find(
         (installation: any) => installation.tool === tool

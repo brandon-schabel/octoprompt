@@ -1,4 +1,4 @@
-import type { ProjectFile } from '@octoprompt/schemas'
+import type { ProjectFile } from '@promptliano/schemas'
 
 /**
  * Helper function to escape characters unsafe for XML content.

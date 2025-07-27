@@ -1,6 +1,6 @@
-// Last 5 changes: Fixed imports to use OctoPrompt package structure
-import { ApiError } from '@octoprompt/shared'
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
+// Last 5 changes: Fixed imports to use Promptliano package structure
+import { ApiError } from '@promptliano/shared'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
 import {
   createTicket,
   getTicketById,
@@ -19,13 +19,13 @@ import {
   getTasksForTickets,
   listTicketsWithTasks,
   suggestFilesForTicket
-} from '@octoprompt/services'
-import { ticketsApiValidation, TicketSchema, TicketTaskSchema } from '@octoprompt/schemas'
+} from '@promptliano/services'
+import { ticketsApiValidation, TicketSchema, TicketTaskSchema } from '@promptliano/schemas'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 
-// Use the proper TicketSchema from @octoprompt/schemas instead of redefining
+// Use the proper TicketSchema from @promptliano/schemas instead of redefining
 
-// Use the proper TicketTaskSchema from @octoprompt/schemas instead of redefining
+// Use the proper TicketTaskSchema from @promptliano/schemas instead of redefining
 const TaskSchema = TicketTaskSchema // Alias for consistency with existing code
 
 const TicketResponseSchema = z

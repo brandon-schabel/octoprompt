@@ -21,7 +21,7 @@ import { toast } from 'sonner'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useGenerateStructuredData } from '@/hooks/api/use-gen-ai-api'
 import { Copy, Download, Loader2, FileText, Code, GitBranch, Database, Book } from 'lucide-react'
-import { estimateTokenCount, formatTokenCount } from '@octoprompt/shared'
+import { estimateTokenCount, formatTokenCount } from '@promptliano/shared'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { ProviderModelSelector, useModelSelection } from '@/components/model-selection'
 import { Separator } from '@/components/ui/separator'
@@ -84,17 +84,17 @@ const documentationTypes = {
   }
 }
 
-export function DocumentationGeneratorDialog({ 
-  open, 
-  onOpenChange, 
-  documentationType, 
+export function DocumentationGeneratorDialog({
+  open,
+  onOpenChange,
+  documentationType,
   projectContext,
-  onSuccess 
+  onSuccess
 }: DocumentationGeneratorDialogProps) {
   const [activeTab, setActiveTab] = useState('input')
-  
+
   const docType = documentationType ? documentationTypes[documentationType as keyof typeof documentationTypes] : null
-  
+
   // Form data - initialize with all sections selected
   const [formData, setFormData] = useState({
     title: '',
@@ -121,11 +121,11 @@ export function DocumentationGeneratorDialog({
   const generateMutation = useGenerateStructuredData()
 
   const getDocTypeName = () => docType?.name || 'Documentation'
-  
+
   // Update sections when documentationType changes
   React.useEffect(() => {
     if (docType?.sections) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         sections: docType.sections
       }))
@@ -151,7 +151,7 @@ export function DocumentationGeneratorDialog({
     setIsGenerating(true)
     try {
       const userInput = prepareUserInput(documentationType || '', formData, projectContext)
-      
+
       const response = await generateMutation.mutateAsync({
         schemaKey: docType.schemaKey,
         userInput,
@@ -226,7 +226,7 @@ export function DocumentationGeneratorDialog({
   }
 
   const updateField = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   if (!docType) return null
@@ -239,9 +239,7 @@ export function DocumentationGeneratorDialog({
             <docType.icon className='h-5 w-5' />
             Generate {getDocTypeName()}
           </DialogTitle>
-          <DialogDescription>
-            {docType.description}
-          </DialogDescription>
+          <DialogDescription>{docType.description}</DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className='flex-1'>
@@ -278,10 +276,7 @@ export function DocumentationGeneratorDialog({
               <div className='grid grid-cols-2 gap-4'>
                 <div>
                   <Label htmlFor='format'>Documentation Format</Label>
-                  <Select
-                    value={formData.format}
-                    onValueChange={(value) => updateField('format', value)}
-                  >
+                  <Select value={formData.format} onValueChange={(value) => updateField('format', value)}>
                     <SelectTrigger id='format'>
                       <SelectValue />
                     </SelectTrigger>
@@ -295,10 +290,7 @@ export function DocumentationGeneratorDialog({
 
                 <div>
                   <Label htmlFor='audience'>Target Audience</Label>
-                  <Select
-                    value={formData.audience}
-                    onValueChange={(value) => updateField('audience', value)}
-                  >
+                  <Select value={formData.audience} onValueChange={(value) => updateField('audience', value)}>
                     <SelectTrigger id='audience'>
                       <SelectValue />
                     </SelectTrigger>
@@ -317,14 +309,17 @@ export function DocumentationGeneratorDialog({
                 <div className='grid grid-cols-2 gap-3 mt-2'>
                   {docType.sections.map((section) => (
                     <div key={section} className='flex items-center space-x-2'>
-                      <Checkbox 
+                      <Checkbox
                         id={section}
                         checked={formData.sections.includes(section)}
                         onCheckedChange={(checked) => {
                           if (checked) {
                             updateField('sections', [...formData.sections, section])
                           } else {
-                            updateField('sections', formData.sections.filter(s => s !== section))
+                            updateField(
+                              'sections',
+                              formData.sections.filter((s) => s !== section)
+                            )
                           }
                         }}
                       />
@@ -387,9 +382,7 @@ export function DocumentationGeneratorDialog({
               </div>
 
               <div className='flex justify-between items-center pt-4'>
-                <span className='text-sm text-muted-foreground'>
-                  Estimated tokens: {formatTokenCount(tokenCount)}
-                </span>
+                <span className='text-sm text-muted-foreground'>Estimated tokens: {formatTokenCount(tokenCount)}</span>
               </div>
             </TabsContent>
 
@@ -419,9 +412,7 @@ export function DocumentationGeneratorDialog({
 
                   {/* Markdown Editor */}
                   <div className='border rounded-lg overflow-hidden'>
-                    <div className='bg-muted px-3 py-2 text-sm font-medium'>
-                      Markdown Source
-                    </div>
+                    <div className='bg-muted px-3 py-2 text-sm font-medium'>Markdown Source</div>
                     <LazyMonacoEditor
                       value={generatedContent}
                       onChange={(value) => setGeneratedContent(value || '')}
@@ -460,21 +451,17 @@ export function DocumentationGeneratorDialog({
 }
 
 // Helper function to prepare user input for API
-function prepareUserInput(
-  documentationType: string, 
-  formData: any, 
-  projectContext?: any
-): string {
+function prepareUserInput(documentationType: string, formData: any, projectContext?: any): string {
   const projectName = projectContext?.name || 'the project'
   const projectDesc = projectContext?.description || ''
   const techStack = projectContext?.techStack?.join(', ') || ''
 
   let basePrompt = `Generate ${formData.format} ${documentationType.replace('-', ' ')} documentation for ${projectName}.`
-  
+
   if (projectDesc) {
     basePrompt += `\n\nProject Description: ${projectDesc}`
   }
-  
+
   if (techStack) {
     basePrompt += `\nTechnology Stack: ${techStack}`
   }
@@ -487,11 +474,11 @@ function prepareUserInput(
   basePrompt += `\n\nFormat Requirements:`
   basePrompt += `\n- Documentation style: ${formData.format}`
   basePrompt += `\n- Target audience: ${formData.audience}`
-  
+
   if (formData.includeTableOfContents) {
     basePrompt += `\n- Include a table of contents`
   }
-  
+
   if (formData.includeExamples) {
     basePrompt += `\n- Include practical code examples`
   }

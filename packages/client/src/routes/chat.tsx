@@ -31,7 +31,7 @@ import {
   useDeleteMessage,
   useForkChatFromMessage
 } from '@/hooks/api/use-chat-api'
-import { Chat, ChatMessage, ChatMessageAttachment } from '@octoprompt/schemas'
+import { Chat, ChatMessage, ChatMessageAttachment } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 import {
   ScrollArea,
@@ -53,12 +53,12 @@ import {
 } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { APIProviders, AiSdkOptions } from '@octoprompt/schemas'
+import { APIProviders, AiSdkOptions } from '@promptliano/schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { useActiveChatId, useSelectSetting, useProjectTabField } from '@/hooks/use-kv-local-storage'
-import { OctoCombobox } from '@/components/octo/octo-combobox'
+import { PromptlianoCombobox } from '@/components/promptliano/promptliano-combobox'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
 import {
@@ -149,7 +149,7 @@ export function AdaptiveChatInput({
 }: AdaptiveChatInputProps) {
   const [isMultiline, setIsMultiline] = useState(false)
   const lastSavedValueRef = useRef(value)
-  
+
   // Save to localStorage only when value changes significantly (debounced)
   const saveToLocalStorage = useDebounceCallback((newValue: string) => {
     if (lastSavedValueRef.current !== newValue) {
@@ -290,11 +290,7 @@ const MessageWrapper: React.FC<{
   excluded: boolean
 }> = ({ children, isUser, excluded }) => (
   <div
-    className={cn(
-      'relative rounded-lg p-3 break-words',
-      isUser ? 'bg-muted' : 'bg-muted/50',
-      excluded && 'opacity-50'
-    )}
+    className={cn('relative rounded-lg p-3 break-words', isUser ? 'bg-muted' : 'bg-muted/50', excluded && 'opacity-50')}
   >
     {children}
   </div>
@@ -358,12 +354,7 @@ const MessageHeader: React.FC<{
               Exclude
             </Label>
             <Label htmlFor={`raw-${msgId}`} className='flex items-center gap-1 cursor-pointer'>
-              <Switch
-                id={`raw-${msgId}`}
-                checked={rawView}
-                onCheckedChange={onToggleRaw}
-                className='scale-75'
-              />
+              <Switch id={`raw-${msgId}`} checked={rawView} onCheckedChange={onToggleRaw} className='scale-75' />
               Raw
             </Label>
           </div>

@@ -3,7 +3,7 @@ import { TicketDialog } from './ticket-dialog'
 import { Button } from '../ui/button'
 import { Plus } from 'lucide-react'
 import { TicketListPanel } from './ticket-list-panel'
-import { TicketWithTasks } from '@octoprompt/schemas'
+import { TicketWithTasks } from '@promptliano/schemas'
 
 interface TicketsTabViewProps {
   projectId: number

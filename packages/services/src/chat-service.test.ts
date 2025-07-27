@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
-import { createChatService } from '@octoprompt/services'
-import { randomString } from '@octoprompt/shared/src/utils/test-utils'
-import { normalizeToUnixMs } from '@octoprompt/shared'
-import type { ChatsStorage, ChatMessagesStorage } from '@octoprompt/storage'
+import { createChatService } from '@promptliano/services'
+import { randomString } from '@promptliano/shared/src/utils/test-utils'
+import { normalizeToUnixMs } from '@promptliano/shared'
+import type { ChatsStorage, ChatMessagesStorage } from '@promptliano/storage'
 
 // Use realistic unix timestamps for test IDs
 const BASE_TIMESTAMP = 1700000000000 // Nov 2023 as base
@@ -37,7 +37,7 @@ const mockChatStorage = {
   generateId: () => generateTestId()
 }
 
-mock.module('@octoprompt/storage', () => ({
+mock.module('@promptliano/storage', () => ({
   chatStorage: mockChatStorage
 }))
 

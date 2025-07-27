@@ -1,15 +1,15 @@
 import { watch as fsWatch, type FSWatcher, existsSync as fsLibExistsSync } from 'fs'
 import { join, extname, resolve as pathResolve, relative, basename } from 'node:path'
 import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs'
-import { type Project, type ProjectFile } from '@octoprompt/schemas'
-import { getFilesConfig } from '@octoprompt/config'
+import { type Project, type ProjectFile } from '@promptliano/schemas'
+import { getFilesConfig } from '@promptliano/config'
 import ignorePackage, { type Ignore } from 'ignore'
 
 const filesConfig = getFilesConfig()
 const ALLOWED_FILE_CONFIGS = filesConfig.allowedExtensions
 const DEFAULT_FILE_EXCLUSIONS = filesConfig.defaultExclusions
 const MAX_FILE_SIZE_FOR_SUMMARY = filesConfig.maxFileSizeForSummary
-import { truncateForSummarization } from '@octoprompt/shared'
+import { truncateForSummarization } from '@promptliano/shared'
 import {
   getProjectFiles,
   bulkCreateProjectFiles,
@@ -18,9 +18,9 @@ import {
   type FileSyncData, // Interface from project-service
   listProjects,
   fileIndexingService
-} from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
+} from '@promptliano/services' // Adjusted path assuming this file is in services/file-services/
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
-import { summarizeSingleFile } from '@octoprompt/services'
+import { summarizeSingleFile } from '@promptliano/services'
 import { analyzeCodeImportsExports } from '../utils/code-analysis'
 import { createLogger } from '../utils/logger'
 

@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/ui/data-table'
 import { formatDistanceToNow } from 'date-fns'
 import { CheckCircle, XCircle, Timer, AlertCircle } from 'lucide-react'
-import type { MCPToolExecution } from '@octoprompt/schemas'
+import type { MCPToolExecution } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 
 // Helper function to extract action from input params

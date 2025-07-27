@@ -5,8 +5,8 @@ import { mcpProjectConfigService } from './mcp-project-config-service'
 import { getMCPClientManager } from './mcp-service'
 import { createLogger } from './utils/logger'
 import { getProjectById } from './project-service'
-import type { MCPServerConfig } from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+import type { MCPServerConfig } from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 
 const logger = createLogger('MCPProjectServerManager')
 

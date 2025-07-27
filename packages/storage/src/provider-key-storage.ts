@@ -1,6 +1,6 @@
 import { z, ZodError } from 'zod'
-import { ProviderKeySchema, type ProviderKey } from '@octoprompt/schemas'
-import { normalizeToUnixMs } from '@octoprompt/shared/src/utils/parse-timestamp'
+import { ProviderKeySchema, type ProviderKey } from '@promptliano/schemas'
+import { normalizeToUnixMs } from '@promptliano/shared/src/utils/parse-timestamp'
 import { DatabaseManager, getDb } from './database-manager'
 
 // Schema for the entire storage file: a record of ProviderKeys keyed by their ID

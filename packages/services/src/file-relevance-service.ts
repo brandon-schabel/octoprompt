@@ -1,5 +1,5 @@
-import { ProjectFile, Ticket, TicketTask, RelevanceScore, RelevanceConfig } from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+import { ProjectFile, Ticket, TicketTask, RelevanceScore, RelevanceConfig } from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 import { fileIndexingService } from './file-indexing-service'
 import { getProjectFiles } from './project-service'
 
@@ -25,7 +25,7 @@ export class FileRelevanceService {
     'below', 'between', 'under', 'again', 'further', 'then', 'once'
   ])
 
-  constructor(private config: RelevanceConfig = DEFAULT_CONFIG) {}
+  constructor(private config: RelevanceConfig = DEFAULT_CONFIG) { }
 
   async scoreFilesForTicket(
     ticket: Ticket,
@@ -82,7 +82,7 @@ export class FileRelevanceService {
     const recencyScore = this.calculateRecencyScore(file)
     const importScore = this.calculateImportScore(file, allFiles)
 
-    const totalScore = 
+    const totalScore =
       keywordScore * this.config.weights.keyword +
       pathScore * this.config.weights.path +
       typeScore * this.config.weights.type +
@@ -144,7 +144,7 @@ export class FileRelevanceService {
 
   private calculateTypeScore(file: ProjectFile, keywords: string[]): number {
     const ext = file.extension?.toLowerCase() || ''
-    
+
     // Map keywords to likely file types
     const typeAssociations: Record<string, string[]> = {
       component: ['tsx', 'jsx', 'vue', 'svelte'],

@@ -6,14 +6,14 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createGroq } from '@ai-sdk/groq'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { createOllama } from 'ollama-ai-provider'
-import { createChatService, createProviderKeyService } from '@octoprompt/services'
-import type { APIProviders, ProviderKey } from '@octoprompt/schemas'
-import type { AiChatStreamRequest } from '@octoprompt/schemas'
-import type { AiSdkOptions } from '@octoprompt/schemas'
-import { LOW_MODEL_CONFIG, getProvidersConfig } from '@octoprompt/config'
-import { structuredDataSchemas } from '@octoprompt/schemas'
+import { createChatService, createProviderKeyService } from '@promptliano/services'
+import type { APIProviders, ProviderKey } from '@promptliano/schemas'
+import type { AiChatStreamRequest } from '@promptliano/schemas'
+import type { AiSdkOptions } from '@promptliano/schemas'
+import { LOW_MODEL_CONFIG, getProvidersConfig } from '@promptliano/config'
+import { structuredDataSchemas } from '@promptliano/schemas'
 
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import { mapProviderErrorToApiError } from './error-mappers'
 import { retryOperation } from './utils/bulk-operations'
 
@@ -45,10 +45,10 @@ export async function handleChatMessage({
     role: msg.role as 'user' | 'assistant' | 'system',
     content: msg.content
   }))
-  
+
   // Check if this is the first user message for auto-naming
   const isFirstUserMessage = dbMessages.filter(msg => msg.role === 'user').length === 0
-  
+
   messagesToProcess.push(...dbMessages)
 
   const savedUserMessage = await chatService.saveMessage({
@@ -112,12 +112,12 @@ export async function handleChatMessage({
           // Get current chat to check if it has a default name
           const allChats = await chatService.getAllChats()
           const currentChat = allChats.find(chat => chat.id === chatId)
-          
+
           if (currentChat && (currentChat.title.startsWith('New Chat') || currentChat.title.startsWith('Chat '))) {
             // Generate a name based on the user's message
             const generatedName = await generateChatName(userMessage)
             await chatService.updateChat(chatId, generatedName)
-            
+
             if (debug) {
               console.log(`[UnifiedProviderService] Auto-named chat ${chatId}: "${generatedName}"`)
             }
@@ -533,7 +533,7 @@ export async function generateChatName(chatContent: string): Promise<string> {
       systemMessage: chatNamingConfig.systemPrompt,
       options: chatNamingConfig.modelSettings
     })
-    
+
     return result.object.chatName
   } catch (error) {
     console.error('[generateChatName] Error generating chat name:', error)
@@ -546,21 +546,21 @@ export async function generateChatName(chatContent: string): Promise<string> {
 export async function generateTabName(projectName: string, selectedFiles: string[] = [], context?: string): Promise<string> {
   try {
     const tabNamingConfig = structuredDataSchemas.tabNaming
-    
+
     // Prepare the prompt with the provided information
-    const selectedFilesStr = selectedFiles.length > 0 
+    const selectedFilesStr = selectedFiles.length > 0
       ? selectedFiles.slice(0, 5).join(', ') + (selectedFiles.length > 5 ? '...' : '')
       : 'No specific files selected'
-    
+
     const promptData = `Project Name: ${projectName}, Selected Files: ${selectedFilesStr}, Context: ${context || 'General project work'}`
-    
+
     const result = await generateStructuredData({
       prompt: promptData,
       schema: tabNamingConfig.schema,
       systemMessage: tabNamingConfig.systemPrompt,
       options: tabNamingConfig.modelSettings
     })
-    
+
     return result.object.tabName
   } catch (error) {
     console.error('[generateTabName] Error generating tab name:', error)

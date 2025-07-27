@@ -1,21 +1,21 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
 import { encryptKey, decryptKey, generateEncryptionKey, isEncrypted } from './crypto'
-import { encryptionKeyStorage } from '@octoprompt/storage'
+import { encryptionKeyStorage } from '@promptliano/storage'
 
 describe('Crypto utilities', () => {
-  const originalEnv = process.env.OCTOPROMPT_ENCRYPTION_KEY
-  
+  const originalEnv = process.env.PROMPTLIANO_ENCRYPTION_KEY
+
   beforeAll(() => {
     // Clear any existing env key for tests
-    delete process.env.OCTOPROMPT_ENCRYPTION_KEY
+    delete process.env.PROMPTLIANO_ENCRYPTION_KEY
     // Clear cache to ensure fresh key generation
     encryptionKeyStorage.clearCache()
   })
-  
+
   afterAll(() => {
     // Restore original env if it existed
     if (originalEnv) {
-      process.env.OCTOPROMPT_ENCRYPTION_KEY = originalEnv
+      process.env.PROMPTLIANO_ENCRYPTION_KEY = originalEnv
     }
   })
 
@@ -117,12 +117,12 @@ describe('Crypto utilities', () => {
   test('automatically generates key when not set', async () => {
     // Clear cache to simulate fresh start
     encryptionKeyStorage.clearCache()
-    delete process.env.OCTOPROMPT_ENCRYPTION_KEY
+    delete process.env.PROMPTLIANO_ENCRYPTION_KEY
 
     // Should not throw, should generate key automatically
     const encrypted = await encryptKey('test')
     expect(encrypted).toHaveProperty('encrypted')
-    
+
     // Key should now exist
     expect(encryptionKeyStorage.hasKey()).toBe(true)
   })

@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from 'bun'
 import { EventEmitter } from 'node:events'
-import type { JobEvent } from '@octoprompt/schemas'
+import type { JobEvent } from '@promptliano/schemas'
 
 interface WebSocketData {
   clientId: string
@@ -38,7 +38,7 @@ export class WebSocketManager extends EventEmitter {
   broadcast(message: any): void {
     const messageStr = JSON.stringify(message)
     let sent = 0
-    
+
     for (const [clientId, ws] of this.clients) {
       if (ws.readyState === 1) { // 1 = OPEN
         ws.send(messageStr)
@@ -48,7 +48,7 @@ export class WebSocketManager extends EventEmitter {
         this.clients.delete(clientId)
       }
     }
-    
+
     if (sent > 0) {
       console.log(`[WebSocket] Broadcasted message to ${sent} clients`)
     }
@@ -58,14 +58,14 @@ export class WebSocketManager extends EventEmitter {
   broadcastToProject(projectId: number, message: any): void {
     const messageStr = JSON.stringify(message)
     let sent = 0
-    
+
     for (const [clientId, ws] of this.clients) {
       if (ws.data.projectId === projectId && ws.readyState === 1) {
         ws.send(messageStr)
         sent++
       }
     }
-    
+
     if (sent > 0) {
       console.log(`[WebSocket] Broadcasted to ${sent} clients for project ${projectId}`)
     }
@@ -91,7 +91,7 @@ export class WebSocketManager extends EventEmitter {
   handleMessage(ws: ServerWebSocket<WebSocketData>, message: string): void {
     try {
       const data = JSON.parse(message)
-      
+
       switch (data.type) {
         case 'subscribe.project':
           if (data.projectId) {
@@ -99,16 +99,16 @@ export class WebSocketManager extends EventEmitter {
             console.log(`[WebSocket] Client ${ws.data.clientId} subscribed to project ${data.projectId}`)
           }
           break
-          
+
         case 'unsubscribe.project':
           ws.data.projectId = undefined
           console.log(`[WebSocket] Client ${ws.data.clientId} unsubscribed from project`)
           break
-          
+
         case 'ping':
           ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }))
           break
-          
+
         default:
           console.log(`[WebSocket] Unknown message type: ${data.type}`)
       }

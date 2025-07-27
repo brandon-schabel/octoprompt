@@ -1,12 +1,12 @@
 # Configuration Migration Guide
 
-This guide helps migrate from scattered configuration imports to the centralized `@octoprompt/config` package.
+This guide helps migrate from scattered configuration imports to the centralized `@promptliano/config` package.
 
 ## Migration Steps
 
-### 1. Add @octoprompt/config Dependency
+### 1. Add @promptliano/config Dependency
 
-Add `"@octoprompt/config": "workspace:*"` to your package's dependencies.
+Add `"@promptliano/config": "workspace:*"` to your package's dependencies.
 
 ### 2. Update Imports
 
@@ -15,13 +15,13 @@ Add `"@octoprompt/config": "workspace:*"` to your package's dependencies.
 **Before:**
 
 ```typescript
-import { LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/schemas'
+import { LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/schemas'
 ```
 
 **After:**
 
 ```typescript
-import { LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/config'
+import { LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/config'
 ```
 
 #### File Sync Options
@@ -29,13 +29,13 @@ import { LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octop
 **Before:**
 
 ```typescript
-import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
+import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from '@promptliano/schemas'
 ```
 
 **After:**
 
 ```typescript
-import { filesConfig } from '@octoprompt/config'
+import { filesConfig } from '@promptliano/config'
 const { allowedExtensions, defaultExclusions } = filesConfig
 ```
 
@@ -51,7 +51,7 @@ const SERVER_PORT = process.env.SERVER_PORT || 3147
 **After:**
 
 ```typescript
-import { getServerConfig } from '@octoprompt/config'
+import { getServerConfig } from '@promptliano/config'
 const { corsOrigin, serverPort } = getServerConfig()
 ```
 
@@ -66,14 +66,14 @@ const OPENAI_BASE_URL = 'https://api.openai.com/v1'
 **After:**
 
 ```typescript
-import { getProvidersConfig } from '@octoprompt/config'
+import { getProvidersConfig } from '@promptliano/config'
 const { openai } = getProvidersConfig()
 const baseURL = openai.baseURL
 ```
 
 ### 3. Files to Update
 
-The following files need to be updated to use @octoprompt/config:
+The following files need to be updated to use @promptliano/config:
 
 - `packages/services/src/gen-ai-services.ts` - Model configurations
 - `packages/services/src/model-providers/provider-defaults.ts` - Provider URLs

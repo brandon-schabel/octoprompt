@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { retryOperation } from './retry-operation'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 
 describe('retryOperation', () => {
   test('should use maxAttempts correctly', async () => {

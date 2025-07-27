@@ -1,8 +1,8 @@
 import { z, ZodError } from 'zod'
-import { ProjectSchema, ProjectFileSchema, type ProjectFile, type Project } from '@octoprompt/schemas'
-import { unixTimestampSchema } from '@octoprompt/schemas'
+import { ProjectSchema, ProjectFileSchema, type ProjectFile, type Project } from '@promptliano/schemas'
+import { unixTimestampSchema } from '@promptliano/schemas'
 import { getDb } from './database-manager'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 
 // --- Schemas for Storage ---
 export const ProjectsStorageSchema = z.record(z.string(), ProjectSchema)

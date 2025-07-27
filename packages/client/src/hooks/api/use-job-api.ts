@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { octoClient } from '../octo-client'
-import type { Job, JobFilter, CreateJob } from '@octoprompt/schemas'
+import { promptlianoClient } from '../promptliano-client'
+import type { Job, JobFilter, CreateJob } from '@promptliano/schemas'
 import { toast } from 'sonner'
 import { useEffect } from 'react'
 import { useWebSocket } from '@/hooks/use-websocket'
@@ -11,7 +11,7 @@ export function useJob(jobId: number | undefined) {
     queryKey: ['job', jobId],
     queryFn: async () => {
       if (!jobId) return null
-      const result = await octoClient.jobs.getJob(jobId)
+      const result = await promptlianoClient.jobs.getJob(jobId)
       return result.data
     },
     enabled: !!jobId,
@@ -31,7 +31,7 @@ export function useJobs(filter: JobFilter = {}) {
   return useQuery({
     queryKey: ['jobs', filter],
     queryFn: async () => {
-      return await octoClient.jobs.listJobs(filter)
+      return await promptlianoClient.jobs.listJobs(filter)
     }
   })
 }
@@ -42,7 +42,7 @@ export function useProjectJobs(projectId: number | undefined) {
     queryKey: ['jobs', 'project', projectId],
     queryFn: async () => {
       if (!projectId) return []
-      return await octoClient.jobs.getProjectJobs(projectId)
+      return await promptlianoClient.jobs.getProjectJobs(projectId)
     },
     enabled: !!projectId
   })
@@ -51,10 +51,10 @@ export function useProjectJobs(projectId: number | undefined) {
 // Cancel job
 export function useCancelJob() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: async (jobId: number) => {
-      return await octoClient.jobs.cancelJob(jobId)
+      return await promptlianoClient.jobs.cancelJob(jobId)
     },
     onSuccess: (_, jobId) => {
       queryClient.invalidateQueries({ queryKey: ['job', jobId] })
@@ -72,10 +72,10 @@ export function useCancelJob() {
 // Retry failed job
 export function useRetryJob() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: async (jobId: number) => {
-      return await octoClient.jobs.retryJob(jobId)
+      return await promptlianoClient.jobs.retryJob(jobId)
     },
     onSuccess: (newJob) => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] })
@@ -105,7 +105,7 @@ export function useJobEvents(jobId?: number) {
         if (data.type === 'job.event' && data.data.jobId === jobId) {
           // Update job in cache
           queryClient.setQueryData(['job', jobId], data.data.job)
-          
+
           // Show toast for important events
           switch (data.data.type) {
             case 'job.completed':
@@ -148,7 +148,7 @@ export function useProjectJobEvents(projectId?: number) {
         if (data.type === 'job.event' && data.data.job.projectId === projectId) {
           // Invalidate project jobs query
           queryClient.invalidateQueries({ queryKey: ['jobs', 'project', projectId] })
-          
+
           // Update specific job if in cache
           queryClient.setQueryData(['job', data.data.jobId], data.data.job)
         }
@@ -158,7 +158,7 @@ export function useProjectJobEvents(projectId?: number) {
     }
 
     subscribe('message', handleJobEvent)
-    
+
     return () => {
       unsubscribe('message', handleJobEvent)
       send({ type: 'unsubscribe.project' })

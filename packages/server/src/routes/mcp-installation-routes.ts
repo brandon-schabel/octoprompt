@@ -12,8 +12,8 @@ import {
   getProjectById,
   type MCPToolInfo,
   type MCPStatus
-} from '@octoprompt/services'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/services'
+import { ApiError } from '@promptliano/shared'
 
 // Schemas
 const MCPToolInfoSchema = z.object({
@@ -22,7 +22,7 @@ const MCPToolInfoSchema = z.object({
   installed: z.boolean(),
   configPath: z.string().optional(),
   configExists: z.boolean().optional(),
-  hasOctoPrompt: z.boolean().optional()
+  hasPromptliano: z.boolean().optional()
 })
 
 const MCPInstallBodySchema = z.object({
@@ -143,7 +143,7 @@ const installMCPRoute = createRoute({
     }
   },
   tags: ['MCP Installation'],
-  description: 'Install OctoPrompt MCP for a specific tool'
+  description: 'Install Promptliano MCP for a specific tool'
 })
 
 const uninstallMCPRoute = createRoute({
@@ -177,7 +177,7 @@ const uninstallMCPRoute = createRoute({
     }
   },
   tags: ['MCP Installation'],
-  description: 'Uninstall OctoPrompt MCP for a specific tool'
+  description: 'Uninstall Promptliano MCP for a specific tool'
 })
 
 const getGlobalMCPStatusRoute = createRoute({
@@ -295,7 +295,7 @@ const batchInstallMCPRoute = createRoute({
     }
   },
   tags: ['MCP Installation'],
-  description: 'Install OctoPrompt MCP for multiple tools at once'
+  description: 'Install Promptliano MCP for multiple tools at once'
 })
 
 // Create route for project-level MCP installation
@@ -367,10 +367,10 @@ export const mcpInstallationRoutes = new OpenAPIHono()
       }
 
       await mcpConfigManager.initialize()
-      
+
       // Get project config
       const projectConfig = await mcpConfigManager.getProjectConfig(projectId)
-      
+
       // Get connection status
       const connectionStatus = await mcpConfigManager.getProjectStatus(projectId)
 
@@ -413,7 +413,7 @@ export const mcpInstallationRoutes = new OpenAPIHono()
       }
 
       // Update project config
-      const serverName = `octoprompt-${project.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+      const serverName = `promptliano-${project.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
       await mcpConfigManager.addInstalledTool(
         projectId,
         tool,
@@ -471,7 +471,7 @@ export const mcpInstallationRoutes = new OpenAPIHono()
   .openapi(getGlobalMCPStatusRoute, async (c) => {
     try {
       await mcpConfigManager.initialize()
-      
+
       const globalStatus = await mcpConfigManager.getGlobalStatus()
       const allStatuses = await mcpConfigManager.getAllProjectStatuses()
 
@@ -556,7 +556,7 @@ export const mcpInstallationRoutes = new OpenAPIHono()
           if (result.success) {
             succeeded++
             // Update project config
-            const serverName = `octoprompt-${project.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+            const serverName = `promptliano-${project.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
             await mcpConfigManager.addInstalledTool(
               projectId,
               tool,

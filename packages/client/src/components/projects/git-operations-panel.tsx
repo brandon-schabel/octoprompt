@@ -14,7 +14,7 @@ import {
   useUnstageAll,
   useCommitChanges
 } from '@/hooks/api/use-git-api'
-import type { GitFileStatus } from '@octoprompt/schemas'
+import type { GitFileStatus } from '@promptliano/schemas'
 import { getGitStatusColor, getGitStatusLabel, getFileName } from '@/lib/git-utils'
 
 interface GitOperationsPanelProps {

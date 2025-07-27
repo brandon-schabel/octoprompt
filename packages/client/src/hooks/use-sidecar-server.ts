@@ -26,7 +26,7 @@ export function useSidecarServer() {
         await sidecarManager.start()
         setIsReady(true)
       } catch (err) {
-        console.error('Failed to start OctoPrompt server:', err)
+        console.error('Failed to start Promptliano server:', err)
         setError(err instanceof Error ? err.message : 'Failed to start server')
       } finally {
         setIsStarting(false)

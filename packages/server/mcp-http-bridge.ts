@@ -16,13 +16,13 @@ import {
 
 // Configuration
 const MCP_HTTP_URL = process.env.MCP_HTTP_URL || 'http://localhost:3147/api/mcp'
-const PROJECT_ID = process.env.OCTOPROMPT_PROJECT_ID
+const PROJECT_ID = process.env.PROMPTLIANO_PROJECT_ID
 const DEBUG = process.env.MCP_DEBUG === 'true'
 
 // Create the stdio server
 const server = new Server(
   {
-    name: 'octoprompt-http-bridge',
+    name: 'promptliano-http-bridge',
     version: '0.8.0'
   },
   {
@@ -36,7 +36,7 @@ const server = new Server(
 // Helper to make HTTP requests to the actual MCP server
 async function callHTTPMCP(method: string, params: any = {}): Promise<any> {
   const url = PROJECT_ID ? MCP_HTTP_URL.replace('/api/mcp', `/api/projects/${PROJECT_ID}/mcp`) : MCP_HTTP_URL
-  
+
   const request = {
     jsonrpc: '2.0',
     id: Date.now(),
@@ -53,7 +53,7 @@ async function callHTTPMCP(method: string, params: any = {}): Promise<any> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'OctoPrompt-HTTP-Bridge/1.0'
+        'User-Agent': 'Promptliano-HTTP-Bridge/1.0'
       },
       body: JSON.stringify(request)
     })
@@ -63,7 +63,7 @@ async function callHTTPMCP(method: string, params: any = {}): Promise<any> {
     }
 
     const result = await response.json()
-    
+
     if (DEBUG) {
       console.error('[Bridge] HTTP MCP response:', result)
     }

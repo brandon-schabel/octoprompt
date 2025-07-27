@@ -1,4 +1,4 @@
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 
 interface ProviderErrorDetails {
   code?: string | number

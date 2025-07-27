@@ -11,7 +11,7 @@ import {
   type MCPExecutionTimeline,
   mcpToolExecutionSchema,
   mcpToolStatisticsSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 export class MCPTrackingStorage {
   private db: Database

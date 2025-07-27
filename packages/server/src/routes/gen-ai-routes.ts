@@ -1,8 +1,8 @@
 import { createRoute, z } from '@hono/zod-openapi'
 
-import { ApiError } from '@octoprompt/shared'
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
-import { ModelsQuerySchema } from '@octoprompt/schemas'
+import { ApiError } from '@promptliano/shared'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
+import { ModelsQuerySchema } from '@promptliano/schemas'
 import {
   AiGenerateTextRequestSchema,
   AiGenerateTextResponseSchema,
@@ -11,13 +11,13 @@ import {
   StructuredDataSchemaConfig,
   ModelsListResponseSchema,
   structuredDataSchemas
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
-import { generateSingleText, generateStructuredData, genTextStream, providerKeyService } from '@octoprompt/services' // Import the service instance
-import { APIProviders, ProviderKey } from '@octoprompt/schemas'
-import { ProviderKeysConfig, ModelFetcherService } from '@octoprompt/services/src/model-providers/model-fetcher-service'
-import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@octoprompt/services/src/model-providers/provider-defaults'
+import { generateSingleText, generateStructuredData, genTextStream, providerKeyService } from '@promptliano/services' // Import the service instance
+import { APIProviders, ProviderKey } from '@promptliano/schemas'
+import { ProviderKeysConfig, ModelFetcherService } from '@promptliano/services/src/model-providers/model-fetcher-service'
+import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@promptliano/services/src/model-providers/provider-defaults'
 import { stream } from 'hono/streaming'
 
 // Define the Zod schema for filename suggestions
@@ -37,7 +37,7 @@ const FilenameSuggestionSchema = z
   })
   .openapi('FilenameSuggestionOutput')
 
-// Use the imported structuredDataSchemas from @octoprompt/schemas
+// Use the imported structuredDataSchemas from @promptliano/schemas
 // which now includes all our asset generators
 
 const getModelsRoute = createRoute({

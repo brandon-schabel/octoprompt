@@ -18,7 +18,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
-import { buildTsconfigAliasMap, getRecursiveImports } from '@octoprompt/shared'
+import { buildTsconfigAliasMap, getRecursiveImports } from '@promptliano/shared'
 import {
   toggleFile as toggleFileUtil,
   toggleFolder as toggleFolderUtil,
@@ -29,16 +29,16 @@ import {
   formatTokenCount,
   FileNode,
   estimateTokenCount
-} from '@octoprompt/shared'
-import { buildNodeContent, buildNodeSummaries } from '@octoprompt/shared'
+} from '@promptliano/shared'
+import { buildNodeContent, buildNodeSummaries } from '@promptliano/shared'
 
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { EditorType, ProjectFile } from '@octoprompt/schemas'
+import { EditorType, ProjectFile } from '@promptliano/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import { useProjectGitStatus, useStageFiles, useUnstageFiles, useFileDiff } from '@/hooks/api/use-git-api'
-import type { GitFileStatus, GitStatus } from '@octoprompt/schemas'
+import type { GitFileStatus, GitStatus } from '@promptliano/schemas'
 import { GitBranch, Plus, Minus, History, GitCompare } from 'lucide-react'
 
 export type VisibleItem = {
@@ -655,7 +655,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 setLoadingOriginal(true)
                 try {
                   // Use the API client directly to fetch the diff
-                  const { octoClient: apiClient } = await import('@/hooks/octo-client')
+                  const { promptlianoClient: apiClient } = await import('@/hooks/promptliano-client')
                   const response = await apiClient.git.getFileDiff(projectId, item.node.file.path, { staged: false })
 
                   if (response.success && response.data?.diff) {
@@ -685,7 +685,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 setLoadingDiff(true)
                 try {
                   // Use the API client directly to fetch the diff
-                  const { octoClient: apiClient } = await import('@/hooks/octo-client')
+                  const { promptlianoClient: apiClient } = await import('@/hooks/promptliano-client')
                   const response = await apiClient.git.getFileDiff(projectId, item.node.file.path, { staged: false })
 
                   if (response.success && response.data?.diff) {

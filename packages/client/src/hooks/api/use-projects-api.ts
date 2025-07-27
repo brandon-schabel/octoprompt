@@ -21,7 +21,7 @@ export {
 export type {
   CreateProjectBody as CreateProjectInput,
   UpdateProjectBody as UpdateProjectInput
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 // Legacy aliases for hooks that had different names
 export { useSuggestFiles as useFindSuggestedFiles } from '../api-hooks'
