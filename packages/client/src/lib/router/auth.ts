@@ -19,7 +19,7 @@ export interface AuthState {
  */
 export function getAuthState(): AuthState {
   // Check for API key in localStorage
-  const apiKey = localStorage.getItem('octoprompt_api_key')
+  const apiKey = localStorage.getItem('promptliano_api_key')
 
   // For now, we consider having an API key as being authenticated
   // In a full implementation, this would validate the key
@@ -29,10 +29,10 @@ export function getAuthState(): AuthState {
     isAuthenticated,
     user: isAuthenticated
       ? {
-          id: 'user-1',
-          name: 'OctoPrompt User',
-          email: 'user@octoprompt.com'
-        }
+        id: 'user-1',
+        name: 'Promptliano User',
+        email: 'user@promptliano.com'
+      }
       : null,
     apiKey: apiKey || undefined
   }
@@ -70,7 +70,7 @@ export async function requireAdmin({ location, context }: { location: any; conte
   }
 
   // Check for admin role (simplified for demo)
-  const isAdmin = auth.user?.email?.endsWith('@admin.octoprompt.com')
+  const isAdmin = auth.user?.email?.endsWith('@admin.promptliano.com')
 
   if (!isAdmin) {
     throw redirect({

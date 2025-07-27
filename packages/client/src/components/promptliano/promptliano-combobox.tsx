@@ -13,7 +13,7 @@ type ComboboxOption = {
   label: string
 }
 
-interface OctoComboboxProps {
+interface PromptlianoComboboxProps {
   options: ComboboxOption[]
   value: string | null // Allow null for no selection
   onValueChange: (value: string | null) => void
@@ -24,7 +24,7 @@ interface OctoComboboxProps {
   disabled?: boolean
 }
 
-export function OctoCombobox({
+export function PromptlianoCombobox({
   options,
   value,
   onValueChange,
@@ -33,7 +33,7 @@ export function OctoCombobox({
   className,
   popoverClassName,
   disabled
-}: OctoComboboxProps) {
+}: PromptlianoComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
   const selectedLabel = value ? options.find((option) => option.value === value)?.label : placeholder

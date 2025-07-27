@@ -163,7 +163,7 @@ function RootComponent() {
     return (
       <div className='flex h-screen w-screen items-center justify-center bg-background text-foreground'>
         <div className='text-center'>
-          <div className='mb-4'>Starting OctoPrompt server...</div>
+          <div className='mb-4'>Starting Promptliano server...</div>
           <div className='text-sm text-muted-foreground'>This may take a few seconds on first launch</div>
         </div>
       </div>
@@ -175,7 +175,7 @@ function RootComponent() {
     return (
       <div className='flex h-screen w-screen items-center justify-center bg-background text-foreground'>
         <div className='text-center'>
-          <div className='mb-4 text-red-500'>Failed to start OctoPrompt server</div>
+          <div className='mb-4 text-red-500'>Failed to start Promptliano server</div>
           <div className='text-sm text-muted-foreground'>{sidecarError}</div>
           <div className='mt-4 text-xs text-muted-foreground'>Please try restarting the application</div>
         </div>

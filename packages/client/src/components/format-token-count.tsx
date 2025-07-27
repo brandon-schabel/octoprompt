@@ -1,7 +1,7 @@
-import { estimateTokenCount } from '@octoprompt/shared'
+import { estimateTokenCount } from '@promptliano/shared'
 import { useMemo } from 'react'
 import { clsx } from 'clsx'
-import { formatTokenCount } from '@octoprompt/shared'
+import { formatTokenCount } from '@promptliano/shared'
 
 /** Formats and displays the token count for given content, color-coding it based on thresholds. */
 export const FormatTokenCount = ({ tokenContent }: { tokenContent: string | number }) => {

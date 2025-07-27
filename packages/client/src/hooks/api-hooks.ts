@@ -1,17 +1,17 @@
-import { DataResponseSchema } from '@octoprompt/api-client'
-import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from '@octoprompt/schemas'
+import { DataResponseSchema } from '@promptliano/api-client'
+import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from '@promptliano/schemas'
 
-import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamRequest } from '@octoprompt/schemas'
+import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamRequest } from '@promptliano/schemas'
 
-import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest } from '@octoprompt/schemas'
+import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest } from '@promptliano/schemas'
 
 // packages/client/src/hooks/api/use-keys-api-v2.ts
-import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@octoprompt/schemas'
+import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@promptliano/schemas'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { octoClient } from './octo-client'
+import { promptlianoClient } from './promptliano-client'
 
 // Query Keys - simplified
 const CHAT_KEYS = {
@@ -25,7 +25,7 @@ const CHAT_KEYS = {
 export function useGetChats() {
   return useQuery({
     queryKey: CHAT_KEYS.list(),
-    queryFn: () => octoClient.chats.listChats(),
+    queryFn: () => promptlianoClient.chats.listChats(),
     staleTime: 5 * 60 * 1000 // 5 minutes
   })
 }
@@ -33,7 +33,7 @@ export function useGetChats() {
 export function useGetChat(chatId: number) {
   return useQuery({
     queryKey: CHAT_KEYS.detail(chatId),
-    queryFn: () => octoClient.chats.getChat(chatId),
+    queryFn: () => promptlianoClient.chats.getChat(chatId),
     enabled: !!chatId,
     staleTime: 5 * 60 * 1000
   })
@@ -42,7 +42,7 @@ export function useGetChat(chatId: number) {
 export function useGetMessages(chatId: number) {
   return useQuery({
     queryKey: CHAT_KEYS.messages(chatId),
-    queryFn: () => octoClient.chats.getMessages(chatId),
+    queryFn: () => promptlianoClient.chats.getMessages(chatId),
     enabled: !!chatId,
     staleTime: 30 * 1000 // 30 seconds for messages
   })
@@ -53,7 +53,7 @@ export function useCreateChat() {
   const { invalidateAllChats } = useInvalidateChats()
 
   return useMutation({
-    mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
+    mutationFn: (data: CreateChatBody) => promptlianoClient.chats.createChat(data),
     onSuccess: (newChat) => {
       invalidateAllChats()
       toast.success('Chat created successfully')
@@ -69,7 +69,7 @@ export function useUpdateChat() {
 
   return useMutation({
     mutationFn: ({ chatId, data }: { chatId: number; data: UpdateChatBody }) =>
-      octoClient.chats.updateChat(chatId, data),
+      promptlianoClient.chats.updateChat(chatId, data),
     onSuccess: ({ data: updatedChat }: DataResponseSchema<Chat>) => {
       invalidateAllChats()
       setChatDetail(updatedChat)
@@ -85,7 +85,7 @@ export function useDeleteChat() {
   const { invalidateAllChats, removeChat } = useInvalidateChats()
 
   return useMutation({
-    mutationFn: (chatId: number) => octoClient.chats.deleteChat(chatId),
+    mutationFn: (chatId: number) => promptlianoClient.chats.deleteChat(chatId),
     onSuccess: (_, chatId) => {
       invalidateAllChats()
       removeChat(chatId)
@@ -102,7 +102,7 @@ export function useForkChat() {
 
   return useMutation({
     mutationFn: ({ chatId, excludeMessageIds }: { chatId: number; excludeMessageIds?: number[] }) =>
-      octoClient.chats.forkChat(chatId, { excludedMessageIds: excludeMessageIds || [] }),
+      promptlianoClient.chats.forkChat(chatId, { excludedMessageIds: excludeMessageIds || [] }),
     onSuccess: (newChat) => {
       invalidateAllChats()
       toast.success('Chat forked successfully')
@@ -126,7 +126,7 @@ export function useForkChatFromMessage() {
       messageId: number
       excludedMessageIds?: number[]
     }) =>
-      octoClient.chats.forkChatFromMessage(chatId, messageId, {
+      promptlianoClient.chats.forkChatFromMessage(chatId, messageId, {
         excludedMessageIds: excludedMessageIds || []
       }),
     onSuccess: (newChat) => {
@@ -144,7 +144,7 @@ export function useDeleteMessage() {
 
   return useMutation({
     mutationFn: ({ chatId, messageId }: { chatId: number; messageId: number }) =>
-      octoClient.chats.deleteMessage(chatId, messageId),
+      promptlianoClient.chats.deleteMessage(chatId, messageId),
     onSuccess: (_, { chatId }) => {
       invalidateChatMessages(chatId)
       toast.success('Message deleted successfully')
@@ -157,7 +157,7 @@ export function useDeleteMessage() {
 
 export function useStreamChat() {
   return useMutation({
-    mutationFn: (data: AiChatStreamRequest) => octoClient.chats.streamChat(data),
+    mutationFn: (data: AiChatStreamRequest) => promptlianoClient.chats.streamChat(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to start chat stream')
     }
@@ -226,7 +226,7 @@ const PROJECT_KEYS = {
 export function useGetProjects() {
   return useQuery({
     queryKey: PROJECT_KEYS.list(),
-    queryFn: () => octoClient.projects.listProjects(),
+    queryFn: () => promptlianoClient.projects.listProjects(),
     staleTime: 5 * 60 * 1000
   })
 }
@@ -234,7 +234,7 @@ export function useGetProjects() {
 export function useGetProject(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.detail(projectId),
-    queryFn: () => octoClient.projects.getProject(projectId),
+    queryFn: () => promptlianoClient.projects.getProject(projectId),
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000
   })
@@ -243,7 +243,7 @@ export function useGetProject(projectId: number) {
 export function useGetProjectFiles(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.files(projectId),
-    queryFn: () => octoClient.projects.getProjectFiles(projectId),
+    queryFn: () => promptlianoClient.projects.getProjectFiles(projectId),
     enabled: !!projectId && projectId !== -1,
     staleTime: 2 * 60 * 1000, // 2 minutes for files
     refetchOnWindowFocus: true
@@ -253,7 +253,7 @@ export function useGetProjectFiles(projectId: number) {
 export function useGetProjectFilesWithoutContent(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.filesWithoutContent(projectId),
-    queryFn: () => octoClient.projects.getProjectFilesWithoutContent(projectId),
+    queryFn: () => promptlianoClient.projects.getProjectFilesWithoutContent(projectId),
     enabled: !!projectId && projectId !== -1,
     staleTime: 5 * 60 * 1000, // 5 minutes for file metadata
     refetchOnWindowFocus: true
@@ -263,7 +263,7 @@ export function useGetProjectFilesWithoutContent(projectId: number) {
 export function useGetProjectSummary(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.summary(projectId),
-    queryFn: () => octoClient.projects.getProjectSummary(projectId),
+    queryFn: () => promptlianoClient.projects.getProjectSummary(projectId),
     enabled: !!projectId,
     staleTime: 10 * 60 * 1000 // 10 minutes for summary
   })
@@ -272,7 +272,7 @@ export function useGetProjectSummary(projectId: number) {
 export function useGetProjectStatistics(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.statistics(projectId),
-    queryFn: () => octoClient.projects.getProjectStatistics(projectId),
+    queryFn: () => promptlianoClient.projects.getProjectStatistics(projectId),
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000 // 5 minutes cache for statistics
   })
@@ -283,7 +283,7 @@ export function useCreateProject() {
   const { invalidateAllProjects } = useInvalidateProjects()
 
   return useMutation({
-    mutationFn: (data: CreateProjectBody) => octoClient.projects.createProject(data),
+    mutationFn: (data: CreateProjectBody) => promptlianoClient.projects.createProject(data),
     onSuccess: (newProject) => {
       invalidateAllProjects()
       toast.success('Project created successfully')
@@ -299,7 +299,7 @@ export function useUpdateProject() {
 
   return useMutation({
     mutationFn: ({ projectId, data }: { projectId: number; data: UpdateProjectBody }) =>
-      octoClient.projects.updateProject(projectId, data),
+      promptlianoClient.projects.updateProject(projectId, data),
     onSuccess: ({ data: updatedProject }: DataResponseSchema<Project>) => {
       invalidateAllProjects()
       setProjectDetail(updatedProject)
@@ -316,7 +316,7 @@ export function useDeleteProject() {
   const { removeProjectPrompts } = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: (projectId: number) => octoClient.projects.deleteProject(projectId),
+    mutationFn: (projectId: number) => promptlianoClient.projects.deleteProject(projectId),
     onSuccess: (_, projectId) => {
       invalidateAllProjects()
       removeProject(projectId)
@@ -333,7 +333,7 @@ export function useSyncProject() {
   const { invalidateProjectFiles, invalidateProject } = useInvalidateProjects()
 
   return useMutation({
-    mutationFn: (projectId: number) => octoClient.projects.syncProject(projectId),
+    mutationFn: (projectId: number) => promptlianoClient.projects.syncProject(projectId),
     onSuccess: (_, projectId) => {
       invalidateProjectFiles(projectId)
       invalidateProject(projectId)
@@ -349,7 +349,7 @@ export function useRefreshProject() {
 
   return useMutation({
     mutationFn: ({ projectId, folder }: { projectId: number; folder?: string }) =>
-      octoClient.projects.refreshProject(projectId, folder ? { folder } : undefined),
+      promptlianoClient.projects.refreshProject(projectId, folder ? { folder } : undefined),
     onSuccess: (_, { projectId }) => {
       invalidateProjectFiles(projectId)
       toast.success('Project refreshed successfully')
@@ -366,10 +366,10 @@ export function useUpdateFileContent() {
   return useMutation({
     mutationFn: async ({ projectId, fileId, content }: { projectId: number; fileId: number; content: string }) => {
       // Update the file content
-      const result = await octoClient.projects.updateFileContent(projectId, fileId, content)
+      const result = await promptlianoClient.projects.updateFileContent(projectId, fileId, content)
 
       // Sync the project to ensure file system and data store are synchronized
-      await octoClient.projects.syncProject(projectId)
+      await promptlianoClient.projects.syncProject(projectId)
 
       return result
     },
@@ -386,7 +386,7 @@ export function useUpdateFileContent() {
 export function useSuggestFiles() {
   return useMutation({
     mutationFn: async ({ projectId, prompt, limit = 10 }: { projectId: number; prompt: string; limit?: number }) => {
-      const response = await octoClient.projects.suggestFiles(projectId, { prompt, limit })
+      const response = await promptlianoClient.projects.suggestFiles(projectId, { prompt, limit })
       return response.data
     },
     onError: (error) => {
@@ -407,7 +407,7 @@ export function useSummarizeProjectFiles() {
       fileIds: number[]
       force?: boolean
     }) => {
-      const response = await octoClient.projects.summarizeFiles(projectId, { fileIds, force })
+      const response = await promptlianoClient.projects.summarizeFiles(projectId, { fileIds, force })
       return response.data
     },
     onSuccess: (data, variables) => {
@@ -425,7 +425,7 @@ export function useRemoveSummariesFromFiles() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ projectId, fileIds }: { projectId: number; fileIds: number[] }) => {
-      const response = await octoClient.projects.removeSummariesFromFiles(projectId, { fileIds })
+      const response = await promptlianoClient.projects.removeSummariesFromFiles(projectId, { fileIds })
       return response.data
     },
     onSuccess: (data, variables) => {
@@ -450,7 +450,7 @@ const PROMPT_KEYS = {
 export function useGetAllPrompts() {
   return useQuery({
     queryKey: PROMPT_KEYS.list(),
-    queryFn: () => octoClient.prompts.listPrompts(),
+    queryFn: () => promptlianoClient.prompts.listPrompts(),
     staleTime: 5 * 60 * 1000
   })
 }
@@ -458,7 +458,7 @@ export function useGetAllPrompts() {
 export function useGetPrompt(promptId: number) {
   return useQuery({
     queryKey: PROMPT_KEYS.detail(promptId),
-    queryFn: () => octoClient.prompts.getPrompt(promptId),
+    queryFn: () => promptlianoClient.prompts.getPrompt(promptId),
     enabled: !!promptId,
     staleTime: 5 * 60 * 1000
   })
@@ -467,7 +467,7 @@ export function useGetPrompt(promptId: number) {
 export function useGetProjectPrompts(projectId: number) {
   return useQuery({
     queryKey: PROMPT_KEYS.projectPrompts(projectId),
-    queryFn: () => octoClient.prompts.listProjectPrompts(projectId),
+    queryFn: () => promptlianoClient.prompts.listProjectPrompts(projectId),
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000
   })
@@ -478,7 +478,7 @@ export function useCreatePrompt() {
   const { invalidateAllPrompts } = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: (data: CreatePromptBody) => octoClient.prompts.createPrompt(data),
+    mutationFn: (data: CreatePromptBody) => promptlianoClient.prompts.createPrompt(data),
     onSuccess: (newPrompt) => {
       invalidateAllPrompts()
       toast.success('Prompt created successfully')
@@ -494,7 +494,7 @@ export function useUpdatePrompt() {
 
   return useMutation({
     mutationFn: ({ promptId, data }: { promptId: number; data: UpdatePromptBody }) =>
-      octoClient.prompts.updatePrompt(promptId, data),
+      promptlianoClient.prompts.updatePrompt(promptId, data),
     onSuccess: ({ data: updatedPrompt }: DataResponseSchema<Prompt>) => {
       invalidateAllPrompts()
       setPromptDetail(updatedPrompt)
@@ -510,7 +510,7 @@ export function useDeletePrompt() {
   const invalidatePrompts = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: ({ promptId }: { promptId: number }) => octoClient.prompts.deletePrompt(promptId),
+    mutationFn: ({ promptId }: { promptId: number }) => promptlianoClient.prompts.deletePrompt(promptId),
     onSuccess: (_, { promptId }) => {
       // Invalidate all prompt-related queries including project prompts
       invalidatePrompts.invalidateAllPrompts()
@@ -528,7 +528,7 @@ export function useAddPromptToProject() {
 
   return useMutation({
     mutationFn: ({ projectId, promptId }: { projectId: number; promptId: number }) =>
-      octoClient.prompts.addPromptToProject(projectId, promptId),
+      promptlianoClient.prompts.addPromptToProject(projectId, promptId),
     onSuccess: (_, { projectId }) => {
       // Invalidate both project-specific prompts and all prompts list
       invalidatePrompts.invalidateProjectPrompts(projectId)
@@ -546,7 +546,7 @@ export function useRemovePromptFromProject() {
 
   return useMutation({
     mutationFn: ({ projectId, promptId }: { projectId: number; promptId: number }) =>
-      octoClient.prompts.removePromptFromProject(projectId, promptId),
+      promptlianoClient.prompts.removePromptFromProject(projectId, promptId),
     onSuccess: (_, { projectId }) => {
       // Invalidate both project-specific prompts and all prompts list
       invalidatePrompts.invalidateProjectPrompts(projectId)
@@ -561,7 +561,7 @@ export function useRemovePromptFromProject() {
 
 export function useOptimizeUserInput() {
   return useMutation({
-    mutationFn: (data: OptimizePromptRequest) => octoClient.prompts.optimizeUserInput(data),
+    mutationFn: (data: OptimizePromptRequest) => promptlianoClient.prompts.optimizeUserInput(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to optimize user input')
     }
@@ -579,7 +579,7 @@ export function useSuggestPrompts() {
       userInput: string
       limit?: number
     }) => {
-      const response = await octoClient.prompts.suggestPrompts(projectId, { userInput, limit })
+      const response = await promptlianoClient.prompts.suggestPrompts(projectId, { userInput, limit })
       return response.data.prompts
     },
     onError: (error) => {
@@ -593,7 +593,7 @@ export function useSuggestPrompts() {
 // export function useGetFileVersions(projectId: number, originalFileId: number) {
 //   return useQuery({
 //     queryKey: PROJECT_KEYS.fileVersions(projectId, originalFileId),
-//     queryFn: () => octoClient.projects.getFileVersions(projectId, originalFileId),
+//     queryFn: () => promptlianoClient.projects.getFileVersions(projectId, originalFileId),
 //     enabled: projectId > 0 && originalFileId > 0,
 //     staleTime: 5 * 60 * 1000
 //   })
@@ -602,7 +602,7 @@ export function useSuggestPrompts() {
 // export function useGetFileVersion(projectId: number, originalFileId: number, version?: number) {
 //   return useQuery({
 //     queryKey: PROJECT_KEYS.fileVersion(projectId, originalFileId, version),
-//     queryFn: () => octoClient.projects.getFileVersion(projectId, originalFileId, version),
+//     queryFn: () => promptlianoClient.projects.getFileVersion(projectId, originalFileId, version),
 //     enabled: projectId > 0 && originalFileId > 0,
 //     staleTime: 5 * 60 * 1000
 //   })
@@ -614,7 +614,7 @@ export function useSuggestPrompts() {
 
 //   return useMutation({
 //     mutationFn: ({ projectId, fileId, targetVersion }: { projectId: number; fileId: number; targetVersion: number }) =>
-//       octoClient.projects.revertFileToVersion(projectId, fileId, targetVersion),
+//       promptlianoClient.projects.revertFileToVersion(projectId, fileId, targetVersion),
 //     onSuccess: (_, { projectId }) => {
 //       invalidateProjectFiles(projectId)
 //       // Invalidate all version-related queries
@@ -644,7 +644,7 @@ const KEY_KEYS = {
 export function useGetKeys() {
   return useQuery({
     queryKey: KEY_KEYS.list(),
-    queryFn: () => octoClient.keys.listKeys(),
+    queryFn: () => promptlianoClient.keys.listKeys(),
     staleTime: 10 * 60 * 1000 // 10 minutes for keys
   })
 }
@@ -652,7 +652,7 @@ export function useGetKeys() {
 export function useGetKey(keyId: number) {
   return useQuery({
     queryKey: KEY_KEYS.detail(keyId),
-    queryFn: () => octoClient.keys.getKey(keyId),
+    queryFn: () => promptlianoClient.keys.getKey(keyId),
     enabled: !!keyId,
     staleTime: 10 * 60 * 1000
   })
@@ -663,7 +663,7 @@ export function useCreateKey() {
   const { invalidateAllKeys } = useInvalidateKeys()
 
   return useMutation({
-    mutationFn: (data: CreateProviderKeyBody) => octoClient.keys.createKey(data),
+    mutationFn: (data: CreateProviderKeyBody) => promptlianoClient.keys.createKey(data),
     onSuccess: (newKey) => {
       invalidateAllKeys()
       toast.success('API key created successfully')
@@ -679,7 +679,7 @@ export function useUpdateKey() {
 
   return useMutation({
     mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) =>
-      octoClient.keys.updateKey(keyId, data),
+      promptlianoClient.keys.updateKey(keyId, data),
     onSuccess: ({ data: updatedKey }: DataResponseSchema<ProviderKey>) => {
       invalidateAllKeys()
       setKeyDetail(updatedKey)
@@ -695,7 +695,7 @@ export function useDeleteKey() {
   const { invalidateAllKeys, removeKey } = useInvalidateKeys()
 
   return useMutation({
-    mutationFn: (keyId: number) => octoClient.keys.deleteKey(keyId),
+    mutationFn: (keyId: number) => promptlianoClient.keys.deleteKey(keyId),
     onSuccess: (_, keyId) => {
       invalidateAllKeys()
       removeKey(keyId)
@@ -716,7 +716,7 @@ const TICKET_KEYS = {
 
 // --- Utility Hooks for Complex Operations ---
 
-// packages/client/src/hooks/api/use-octoprompt-utils.ts
+// packages/client/src/hooks/api/use-promptliano-utils.ts
 export function useInvalidateProject(projectId: number) {
   const queryClient = useQueryClient()
 
@@ -885,7 +885,7 @@ export function useBatchProjectOperations() {
     prefetchProject: (projectId: number) => {
       queryClient.prefetchQuery({
         queryKey: PROJECT_KEYS.detail(projectId),
-        queryFn: () => octoClient.projects.getProject(projectId),
+        queryFn: () => promptlianoClient.projects.getProject(projectId),
         staleTime: 5 * 60 * 1000
       })
     },
@@ -933,11 +933,11 @@ export function useSmartCaching() {
       await Promise.all([
         queryClient.prefetchQuery({
           queryKey: PROJECT_KEYS.files(projectId),
-          queryFn: () => octoClient.projects.getProjectFiles(projectId)
+          queryFn: () => promptlianoClient.projects.getProjectFiles(projectId)
         }),
         queryClient.prefetchQuery({
           queryKey: PROMPT_KEYS.projectPrompts(projectId),
-          queryFn: () => octoClient.prompts.listProjectPrompts(projectId)
+          queryFn: () => promptlianoClient.prompts.listProjectPrompts(projectId)
         })
       ])
     },

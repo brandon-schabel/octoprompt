@@ -33,8 +33,8 @@ import {
   gitWorktreePruneRequestSchema,
   gitWorktreePruneResponseSchema,
   type GitLogEnhancedRequest
-} from '@octoprompt/schemas'
-import * as gitService from '@octoprompt/services'
+} from '@promptliano/schemas'
+import * as gitService from '@promptliano/services'
 
 export const gitRoutes = new OpenAPIHono()
 
@@ -897,9 +897,9 @@ gitRoutes.openapi(deleteBranchRoute, async (c) => {
   try {
     const { projectId, branchName } = c.req.valid('param')
     const { force } = c.req.valid('query')
-    
+
     await gitService.deleteBranch(projectId, branchName, force || false)
-    
+
     return c.json({
       success: true,
       message: `Branch '${branchName}' deleted successfully`
@@ -1074,7 +1074,7 @@ gitRoutes.openapi(getCommitLogEnhancedRoute, async (c) => {
   try {
     const { projectId } = c.req.valid('param')
     const params = c.req.valid('query')
-    
+
     // Convert query params to match service expectations
     const serviceParams: GitLogEnhancedRequest = {
       page: params.page || 1,
@@ -1087,7 +1087,7 @@ gitRoutes.openapi(getCommitLogEnhancedRoute, async (c) => {
       includeStats: params.includeStats || false,
       includeFileDetails: params.includeFileDetails || false
     }
-    
+
     console.log('[GetCommitLogEnhanced] Params:', serviceParams)
     const result = await gitService.getCommitLogEnhanced(projectId, serviceParams)
     return c.json(result)
@@ -1692,12 +1692,12 @@ gitRoutes.openapi(addWorktreeRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const options = c.req.valid('json')
     const async = c.req.query('async') === 'true'
-    
+
     if (async) {
       // Create job for async processing
-      const { getJobQueue } = await import('@octoprompt/services')
+      const { getJobQueue } = await import('@promptliano/services')
       const jobQueue = getJobQueue()
-      
+
       const job = await jobQueue.createJob({
         type: 'git.worktree.add',
         input: options,
@@ -1707,7 +1707,7 @@ gitRoutes.openapi(addWorktreeRoute, async (c) => {
           branch: options.branch || options.newBranch
         }
       })
-      
+
       return c.json({
         success: true,
         jobId: job.id,
@@ -1792,12 +1792,12 @@ gitRoutes.openapi(removeWorktreeRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { path, force } = c.req.valid('json')
     const async = c.req.query('async') === 'true'
-    
+
     if (async) {
       // Create job for async processing
-      const { getJobQueue } = await import('@octoprompt/services')
+      const { getJobQueue } = await import('@promptliano/services')
       const jobQueue = getJobQueue()
-      
+
       const job = await jobQueue.createJob({
         type: 'git.worktree.remove',
         input: { path, force },
@@ -1807,7 +1807,7 @@ gitRoutes.openapi(removeWorktreeRoute, async (c) => {
           force
         }
       })
-      
+
       return c.json({
         success: true,
         jobId: job.id,
@@ -1823,9 +1823,9 @@ gitRoutes.openapi(removeWorktreeRoute, async (c) => {
     }
   } catch (error) {
     console.error('[RemoveWorktree] Error:', error)
-    const statusCode = error instanceof Error && 
-      (error.message.includes('Cannot remove the main worktree') ? 400 : 
-       error.message.includes('not found') ? 404 : 500)
+    const statusCode = error instanceof Error &&
+      (error.message.includes('Cannot remove the main worktree') ? 400 :
+        error.message.includes('not found') ? 404 : 500)
     return c.json(
       {
         success: false,
@@ -2023,12 +2023,12 @@ gitRoutes.openapi(pruneWorktreesRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { dryRun } = c.req.valid('json')
     const async = c.req.query('async') === 'true'
-    
+
     if (async && !dryRun) {
       // Only async for actual prune operations, not dry runs
-      const { getJobQueue } = await import('@octoprompt/services')
+      const { getJobQueue } = await import('@promptliano/services')
       const jobQueue = getJobQueue()
-      
+
       const job = await jobQueue.createJob({
         type: 'git.worktree.prune',
         input: { dryRun: false },
@@ -2037,7 +2037,7 @@ gitRoutes.openapi(pruneWorktreesRoute, async (c) => {
           operation: 'prune'
         }
       })
-      
+
       return c.json({
         success: true,
         jobId: job.id,
@@ -2049,8 +2049,8 @@ gitRoutes.openapi(pruneWorktreesRoute, async (c) => {
       return c.json({
         success: true,
         data: prunedPaths,
-        message: dryRun 
-          ? `Would prune ${prunedPaths.length} worktree(s)` 
+        message: dryRun
+          ? `Would prune ${prunedPaths.length} worktree(s)`
           : `Pruned ${prunedPaths.length} worktree(s)`
       })
     }

@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
 import {
   CreatePromptBodySchema,
   UpdatePromptBodySchema,
@@ -9,7 +9,7 @@ import {
   PromptListResponseSchema,
   SuggestPromptsRequestSchema,
   SuggestPromptsResponseSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import {
   addPromptToProject,
   createPrompt,
@@ -20,8 +20,8 @@ import {
   removePromptFromProject,
   updatePrompt,
   suggestPrompts
-} from '@octoprompt/services'
-import { ProjectIdParamsSchema } from '@octoprompt/schemas'
+} from '@promptliano/services'
+import { ProjectIdParamsSchema } from '@promptliano/schemas'
 
 const createPromptRoute = createRoute({
   method: 'post',

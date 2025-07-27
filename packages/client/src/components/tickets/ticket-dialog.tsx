@@ -5,9 +5,9 @@ import { Input } from '@ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { Textarea } from '@ui'
 import { useCreateTicket, useUpdateTicket } from '../../hooks/api/use-tickets-api'
-import { OctoTooltip } from '../octo/octo-tooltip'
+import { PromptlianoTooltip } from '../promptliano/promptliano-tooltip'
 import { TicketTasksPanel } from './ticket-tasks-panel'
-import type { TicketWithTasks } from '@octoprompt/schemas'
+import type { TicketWithTasks } from '@promptliano/schemas'
 
 interface TicketDialogProps {
   isOpen: boolean
@@ -111,9 +111,9 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
         <DialogHeader>
           <DialogTitle className='flex space-x-2 items-center'>
             <span>{ticketWithTasks ? 'Edit Ticket' : 'Create New Ticket'}</span>
-            <OctoTooltip className='max-w-xs'>
+            <PromptlianoTooltip className='max-w-xs'>
               Providing a detailed overview helps auto-generate tasks & file suggestions!
-            </OctoTooltip>
+            </PromptlianoTooltip>
           </DialogTitle>
         </DialogHeader>
 

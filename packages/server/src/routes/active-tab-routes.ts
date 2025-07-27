@@ -1,8 +1,8 @@
 import { createRoute } from '@hono/zod-openapi'
 import { z } from '@hono/zod-openapi'
 import { OpenAPIHono } from '@hono/zod-openapi'
-import * as activeTabService from '@octoprompt/services'
-import { updateActiveTabSchema } from '@octoprompt/schemas'
+import * as activeTabService from '@promptliano/services'
+import { updateActiveTabSchema } from '@promptliano/schemas'
 
 export const activeTabRoutes = new OpenAPIHono()
 
@@ -64,11 +64,11 @@ activeTabRoutes.openapi(getActiveTabRoute, async (c) => {
     success: true,
     data: activeTab
       ? {
-          activeTabId: activeTab.data.activeTabId,
-          lastUpdated: activeTab.data.lastUpdated,
-          clientId: activeTab.data.clientId,
-          tabMetadata: activeTab.data.tabMetadata
-        }
+        activeTabId: activeTab.data.activeTabId,
+        lastUpdated: activeTab.data.lastUpdated,
+        clientId: activeTab.data.clientId,
+        tabMetadata: activeTab.data.tabMetadata
+      }
       : null
   })
 })

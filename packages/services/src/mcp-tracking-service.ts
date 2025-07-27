@@ -1,4 +1,4 @@
-import { mcpTrackingStorage } from '@octoprompt/storage'
+import { mcpTrackingStorage } from '@promptliano/storage'
 import {
   type MCPToolExecution,
   type CreateMCPToolExecution,
@@ -9,8 +9,8 @@ import {
   type MCPAnalyticsOverview,
   type MCPExecutionTimeline,
   type MCPExecutionStatus
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 import { createLogger } from './utils/logger'
 
 const logger = createLogger('MCPTracking')
@@ -206,12 +206,12 @@ export async function getMCPAnalyticsOverview(
     const overallSuccessRate =
       totalExecutions > 0
         ? topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number) * (tool.successRate as number), 0) /
-          totalExecutions
+        totalExecutions
         : 0
     const avgExecutionTime =
       totalExecutions > 0
         ? topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number) * (tool.avgDurationMs as number), 0) /
-          totalExecutions
+        totalExecutions
         : 0
 
     return {

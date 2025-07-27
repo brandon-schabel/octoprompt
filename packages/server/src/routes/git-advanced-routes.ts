@@ -6,8 +6,8 @@ import {
   gitStashSchema,
   gitPushRequestSchema,
   gitResetRequestSchema
-} from '@octoprompt/schemas'
-import * as gitService from '@octoprompt/services'
+} from '@promptliano/schemas'
+import * as gitService from '@promptliano/services'
 
 export const gitAdvancedRoutes = new OpenAPIHono()
 

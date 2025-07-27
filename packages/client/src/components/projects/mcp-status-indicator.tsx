@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Loader2, WifiOff, Wifi } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { octoClient } from '@/hooks/octo-client'
+import { promptlianoClient } from '@/hooks/promptliano-client'
 
 interface MCPStatusIndicatorProps {
   projectId: number
@@ -21,7 +21,7 @@ export function MCPStatusIndicator({ projectId }: MCPStatusIndicatorProps) {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['mcp-status', projectId],
     queryFn: async () => {
-      const response = await octoClient.projects.getMCPInstallationStatus(projectId)
+      const response = await promptlianoClient.projects.getMCPInstallationStatus(projectId)
       return response.data
     },
     refetchInterval: 30000, // Refresh every 30 seconds

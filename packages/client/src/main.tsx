@@ -4,7 +4,7 @@ import { routeTree } from './routeTree.gen'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from '@ui'
-import { octoClient } from '@/hooks/octo-client'
+import { promptlianoClient } from '@/hooks/promptliano-client'
 
 // Initialize core services
 const queryClient = new QueryClient({
@@ -19,7 +19,7 @@ const queryClient = new QueryClient({
 // Router context interface
 export interface RouterContext {
   queryClient: QueryClient
-  octoClient: typeof octoClient
+  promptlianoClient: typeof promptlianoClient
 }
 
 // Create router instance with context
@@ -28,7 +28,7 @@ const router = createRouter({
   defaultPreload: 'intent',
   context: {
     queryClient,
-    octoClient
+    promptlianoClient: promptlianoClient
   }
 })
 

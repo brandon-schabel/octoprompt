@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, ScrollArea, Separator } from '@ui'
 import { ChevronRight, Folder, FolderOpen, Home, ChevronUp } from 'lucide-react'
 import { useBrowseDirectory } from '@/hooks/api/use-browse-directory'
-import type { DirectoryEntry } from '@octoprompt/schemas'
+import type { DirectoryEntry } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 
 interface DirectoryBrowserDialogProps {

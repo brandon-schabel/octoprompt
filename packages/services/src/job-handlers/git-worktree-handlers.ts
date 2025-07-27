@@ -1,18 +1,18 @@
 import { type JobHandler } from '../job-service'
-import { 
-  getWorktrees, 
-  addWorktree, 
-  removeWorktree, 
+import {
+  getWorktrees,
+  addWorktree,
+  removeWorktree,
   pruneWorktrees,
   lockWorktree,
   unlockWorktree
 } from '../git-service'
-import { 
+import {
   gitWorktreeAddRequestSchema,
   gitWorktreeRemoveRequestSchema,
   gitWorktreeLockRequestSchema,
   gitWorktreePruneRequestSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import { z } from 'zod'
 
 // Simple schema for unlock operation (just needs path)
@@ -26,7 +26,7 @@ export const gitWorktreeAddHandler: JobHandler = {
   name: 'Add Git Worktree',
   description: 'Create a new git worktree',
   timeout: 120000, // 2 minutes
-  
+
   validate: (input) => {
     return gitWorktreeAddRequestSchema.safeParse(input).success
   },
@@ -38,7 +38,7 @@ export const gitWorktreeAddHandler: JobHandler = {
     }
 
     const options = gitWorktreeAddRequestSchema.parse(job.input)
-    
+
     context.log(`Creating worktree at path: ${options.path}`)
     await context.updateProgress({
       current: 1,
@@ -101,7 +101,7 @@ export const gitWorktreeRemoveHandler: JobHandler = {
     }
 
     const options = gitWorktreeRemoveRequestSchema.parse(job.input)
-    
+
     context.log(`Removing worktree at path: ${options.path}`)
     await context.updateProgress({
       current: 1,
@@ -157,7 +157,7 @@ export const gitWorktreePruneHandler: JobHandler = {
     }
 
     const options = gitWorktreePruneRequestSchema.parse(job.input)
-    
+
     context.log(`Pruning worktrees (dry run: ${options.dryRun})`)
     await context.updateProgress({
       current: 1,
@@ -175,7 +175,7 @@ export const gitWorktreePruneHandler: JobHandler = {
     await context.updateProgress({
       current: 2,
       total: 3,
-      message: options.dryRun 
+      message: options.dryRun
         ? `Found ${prunedPaths.length} prunable worktrees`
         : `Pruned ${prunedPaths.length} worktrees`
     })
@@ -216,7 +216,7 @@ export const gitWorktreeLockHandler: JobHandler = {
     }
 
     const options = gitWorktreeLockRequestSchema.parse(job.input)
-    
+
     context.log(`Locking worktree at path: ${options.path}`)
     await lockWorktree(projectId, options.path, options.reason)
 
@@ -249,7 +249,7 @@ export const gitWorktreeUnlockHandler: JobHandler = {
     }
 
     const options = unlockWorktreeOptionsSchema.parse(job.input)
-    
+
     context.log(`Unlocking worktree at path: ${options.path}`)
     await unlockWorktree(projectId, options.path)
 

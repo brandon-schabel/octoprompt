@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "opener:default",
@@ -11,9 +13,14 @@
       "identifier": "shell:allow-spawn",
       "allow": [
         {
-          "name": "binaries/octoprompt-server",
+          "name": "binaries/promptliano-server",
           "sidecar": true,
-          "args": ["--port", { "validator": "\\d+" }]
+          "args": [
+            "--port",
+            {
+              "validator": "\\d+"
+            }
+          ]
         }
       ]
     },

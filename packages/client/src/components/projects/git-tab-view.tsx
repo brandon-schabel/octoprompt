@@ -18,7 +18,7 @@ import {
   Minus
 } from 'lucide-react'
 import { useProjectGitStatus, useStageFiles, useUnstageFiles, useCommitChanges } from '@/hooks/api/use-git-api'
-import type { GitFileStatus } from '@octoprompt/schemas'
+import type { GitFileStatus } from '@promptliano/schemas'
 import { getFileName } from '@/lib/git-utils'
 import { GitDiffDialog } from './git-diff-dialog'
 

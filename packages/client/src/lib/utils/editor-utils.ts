@@ -30,12 +30,12 @@ export const EDITOR_CONFIGS: Record<string, EditorInfo> = {
     color: 'text-green-500',
     description: 'Universal MCP configuration (works with all editors)'
   },
-  // octoprompt: {
-  //   type: 'octoprompt',
-  //   name: 'OctoPrompt',
+  // promptliano: {
+  //   type: 'promptliano',
+  //   name: 'Promptliano',
   //   icon: Package,
   //   color: 'text-orange-500',
-  //   description: 'OctoPrompt-specific configuration'
+  //   description: 'Promptliano-specific configuration'
   // }
 }
 
@@ -45,8 +45,8 @@ export function getEditorInfoFromPath(path: string): EditorInfo {
   } else if (path.includes('.cursor/mcp.json')) {
     return EDITOR_CONFIGS.cursor
   }
-  // else if (path.includes('.octoprompt/mcp.json')) {
-  //   return EDITOR_CONFIGS.octoprompt
+  // else if (path.includes('.promptliano/mcp.json')) {
+  //   return EDITOR_CONFIGS.promptliano
   // } 
   // else if (path.includes('.mcp.json')) {
   // return EDITOR_CONFIGS.universal
@@ -61,19 +61,19 @@ export function getRelativeConfigPath(fullPath: string, projectPath: string): st
   return fullPath.replace(projectPath, '').replace(/^\//, '')
 }
 
-// export function getDefaultOctoPromptConfig(projectId: number, projectPath: string) {
+// export function getDefaultPromptlianoConfig(projectId: number, projectPath: string) {
 //   return {
 //     servers: {
-//       octoprompt: {
+//       promptliano: {
 //         type: 'stdio' as const,
 //         command: process.platform === 'win32' ? 'cmd.exe' : 'sh',
 //         args: process.platform === 'win32'
 //           ? ['/c', 'packages/server/mcp-start.bat']
 //           : ['packages/server/mcp-start.sh'],
 //         env: {
-//           OCTOPROMPT_PROJECT_ID: projectId.toString(),
-//           OCTOPROMPT_PROJECT_PATH: projectPath,
-//           OCTOPROMPT_API_URL: 'http://localhost:3147/api/mcp',
+//           PROMPTLIANO_PROJECT_ID: projectId.toString(),
+//           PROMPTLIANO_PROJECT_PATH: projectPath,
+//           PROMPTLIANO_API_URL: 'http://localhost:3147/api/mcp',
 //           NODE_ENV: 'production'
 //         }
 //       }

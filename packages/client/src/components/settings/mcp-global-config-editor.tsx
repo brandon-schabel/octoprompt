@@ -38,25 +38,25 @@ const SUPPORTED_TOOLS: Record<string, ToolInfo> = {
   'claude-desktop': {
     id: 'claude-desktop',
     name: 'Claude Desktop',
-    description: 'Anthropic\'s Claude Desktop application',
+    description: "Anthropic's Claude Desktop application",
     icon: Package,
     color: 'text-purple-500'
   },
-  'vscode': {
+  vscode: {
     id: 'vscode',
     name: 'VS Code',
     description: 'Visual Studio Code editor',
     icon: Package,
     color: 'text-blue-500'
   },
-  'cursor': {
+  cursor: {
     id: 'cursor',
     name: 'Cursor',
     description: 'Cursor AI-powered IDE',
     icon: Package,
     color: 'text-orange-500'
   },
-  'continue': {
+  continue: {
     id: 'continue',
     name: 'Continue',
     description: 'AI-powered code assistant',
@@ -70,7 +70,7 @@ const SUPPORTED_TOOLS: Record<string, ToolInfo> = {
     icon: Package,
     color: 'text-purple-600'
   },
-  'windsurf': {
+  windsurf: {
     id: 'windsurf',
     name: 'Windsurf',
     description: 'Windsurf AI IDE',
@@ -219,9 +219,9 @@ export function MCPGlobalConfigEditor() {
             {Object.values(SUPPORTED_TOOLS).map((tool) => {
               const installation = getInstallation(tool.id)
               // Find the tool status from the API response
-              const toolStatus = toolStatuses?.find(t => t.tool === tool.id)
+              const toolStatus = toolStatuses?.find((t) => t.tool === tool.id)
               const isInstalled = toolStatus?.installed || false
-              const hasGlobalOctoPrompt = toolStatus?.hasGlobalOctoPrompt || false
+              const hasGlobalPromptliano = toolStatus?.hasGlobalPromptliano || false
               const Icon = tool.icon
 
               return (
@@ -242,15 +242,15 @@ export function MCPGlobalConfigEditor() {
                         {isInstalled ? 'Installed' : 'Not Installed'}
                       </Badge>
                       {isInstalled && (
-                        <Badge variant={hasGlobalOctoPrompt ? 'secondary' : 'outline'} className='text-xs'>
-                          {hasGlobalOctoPrompt ? 'OctoPrompt' : 'No OctoPrompt'}
+                        <Badge variant={hasGlobalPromptliano ? 'secondary' : 'outline'} className='text-xs'>
+                          {hasGlobalPromptliano ? 'Promptliano' : 'No Promptliano'}
                         </Badge>
                       )}
                     </div>
                   </div>
-                  
+
                   <p className='text-sm text-muted-foreground mb-3'>{tool.description}</p>
-                  
+
                   {installation && (
                     <div className='space-y-1 mb-3 text-xs text-muted-foreground'>
                       <div className='flex items-center gap-1'>
@@ -263,7 +263,10 @@ export function MCPGlobalConfigEditor() {
                           <span>Version: {installation.version}</span>
                         </div>
                       )}
-                      {installation && 'location' in installation && installation.location && typeof installation.location === 'string' ? (
+                      {installation &&
+                      'location' in installation &&
+                      installation.location &&
+                      typeof installation.location === 'string' ? (
                         <div className='flex items-center gap-1'>
                           <FolderOpen className='h-3 w-3' />
                           <span className='truncate' title={installation.location as string}>
@@ -273,15 +276,10 @@ export function MCPGlobalConfigEditor() {
                       ) : null}
                     </div>
                   )}
-                  
+
                   <div className='flex gap-2'>
                     {isInstalled && toolStatus?.configPath && (
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        title='Open config file'
-                        asChild
-                      >
+                      <Button size='sm' variant='outline' title='Open config file' asChild>
                         <a
                           href={getEditorUrl('vscode', toolStatus.configPath)}
                           target='_blank'
@@ -291,7 +289,7 @@ export function MCPGlobalConfigEditor() {
                         </a>
                       </Button>
                     )}
-                    {isInstalled && hasGlobalOctoPrompt ? (
+                    {isInstalled && hasGlobalPromptliano ? (
                       <Button
                         size='sm'
                         variant='destructive'
@@ -412,16 +410,24 @@ export function MCPGlobalConfigEditor() {
                         </div>
                         <div className='flex items-center gap-1'>
                           <User className='h-3 w-3' />
-                          <span>{installation.installedAt ? new Date(installation.installedAt).toLocaleString() : 'Unknown'}</span>
+                          <span>
+                            {installation.installedAt ? new Date(installation.installedAt).toLocaleString() : 'Unknown'}
+                          </span>
                         </div>
                       </div>
-                      {installation && 'location' in installation && installation.location && typeof installation.location === 'string' ? (
+                      {installation &&
+                      'location' in installation &&
+                      installation.location &&
+                      typeof installation.location === 'string' ? (
                         <div className='flex items-center gap-1 text-sm text-muted-foreground'>
                           <FolderOpen className='h-3 w-3' />
                           <code className='text-xs'>{installation.location as string}</code>
                         </div>
                       ) : null}
-                      {installation && 'config' in installation && installation.config && typeof installation.config === 'object' ? (
+                      {installation &&
+                      'config' in installation &&
+                      installation.config &&
+                      typeof installation.config === 'object' ? (
                         <details className='mt-2'>
                           <summary className='cursor-pointer text-sm text-muted-foreground hover:text-foreground'>
                             View configuration
@@ -436,9 +442,7 @@ export function MCPGlobalConfigEditor() {
                 </div>
               ) : (
                 <Alert>
-                  <AlertDescription>
-                    No tools are currently installed globally.
-                  </AlertDescription>
+                  <AlertDescription>No tools are currently installed globally.</AlertDescription>
                 </Alert>
               )}
             </TabsContent>

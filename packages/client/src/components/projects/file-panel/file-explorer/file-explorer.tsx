@@ -4,7 +4,7 @@ import { Button } from '@ui'
 import { Badge } from '@ui'
 import { ScrollArea } from '@ui'
 import { Skeleton } from '@ui'
-import { OctoTooltip } from '@/components/octo/octo-tooltip'
+import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { formatShortcut } from '@/lib/shortcuts'
 import { X, ChevronDown, Files } from 'lucide-react'
@@ -13,14 +13,14 @@ import { useActiveProjectTab, useProjectTabField } from '@/hooks/use-kv-local-st
 import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useClickAway } from '@/hooks/utility-hooks/use-click-away'
 import { SelectedFilesListRef } from '../../selected-files-list'
-import { buildFileTree } from '@octoprompt/shared'
+import { buildFileTree } from '@promptliano/shared'
 import { FileTreeRef, FileTree } from '../file-tree/file-tree'
 import { NoResultsScreen } from './no-results-screen'
 import { EmptyProjectScreen } from './empty-project-screen'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject, useUpdateFileContent } from '@/hooks/api/use-projects-api'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useProjectGitStatus } from '@/hooks/api/use-git-api'
 import { GitPullRequest, GitBranch } from 'lucide-react'
@@ -366,7 +366,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <OctoTooltip>
+        <PromptlianoTooltip>
           <div className='space-y-2'>
             <p>File Search Keyboard Shortcuts:</p>
             <ul>
@@ -391,7 +391,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               </li>
             </ul>
           </div>
-        </OctoTooltip>
+        </PromptlianoTooltip>
 
         {showAutocomplete && (localFileSearch || '').trim() && suggestions.length > 0 && (
           <ul className='absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto'>

@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi'
 import { unixTSSchemaSpec, unixTSOptionalSchemaSpec } from './schema-utils'
 
-// Base ticket schema with OctoPrompt patterns
+// Base ticket schema with Promptliano patterns
 export const TicketSchema = z
   .object({
     id: unixTSSchemaSpec,

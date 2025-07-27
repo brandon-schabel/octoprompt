@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { ExternalLinkIcon, Copy } from 'lucide-react'
 import { PROVIDERS } from '@/constants/providers-constants'
-import { OctoTooltip } from '@/components/octo/octo-tooltip'
+import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
 
 export const Route = createFileRoute('/keys')({
   component: KeysPage
@@ -42,9 +42,9 @@ function KeysPage() {
         <CardHeader>
           <div className='flex items-center gap-2'>
             <CardTitle>Provider Keys</CardTitle>
-            <OctoTooltip>
+            <PromptlianoTooltip>
               {`Provider keys let you tap into external AI services (e.g. OpenAI, OpenRouter). Adding these keys unlocks extra features like file suggestions, summarizations, generating ticket tasks. If no key is added, you can still use local LLMs in the chat.`}
-            </OctoTooltip>
+            </PromptlianoTooltip>
           </div>
           <CardDescription>Add API keys for different AI providers here.</CardDescription>
         </CardHeader>

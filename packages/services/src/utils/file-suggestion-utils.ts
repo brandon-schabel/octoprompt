@@ -1,4 +1,4 @@
-import type { ProjectFile, RelevanceScore } from '@octoprompt/schemas'
+import type { ProjectFile, RelevanceScore } from '@promptliano/schemas'
 import { calculateTokenSavings } from './compact-file-formatter'
 
 /**

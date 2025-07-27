@@ -1,4 +1,4 @@
-import type { ProjectFileMap, ProjectFile } from '@octoprompt/schemas'
+import type { ProjectFileMap, ProjectFile } from '@promptliano/schemas'
 import { $ } from 'bun'
 import { XMLParser } from 'fast-xml-parser'
 

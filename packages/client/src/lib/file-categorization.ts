@@ -1,4 +1,4 @@
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 
 // Common binary file extensions
 const BINARY_EXTENSIONS = new Set([

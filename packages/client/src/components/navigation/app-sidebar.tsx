@@ -119,7 +119,7 @@ export function AppSidebar() {
         <Sidebar collapsible='icon' side='left' variant='sidebar'>
           <SidebarHeader className='p-2 flex items-center justify-center group-data-[collapsible=icon]:hidden'>
             {/* You can add a logo or App Name here */}
-            <span className='text-lg font-semibold'>OctoPrompt</span>
+            <span className='text-lg font-semibold'>Promptliano</span>
           </SidebarHeader>
           <SidebarContent className='p-2'>
             <SidebarMenu>

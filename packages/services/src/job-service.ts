@@ -1,16 +1,16 @@
-import { DatabaseManager } from '@octoprompt/storage'
+import { DatabaseManager } from '@promptliano/storage'
 import type { Database } from 'bun:sqlite'
-import { 
-  type Job, 
-  type CreateJob, 
+import {
+  type Job,
+  type CreateJob,
   type JobFilter,
   type JobProgress,
   type JobError,
   type JobStatus,
   type JobEvent,
   jobSchema,
-  createJobSchema 
-} from '@octoprompt/schemas'
+  createJobSchema
+} from '@promptliano/schemas'
 import { EventEmitter } from 'node:events'
 
 // Job handler types
@@ -62,7 +62,7 @@ export class JobQueueService extends EventEmitter {
   // Job creation
   async createJob(data: CreateJob): Promise<Job> {
     const validated = createJobSchema.parse(data)
-    
+
     // Check if handler exists
     const handler = this.handlers.get(validated.type)
     if (!handler) {
@@ -171,7 +171,7 @@ export class JobQueueService extends EventEmitter {
     if (filter.limit) {
       query += ' LIMIT ?'
       params.push(filter.limit)
-      
+
       if (filter.offset) {
         query += ' OFFSET ?'
         params.push(filter.offset)
@@ -272,7 +272,7 @@ export class JobQueueService extends EventEmitter {
 
     const job = this.rowToJob(row)
     const handler = this.handlers.get(job.type)
-    
+
     if (!handler) {
       console.error(`[JobQueue] No handler for job type: ${job.type}`)
       await this.failJob(job.id, {
@@ -331,7 +331,7 @@ export class JobQueueService extends EventEmitter {
         }
       } catch (error) {
         clearTimeout(timeoutId)
-        
+
         if (controller.signal.aborted) {
           await this.updateJobStatus(job.id, 'cancelled')
         } else {
@@ -369,9 +369,9 @@ export class JobQueueService extends EventEmitter {
     const job = await this.getJob(jobId)
     if (job) {
       this.emitJobEvent(
-        status === 'running' ? 'job.started' : 
-        status === 'cancelled' ? 'job.cancelled' : 
-        'job.progress', 
+        status === 'running' ? 'job.started' :
+          status === 'cancelled' ? 'job.cancelled' :
+            'job.progress',
         job
       )
     }
@@ -478,7 +478,7 @@ export class JobQueueService extends EventEmitter {
   // Cleanup old jobs
   async cleanupOldJobs(olderThanDays: number = 30): Promise<number> {
     const cutoffTime = Date.now() - (olderThanDays * 24 * 60 * 60 * 1000)
-    
+
     // Archive to job_history first
     const archiveStmt = this.db.prepare(`
       INSERT INTO job_history 
@@ -492,7 +492,7 @@ export class JobQueueService extends EventEmitter {
       WHERE status IN ('completed', 'failed', 'cancelled') 
       AND completed_at < ?
     `)
-    
+
     const deleteStmt = this.db.prepare(`
       DELETE FROM jobs 
       WHERE status IN ('completed', 'failed', 'cancelled') 

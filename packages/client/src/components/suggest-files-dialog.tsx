@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
 import { Button } from '@ui'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 type SuggestedFilesDialogProps = {

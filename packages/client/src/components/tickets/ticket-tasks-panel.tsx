@@ -13,7 +13,7 @@ import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Cir
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { toast } from 'sonner'
-import type { TicketTask } from '@octoprompt/schemas'
+import type { TicketTask } from '@promptliano/schemas'
 import { TaskEmptyState } from './task-empty-state'
 
 interface TicketTasksPanelProps {

@@ -2,7 +2,7 @@
 // - Created dedicated MCP stdio server for Claude Desktop compatibility
 // - Implemented all MCP protocol methods (initialize, tools/list, tools/call, resources/list, resources/read)
 // - Added proper error handling and JSON-RPC 2.0 compliance
-// - Connected to existing OctoPrompt services for file operations and project management
+// - Connected to existing Promptliano services for file operations and project management
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -12,13 +12,13 @@ import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js'
-import { getProjectFiles, getProjectById, suggestFiles, listProjects } from '@octoprompt/services'
+import { getProjectFiles, getProjectById, suggestFiles, listProjects } from '@promptliano/services'
 import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './mcp/tools-registry'
 
 // Create MCP server
 const server = new Server(
   {
-    name: 'octoprompt-mcp',
+    name: 'promptliano-mcp',
     version: '0.8.0'
   },
   {
@@ -31,7 +31,7 @@ const server = new Server(
 
 // Helper to get project ID from environment
 function getProjectId(): number | null {
-  const projectIdStr = process.env.OCTOPROMPT_PROJECT_ID
+  const projectIdStr = process.env.PROMPTLIANO_PROJECT_ID
   if (projectIdStr) {
     const parsed = parseInt(projectIdStr, 10)
     if (!isNaN(parsed)) return parsed
@@ -52,7 +52,7 @@ async function getProjectIfSpecified(): Promise<number | null> {
     return projectId
   } catch (error) {
     console.error(
-      `Project ${projectId} not found. Please set OCTOPROMPT_PROJECT_ID environment variable to a valid project ID.`
+      `Project ${projectId} not found. Please set PROMPTLIANO_PROJECT_ID environment variable to a valid project ID.`
     )
     throw new Error(`Project ${projectId} not found`)
   }
@@ -82,7 +82,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // Get project ID from environment or from the tool arguments
     let projectId = await getProjectIfSpecified()
-    
+
     // Some tools (like list_projects) don't need a project ID
     // Others might have projectId in their arguments
     if (!projectId && args && 'projectId' in args && typeof args.projectId === 'number') {
@@ -111,39 +111,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
     const projectId = await getProjectIfSpecified()
-    
+
     // If no project ID specified, return general resources
     if (!projectId) {
       return {
         resources: [
           {
-            uri: 'octoprompt://info',
-            name: 'OctoPrompt Info',
-            description: 'Information about OctoPrompt MCP Server',
+            uri: 'promptliano://info',
+            name: 'Promptliano Info',
+            description: 'Information about Promptliano MCP Server',
             mimeType: 'text/plain'
           },
           {
-            uri: 'octoprompt://projects',
+            uri: 'promptliano://projects',
             name: 'Available Projects',
-            description: 'List of available OctoPrompt projects',
+            description: 'List of available Promptliano projects',
             mimeType: 'application/json'
           }
         ]
       }
     }
-    
+
     const project = await getProjectById(projectId)
     const files = await getProjectFiles(projectId)
 
     const resources = [
       {
-        uri: `octoprompt://projects/${projectId}/summary`,
+        uri: `promptliano://projects/${projectId}/summary`,
         name: 'Project Summary',
         description: `Summary of project "${project.name}"`,
         mimeType: 'text/plain'
       },
       {
-        uri: `octoprompt://projects/${projectId}/suggest-files`,
+        uri: `promptliano://projects/${projectId}/suggest-files`,
         name: 'File Suggestions',
         description: 'AI-powered file suggestions based on prompts',
         mimeType: 'application/json'
@@ -152,7 +152,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 
     // Add individual file resources (limit to first 20 for performance)
     const fileResources = (files || []).slice(0, 20).map((file) => ({
-      uri: `octoprompt://projects/${projectId}/files/${file.id}`,
+      uri: `promptliano://projects/${projectId}/files/${file.id}`,
       name: file.name,
       description: `File: ${file.path} (${file.size} bytes)`,
       mimeType:
@@ -181,9 +181,9 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   try {
     const projectId = await getProjectIfSpecified()
 
-    if (uri.startsWith('octoprompt://')) {
-      const urlParts = uri.replace('octoprompt://', '').split('/')
-      
+    if (uri.startsWith('promptliano://')) {
+      const urlParts = uri.replace('promptliano://', '').split('/')
+
       // Handle general resources (no project context needed)
       if (urlParts[0] === 'info') {
         return {
@@ -191,9 +191,9 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             {
               uri,
               mimeType: 'text/plain',
-              text: `OctoPrompt MCP Server v0.8.0
+              text: `Promptliano MCP Server v0.8.0
 
-OctoPrompt is a powerful project management and AI assistance tool.
+Promptliano is a powerful project management and AI assistance tool.
 
 Available tools:
 - list_projects: List all available projects
@@ -202,10 +202,10 @@ Available tools:
 - And many more...
 
 To work with a specific project, either:
-1. Set OCTOPROMPT_PROJECT_ID environment variable
+1. Set PROMPTLIANO_PROJECT_ID environment variable
 2. Pass projectId in tool arguments
 
-For more information, visit: https://github.com/Ejb503/octoprompt`
+For more information, visit: https://github.com/Ejb503/promptliano`
             }
           ]
         }
@@ -305,7 +305,7 @@ async function main() {
   const transport = new StdioServerTransport()
   await server.connect(transport)
   // Use stderr for logging to avoid interfering with JSON-RPC messages on stdout
-  console.error('OctoPrompt MCP server running on stdio')
+  console.error('Promptliano MCP server running on stdio')
 }
 
 main().catch((error) => {

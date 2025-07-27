@@ -333,7 +333,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
           <TabsContent value='getting-started'>
             <ScrollArea className='h-[60vh] pr-4'>
               <div className='space-y-3 p-4 text-sm'>
-                <h3 className='font-semibold mb-2'>Welcome to OctoPrompt!</h3>
+                <h3 className='font-semibold mb-2'>Welcome to Promptliano!</h3>
 
                 <h4 className='font-semibold mt-3 mb-1'>1. Setting Up Your Project</h4>
                 <ol className='list-decimal list-inside space-y-1'>
@@ -424,7 +424,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 </ul>
 
                 <h4 className='font-semibold mt-3 mb-1'>3. Finding and Selecting Files (Building Context)</h4>
-                <p>OctoPrompt offers several ways to find and select files to include as context for the AI:</p>
+                <p>Promptliano offers several ways to find and select files to include as context for the AI:</p>
                 <ul className='list-disc list-inside space-y-1 pl-4'>
                   <li>
                     <strong>File Tree Navigation:</strong> In the File Panel, manually browse your project's directory
@@ -527,7 +527,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
 
                 <h4 className='font-semibold mt-3 mb-1'>6. Project Syncing & File Summarization (Optional)</h4>
                 <p>
-                  OctoPrompt automatically syncs files when you add or open a project. This allows the application to
+                  Promptliano automatically syncs files when you add or open a project. This allows the application to
                   understand your project's structure and content for search and AI operations.
                 </p>
                 <p>
@@ -536,7 +536,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                     Keys
                   </Link>
                   page), and you enable file summaries for your project (usually in the project's settings or a
-                  dedicated "Summary" page after creation), OctoPrompt will begin to create summaries of your project
+                  dedicated "Summary" page after creation), Promptliano will begin to create summaries of your project
                   files. These summaries are then used as context for various AI operations, such as:
                 </p>
                 <ul className='list-disc list-inside space-y-1 pl-4'>
@@ -550,7 +550,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 </p>
 
                 <p className='mt-4'>
-                  That's it! You're ready to start exploring and working with your codebase using OctoPrompt's
+                  That's it! You're ready to start exploring and working with your codebase using Promptliano's
                   AI-assisted features.
                 </p>
               </div>
@@ -562,8 +562,8 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <h3 className='font-semibold mb-2'>Managing API Keys</h3>
                 <p>
                   The "Keys" page is where you configure and manage the API keys required to access various Large
-                  Language Models (LLMs). These keys enable OctoPrompt to utilize external AI services for features like
-                  chat, agent runs, and file summarization.
+                  Language Models (LLMs). These keys enable Promptliano to utilize external AI services for features
+                  like chat, agent runs, and file summarization.
                 </p>
                 <h4 className='font-semibold mt-3 mb-1'>Providers and Models:</h4>
                 <p>
@@ -576,7 +576,9 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                   model has different capabilities, strengths, and costs. For example, OpenAI offers models like GPT-4
                   and GPT-3.5, while Anthropic offers Claude models.
                 </p>
-                <p>OctoPrompt supports integration with several AI providers. The currently supported providers are:</p>
+                <p>
+                  Promptliano supports integration with several AI providers. The currently supported providers are:
+                </p>
                 <ul className='list-disc list-inside space-y-1 pl-4'>
                   <li>OpenAI</li>
                   <li>Anthropic</li>
@@ -585,10 +587,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 </ul>
                 <p className='mt-3'>
                   <strong>Why You Need API Keys:</strong>
-                  To use the AI features within OctoPrompt, you need to provide API keys obtained directly from the AI
+                  To use the AI features within Promptliano, you need to provide API keys obtained directly from the AI
                   providers you wish to use (or from an aggregator like OpenRouter). These keys act as your credentials,
-                  allowing OctoPrompt to send requests to the provider's AI models on your behalf and enabling features
-                  like chat, code generation, and file analysis. Without a valid API key configured, OctoPrompt cannot
+                  allowing Promptliano to send requests to the provider's AI models on your behalf and enabling features
+                  like chat, code generation, and file analysis. Without a valid API key configured, Promptliano cannot
                   access the external AI services.
                 </p>
                 <h4 className='font-semibold mt-3 mb-1'>Adding, Editing, and Deleting Keys:</h4>
@@ -665,7 +667,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                   <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                     Keys
                   </Link>
-                  page in OctoPrompt to add it.
+                  page in Promptliano to add it.
                 </p>
               </div>
             </ScrollArea>

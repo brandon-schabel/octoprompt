@@ -9,10 +9,10 @@ import {
   type MCPToolExecutionResult,
   MCPServerConfigSchema,
   MCPToolExecutionRequestSchema
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
-import { mcpStorage } from '@octoprompt/storage'
-import { MCPClientManager } from '@octoprompt/mcp-client'
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
+import { mcpStorage } from '@promptliano/storage'
+import { MCPClientManager } from '@promptliano/mcp-client'
 import { z, ZodError } from 'zod'
 import { getProjectById } from './project-service'
 

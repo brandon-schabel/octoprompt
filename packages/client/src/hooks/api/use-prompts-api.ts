@@ -13,7 +13,7 @@ export {
 } from '../api-hooks'
 
 // Type exports for backward compatibility
-import type { CreatePromptBody, UpdatePromptBody } from '@octoprompt/schemas'
+import type { CreatePromptBody, UpdatePromptBody } from '@promptliano/schemas'
 
 export type CreatePromptInput = CreatePromptBody
 export type UpdatePromptInput = UpdatePromptBody

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { octoClient } from '../octo-client'
-import type { AiGenerateTextRequest, AiGenerateStructuredRequest } from '@octoprompt/schemas'
+import { promptlianoClient } from '../promptliano-client'
+import type { AiGenerateTextRequest, AiGenerateStructuredRequest } from '@promptliano/schemas'
 import { toast } from 'sonner'
 
 // Query Keys
@@ -12,7 +12,7 @@ const GEN_AI_KEYS = {
 // Simplified hook for generating text
 export const useGenerateText = () => {
   return useMutation({
-    mutationFn: (data: AiGenerateTextRequest) => octoClient.genAi.generateText(data),
+    mutationFn: (data: AiGenerateTextRequest) => promptlianoClient.genAi.generateText(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to generate text')
     }
@@ -22,7 +22,7 @@ export const useGenerateText = () => {
 // Hook for generating structured data
 export const useGenerateStructuredData = () => {
   return useMutation({
-    mutationFn: (data: AiGenerateStructuredRequest) => octoClient.genAi.generateStructured(data),
+    mutationFn: (data: AiGenerateStructuredRequest) => promptlianoClient.genAi.generateStructured(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to generate structured data')
     }
@@ -32,7 +32,7 @@ export const useGenerateStructuredData = () => {
 // Hook for streaming text generation
 export const useStreamText = () => {
   return useMutation({
-    mutationFn: (data: AiGenerateTextRequest) => octoClient.genAi.streamText(data),
+    mutationFn: (data: AiGenerateTextRequest) => promptlianoClient.genAi.streamText(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to start text stream')
     }
@@ -43,7 +43,7 @@ export const useStreamText = () => {
 export const useGetModels = (provider: string) => {
   return useQuery({
     queryKey: GEN_AI_KEYS.models(provider),
-    queryFn: () => octoClient.genAi.getModels(provider),
+    queryFn: () => promptlianoClient.genAi.getModels(provider),
     enabled: !!provider,
     staleTime: 10 * 60 * 1000 // 10 minutes - models don't change frequently
   })

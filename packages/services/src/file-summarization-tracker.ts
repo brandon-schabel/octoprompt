@@ -5,8 +5,8 @@ import {
   type SummaryProgress,
   type FileSummarizationStats,
   SummaryStatusEnum
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 import { getProjectFiles } from './project-service'
 import { logger } from './utils/logger'
 import { getJobQueue } from './job-service'

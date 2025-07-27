@@ -1,7 +1,7 @@
 /**
  * Monaco Editor Configuration and Integration Test
  *
- * This file demonstrates and tests the Monaco Editor integration with OctoPrompt.
+ * This file demonstrates and tests the Monaco Editor integration with Promptliano.
  * It includes:
  * 1. Language detection for various file types
  * 2. Theme integration with the app's dark/light mode
@@ -45,7 +45,7 @@ console.log(fibonacci(10))`,
     return quicksort(left) + middle + quicksort(right)`,
 
   json: `{
-  "name": "octoprompt",
+  "name": "promptliano",
   "version": "0.5.3",
   "features": [
     "monaco-editor",

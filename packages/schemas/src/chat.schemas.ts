@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas'
-import { LOW_MODEL_CONFIG } from '@octoprompt/config'
+import { LOW_MODEL_CONFIG } from '@promptliano/config'
 
 import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'

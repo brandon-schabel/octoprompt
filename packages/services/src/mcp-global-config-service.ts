@@ -54,7 +54,7 @@ export class MCPGlobalConfigService extends EventEmitter {
 
   constructor() {
     super()
-    this.configPath = path.join(os.homedir(), '.octoprompt', 'global-mcp-config.json')
+    this.configPath = path.join(os.homedir(), '.promptliano', 'global-mcp-config.json')
   }
 
   /**
@@ -63,10 +63,10 @@ export class MCPGlobalConfigService extends EventEmitter {
   async initialize(): Promise<void> {
     const configDir = path.dirname(this.configPath)
     await fs.mkdir(configDir, { recursive: true })
-    
+
     // Load or create initial state
     await this.loadState()
-    
+
     // Set up file watching
     this.watchConfigFile()
   }
@@ -84,7 +84,7 @@ export class MCPGlobalConfigService extends EventEmitter {
    */
   async updateGlobalConfig(updates: Partial<GlobalMCPConfig>): Promise<GlobalMCPConfig> {
     const state = await this.loadState()
-    
+
     state.config = {
       ...state.config,
       ...updates,
@@ -93,10 +93,10 @@ export class MCPGlobalConfigService extends EventEmitter {
         ...(updates.servers || {})
       }
     }
-    
+
     state.lastModified = Date.now()
     await this.saveState(state)
-    
+
     this.emit('configChanged', state.config)
     return state.config
   }
@@ -114,19 +114,19 @@ export class MCPGlobalConfigService extends EventEmitter {
    */
   async addGlobalInstallation(installation: Omit<GlobalInstallationRecord, 'installedAt'>): Promise<void> {
     const state = await this.loadState()
-    
+
     // Remove existing installation for the same tool if any
     state.installations = state.installations.filter(i => i.tool !== installation.tool)
-    
+
     // Add new installation
     state.installations.push({
       ...installation,
       installedAt: Date.now()
     })
-    
+
     state.lastModified = Date.now()
     await this.saveState(state)
-    
+
     this.emit('installationAdded', installation)
   }
 
@@ -135,20 +135,20 @@ export class MCPGlobalConfigService extends EventEmitter {
    */
   async removeGlobalInstallation(tool: string): Promise<void> {
     const state = await this.loadState()
-    
+
     const removed = state.installations.find(i => i.tool === tool)
     state.installations = state.installations.filter(i => i.tool !== tool)
-    
+
     state.lastModified = Date.now()
     await this.saveState(state)
-    
+
     if (removed) {
       this.emit('installationRemoved', removed)
     }
   }
 
   /**
-   * Check if a tool has global OctoPrompt installed
+   * Check if a tool has global Promptliano installed
    */
   async hasGlobalInstallation(tool: string): Promise<boolean> {
     const state = await this.loadState()
@@ -160,16 +160,16 @@ export class MCPGlobalConfigService extends EventEmitter {
    */
   async getGlobalServerConfig(): Promise<GlobalMCPServerConfig> {
     const config = await this.getGlobalConfig()
-    
-    // Get the OctoPrompt installation path
-    let octopromptPath = process.cwd()
-    if (octopromptPath.includes('packages/server')) {
-      octopromptPath = path.resolve(octopromptPath, '../..')
+
+    // Get the Promptliano installation path
+    let promptlianoPath = process.cwd()
+    if (promptlianoPath.includes('packages/server')) {
+      promptlianoPath = path.resolve(promptlianoPath, '../..')
     }
-    
+
     const scriptPath = process.platform === 'win32'
-      ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
-      : path.join(octopromptPath, 'packages/server/mcp-start.sh')
+      ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+      : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
     return {
       type: 'stdio',
@@ -179,7 +179,7 @@ export class MCPGlobalConfigService extends EventEmitter {
         : [scriptPath],
       env: {
         // No project ID for global installation
-        OCTOPROMPT_API_URL: config.defaultServerUrl,
+        PROMPTLIANO_API_URL: config.defaultServerUrl,
         MCP_DEBUG: config.debugMode ? 'true' : 'false',
         NODE_ENV: 'production',
         ...config.globalEnv
@@ -194,7 +194,7 @@ export class MCPGlobalConfigService extends EventEmitter {
   getDefaultConfig(): GlobalMCPConfig {
     return {
       servers: {
-        'octoprompt': {
+        'promptliano': {
           type: 'stdio',
           command: process.platform === 'win32' ? 'cmd.exe' : 'sh',
           args: [],
@@ -227,7 +227,7 @@ export class MCPGlobalConfigService extends EventEmitter {
         config: this.getDefaultConfig(),
         lastModified: Date.now()
       }
-      
+
       this.stateCache = defaultState
       await this.saveState(defaultState)
       return defaultState
@@ -262,10 +262,10 @@ export class MCPGlobalConfigService extends EventEmitter {
       this.fileWatcher = fs.watch(this.configPath, async (eventType) => {
         if (eventType === 'change') {
           logger.info('Global MCP config file changed')
-          
+
           // Clear cache to force reload
           this.stateCache = null
-          
+
           try {
             const state = await this.loadState()
             this.emit('stateChanged', state)
@@ -294,7 +294,7 @@ export class MCPGlobalConfigService extends EventEmitter {
       }
       this.fileWatcher = null
     }
-    
+
     this.stateCache = null
     this.removeAllListeners()
   }

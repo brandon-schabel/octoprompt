@@ -1,26 +1,26 @@
-import { 
-  ApiError, 
-  buildProjectSummary, 
+import {
+  ApiError,
+  buildProjectSummary,
   buildProjectSummaryWithFormat,
   compressSummary,
-  promptsMap, 
+  promptsMap,
   truncateForSummarization,
   FILE_SUMMARIZATION_LIMITS
-} from '@octoprompt/shared'
-import type { 
-  SummaryOptions, 
-  SummaryVersion, 
+} from '@promptliano/shared'
+import type {
+  SummaryOptions,
+  SummaryVersion,
   SummaryMetrics,
   EnhancedProjectSummaryResponse,
   ProjectFile
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import { getProjectFiles } from '../project-service'
 import { generateSingleText } from '../gen-ai-services'
-import { LOW_MODEL_CONFIG } from '@octoprompt/config'
-import { 
-  sortFilesByImportance, 
+import { LOW_MODEL_CONFIG } from '@promptliano/config'
+import {
+  sortFilesByImportance,
   getTopImportantFiles,
-  filterByImportance 
+  filterByImportance
 } from './file-importance-scorer'
 
 // Cache for project summaries with TTL
@@ -83,7 +83,7 @@ export async function getProjectSummaryWithOptions(
   const startTime = Date.now()
   const cacheKey = getSummaryCacheKey(projectId, options)
   const cached = projectSummaryCache.get(cacheKey)
-  
+
   // Check if cached summary is still valid
   if (cached && Date.now() - cached.timestamp < SUMMARY_CACHE_TTL) {
     return {
@@ -93,37 +93,37 @@ export async function getProjectSummaryWithOptions(
       metrics: options.includeMetrics ? cached.metrics : undefined
     }
   }
-  
+
   // Get all project files
   const allFiles = await getSafeAllProjectFiles(projectId)
-  
+
   // Apply file filtering based on options
   let selectedFiles = await filterFilesForSummary(allFiles, options)
-  
+
   // Generate summary based on strategy
   let summary: string
   let wasTruncated = false
   let originalSize = 0
-  
+
   switch (options.strategy) {
     case 'fast':
       // No AI processing, just structured data
       summary = buildProjectSummaryWithFormat(selectedFiles, options.format, options)
       break
-      
+
     case 'balanced':
       // Pre-filter to top 50 files, then use AI
       selectedFiles = getTopImportantFiles(selectedFiles, 50)
       summary = await generateAISummary(selectedFiles, options)
       break
-      
+
     case 'thorough':
       // Pre-filter to top 100 files, use high-quality model
       selectedFiles = getTopImportantFiles(selectedFiles, 100)
       summary = await generateAISummary(selectedFiles, options, true)
       break
   }
-  
+
   // Apply compression if needed
   if (options.depth === 'minimal') {
     const originalLength = summary.length
@@ -131,7 +131,7 @@ export async function getProjectSummaryWithOptions(
     wasTruncated = summary.length < originalLength
     originalSize = originalLength
   }
-  
+
   // Create version info
   const version: SummaryVersion = {
     version: '2.0',
@@ -140,7 +140,7 @@ export async function getProjectSummaryWithOptions(
     options,
     tokenCount: estimateTokenCount(summary)
   }
-  
+
   // Calculate metrics
   const metrics: SummaryMetrics = {
     generationTime: Date.now() - startTime,
@@ -152,7 +152,7 @@ export async function getProjectSummaryWithOptions(
     cacheHit: false,
     truncated: wasTruncated
   }
-  
+
   // Cache the result
   projectSummaryCache.set(cacheKey, {
     content: summary,
@@ -160,7 +160,7 @@ export async function getProjectSummaryWithOptions(
     metrics,
     timestamp: Date.now()
   })
-  
+
   return {
     success: true,
     summary,
@@ -177,17 +177,17 @@ async function filterFilesForSummary(
   options: SummaryOptions
 ): Promise<ProjectFile[]> {
   let filtered = [...files]
-  
+
   // Apply focus areas if specified
   if (options.focus && options.focus.length > 0) {
     filtered = filtered.filter(file => {
       const path = file.path.toLowerCase()
-      return options.focus!.some(focus => 
+      return options.focus!.some(focus =>
         path.includes(focus.toLowerCase())
       )
     })
   }
-  
+
   // Apply importance filtering based on depth
   switch (options.depth) {
     case 'minimal':
@@ -203,10 +203,10 @@ async function filterFilesForSummary(
       filtered = filterByImportance(filtered, 0.5)
       break
   }
-  
+
   // Sort by importance for better organization
   filtered = sortFilesByImportance(filtered)
-  
+
   return filtered
 }
 
@@ -220,10 +220,10 @@ async function generateAISummary(
 ): Promise<string> {
   // Build structured summary
   const structuredSummary = buildProjectSummaryWithFormat(files, 'xml', options)
-  
+
   // Ensure the summary doesn't exceed character limits based on depth
   const truncationResult = truncateForSummarization(structuredSummary, options.depth || 'standard')
-  
+
   if (truncationResult.wasTruncated) {
     console.log(
       `[ProjectSummary] Content truncated for AI processing:\n` +
@@ -231,23 +231,23 @@ async function generateAISummary(
       `  Truncated to: ${truncationResult.content.length.toLocaleString()} chars`
     )
   }
-  
+
   try {
     // Select appropriate prompt based on depth
     const systemPrompt = getSystemPromptForDepth(options.depth)
-    
+
     // Use AI to create a compact version
     const compactSummary = await generateSingleText({
       prompt: truncationResult.content,
       systemMessage: systemPrompt,
       options: useHighQuality ? HIGH_QUALITY_SUMMARY_CONFIG : SUMMARY_MODEL_CONFIG
     })
-    
+
     // Convert to requested format if not XML
     if (options.format !== 'xml') {
       return convertSummaryFormat(compactSummary.trim(), options.format)
     }
-    
+
     return compactSummary.trim()
   } catch (error) {
     // Fallback to structured summary if AI fails
@@ -269,12 +269,12 @@ function getSystemPromptForDepth(depth: string): string {
       return promptsMap.minimalProjectSummary || `Ultra-concise overview (max 100 words).
 Include: stack, purpose, entry points.
 Use heavy abbreviations.`
-      
+
     case 'detailed':
       return promptsMap.detailedProjectSummary || `Comprehensive project analysis (max 400 words).
 Include: architecture decisions, all components, dependencies, patterns.
 Provide full context for complex development tasks.`
-      
+
     default: // standard
       return promptsMap.compactProjectSummary
   }
@@ -295,7 +295,7 @@ function convertSummaryFormat(xmlSummary: string, targetFormat: string): string 
       .replace(/<summary>(.*?)<\/summary>/g, '\n$1\n')
       .replace(/<file_id>(.*?)<\/file_id>/g, '')
   }
-  
+
   // For JSON, we'd need to parse XML properly
   // For now, return as-is
   return xmlSummary

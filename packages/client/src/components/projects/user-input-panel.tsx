@@ -7,7 +7,7 @@ import { Button } from '@ui'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
-import { OctoTooltip } from '@/components/octo/octo-tooltip'
+import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   useActiveProjectTab,
@@ -23,11 +23,11 @@ import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Binoculars, Bot, Copy, FileText, MessageCircleCode, Search, Lightbulb } from 'lucide-react'
 import { useGetProjectSummary, useSuggestFiles } from '@/hooks/api/use-projects-api'
 import { useGetProjectPrompts, useSuggestPrompts } from '@/hooks/api/use-prompts-api'
-import { Prompt } from '@octoprompt/schemas'
+import { Prompt } from '@promptliano/schemas'
 import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import { buildPromptContent, calculateTotalTokens } from 'shared/src/utils/projects-utils'
 
 export type UserInputPanelRef = {
@@ -269,7 +269,7 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
           <div className='flex-1 flex flex-col min-h-0'>
             <div className='flex items-center gap-2 mb-2 shrink-0'>
               <span className='text-sm font-medium'>User Input</span>
-              <OctoTooltip>
+              <PromptlianoTooltip>
                 <div className='space-y-2'>
                   <p>Shortcuts:</p>
                   <ul>
@@ -279,7 +279,7 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
                     </li>
                   </ul>
                 </div>
-              </OctoTooltip>
+              </PromptlianoTooltip>
               <div className='ml-auto text-xs text-muted-foreground'>
                 {formatCompactTokenCount(totalTokens)} tokens
                 {contextLimit > 0 && ` (${Math.round(usagePercentage)}%)`}

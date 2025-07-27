@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo } from 'react'
-import { APIProviders } from '@octoprompt/schemas'
+import { APIProviders } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
-import { OctoCombobox } from '@/components/octo/octo-combobox'
+import { PromptlianoCombobox } from '@/components/promptliano/promptliano-combobox'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 
@@ -104,7 +104,7 @@ export function ProviderModelSelector({
       </Select>
 
       {showLabels && layout === 'vertical' && <label className='text-sm font-medium'>Model</label>}
-      <OctoCombobox
+      <PromptlianoCombobox
         options={comboboxOptions}
         value={currentModel}
         onValueChange={handleModelChange}

@@ -1,16 +1,16 @@
-# OctoPrompt Userflow Guide
+# Promptliano Userflow Guide
 
 ## Overview
 
-OctoPrompt is a "human-in-the-loop" co-pilot tool designed to enhance AI-assisted software development. It acts as an intelligent context manager that helps developers provide the right information to AI coding assistants, ensuring more accurate and relevant code generation.
+Promptliano is a "human-in-the-loop" co-pilot tool designed to enhance AI-assisted software development. It acts as an intelligent context manager that helps developers provide the right information to AI coding assistants, ensuring more accurate and relevant code generation.
 
 ## The Ideal Workflow
 
 ### 1. Project Preparation
 
-Before starting feature development, ensure your project is fully set up in OctoPrompt:
+Before starting feature development, ensure your project is fully set up in Promptliano:
 
-- **Import your project** into OctoPrompt
+- **Import your project** into Promptliano
 - **Run full project summarization** to analyze all files
   - This creates AI-readable summaries of your codebase
   - Enables intelligent file and prompt suggestions
@@ -22,7 +22,7 @@ When you're ready to build a new feature, follow this optimal workflow:
 
 #### Step 1: Navigate to Project Context
 
-- Go to the **Project Context** page in OctoPrompt
+- Go to the **Project Context** page in Promptliano
 - This is your command center for gathering relevant context
 
 #### Step 2: Describe Your Feature
@@ -37,14 +37,14 @@ When you're ready to build a new feature, follow this optimal workflow:
 #### Step 3: Find Relevant Files
 
 - Click the **"Files"** button (search icon)
-- OctoPrompt's AI analyzes your description and project context
+- Promptliano's AI analyzes your description and project context
 - It suggests the most relevant files you'll need to reference or modify
 - Review and select the files that are truly relevant to your task
 
 #### Step 4: Get Prompt Suggestions
 
 - Click the **"Prompts"** button (lightbulb icon)
-- Based on your selected files and feature description, OctoPrompt suggests relevant saved prompts
+- Based on your selected files and feature description, Promptliano suggests relevant saved prompts
 - These might include:
   - Technology-specific guidelines (e.g., "React Component Best Practices")
   - Project conventions (e.g., "API Endpoint Patterns")
@@ -71,7 +71,7 @@ When you're ready to build a new feature, follow this optimal workflow:
 
 ## Advanced Usage: MCP Integration
 
-OctoPrompt also supports the Model Context Protocol (MCP), allowing AI assistants to directly:
+Promptliano also supports the Model Context Protocol (MCP), allowing AI assistants to directly:
 
 - Browse project files
 - Search for relevant code
@@ -96,7 +96,7 @@ You maintain control over what context is provided, ensuring the AI focuses on t
 
 ### 4. **Efficiency**
 
-Instead of manually finding and copying relevant files, OctoPrompt's AI-powered suggestions save significant time.
+Instead of manually finding and copying relevant files, Promptliano's AI-powered suggestions save significant time.
 
 ### 5. **Consistency**
 
@@ -133,4 +133,4 @@ By using saved prompts for common patterns, you ensure consistent implementation
 
 ## Conclusion
 
-OctoPrompt transforms AI-assisted development from a hit-or-miss experience into a reliable, efficient workflow. By providing comprehensive, relevant context, it enables AI to generate code that truly fits your project's needs.
+Promptliano transforms AI-assisted development from a hit-or-miss experience into a reliable, efficient workflow. By providing comprehensive, relevant context, it enables AI to generate code that truly fits your project's needs.

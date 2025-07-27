@@ -8,8 +8,8 @@ import {
   BrowseDirectoryRequestSchema,
   BrowseDirectoryResponseSchema,
   DirectoryEntry
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 
 const browseDirectoryRoute = createRoute({
   method: 'post',

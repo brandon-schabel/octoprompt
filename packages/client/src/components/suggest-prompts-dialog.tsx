@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
 import { Button } from '@ui'
 import { useActiveProjectTab, useUpdateActiveProjectTab, useProjectTabField } from '@/hooks/use-kv-local-storage'
-import { Prompt } from '@octoprompt/schemas'
+import { Prompt } from '@promptliano/schemas'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { cn } from '@/lib/utils'
 

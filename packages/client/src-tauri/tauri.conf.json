@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OctoPrompt",
+  "productName": "Promptliano",
   "version": "0.8.0",
-  "identifier": "com.octoprompt.app",
+  "identifier": "com.promptliano.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "OctoPrompt",
+        "title": "Promptliano",
         "width": 1280,
         "height": 720
       }
@@ -33,7 +33,7 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "binaries/octoprompt-server"
+      "binaries/promptliano-server"
     ],
     "macOS": {
       "signingIdentity": null,

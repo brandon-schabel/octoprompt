@@ -3,9 +3,9 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import {
   OperationSuccessResponseSchema,
   ApiErrorResponseSchema
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
-import { generateTabName, getProjectById } from '@octoprompt/services'
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
+import { generateTabName, getProjectById } from '@promptliano/services'
 
 const projectTabNameGenerateRoute = createRoute({
   method: 'post',
@@ -56,24 +56,24 @@ export const projectTabRoutes = new OpenAPIHono()
   .openapi(projectTabNameGenerateRoute, async (c) => {
     try {
       const { projectId, tabData, existingNames } = await c.req.json()
-      
+
       // Get project information
       const project = await getProjectById(projectId)
-      
+
       if (!project) {
         throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
       }
-      
+
       // Generate tab name using the AI service
       const selectedFiles = tabData?.selectedFiles || []
       const context = tabData?.userPrompt || undefined
-      
+
       const generatedName = await generateTabName(
         project.name,
         selectedFiles,
         context
       )
-      
+
       return c.json(
         {
           success: true,
@@ -87,7 +87,7 @@ export const projectTabRoutes = new OpenAPIHono()
       )
     } catch (error) {
       console.error('Failed to generate tab name:', error)
-      
+
       if (error instanceof ApiError) {
         return c.json(
           {
@@ -100,7 +100,7 @@ export const projectTabRoutes = new OpenAPIHono()
           error.status as any
         )
       }
-      
+
       return c.json(
         {
           success: false,

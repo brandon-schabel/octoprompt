@@ -7,8 +7,8 @@ import {
   mcpGlobalConfigService,
   type GlobalMCPConfig,
   type GlobalInstallationRecord
-} from '@octoprompt/services'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/services'
+import { ApiError } from '@promptliano/shared'
 
 // Schemas for API
 const GlobalMCPConfigSchema = z.object({
@@ -130,7 +130,7 @@ const getGlobalInstallationsRoute = createRoute({
                 tool: z.string(),
                 name: z.string(),
                 installed: z.boolean(),
-                hasGlobalOctoPrompt: z.boolean(),
+                hasGlobalPromptliano: z.boolean(),
                 configPath: z.string().optional()
               }))
             })
@@ -174,7 +174,7 @@ const installGlobalMCPRoute = createRoute({
     }
   },
   tags: ['MCP Global'],
-  description: 'Install OctoPrompt MCP globally for a tool'
+  description: 'Install Promptliano MCP globally for a tool'
 })
 
 const uninstallGlobalMCPRoute = createRoute({
@@ -205,7 +205,7 @@ const uninstallGlobalMCPRoute = createRoute({
     }
   },
   tags: ['MCP Global'],
-  description: 'Uninstall global OctoPrompt MCP for a tool'
+  description: 'Uninstall global Promptliano MCP for a tool'
 })
 
 const getGlobalStatusRoute = createRoute({
@@ -245,7 +245,7 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
     try {
       await mcpGlobalConfigService.initialize()
       const config = await mcpGlobalConfigService.getGlobalConfig()
-      
+
       return c.json({
         success: true,
         data: config
@@ -257,10 +257,10 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
   .openapi(updateGlobalConfigRoute, async (c) => {
     try {
       const updates = c.req.valid('json')
-      
+
       await mcpGlobalConfigService.initialize()
       const updatedConfig = await mcpGlobalConfigService.updateGlobalConfig(updates)
-      
+
       return c.json({
         success: true,
         data: updatedConfig
@@ -272,13 +272,13 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
   .openapi(getGlobalInstallationsRoute, async (c) => {
     try {
       await mcpGlobalConfigService.initialize()
-      
+
       // Get stored installations
       const installations = await mcpGlobalConfigService.getGlobalInstallations()
-      
+
       // Get current tool statuses
       const toolStatuses = await mcpInstallationService.detectGlobalInstallations()
-      
+
       return c.json({
         success: true,
         data: {
@@ -287,7 +287,7 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
             tool: tool.tool,
             name: tool.name,
             installed: tool.installed,
-            hasGlobalOctoPrompt: tool.hasOctoPrompt || false,
+            hasGlobalPromptliano: tool.hasPromptliano || false,
             configPath: tool.configPath
           }))
         }
@@ -299,14 +299,14 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
   .openapi(installGlobalMCPRoute, async (c) => {
     try {
       const { tool, serverUrl, debug } = c.req.valid('json')
-      
+
       // Install globally
       const result = await mcpInstallationService.installGlobalMCP(tool, serverUrl, debug)
-      
+
       if (!result.success) {
         throw new ApiError(500, result.message, 'INSTALL_FAILED')
       }
-      
+
       return c.json({
         success: true,
         data: {
@@ -323,14 +323,14 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
   .openapi(uninstallGlobalMCPRoute, async (c) => {
     try {
       const { tool } = c.req.valid('json')
-      
+
       // Uninstall globally
       const result = await mcpInstallationService.uninstallGlobalMCP(tool)
-      
+
       if (!result.success) {
         throw new ApiError(500, result.message, 'UNINSTALL_FAILED')
       }
-      
+
       return c.json({
         success: true,
         data: {
@@ -344,23 +344,23 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
   .openapi(getGlobalStatusRoute, async (c) => {
     try {
       await mcpGlobalConfigService.initialize()
-      
+
       const config = await mcpGlobalConfigService.getGlobalConfig()
       const installations = await mcpGlobalConfigService.getGlobalInstallations()
-      
+
       // Check if global mode scripts exist
       const path = await import('path')
       const fs = await import('fs/promises')
-      
-      let octopromptPath = process.cwd()
-      if (octopromptPath.includes('packages/server')) {
-        octopromptPath = path.resolve(octopromptPath, '../..')
+
+      let promptlianoPath = process.cwd()
+      if (promptlianoPath.includes('packages/server')) {
+        promptlianoPath = path.resolve(promptlianoPath, '../..')
       }
-      
+
       const scriptPath = process.platform === 'win32'
-        ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
-        : path.join(octopromptPath, 'packages/server/mcp-start.sh')
-      
+        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+
       let scriptExists = false
       try {
         await fs.access(scriptPath)
@@ -368,12 +368,12 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
       } catch {
         scriptExists = false
       }
-      
+
       return c.json({
         success: true,
         data: {
           configExists: true,
-          configPath: path.join(process.env.HOME || process.env.USERPROFILE || '', '.octoprompt/global-mcp-config.json'),
+          configPath: path.join(process.env.HOME || process.env.USERPROFILE || '', '.promptliano/global-mcp-config.json'),
           lastModified: Date.now(),
           totalInstallations: installations.length,
           installedTools: installations.map(i => i.tool),

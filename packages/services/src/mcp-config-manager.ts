@@ -41,8 +41,8 @@ export class MCPConfigManager {
   private readonly configDir: string
 
   constructor() {
-    this.configDir = path.join(os.homedir(), '.octoprompt', 'mcp-configs')
-    
+    this.configDir = path.join(os.homedir(), '.promptliano', 'mcp-configs')
+
     // Listen for project config changes
     mcpProjectConfigService.on('configChanged', (projectId: number, config: ProjectMCPConfig) => {
       this.handleProjectConfigChange(projectId, config)
@@ -73,7 +73,7 @@ export class MCPConfigManager {
     updates: Partial<MCPProjectConfig>
   ): Promise<MCPProjectConfig> {
     const existing = await this.getProjectConfig(projectId)
-    
+
     const updated: MCPProjectConfig = existing ? {
       ...existing,
       ...updates,
@@ -97,11 +97,11 @@ export class MCPConfigManager {
     serverName: string
   ): Promise<void> {
     const config = await this.getProjectConfig(projectId)
-    
+
     if (config) {
       // Remove existing entry for this tool if any
       config.installedTools = config.installedTools.filter(t => t.tool !== tool)
-      
+
       // Add new entry
       config.installedTools.push({
         tool,
@@ -109,7 +109,7 @@ export class MCPConfigManager {
         configPath,
         serverName
       })
-      
+
       await this.saveProjectConfig(config)
     } else {
       // Create new config
@@ -129,7 +129,7 @@ export class MCPConfigManager {
 
   async removeInstalledTool(projectId: number, tool: string): Promise<void> {
     const config = await this.getProjectConfig(projectId)
-    
+
     if (config) {
       config.installedTools = config.installedTools.filter(t => t.tool !== tool)
       await this.saveProjectConfig(config)
@@ -139,7 +139,7 @@ export class MCPConfigManager {
   async getProjectStatus(projectId: number): Promise<MCPStatus> {
     // Get active sessions from the transport
     const activeSessions = getActiveSessions()
-    
+
     // Find sessions for this project
     const projectSessions = activeSessions.filter(
       session => session.projectId === projectId
@@ -147,7 +147,7 @@ export class MCPConfigManager {
 
     if (projectSessions.length > 0) {
       // Get the most recent session
-      const latestSession = projectSessions.reduce((latest, current) => 
+      const latestSession = projectSessions.reduce((latest, current) =>
         current.lastActivity > latest.lastActivity ? current : latest
       )
 
@@ -173,7 +173,7 @@ export class MCPConfigManager {
     for (const session of activeSessions) {
       if (session.projectId) {
         const existing = statuses.get(session.projectId)
-        
+
         if (!existing || session.lastActivity > (existing.lastActivity || 0)) {
           statuses.set(session.projectId, {
             connected: true,
@@ -210,10 +210,10 @@ export class MCPConfigManager {
     try {
       // Get the merged config from project config service
       const projectMCPConfig = await mcpProjectConfigService.getMergedConfig(projectId)
-      
+
       // Expand variables
       const expandedConfig = await mcpProjectConfigService.expandVariables(projectMCPConfig, projectId)
-      
+
       return expandedConfig
     } catch (error) {
       console.error('Failed to get merged MCP config:', error)

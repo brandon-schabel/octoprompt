@@ -9,16 +9,16 @@ import {
   FileSuggestionsZodSchema,
   type ImportInfo,
   type ExportInfo
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import {
   MAX_FILE_SIZE_FOR_SUMMARY,
   MAX_TOKENS_FOR_SUMMARY,
   CHARS_PER_TOKEN_ESTIMATE,
   MEDIUM_MODEL_CONFIG
-} from '@octoprompt/config'
-import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/config'
-import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@octoprompt/shared'
-import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
+} from '@promptliano/config'
+import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/config'
+import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@promptliano/shared'
+import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@promptliano/storage'
 import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { generateStructuredData, generateSingleText } from './gen-ai-services'
@@ -466,7 +466,7 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
     filesMap = await projectStorage.readProjectFiles(projectId)
 
     // Generate bulk IDs to avoid conflicts
-    const { getDb } = await import('@octoprompt/storage')
+    const { getDb } = await import('@promptliano/storage')
     const db = getDb()
     const fileIds = db.generateBulkIds('project_files', filesToCreate.length)
     let idIndex = 0
@@ -761,12 +761,12 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   const exportsContext = file.exports?.length
     ? `The file exports: ${file.exports
-        .map((e) => {
-          if (e.type === 'default') return 'default export'
-          if (e.type === 'all') return `all from ${e.source}`
-          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
-        })
-        .join(', ')}`
+      .map((e) => {
+        if (e.type === 'default') return 'default export'
+        if (e.type === 'all') return `all from ${e.source}`
+        return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+      })
+      .join(', ')}`
     : ''
 
   const systemPrompt = `
@@ -935,12 +935,12 @@ export async function summarizeFiles(
 
   logger.info(
     `File summarization batch complete for project ${projectId}. ` +
-      `Total to process: ${totalProcessed}, ` +
-      `Successfully summarized: ${summarizedCount}, ` +
-      `Skipped (empty): ${skippedByEmptyCount}, ` +
-      `Skipped (too large): ${skippedBySizeCount}, ` +
-      `Skipped (errors): ${errorCount}, ` +
-      `Total not summarized: ${finalSkippedCount}`
+    `Total to process: ${totalProcessed}, ` +
+    `Successfully summarized: ${summarizedCount}, ` +
+    `Skipped (empty): ${skippedByEmptyCount}, ` +
+    `Skipped (too large): ${skippedBySizeCount}, ` +
+    `Skipped (errors): ${errorCount}, ` +
+    `Total not summarized: ${finalSkippedCount}`
   )
 
   return {
@@ -1116,7 +1116,7 @@ export async function getProjectFileTree(projectId: number): Promise<string> {
       return 'No files found in project'
     }
 
-    const { buildFileTree } = await import('@octoprompt/shared')
+    const { buildFileTree } = await import('@promptliano/shared')
     const tree = buildFileTree(files)
 
     const lines: string[] = []
@@ -1288,7 +1288,7 @@ export async function getProjectOverview(projectId: number): Promise<string> {
       lines.push('')
       lines.push('To summarize these files, use the file_summarization_manager tool:')
       lines.push('```')
-      lines.push('mcp__OctoPrompt__file_summarization_manager(')
+      lines.push('mcp__Promptliano__file_summarization_manager(')
       lines.push('  action: "summarize_batch",')
       lines.push(`  projectId: ${projectId},`)
       lines.push('  data: {')

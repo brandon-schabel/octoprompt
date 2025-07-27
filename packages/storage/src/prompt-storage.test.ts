@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'bun:test'
 import { promptStorage } from './prompt-storage'
-import { type Prompt, type PromptProject } from '@octoprompt/schemas'
+import { type Prompt, type PromptProject } from '@promptliano/schemas'
 import { DatabaseManager } from './database-manager'
 
 describe('Prompt Storage (SQLite)', () => {

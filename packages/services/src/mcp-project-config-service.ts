@@ -49,7 +49,7 @@ const CONFIG_FILE_NAMES = [
   '.vscode/mcp.json',      // VS Code workspace-specific
   '.cursor/mcp.json',      // Cursor IDE project-specific
   '.mcp.json',             // Universal project root (primary)
-  // '.octoprompt/mcp.json'   // OctoPrompt-specific
+  // '.promptliano/mcp.json'   // Promptliano-specific
 ]
 
 export interface MCPConfigLocation {
@@ -156,7 +156,7 @@ export class MCPProjectConfigService extends EventEmitter {
    * Get user-level MCP configuration
    */
   async getUserConfig(): Promise<ProjectMCPConfig | null> {
-    const userConfigPath = path.join(os.homedir(), '.octoprompt', 'mcp-config.json')
+    const userConfigPath = path.join(os.homedir(), '.promptliano', 'mcp-config.json')
 
     try {
       if (await this.fileExists(userConfigPath)) {
@@ -330,8 +330,8 @@ export class MCPProjectConfigService extends EventEmitter {
     } else if (locationPath.includes('.cursor/mcp.json')) {
       return 'cursor'
     }
-    // else if (locationPath.includes('.octoprompt/mcp.json')) {
-    //   return 'octoprompt'
+    // else if (locationPath.includes('.promptliano/mcp.json')) {
+    //   return 'promptliano'
     // } 
     else if (locationPath.includes('.mcp.json')) {
       return 'universal'
@@ -346,31 +346,31 @@ export class MCPProjectConfigService extends EventEmitter {
     const project = await getProjectById(projectId)
     const editorType = this.getEditorType(locationPath)
 
-    // Get the OctoPrompt installation path - find the root where package.json exists
-    let octopromptPath = process.cwd()
+    // Get the Promptliano installation path - find the root where package.json exists
+    let promptlianoPath = process.cwd()
 
     // If we're running from within packages/server, go up to the root
-    if (octopromptPath.includes('packages/server')) {
-      octopromptPath = path.resolve(octopromptPath, '../..')
+    if (promptlianoPath.includes('packages/server')) {
+      promptlianoPath = path.resolve(promptlianoPath, '../..')
     }
 
     const scriptPath = process.platform === 'win32'
-      ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
-      : path.join(octopromptPath, 'packages/server/mcp-start.sh')
+      ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+      : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
     // Base config that works for all editors (using new format)
     const baseConfig: ProjectMCPConfig = {
       mcpServers: {
-        octoprompt: {
+        promptliano: {
           type: 'stdio',
           command: process.platform === 'win32' ? 'cmd.exe' : 'sh',
           args: process.platform === 'win32'
             ? ['/c', scriptPath]
             : [scriptPath],
           env: {
-            OCTOPROMPT_PROJECT_ID: projectId.toString(),
-            OCTOPROMPT_PROJECT_PATH: project.path,
-            OCTOPROMPT_API_URL: 'http://localhost:3147/api/mcp',
+            PROMPTLIANO_PROJECT_ID: projectId.toString(),
+            PROMPTLIANO_PROJECT_PATH: project.path,
+            PROMPTLIANO_API_URL: 'http://localhost:3147/api/mcp',
             NODE_ENV: 'production'
           }
         }

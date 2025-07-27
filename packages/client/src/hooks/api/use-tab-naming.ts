@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { octoClient } from '../octo-client'
+import { promptlianoClient } from '../promptliano-client'
 import { toast } from 'sonner'
 
 export interface TabNameGenerationRequest {
@@ -12,7 +12,7 @@ export function useGenerateTabName() {
   return useMutation({
     mutationFn: async (params: TabNameGenerationRequest) => {
       // Since we're using AI generation, we'll call the gen-ai endpoint directly
-      const response = await octoClient.genAi.generateStructured({
+      const response = await promptlianoClient.genAi.generateStructured({
         schemaKey: 'tabNaming',
         userInput: `Project Name: ${params.projectName}, Selected Files: ${params.selectedFiles?.join(', ') || 'None'}, Context: ${params.context || 'General project work'}`
       })

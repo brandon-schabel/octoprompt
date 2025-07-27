@@ -118,7 +118,7 @@ Remember: The goal is to reach a conclusion, but to explore thoroughly and let c
 - Do **not** repeat information unnecessarily.
 
   `,
-  octopromptPlanningMetaPrompt: `
+  promptlianoPlanningMetaPrompt: `
   #Backend
   bun, hono
   `,

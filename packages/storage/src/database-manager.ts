@@ -15,14 +15,14 @@ function getDataDirectory(): string {
 
   switch (platform) {
     case 'darwin': // macOS
-      return path.join(homeDir, 'Library', 'Application Support', 'OctoPrompt')
+      return path.join(homeDir, 'Library', 'Application Support', 'Promptliano')
     case 'win32': // Windows
-      return path.join(process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming'), 'OctoPrompt')
+      return path.join(process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming'), 'Promptliano')
     case 'linux': // Linux
-      return path.join(process.env.XDG_DATA_HOME || path.join(homeDir, '.local', 'share'), 'octoprompt')
+      return path.join(process.env.XDG_DATA_HOME || path.join(homeDir, '.local', 'share'), 'promptliano')
     default:
       // Fallback to home directory
-      return path.join(homeDir, '.octoprompt')
+      return path.join(homeDir, '.promptliano')
   }
 }
 
@@ -105,7 +105,7 @@ export class DatabaseManager {
     if (isTest) {
       // Use in-memory database for tests
       this.db = new Database(':memory:')
-      console.error('OctoPrompt database initialized in memory for testing')
+      console.error('Promptliano database initialized in memory for testing')
     } else {
       // Use platform-appropriate data directory for production
       this.db = this.createProductionDatabase()
@@ -116,19 +116,19 @@ export class DatabaseManager {
 
   private createProductionDatabase(): Database {
     const dataDir = getDataDirectory()
-    const dbPath = path.join(dataDir, 'octoprompt.db')
+    const dbPath = path.join(dataDir, 'promptliano.db')
 
     try {
       this.ensureDataDirectory(dbPath)
       const db = new Database(dbPath)
-      console.error(`OctoPrompt database initialized at: ${dbPath}`)
+      console.error(`Promptliano database initialized at: ${dbPath}`)
       return db
     } catch (error) {
       console.error(`Failed to create database at ${dbPath}:`, error)
 
       // Fallback to current working directory
       const fallbackDir = path.join(process.cwd(), 'data')
-      const fallbackDbPath = path.join(fallbackDir, 'octoprompt.db')
+      const fallbackDbPath = path.join(fallbackDir, 'promptliano.db')
 
       try {
         this.ensureDataDirectory(fallbackDbPath)
@@ -140,7 +140,7 @@ export class DatabaseManager {
 
         // Last resort: use temp directory
         const tempDir = os.tmpdir()
-        const tempDbPath = path.join(tempDir, 'octoprompt', 'octoprompt.db')
+        const tempDbPath = path.join(tempDir, 'promptliano', 'promptliano.db')
         const tempDbDir = path.dirname(tempDbPath)
 
         try {

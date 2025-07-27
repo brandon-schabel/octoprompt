@@ -8,7 +8,7 @@ import { Input } from '@ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Theme } from '@octoprompt/schemas'
+import { Theme } from '@promptliano/schemas'
 import { useAppSettings } from '@/hooks/use-kv-local-storage'
 import { MCPGlobalConfigEditor } from '@/components/settings/mcp-global-config-editor'
 

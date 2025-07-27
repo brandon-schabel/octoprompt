@@ -1,4 +1,4 @@
-import { type ActiveTab, activeTabSchema } from '@octoprompt/schemas'
+import { type ActiveTab, activeTabSchema } from '@promptliano/schemas'
 import { StorageV2 } from './storage-v2'
 import { SQLiteDbManagerAdapter } from './sqlite-db-manager-adapter'
 

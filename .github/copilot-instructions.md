@@ -1,4 +1,4 @@
-# OctoPrompt Development Guide
+# Promptliano Development Guide
 
 ## General Code Principles
 
@@ -53,7 +53,7 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 
 ---
 
-## OctoPrompt Specifics
+## Promptliano Specifics
 
 - **Timestamps & IDs**: All IDs, `created`, and `updated` timestamps are Unix timestamps in milliseconds. For IDs, `-1` signifies `null`; otherwise, it must be a valid Unix timestamp (ms).
 - **Maps with Numeric Keys**: Prefer `new Map()` over plain objects, as object keys are converted to strings.
@@ -92,11 +92,11 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 ## Project Overall Structure
 
 ```
-OctoPrompt
+Promptliano
  packages
 
   api-client
-   index.ts // contains the entire octoprompt client
+   index.ts // contains the entire promptliano client
    src
     tests // contains a test suite that tests the client against the server endpoints
 
@@ -201,14 +201,14 @@ schemas using z.infer<>
 
 ## Useful Utils
 
-**`@octoprompt/schemas`:**
+**`@promptliano/schemas`:**
 
 - `unixTSSchemaSpec`: Standard Unix timestamp (ms) schema.
 - `unixTSOptionalSchemaSpec`: Optional Unix timestamp (ms).
 - `unixTSArraySchemaSpec`: Required array of Unix timestamps (ms).
 - `unixTSArrayOptionalSchemaSpec`: Optional array of Unix timestamps (ms).
 
-**`@octoprompt/shared`:**
+**`@promptliano/shared`:**
 
 - `mergeDeep<T>([obj1, obj2, ...]): T`: Recursively merges objects.
 - `normalizePath(filePath: string): string`: Normalizes path separators.
@@ -216,12 +216,12 @@ schemas using z.infer<>
 - `buildPromptContent({ fileMap, promptData, selectedFiles, selectedPrompts, userPrompt }): string`
 - `calculateTotalTokens({ promptData, selectedPrompts, userPrompt, selectedFiles, fileMap }): number`
 - `buildFileTree(files: ProjectFile[]): Record<string, any>`
-- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `octopromptPlanningMetaPrompt`)
+- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `promptlianoPlanningMetaPrompt`)
 - `promptsMap`: Exported object mapping names to prompt strings.
   **`packages/shared/src/constants/model-default-configs.ts`:**
 - `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`: `ModelOptionsWithProvider` objects with settings for temperature, maxTokens, provider, model, etc. (e.g., `LOW_MODEL_CONFIG` uses `google/gemini-2.5-flash-preview`).
 
-**`@octoprompt/shared`:**
+**`@promptliano/shared`:**
 
 - `getFullProjectSummary(projectId: number): Promise<string>`: Generates a full project summary.
 - `resolveJsonPath(rawPath: string | string[], basePath?: string): string`: Resolves input to a normalized file path.
@@ -268,13 +268,13 @@ Direct schema import approach for type safety (TypeScript types from shared Zod 
 **Modern API Hook Pattern (Example `useCreateChat`):**
 
 ```typescript
-import type { CreateChatBody } from '@octoprompt/schemas' // Import types directly
-// ... other imports: useQueryClient, useMutation, octoClient, toast
+import type { CreateChatBody } from '@promptliano/schemas' // Import types directly
+// ... other imports: useQueryClient, useMutation, promptlianoClient, toast
 
 export function useCreateChat() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
+    mutationFn: (data: CreateChatBody) => promptlianoClient.chats.createChat(data),
     onSuccess: () => {
       /* Invalidate queries, show toast */
     },
@@ -288,31 +288,31 @@ export function useCreateChat() {
 **Schema-First Query (Example `useGetPrompt`):**
 
 ```typescript
-import type { Prompt } from '@octoprompt/schemas' // Import types
-// ... other imports: useQuery, octoClient, PROMPT_KEYS
+import type { Prompt } from '@promptliano/schemas' // Import types
+// ... other imports: useQuery, promptlianoClient, PROMPT_KEYS
 
 export function useGetPrompt(promptId: number) {
   return useQuery({
     queryKey: PROMPT_KEYS.detail(promptId),
-    queryFn: () => octoClient.prompts.getPrompt(promptId),
+    queryFn: () => promptlianoClient.prompts.getPrompt(promptId),
     enabled: !!promptId,
     staleTime: 5 * 60 * 1000
   })
 }
 ```
 
-**OctoPrompt Client Instance (`octoClient`):**
-Singleton client in `packages/client/src/hooks/api.ts` (created via `createOctoPromptClient`) provides type-safe methods for each service (e.g., `octoClient.chats.createChat(data)`).
+**Promptliano Client Instance (`promptlianoClient`):**
+Singleton client in `packages/client/src/hooks/api.ts` (created via `createPromptlianoClient`) provides type-safe methods for each service (e.g., `promptlianoClient.chats.createChat(data)`).
 
 ---
 
-## OctoPrompt Backend Architecture
+## Promptliano Backend Architecture
 
 TypeScript/Bun backend: AI-powered project management, layered architecture, file-based JSON storage, service-oriented logic, OpenAPI-compliant REST APIs.
 
 ### Architecture Layers
 
-- **Storage Layer (`@octoprompt/storage`)**: JSON file storage with CRUD and Zod validation.
+- **Storage Layer (`@promptliano/storage`)**: JSON file storage with CRUD and Zod validation.
   Example: `projectStorage.readProjects()`, `projectStorage.writeProjectFiles()`.
   Files: `project-storage.ts`, `chat-storage.ts`, `prompt-storage.ts`, `ticket-storage.ts`, `provider-key-storage.ts`.
   Patterns: Unix ms IDs, `Record<string, Entity>` data structure, Zod validation, atomic file ops.
@@ -370,9 +370,9 @@ Implements `readTodos`, `writeTodos`, `readTodoCategories`, `writeTodoCategories
 
 ```typescript
 import { z } from 'zod' // Assuming path
-import { TodoSchema, TodoCategorySchema } from '@octoprompt/schemas'
+import { TodoSchema, TodoCategorySchema } from '@promptliano/schemas'
 import { readJson, writeJson } from '../json-scribe' // Assuming path
-import { normalizeToUnixMs } from '@octoprompt/schemas' // Assuming path
+import { normalizeToUnixMs } from '@promptliano/schemas' // Assuming path
 
 export const TodoStorageSchema = z.record(z.string(), TodoSchema)
 // ... (TodoCategoryStorageSchema defined similarly)
@@ -397,9 +397,9 @@ export const todoStorage = {
 Business logic: `createTodo`, `updateTodoStatus`, `getTodosByProject`, `deleteTodo`, `generateTodoSuggestions` (uses `generateStructuredData`). Handles ID conflicts, validation, and error wrapping (`ApiError`).
 
 ```typescript
-import { Todo, CreateTodoBody, TodoSchema } from '@octoprompt/schemas' // Assuming path
+import { Todo, CreateTodoBody, TodoSchema } from '@promptliano/schemas' // Assuming path
 import { todoStorage } from '@/utils/storage/todo-storage' // Assuming path
-import { ApiError } from '@octoprompt/shared' // Assuming path
+import { ApiError } from '@promptliano/shared' // Assuming path
 // ... (other imports like generateStructuredData, getProjectById)
 
 export async function createTodo(data: CreateTodoBody): Promise<Todo> {

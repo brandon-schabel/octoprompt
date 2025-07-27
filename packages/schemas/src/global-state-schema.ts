@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { providerSchema, type APIProviders } from './provider-key.schemas'
 import { idSchemaSpec, idArraySchemaSpec } from './schema-utils'
-import { LOW_MODEL_CONFIG } from '@octoprompt/config'
+import { LOW_MODEL_CONFIG } from '@promptliano/config'
 
 const defaultModelConfigs = LOW_MODEL_CONFIG
 

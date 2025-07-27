@@ -1,7 +1,7 @@
 // Database utilities for services package
-import { DatabaseManager } from '@octoprompt/storage'
+import { DatabaseManager } from '@promptliano/storage'
 import type { Database } from 'bun:sqlite'
-import { runMigrations } from '@octoprompt/storage/src/migrations/run-migrations'
+import { runMigrations } from '@promptliano/storage/src/migrations/run-migrations'
 
 // Get database instance
 const dbManager = DatabaseManager.getInstance()

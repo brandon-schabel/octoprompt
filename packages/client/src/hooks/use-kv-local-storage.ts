@@ -1,6 +1,6 @@
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { KVKey, KVValue, KVDefaultValues } from '@octoprompt/schemas'
-import { AppSettings, ProjectTabsStateRecord, ProjectTabState, ProjectTabStatePartial } from '@octoprompt/schemas'
+import { KVKey, KVValue, KVDefaultValues } from '@promptliano/schemas'
+import { AppSettings, ProjectTabsStateRecord, ProjectTabState, ProjectTabStatePartial } from '@promptliano/schemas'
 import { useCallback, useMemo } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -134,7 +134,7 @@ export const useAppSettingsKvApi = () => {
 
 export const useInvalidateKv = (key: KVKey) => {
   // No-op for local storage, as updates are synchronous
-  return () => {}
+  return () => { }
 }
 
 export const useGetProjectTabById = (
@@ -275,7 +275,7 @@ export function useProjectTabField<K extends keyof ProjectTabState>(
       const newVal =
         typeof valueOrFn === 'function'
           ? // @ts-ignore
-            (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
+          (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
           : valueOrFn
 
       // Call the refactored updateTab hook, which handles the API call
@@ -302,7 +302,7 @@ export const useSelectSetting = <K extends keyof AppSettings>(key: K) => {
 export function useAppSettings(): [AppSettings, (partialSettings: PartialOrFn<AppSettings>) => void] {
   const [appSettings] = useGetAppSettings()
   const { mutate: setAppSettingsBase } = useSetKvValue('appSettings')
-  
+
   const setAppSettings = useCallback((partialSettings: PartialOrFn<AppSettings>) => {
     setAppSettingsBase((prev) => {
       const partial = typeof partialSettings === 'function' ? partialSettings(prev as AppSettings) : partialSettings

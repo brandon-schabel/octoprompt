@@ -3,7 +3,7 @@ import { Progress } from '@ui'
 import { Badge } from '@ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui'
 import { FileText, Clock, Binary, AlertCircle, FileX, CheckCircle2, HelpCircle, TrendingUp } from 'lucide-react'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import {
   getSummarizationStats,
   getFileCountDescription,

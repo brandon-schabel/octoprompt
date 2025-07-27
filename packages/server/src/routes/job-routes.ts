@@ -1,13 +1,13 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { 
-  createJobSchema, 
+import {
+  createJobSchema,
   jobFilterSchema,
   type Job,
-  type JobEvent 
-} from '@octoprompt/schemas'
-import { getJobQueue } from '@octoprompt/services'
+  type JobEvent
+} from '@promptliano/schemas'
+import { getJobQueue } from '@promptliano/services'
 import type { Variables } from '../types'
 
 const jobApp = new Hono<{ Variables: Variables }>()
@@ -35,7 +35,7 @@ jobApp.post(
 // Get job by ID
 jobApp.get('/:jobId', async (c) => {
   const jobId = parseInt(c.req.param('jobId'))
-  
+
   if (isNaN(jobId)) {
     return c.json({ error: 'Invalid job ID' }, 400)
   }
@@ -57,7 +57,7 @@ jobApp.get(
   async (c) => {
     const filter = c.req.valid('query')
     const jobQueue = getJobQueue()
-    
+
     const jobs = await jobQueue.getJobs(filter)
     return c.json({ jobs })
   }
@@ -66,21 +66,21 @@ jobApp.get(
 // Get jobs for a specific project
 jobApp.get('/project/:projectId', async (c) => {
   const projectId = parseInt(c.req.param('projectId'))
-  
+
   if (isNaN(projectId)) {
     return c.json({ error: 'Invalid project ID' }, 400)
   }
 
   const jobQueue = getJobQueue()
   const jobs = await jobQueue.getJobs({ projectId })
-  
+
   return c.json({ jobs })
 })
 
 // Cancel a job
 jobApp.post('/:jobId/cancel', async (c) => {
   const jobId = parseInt(c.req.param('jobId'))
-  
+
   if (isNaN(jobId)) {
     return c.json({ error: 'Invalid job ID' }, 400)
   }
@@ -98,7 +98,7 @@ jobApp.post('/:jobId/cancel', async (c) => {
 // Retry a failed job
 jobApp.post('/:jobId/retry', async (c) => {
   const jobId = parseInt(c.req.param('jobId'))
-  
+
   if (isNaN(jobId)) {
     return c.json({ error: 'Invalid job ID' }, 400)
   }
@@ -146,9 +146,9 @@ jobApp.post(
     const jobQueue = getJobQueue()
 
     const deletedCount = await jobQueue.cleanupOldJobs(olderThanDays)
-    
-    return c.json({ 
-      success: true, 
+
+    return c.json({
+      success: true,
       deletedCount,
       message: `Cleaned up ${deletedCount} jobs older than ${olderThanDays} days`
     })

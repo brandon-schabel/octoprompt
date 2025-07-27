@@ -23,7 +23,7 @@ describe('Config Package', () => {
 
   it('should export app config', () => {
     const app = getAppConfig()
-    expect(app.name).toBe('OctoPrompt')
+    expect(app.name).toBe('Promptliano')
     expect(app.version).toBe('0.8.0')
   })
 

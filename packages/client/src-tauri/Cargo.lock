@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "OctoPrompt"
+name = "Promptliano"
 version = "0.8.0"
 dependencies = [
  "reqwest",

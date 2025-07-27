@@ -1,4 +1,4 @@
-// Last 5 changes: Completely rewritten to use OctoPrompt storage patterns and proper error handling
+// Last 5 changes: Completely rewritten to use Promptliano storage patterns and proper error handling
 import type {
   CreateTicketBody,
   UpdateTicketBody,
@@ -8,11 +8,11 @@ import type {
   Ticket,
   TicketTask,
   TaskSuggestions
-} from '@octoprompt/schemas'
-import { TaskSuggestionsSchema, FileSuggestionsZodSchema } from '@octoprompt/schemas'
-import { MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/config'
-import { ticketStorage } from '@octoprompt/storage'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/schemas'
+import { TaskSuggestionsSchema, FileSuggestionsZodSchema } from '@promptliano/schemas'
+import { MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/config'
+import { ticketStorage } from '@promptliano/storage'
+import { ApiError } from '@promptliano/shared'
 import { getFullProjectSummary, getCompactProjectSummary } from './utils/project-summary-service'
 import { generateStructuredData } from './gen-ai-services'
 import { fileSuggestionStrategyService } from './file-suggestion-strategy-service'
@@ -65,7 +65,7 @@ export async function fetchTaskSuggestionsForTicket(
   userContext: string | undefined
 ): Promise<TaskSuggestions> {
   let projectSummary: string
-  
+
   try {
     projectSummary = await getFullProjectSummary(ticket.projectId)
   } catch (error) {
@@ -397,10 +397,10 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
 
 export async function suggestFilesForTicket(
   ticketId: number,
-  options: { 
+  options: {
     extraUserInput?: string,
     strategy?: 'fast' | 'balanced' | 'thorough',
-    maxResults?: number 
+    maxResults?: number
   } = {}
 ): Promise<{ recommendedFileIds: string[]; combinedSummaries?: string; message?: string }> {
   const ticket = await getTicketById(ticketId)
@@ -409,7 +409,7 @@ export async function suggestFilesForTicket(
     // Determine strategy based on project size if not specified
     const { FileSuggestionStrategyService } = await import('./file-suggestion-strategy-service')
     const strategy = options.strategy || await FileSuggestionStrategyService.recommendStrategy(ticket.projectId)
-    
+
     // Use the new file suggestion strategy service
     const suggestionResponse = await fileSuggestionStrategyService.suggestFiles(
       ticket,

@@ -1,4 +1,4 @@
-import { Ticket, TicketTask, TicketWithTasks } from '@octoprompt/schemas'
+import { Ticket, TicketTask, TicketWithTasks } from '@promptliano/schemas'
 
 export function buildTicketContent(ticket: Ticket, tasks?: TicketTask[]): string {
   let content = ''

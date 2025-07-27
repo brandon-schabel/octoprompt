@@ -1,4 +1,4 @@
-import { promptStorage } from '@octoprompt/storage'
+import { promptStorage } from '@promptliano/storage'
 import {
   type CreatePromptBody,
   type UpdatePromptBody,
@@ -7,9 +7,9 @@ import {
   type PromptProject,
   PromptProjectSchema,
   PromptSuggestionsZodSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
-import { ApiError, promptsMap } from '@octoprompt/shared'
+import { ApiError, promptsMap } from '@promptliano/shared'
 import { ZodError } from 'zod'
 import { generateStructuredData } from './gen-ai-services'
 import { getCompactProjectSummary } from './utils/project-summary-service'
@@ -323,7 +323,7 @@ Based on the user's input and project context, suggest the most relevant prompts
 
     // Extract the suggestions from the result object
     const suggestions = result.object
-    
+
     // Filter and order prompts based on AI suggestions
     const suggestedPromptIds = (suggestions.promptIds || []).slice(0, limit)
     let suggestedPrompts: Prompt[] = []
@@ -426,7 +426,7 @@ function calculatePromptRelevance(userInput: string, prompt: Prompt): number {
       'consolidated-tools',
       'mcp-server',
       'mcp-client',
-      'octoprompt'
+      'promptliano'
     ],
     api: ['endpoint', 'route', 'rest', 'graphql', 'http', 'request', 'response', 'hono'],
     database: ['sql', 'query', 'schema', 'migration', 'storage', 'sqlite', 'table', 'index'],

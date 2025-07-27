@@ -1,6 +1,6 @@
-# Tauri Build Guide for OctoPrompt
+# Tauri Build Guide for Promptliano
 
-This guide explains how to build and release OctoPrompt's Tauri desktop application.
+This guide explains how to build and release Promptliano's Tauri desktop application.
 
 ## Quick Start
 
@@ -58,21 +58,21 @@ Packages built artifacts into distribution-ready bundles:
 ```
 release-bundles/
 ├── macOS/
-│   ├── OctoPrompt-v1.0.0-macOS-Intel.dmg
-│   ├── OctoPrompt-v1.0.0-macOS-AppleSilicon.dmg
-│   ├── OctoPrompt-v1.0.0-macOS-Universal.dmg
+│   ├── Promptliano-v1.0.0-macOS-Intel.dmg
+│   ├── Promptliano-v1.0.0-macOS-AppleSilicon.dmg
+│   ├── Promptliano-v1.0.0-macOS-Universal.dmg
 │   └── README.txt
 ├── Windows/
-│   ├── OctoPrompt-v1.0.0-Windows-x64-Setup.exe
+│   ├── Promptliano-v1.0.0-Windows-x64-Setup.exe
 │   └── README.txt
 ├── Linux/
-│   ├── OctoPrompt-v1.0.0-Linux-x86_64.AppImage
-│   ├── OctoPrompt-v1.0.0-Linux-amd64.deb
-│   ├── OctoPrompt-v1.0.0-Linux-x86_64.rpm
+│   ├── Promptliano-v1.0.0-Linux-x86_64.AppImage
+│   ├── Promptliano-v1.0.0-Linux-amd64.deb
+│   ├── Promptliano-v1.0.0-Linux-x86_64.rpm
 │   └── README.txt
 ├── README.md
 ├── checksums.txt
-└── OctoPrompt-v1.0.0-all-platforms.tar.gz
+└── Promptliano-v1.0.0-all-platforms.tar.gz
 ```
 
 ### 3. `release-tauri.sh`
@@ -179,7 +179,7 @@ gh release create v1.0.0 \
   macOS/*.dmg \
   Windows/*.exe \
   Linux/*.{deb,AppImage,rpm} \
-  --title "OctoPrompt v1.0.0" \
+  --title "Promptliano v1.0.0" \
   --notes-file ../CHANGELOG.md
 ```
 

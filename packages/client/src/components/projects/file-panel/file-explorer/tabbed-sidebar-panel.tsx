@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { SelectedFilesListDisplay } from './selected-files-list-display'
-import { ProjectFileMap } from '@octoprompt/schemas'
+import { ProjectFileMap } from '@promptliano/schemas'
 import { SelectedFilesListRef } from '../../selected-files-list'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 

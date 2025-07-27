@@ -23,7 +23,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { PromptSchema } from '@octoprompt/schemas'
+import { PromptSchema } from '@promptliano/schemas'
 
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import {
@@ -40,9 +40,9 @@ import {
 } from '@ui'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '@ui'
-import { OctoTooltip } from '../octo/octo-tooltip'
+import { PromptlianoTooltip } from '../promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -249,7 +249,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
                   {isCollapsed && selectedPrompts.length > 0 && (
                     <span className='text-xs text-muted-foreground'>({selectedPrompts.length} selected)</span>
                   )}
-                  <OctoTooltip>
+                  <PromptlianoTooltip>
                     <div className=''>
                       <p>
                         Prompts are reusable instructions that will be included with your chat. Each selected prompt
@@ -277,7 +277,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
                         </li>
                       </ul>
                     </div>
-                  </OctoTooltip>
+                  </PromptlianoTooltip>
                 </div>
               </div>
               <div className='flex space-x-2' onClick={(e) => e.stopPropagation()}>

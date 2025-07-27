@@ -90,7 +90,7 @@ jobs:
         with:
           projectPath: ./packages/client
           tagName: ${{ github.ref_name }}
-          releaseName: 'OctoPrompt ${{ github.ref_name }}'
+          releaseName: 'Promptliano ${{ github.ref_name }}'
           releaseBody: |
             ## What's New
 
@@ -99,16 +99,16 @@ jobs:
             ## Download Instructions
 
             ### macOS
-            - **Intel**: Download `OctoPrompt_x64.dmg`
-            - **Apple Silicon**: Download `OctoPrompt_aarch64.dmg`
-            - **Universal**: Download `OctoPrompt_universal.dmg` (works on both)
+            - **Intel**: Download `Promptliano_x64.dmg`
+            - **Apple Silicon**: Download `Promptliano_aarch64.dmg`
+            - **Universal**: Download `Promptliano_universal.dmg` (works on both)
 
             ### Windows
-            - Download `OctoPrompt_x64-setup.exe`
+            - Download `Promptliano_x64-setup.exe`
 
             ### Linux
-            - **AppImage**: Download `octoprompt_amd64.AppImage`
-            - **Debian/Ubuntu**: Download `octoprompt_amd64.deb`
+            - **AppImage**: Download `promptliano_amd64.AppImage`
+            - **Debian/Ubuntu**: Download `promptliano_amd64.deb`
 
             ## Verification
 

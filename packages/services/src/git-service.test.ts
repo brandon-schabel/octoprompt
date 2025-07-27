@@ -2,8 +2,8 @@ import { describe, test, expect, spyOn, beforeEach, afterEach, Mock } from 'bun:
 import * as gitService from './git-service'
 import * as projectService from './project-service'
 import { simpleGit, type SimpleGit } from 'simple-git'
-import type { Project, GitStatus } from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+import type { Project, GitStatus } from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 
 // Mock simple-git
 const mockGit: Partial<SimpleGit> = {
@@ -27,8 +27,8 @@ const mockGit: Partial<SimpleGit> = {
     conflicted: [],
     isClean: () => false
   }),
-  add: async () => {},
-  reset: async () => {},
+  add: async () => { },
+  reset: async () => { },
   commit: async () => ({ commit: 'abc123', summary: { changes: 2, deletions: 0, insertions: 10 } })
 }
 
@@ -174,7 +174,7 @@ describe('Git Service', () => {
 
   describe('stageFiles', () => {
     beforeEach(() => {
-      mockGit.add = async () => {}
+      mockGit.add = async () => { }
     })
 
     test('should stage files with relative paths', async () => {
@@ -225,7 +225,7 @@ describe('Git Service', () => {
 
   describe('unstageFiles', () => {
     beforeEach(() => {
-      mockGit.reset = async () => {}
+      mockGit.reset = async () => { }
     })
 
     test('should unstage files with relative paths', async () => {

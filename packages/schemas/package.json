@@ -1,5 +1,5 @@
 {
-  "name": "@octoprompt/schemas",
+  "name": "@promptliano/schemas",
   "version": "0.8.0",
   "module": "index.ts",
   "type": "module",
@@ -17,7 +17,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@octoprompt/config": "workspace:*"
+    "@promptliano/config": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

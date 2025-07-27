@@ -1,5 +1,5 @@
 {
-  "name": "@octoprompt/mcp-client",
+  "name": "@promptliano/mcp-client",
   "version": "0.8.0",
   "module": "index.ts",
   "type": "module",

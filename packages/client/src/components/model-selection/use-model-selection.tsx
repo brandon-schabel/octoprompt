@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react'
-import { APIProviders } from '@octoprompt/schemas'
+import { APIProviders } from '@promptliano/schemas'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
 

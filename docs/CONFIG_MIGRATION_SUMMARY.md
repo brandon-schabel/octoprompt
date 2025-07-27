@@ -2,11 +2,11 @@
 
 ## Overview
 
-This document summarizes the migration of OctoPrompt's configuration system from scattered constants across multiple packages to a centralized `@octoprompt/config` package.
+This document summarizes the migration of Promptliano's configuration system from scattered constants across multiple packages to a centralized `@promptliano/config` package.
 
 ## What Changed
 
-### New Package: @octoprompt/config
+### New Package: @promptliano/config
 
 A new centralized configuration package was created at `packages/config` that consolidates all global settings:
 
@@ -27,15 +27,17 @@ The following duplicate configuration files were removed:
 ### Updated Imports
 
 All imports were updated from:
+
 ```typescript
-import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
-import { DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
-import { corsConfig } from '@octoprompt/services/src/constants/server-config'
+import { LOW_MODEL_CONFIG } from '@promptliano/schemas'
+import { DEFAULT_FILE_EXCLUSIONS } from '@promptliano/schemas'
+import { corsConfig } from '@promptliano/services/src/constants/server-config'
 ```
 
 To:
+
 ```typescript
-import { LOW_MODEL_CONFIG, getFilesConfig, getServerConfig } from '@octoprompt/config'
+import { LOW_MODEL_CONFIG, getFilesConfig, getServerConfig } from '@promptliano/config'
 ```
 
 ### Files Modified
@@ -116,12 +118,12 @@ import {
   LOW_MODEL_CONFIG,     // Direct access to specific configs
   MEDIUM_MODEL_CONFIG,
   HIGH_MODEL_CONFIG
-} from '@octoprompt/config'
+} from '@promptliano/config'
 ```
 
 ## Migration Checklist
 
-- [x] Created @octoprompt/config package
+- [x] Created @promptliano/config package
 - [x] Migrated model configurations
 - [x] Migrated provider configurations
 - [x] Migrated server configurations

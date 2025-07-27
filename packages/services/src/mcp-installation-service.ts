@@ -103,7 +103,7 @@ export interface MCPToolInfo {
   installed: boolean
   configPath?: string
   configExists?: boolean
-  hasOctoPrompt?: boolean
+  hasPromptliano?: boolean
 }
 
 export class MCPInstallationService {
@@ -210,47 +210,47 @@ export class MCPInstallationService {
         // No existing config, start fresh
       }
 
-      // Get OctoPrompt executable path
-      const octopromptPath = await this.getOctopromptPath()
+      // Get Promptliano executable path
+      const promptlianoPath = await this.getPromptlianoPath()
 
-      // Add OctoPrompt MCP server configuration
-      const serverName = `octoprompt-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+      // Add Promptliano MCP server configuration
+      const serverName = `promptliano-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
 
       if (tool === 'claude-desktop') {
         // Claude Desktop requires stdio communication, so we use platform-specific scripts
         const scriptPath = this.platform === 'win32'
-          ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
-          : path.join(octopromptPath, 'packages/server/mcp-start.sh')
+          ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+          : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
         const servers = this.getServersFromConfig(config)
         servers[serverName] = {
           command: scriptPath,
           env: {
-            OCTOPROMPT_PROJECT_ID: projectId.toString(),
+            PROMPTLIANO_PROJECT_ID: projectId.toString(),
             MCP_DEBUG: debug ? 'true' : 'false'
           }
         }
         config = this.setServersInConfig(config, servers)
       } else if (tool === 'vscode' || tool === 'cursor' || tool === 'windsurf') {
         // VS Code/Cursor/Windsurf use settings.json format
-        const vscodeConfig = await this.installVSCodeStyle(tool, projectId, projectName, projectPath, octopromptPath, debug)
+        const vscodeConfig = await this.installVSCodeStyle(tool, projectId, projectName, projectPath, promptlianoPath, debug)
         if (!vscodeConfig.success) {
           return vscodeConfig
         }
         return {
           success: true,
-          message: `Successfully installed OctoPrompt MCP for ${tool}`,
+          message: `Successfully installed Promptliano MCP for ${tool}`,
           configPath: vscodeConfig.configPath,
           backedUp: vscodeConfig.backedUp,
           backupPath: vscodeConfig.backupPath
         }
       } else if (tool === 'continue') {
         // Continue uses its own config format
-        const continueConfig = await this.installContinue(projectId, projectName, projectPath, octopromptPath, debug)
+        const continueConfig = await this.installContinue(projectId, projectName, projectPath, promptlianoPath, debug)
         return continueConfig
       } else if (tool === 'claude-code') {
         // Claude Code uses a hybrid config format
-        const claudeCodeConfig = await this.installClaudeCode(projectId, projectName, projectPath, octopromptPath, debug)
+        const claudeCodeConfig = await this.installClaudeCode(projectId, projectName, projectPath, promptlianoPath, debug)
         return claudeCodeConfig
       }
 
@@ -286,7 +286,7 @@ export class MCPInstallationService {
 
       return {
         success: true,
-        message: 'Successfully installed OctoPrompt MCP',
+        message: 'Successfully installed Promptliano MCP',
         configPath,
         backedUp,
         backupPath
@@ -309,7 +309,7 @@ export class MCPInstallationService {
         }
       }
 
-      const serverName = `octoprompt-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+      const serverName = `promptliano-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
       const content = await fs.readFile(configPath, 'utf-8')
 
       if (tool === 'claude-desktop') {
@@ -324,7 +324,7 @@ export class MCPInstallationService {
 
           return {
             success: true,
-            message: 'Successfully removed OctoPrompt MCP configuration'
+            message: 'Successfully removed Promptliano MCP configuration'
           }
         }
       } else if (tool === 'vscode' || tool === 'cursor' || tool === 'windsurf') {
@@ -342,7 +342,7 @@ export class MCPInstallationService {
 
           return {
             success: true,
-            message: `Successfully removed OctoPrompt MCP configuration from ${tool}`
+            message: `Successfully removed Promptliano MCP configuration from ${tool}`
           }
         }
       } else if (tool === 'continue') {
@@ -364,7 +364,7 @@ export class MCPInstallationService {
 
           return {
             success: true,
-            message: 'Successfully removed OctoPrompt MCP configuration from Continue'
+            message: 'Successfully removed Promptliano MCP configuration from Continue'
           }
         }
       } else if (tool === 'claude-code') {
@@ -385,14 +385,14 @@ export class MCPInstallationService {
 
           return {
             success: true,
-            message: 'Successfully removed OctoPrompt MCP configuration from Claude Code'
+            message: 'Successfully removed Promptliano MCP configuration from Claude Code'
           }
         }
       }
 
       return {
         success: false,
-        message: 'OctoPrompt MCP configuration not found'
+        message: 'Promptliano MCP configuration not found'
       }
     } catch (error) {
       return {
@@ -451,7 +451,7 @@ export class MCPInstallationService {
     const configPath = this.getConfigPath('claude-desktop')
     let installed = false
     let configExists = false
-    let hasOctoPrompt = false
+    let hasPromptliano = false
 
     // Check if Claude Desktop is installed
     try {
@@ -480,7 +480,7 @@ export class MCPInstallationService {
         const parsedConfig = JSON.parse(content)
         const config = this.migrateConfigFormat(parsedConfig)
         const servers = this.getServersFromConfig(config)
-        hasOctoPrompt = servers && Object.keys(servers).some(k => k.includes('octoprompt'))
+        hasPromptliano = servers && Object.keys(servers).some(k => k.includes('promptliano'))
       } catch {
         configExists = false
       }
@@ -492,7 +492,7 @@ export class MCPInstallationService {
       installed,
       configPath: configPath || undefined,
       configExists,
-      hasOctoPrompt
+      hasPromptliano
     }
   }
 
@@ -500,7 +500,7 @@ export class MCPInstallationService {
     let installed = false
     const configPath = this.getConfigPath('vscode')
     let configExists = false
-    let hasOctoPrompt = false
+    let hasPromptliano = false
 
     try {
       // Check if code command is available
@@ -516,7 +516,7 @@ export class MCPInstallationService {
         const content = await fs.readFile(configPath, 'utf-8')
         configExists = true
         const parsed = JSON.parse(content)
-        hasOctoPrompt = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('octoprompt'))
+        hasPromptliano = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('promptliano'))
       } catch {
         configExists = false
       }
@@ -528,7 +528,7 @@ export class MCPInstallationService {
       installed,
       configPath: configPath || undefined,
       configExists,
-      hasOctoPrompt
+      hasPromptliano
     }
   }
 
@@ -536,7 +536,7 @@ export class MCPInstallationService {
     let installed = false
     const configPath = this.getConfigPath('cursor')
     let configExists = false
-    let hasOctoPrompt = false
+    let hasPromptliano = false
 
     try {
       // Check if cursor command is available
@@ -552,7 +552,7 @@ export class MCPInstallationService {
         const content = await fs.readFile(configPath, 'utf-8')
         configExists = true
         const parsed = JSON.parse(content)
-        hasOctoPrompt = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('octoprompt'))
+        hasPromptliano = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('promptliano'))
       } catch {
         configExists = false
       }
@@ -564,7 +564,7 @@ export class MCPInstallationService {
       installed,
       configPath: configPath || undefined,
       configExists,
-      hasOctoPrompt
+      hasPromptliano
     }
   }
 
@@ -572,7 +572,7 @@ export class MCPInstallationService {
     const configPath = this.getConfigPath('continue')
     let installed = false
     let configExists = false
-    let hasOctoPrompt = false
+    let hasPromptliano = false
 
     // Check if Continue config exists
     if (configPath) {
@@ -582,7 +582,7 @@ export class MCPInstallationService {
         configExists = true
         // Continue uses a different config format
         const config = JSON.parse(content)
-        hasOctoPrompt = config.mcpConfigs && Object.keys(config.mcpConfigs).some(k => k.includes('octoprompt'))
+        hasPromptliano = config.mcpConfigs && Object.keys(config.mcpConfigs).some(k => k.includes('promptliano'))
       } catch {
         installed = false
         configExists = false
@@ -595,7 +595,7 @@ export class MCPInstallationService {
       installed,
       configPath: configPath || undefined,
       configExists,
-      hasOctoPrompt
+      hasPromptliano
     }
   }
 
@@ -603,7 +603,7 @@ export class MCPInstallationService {
     let installed = false
     const configPath = this.getConfigPath('claude-code')
     let configExists = false
-    let hasOctoPrompt = false
+    let hasPromptliano = false
 
     // For Claude Code, check if config exists rather than CLI
     // since Claude Code might be web-based or use different installation methods
@@ -614,8 +614,8 @@ export class MCPInstallationService {
         configExists = true
         // Claude Code config format
         const config = JSON.parse(content)
-        hasOctoPrompt = (config.mcpServers && Object.keys(config.mcpServers).some(k => k.includes('octoprompt'))) ||
-          (config.defaultMcpServers && config.defaultMcpServers.some((s: any) => s.includes('octoprompt')))
+        hasPromptliano = (config.mcpServers && Object.keys(config.mcpServers).some(k => k.includes('promptliano'))) ||
+          (config.defaultMcpServers && config.defaultMcpServers.some((s: any) => s.includes('promptliano')))
       } catch {
         // Also check if Claude Code CLI is available as fallback
         try {
@@ -634,7 +634,7 @@ export class MCPInstallationService {
       installed,
       configPath: configPath || undefined,
       configExists,
-      hasOctoPrompt
+      hasPromptliano
     }
   }
 
@@ -642,7 +642,7 @@ export class MCPInstallationService {
     let installed = false
     const configPath = this.getConfigPath('windsurf')
     let configExists = false
-    let hasOctoPrompt = false
+    let hasPromptliano = false
 
     try {
       // Check if Windsurf command is available
@@ -673,7 +673,7 @@ export class MCPInstallationService {
         const content = await fs.readFile(configPath, 'utf-8')
         configExists = true
         const parsed = JSON.parse(content)
-        hasOctoPrompt = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('octoprompt'))
+        hasPromptliano = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('promptliano'))
       } catch {
         configExists = false
       }
@@ -685,12 +685,12 @@ export class MCPInstallationService {
       installed,
       configPath: configPath || undefined,
       configExists,
-      hasOctoPrompt
+      hasPromptliano
     }
   }
 
-  private async getOctopromptPath(): Promise<string> {
-    // Get the current working directory as the OctoPrompt path
+  private async getPromptlianoPath(): Promise<string> {
+    // Get the current working directory as the Promptliano path
     // In production, this might be different
     return process.cwd()
   }
@@ -700,7 +700,7 @@ export class MCPInstallationService {
     projectId: number,
     projectName: string,
     projectPath: string,
-    octopromptPath: string,
+    promptlianoPath: string,
     debug?: boolean
   ): Promise<MCPInstallationResult> {
     try {
@@ -738,17 +738,17 @@ export class MCPInstallationService {
         settings['mcp.servers'] = {}
       }
 
-      // Add OctoPrompt MCP configuration
-      const serverName = `octoprompt-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+      // Add Promptliano MCP configuration
+      const serverName = `promptliano-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
       const scriptPath = this.platform === 'win32'
-        ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
-        : path.join(octopromptPath, 'packages/server/mcp-start.sh')
+        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       settings['mcp.servers'][serverName] = {
         command: scriptPath,
         env: {
-          OCTOPROMPT_PROJECT_ID: projectId.toString(),
-          OCTOPROMPT_PROJECT_PATH: projectPath,
+          PROMPTLIANO_PROJECT_ID: projectId.toString(),
+          PROMPTLIANO_PROJECT_PATH: projectPath,
           MCP_DEBUG: debug ? 'true' : 'false'
         }
       }
@@ -767,7 +767,7 @@ export class MCPInstallationService {
 
       return {
         success: true,
-        message: `Successfully installed OctoPrompt MCP for ${tool}`,
+        message: `Successfully installed Promptliano MCP for ${tool}`,
         configPath,
         backedUp,
         backupPath
@@ -784,7 +784,7 @@ export class MCPInstallationService {
     projectId: number,
     projectName: string,
     projectPath: string,
-    octopromptPath: string,
+    promptlianoPath: string,
     debug?: boolean
   ): Promise<MCPInstallationResult> {
     try {
@@ -820,11 +820,11 @@ export class MCPInstallationService {
         // No existing config
       }
 
-      // Add OctoPrompt MCP configuration
-      const serverName = `octoprompt-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+      // Add Promptliano MCP configuration
+      const serverName = `promptliano-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
       const scriptPath = this.platform === 'win32'
-        ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
-        : path.join(octopromptPath, 'packages/server/mcp-start.sh')
+        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       if (!config.mcpConfigs) {
         config.mcpConfigs = {}
@@ -834,7 +834,7 @@ export class MCPInstallationService {
         transport: 'stdio',
         command: scriptPath,
         env: {
-          OCTOPROMPT_PROJECT_ID: projectId.toString(),
+          PROMPTLIANO_PROJECT_ID: projectId.toString(),
           MCP_DEBUG: debug ? 'true' : 'false'
         }
       }
@@ -865,7 +865,7 @@ export class MCPInstallationService {
 
       return {
         success: true,
-        message: 'Successfully installed OctoPrompt MCP for Continue',
+        message: 'Successfully installed Promptliano MCP for Continue',
         configPath,
         backedUp,
         backupPath
@@ -882,7 +882,7 @@ export class MCPInstallationService {
     projectId: number,
     projectName: string,
     projectPath: string,
-    octopromptPath: string,
+    promptlianoPath: string,
     debug?: boolean
   ): Promise<MCPInstallationResult> {
     try {
@@ -924,16 +924,16 @@ export class MCPInstallationService {
       if (!config.projectBindings) config.projectBindings = {}
       if (!config.mcpServers) config.mcpServers = {}
 
-      // Add OctoPrompt MCP server configuration
-      const serverName = `octoprompt-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+      // Add Promptliano MCP server configuration
+      const serverName = `promptliano-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
       const scriptPath = this.platform === 'win32'
-        ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
-        : path.join(octopromptPath, 'packages/server/mcp-start.sh')
+        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       config.mcpServers[serverName] = {
         command: scriptPath,
         env: {
-          OCTOPROMPT_PROJECT_ID: projectId.toString(),
+          PROMPTLIANO_PROJECT_ID: projectId.toString(),
           MCP_DEBUG: debug ? 'true' : 'false'
         }
       }
@@ -963,7 +963,7 @@ export class MCPInstallationService {
 
       return {
         success: true,
-        message: 'Successfully installed OctoPrompt MCP for Claude Code',
+        message: 'Successfully installed Promptliano MCP for Claude Code',
         configPath,
         backedUp,
         backupPath
@@ -1041,11 +1041,11 @@ export class MCPInstallationService {
         // No existing config, start fresh
       }
 
-      // Get the OctoPrompt installation path
-      const octopromptPath = await this.getOctopromptPath()
+      // Get the Promptliano installation path
+      const promptlianoPath = await this.getPromptlianoPath()
       const scriptPath = this.platform === 'win32'
-        ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
-        : path.join(octopromptPath, 'packages/server/mcp-start.sh')
+        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       // Get existing servers if any
       const existingServers = existingConfig.mcpServers || existingConfig.servers || {}
@@ -1054,16 +1054,16 @@ export class MCPInstallationService {
       const projectConfig = {
         mcpServers: {
           ...existingServers,
-          octoprompt: {
+          promptliano: {
             type: 'stdio',
             command: this.platform === 'win32' ? 'cmd.exe' : 'sh',
             args: this.platform === 'win32'
               ? ['/c', scriptPath]
               : [scriptPath],
             env: {
-              OCTOPROMPT_PROJECT_ID: projectId.toString(),
-              OCTOPROMPT_PROJECT_PATH: projectPath,
-              OCTOPROMPT_API_URL: serverUrl || this.defaultServerUrl,
+              PROMPTLIANO_PROJECT_ID: projectId.toString(),
+              PROMPTLIANO_PROJECT_PATH: projectPath,
+              PROMPTLIANO_API_URL: serverUrl || this.defaultServerUrl,
               NODE_ENV: 'production'
             }
           }
@@ -1100,7 +1100,7 @@ export class MCPInstallationService {
   // Global installation methods
 
   /**
-   * Install OctoPrompt MCP globally for a tool (no project context)
+   * Install Promptliano MCP globally for a tool (no project context)
    */
   async installGlobalMCP(tool: MCPTool, serverUrl?: string, debug?: boolean): Promise<MCPInstallationResult> {
     try {
@@ -1148,7 +1148,7 @@ export class MCPInstallationService {
   }
 
   /**
-   * Uninstall global OctoPrompt MCP for a tool
+   * Uninstall global Promptliano MCP for a tool
    */
   async uninstallGlobalMCP(tool: MCPTool): Promise<MCPInstallationResult> {
     try {
@@ -1160,7 +1160,7 @@ export class MCPInstallationService {
         }
       }
 
-      const serverName = 'octoprompt'
+      const serverName = 'promptliano'
       const content = await fs.readFile(configPath, 'utf-8')
 
       if (tool === 'claude-desktop') {
@@ -1179,7 +1179,7 @@ export class MCPInstallationService {
 
           return {
             success: true,
-            message: 'Successfully removed global OctoPrompt MCP configuration'
+            message: 'Successfully removed global Promptliano MCP configuration'
           }
         }
       } else if (tool === 'vscode' || tool === 'cursor' || tool === 'windsurf') {
@@ -1200,7 +1200,7 @@ export class MCPInstallationService {
 
           return {
             success: true,
-            message: `Successfully removed global OctoPrompt MCP configuration from ${tool}`
+            message: `Successfully removed global Promptliano MCP configuration from ${tool}`
           }
         }
       } else if (tool === 'continue') {
@@ -1226,7 +1226,7 @@ export class MCPInstallationService {
 
           return {
             success: true,
-            message: 'Successfully removed global OctoPrompt MCP configuration from Continue'
+            message: 'Successfully removed global Promptliano MCP configuration from Continue'
           }
         }
       } else if (tool === 'claude-code') {
@@ -1248,14 +1248,14 @@ export class MCPInstallationService {
 
           return {
             success: true,
-            message: 'Successfully removed global OctoPrompt MCP configuration from Claude Code'
+            message: 'Successfully removed global Promptliano MCP configuration from Claude Code'
           }
         }
       }
 
       return {
         success: false,
-        message: 'Global OctoPrompt MCP configuration not found'
+        message: 'Global Promptliano MCP configuration not found'
       }
     } catch (error) {
       return {
@@ -1266,7 +1266,7 @@ export class MCPInstallationService {
   }
 
   /**
-   * Detect which tools have global OctoPrompt installations
+   * Detect which tools have global Promptliano installations
    */
   async detectGlobalInstallations(): Promise<MCPToolInfo[]> {
     const tools = await this.detectInstalledTools()
@@ -1275,8 +1275,8 @@ export class MCPInstallationService {
     const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
     await mcpGlobalConfigService.initialize()
 
-    // The detectInstalledTools already checks for OctoPrompt correctly
-    // Just return the tools as-is since they already have the correct hasOctoPrompt status
+    // The detectInstalledTools already checks for Promptliano correctly
+    // Just return the tools as-is since they already have the correct hasPromptliano status
     return tools
   }
 
@@ -1306,9 +1306,9 @@ export class MCPInstallationService {
         // No existing config
       }
 
-      // Add global OctoPrompt configuration
+      // Add global Promptliano configuration
       const servers = this.getServersFromConfig(config)
-      servers['octoprompt'] = {
+      servers['promptliano'] = {
         command: globalServerConfig.command,
         args: globalServerConfig.args,
         env: {
@@ -1335,13 +1335,13 @@ export class MCPInstallationService {
       await mcpGlobalConfigService.addGlobalInstallation({
         tool: 'claude-desktop',
         configPath,
-        serverName: 'octoprompt',
+        serverName: 'promptliano',
         version: '0.8.0'
       })
 
       return {
         success: true,
-        message: 'Successfully installed global OctoPrompt MCP for Claude Desktop',
+        message: 'Successfully installed global Promptliano MCP for Claude Desktop',
         configPath,
         backedUp,
         backupPath
@@ -1383,8 +1383,8 @@ export class MCPInstallationService {
         settings['mcp.servers'] = {}
       }
 
-      // Add global OctoPrompt configuration
-      settings['mcp.servers']['octoprompt'] = {
+      // Add global Promptliano configuration
+      settings['mcp.servers']['promptliano'] = {
         command: globalServerConfig.args?.[0] || globalServerConfig.command,
         env: {
           ...globalServerConfig.env,
@@ -1409,13 +1409,13 @@ export class MCPInstallationService {
       await mcpGlobalConfigService.addGlobalInstallation({
         tool,
         configPath,
-        serverName: 'octoprompt',
+        serverName: 'promptliano',
         version: '0.8.0'
       })
 
       return {
         success: true,
-        message: `Successfully installed global OctoPrompt MCP for ${tool}`,
+        message: `Successfully installed global Promptliano MCP for ${tool}`,
         configPath,
         backedUp,
         backupPath
@@ -1454,12 +1454,12 @@ export class MCPInstallationService {
         // No existing config
       }
 
-      // Add global OctoPrompt configuration
+      // Add global Promptliano configuration
       if (!config.mcpConfigs) {
         config.mcpConfigs = {}
       }
 
-      config.mcpConfigs['octoprompt-global'] = {
+      config.mcpConfigs['promptliano-global'] = {
         transport: 'stdio',
         command: globalServerConfig.args?.[0] || globalServerConfig.command,
         env: {
@@ -1474,8 +1474,8 @@ export class MCPInstallationService {
           if (!model.mcpServers) {
             model.mcpServers = []
           }
-          if (!model.mcpServers.includes('octoprompt-global')) {
-            model.mcpServers.push('octoprompt-global')
+          if (!model.mcpServers.includes('promptliano-global')) {
+            model.mcpServers.push('promptliano-global')
           }
         }
       }
@@ -1497,13 +1497,13 @@ export class MCPInstallationService {
       await mcpGlobalConfigService.addGlobalInstallation({
         tool: 'continue',
         configPath,
-        serverName: 'octoprompt',
+        serverName: 'promptliano',
         version: '0.8.0'
       })
 
       return {
         success: true,
-        message: 'Successfully installed global OctoPrompt MCP for Continue',
+        message: 'Successfully installed global Promptliano MCP for Continue',
         configPath,
         backedUp,
         backupPath
@@ -1547,8 +1547,8 @@ export class MCPInstallationService {
       if (!config.defaultMcpServers) config.defaultMcpServers = []
       if (!config.mcpServers) config.mcpServers = {}
 
-      // Add global OctoPrompt server configuration
-      config.mcpServers['octoprompt'] = {
+      // Add global Promptliano server configuration
+      config.mcpServers['promptliano'] = {
         command: globalServerConfig.args?.[0] || globalServerConfig.command,
         env: {
           ...globalServerConfig.env,
@@ -1557,8 +1557,8 @@ export class MCPInstallationService {
       }
 
       // Add to default servers if not already there
-      if (!config.defaultMcpServers.includes('octoprompt')) {
-        config.defaultMcpServers.push('octoprompt')
+      if (!config.defaultMcpServers.includes('promptliano')) {
+        config.defaultMcpServers.push('promptliano')
       }
 
       // Write updated config
@@ -1578,13 +1578,13 @@ export class MCPInstallationService {
       await mcpGlobalConfigService.addGlobalInstallation({
         tool: 'claude-code',
         configPath,
-        serverName: 'octoprompt',
+        serverName: 'promptliano',
         version: '0.8.0'
       })
 
       return {
         success: true,
-        message: 'Successfully installed global OctoPrompt MCP for Claude Code',
+        message: 'Successfully installed global Promptliano MCP for Claude Code',
         configPath,
         backedUp,
         backupPath

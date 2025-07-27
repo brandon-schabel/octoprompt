@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { DatabaseManager } from '@octoprompt/storage'
+import { DatabaseManager } from '@promptliano/storage'
 
 async function migrateTaskEnhancements() {
   console.log('Starting task enhancement migration...')

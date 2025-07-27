@@ -6,8 +6,8 @@
 // - Implemented tool execution and resource reading
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type { MCPServerConfig, MCPTool, MCPResource } from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+import type { MCPServerConfig, MCPTool, MCPResource } from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 
 export interface MCPClientOptions {
   config: MCPServerConfig
@@ -54,7 +54,7 @@ export class MCPClient {
       // For HTTP transport, we'll create a client without stdio
       this.client = new Client(
         {
-          name: `octoprompt-${this.config.id}`,
+          name: `promptliano-${this.config.id}`,
           version: '0.8.0'
         },
         {
@@ -96,7 +96,7 @@ export class MCPClient {
             protocolVersion: '2024-11-05',
             capabilities: {},
             clientInfo: {
-              name: `octoprompt-client-${this.config.id}`,
+              name: `promptliano-client-${this.config.id}`,
               version: '0.8.0'
             }
           }

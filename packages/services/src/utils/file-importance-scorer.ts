@@ -1,4 +1,4 @@
-import type { ProjectFile, FileImportance } from '@octoprompt/schemas'
+import type { ProjectFile, FileImportance } from '@promptliano/schemas'
 
 // File type weights for importance scoring
 const FILE_TYPE_WEIGHTS: Record<string, number> = {
@@ -11,14 +11,14 @@ const FILE_TYPE_WEIGHTS: Record<string, number> = {
   'route.js': 2.5,
   'controller.ts': 2.5,
   'controller.js': 2.5,
-  
+
   // Configuration and schema files
   'schema.ts': 2.0,
   'schemas.ts': 2.0,
   'config.ts': 2.0,
   'config.js': 2.0,
   '.env': 2.0,
-  
+
   // Entry points
   'index.ts': 2.0,
   'index.js': 2.0,
@@ -26,28 +26,28 @@ const FILE_TYPE_WEIGHTS: Record<string, number> = {
   'main.js': 2.0,
   'app.ts': 2.0,
   'app.js': 2.0,
-  
+
   // React components
   '.tsx': 1.5,
   '.jsx': 1.5,
-  
+
   // Regular source files
   '.ts': 1.0,
   '.js': 1.0,
   '.py': 1.0,
   '.go': 1.0,
   '.rs': 1.0,
-  
+
   // Test files (lower priority)
   '.test.ts': 0.5,
   '.test.js': 0.5,
   '.spec.ts': 0.5,
   '.spec.js': 0.5,
-  
+
   // Documentation
   '.md': 0.3,
   '.txt': 0.2,
-  
+
   // Assets and other
   '.json': 0.5,
   '.yaml': 0.5,
@@ -90,9 +90,9 @@ export function getFileImportance(file: ProjectFile): FileImportance {
     size: getFileSizeScore(file.size || 0),
     recency: getRecencyScore(file.updated)
   }
-  
+
   // Calculate weighted total score
-  const score = Math.min(10, 
+  const score = Math.min(10,
     factors.type * 0.3 +
     factors.location * 0.2 +
     factors.imports * 0.15 +
@@ -100,7 +100,7 @@ export function getFileImportance(file: ProjectFile): FileImportance {
     factors.size * 0.1 +
     factors.recency * 0.1
   )
-  
+
   return {
     fileId: file.id,
     score,
@@ -113,7 +113,7 @@ export function getFileImportance(file: ProjectFile): FileImportance {
  */
 function getFileTypeScore(filename: string): number {
   const lowerName = filename.toLowerCase()
-  
+
   // Check specific file patterns first
   for (const [pattern, weight] of Object.entries(FILE_TYPE_WEIGHTS)) {
     if (pattern.startsWith('.') && lowerName.endsWith(pattern)) {
@@ -122,7 +122,7 @@ function getFileTypeScore(filename: string): number {
       return weight
     }
   }
-  
+
   // Extract extension
   const ext = '.' + lowerName.split('.').pop()
   return FILE_TYPE_WEIGHTS[ext] || 0.1
@@ -134,17 +134,17 @@ function getFileTypeScore(filename: string): number {
 function getLocationScore(path: string): number {
   const parts = path.toLowerCase().split('/')
   let maxScore = 1.0
-  
+
   for (const part of parts) {
     const dirWeight = DIRECTORY_WEIGHTS[part]
     if (dirWeight !== undefined) {
       maxScore = Math.max(maxScore, dirWeight)
     }
   }
-  
+
   // Bonus for files closer to root (fewer directory levels)
   const depthPenalty = Math.max(0, 1 - (parts.length - 1) * 0.1)
-  
+
   return maxScore * depthPenalty
 }
 
@@ -189,7 +189,7 @@ function getRecencyScore(lastUpdated: number): number {
   const now = Date.now()
   const age = now - lastUpdated
   const daysOld = age / (1000 * 60 * 60 * 24)
-  
+
   if (daysOld < 1) return 3.0 // Modified today
   if (daysOld < 7) return 2.5 // Modified this week
   if (daysOld < 30) return 2.0 // Modified this month
@@ -206,9 +206,9 @@ export function sortFilesByImportance(files: ProjectFile[]): ProjectFile[] {
     file,
     importance: getFileImportance(file)
   }))
-  
+
   filesWithScores.sort((a, b) => b.importance.score - a.importance.score)
-  
+
   return filesWithScores.map(item => item.file)
 }
 

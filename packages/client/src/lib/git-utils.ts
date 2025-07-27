@@ -1,4 +1,4 @@
-import type { GitFileStatus } from '@octoprompt/schemas'
+import type { GitFileStatus } from '@promptliano/schemas'
 
 /**
  * Get the appropriate color class for a git file status

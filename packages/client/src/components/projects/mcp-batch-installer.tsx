@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { octoClient } from '@/hooks/octo-client'
+import { promptlianoClient } from '@/hooks/promptliano-client'
 import { Button } from '@ui'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
@@ -21,7 +21,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
   const { data: detectionData, refetch: refetchDetection } = useQuery({
     queryKey: ['mcp-detection-batch'],
     queryFn: async () => {
-      const result = await octoClient.mcpInstallation.detectTools()
+      const result = await promptlianoClient.mcpInstallation.detectTools()
       return result.data
     }
   })
@@ -29,14 +29,14 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
   const { data: statusData, refetch: refetchStatus } = useQuery({
     queryKey: ['mcp-installation-status-batch', projectId],
     queryFn: async () => {
-      const result = await octoClient.mcpInstallation.getInstallationStatus(projectId)
+      const result = await promptlianoClient.mcpInstallation.getInstallationStatus(projectId)
       return result.data
     }
   })
 
   const batchInstallMutation = useMutation({
     mutationFn: async (tools: string[]) => {
-      const response = await octoClient.mcpInstallation.batchInstall(projectId, {
+      const response = await promptlianoClient.mcpInstallation.batchInstall(projectId, {
         tools,
         debug: false
       })
@@ -44,10 +44,10 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
     },
     onSuccess: async (data) => {
       const { succeeded, failed, total } = data.data.summary
-      
+
       if (succeeded === total) {
         toast.success('Installation Complete', {
-          description: `Successfully installed OctoPrompt MCP to ${succeeded} platform${succeeded > 1 ? 's' : ''}`
+          description: `Successfully installed Promptliano MCP to ${succeeded} platform${succeeded > 1 ? 's' : ''}`
         })
       } else if (succeeded > 0) {
         toast.warning('Partial Installation', {
@@ -60,7 +60,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
       }
 
       // Show individual results
-      data.data.results.forEach(result => {
+      data.data.results.forEach((result) => {
         if (!result.success) {
           toast.error(`${result.tool} failed: ${result.message}`)
         }
@@ -80,23 +80,17 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
   const tools = detectionData?.tools || []
   const installedTools = statusData?.projectConfig?.installedTools || []
 
-  const availableTools = tools.filter(tool => 
-    tool.installed && !installedTools.some(t => t.tool === tool.tool)
-  )
+  const availableTools = tools.filter((tool) => tool.installed && !installedTools.some((t) => t.tool === tool.tool))
 
   const handleToggleTool = (toolId: string) => {
-    setSelectedTools(prev =>
-      prev.includes(toolId)
-        ? prev.filter(t => t !== toolId)
-        : [...prev, toolId]
-    )
+    setSelectedTools((prev) => (prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId]))
   }
 
   const handleSelectAll = () => {
     if (selectedTools.length === availableTools.length) {
       setSelectedTools([])
     } else {
-      setSelectedTools(availableTools.map(t => t.tool))
+      setSelectedTools(availableTools.map((t) => t.tool))
     }
   }
 
@@ -124,31 +118,25 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
     <Card>
       <CardHeader>
         <CardTitle>Quick Install</CardTitle>
-        <CardDescription>
-          Install OctoPrompt MCP to multiple platforms at once
-        </CardDescription>
+        <CardDescription>Install Promptliano MCP to multiple platforms at once</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">Available Platforms</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSelectAll}
-          >
+      <CardContent className='space-y-4'>
+        <div className='flex items-center justify-between mb-2'>
+          <span className='text-sm font-medium'>Available Platforms</span>
+          <Button variant='ghost' size='sm' onClick={handleSelectAll}>
             {selectedTools.length === availableTools.length ? 'Deselect All' : 'Select All'}
           </Button>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
           {availableTools.map((tool) => (
             <div
               key={tool.tool}
               className={cn(
-                "flex items-center space-x-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                selectedTools.includes(tool.tool) 
-                  ? "border-primary bg-primary/5" 
-                  : "border-muted hover:border-muted-foreground/50"
+                'flex items-center space-x-3 rounded-lg border p-3 cursor-pointer transition-colors',
+                selectedTools.includes(tool.tool)
+                  ? 'border-primary bg-primary/5'
+                  : 'border-muted hover:border-muted-foreground/50'
               )}
               onClick={() => handleToggleTool(tool.tool)}
             >
@@ -157,35 +145,32 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
                 onCheckedChange={() => handleToggleTool(tool.tool)}
                 onClick={(e) => e.stopPropagation()}
               />
-              <div className="flex-1">
-                <div className="font-medium text-sm">{tool.name}</div>
+              <div className='flex-1'>
+                <div className='font-medium text-sm'>{tool.name}</div>
                 {tool.configPath && (
-                  <div className="text-xs text-muted-foreground truncate" title={tool.configPath}>
+                  <div className='text-xs text-muted-foreground truncate' title={tool.configPath}>
                     {tool.configPath}
                   </div>
                 )}
               </div>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CheckCircle2 className='h-4 w-4 text-green-500' />
             </div>
           ))}
         </div>
 
-        <div className="flex items-center justify-between pt-4">
-          <span className="text-sm text-muted-foreground">
+        <div className='flex items-center justify-between pt-4'>
+          <span className='text-sm text-muted-foreground'>
             {selectedTools.length} platform{selectedTools.length !== 1 ? 's' : ''} selected
           </span>
-          <Button
-            onClick={handleInstall}
-            disabled={selectedTools.length === 0 || isInstalling}
-          >
+          <Button onClick={handleInstall} disabled={selectedTools.length === 0 || isInstalling}>
             {isInstalling ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                 Installing...
               </>
             ) : (
               <>
-                <Download className="h-4 w-4 mr-2" />
+                <Download className='h-4 w-4 mr-2' />
                 Install to Selected
               </>
             )}

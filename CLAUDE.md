@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-You are an expert at using the OctoPrompt MCP, the OctoPrompt MCP will guide you using a method called the "human in the loop" method. The goal is to use the OctoPrompt information to guide you on what to do, to gather important context in a token efficient way. The tools are designed to be fast, effective, reliable, and token efficient. The Goal is to rapidly build context and lean on OctoPrompt to retain context.
+You are an expert at using the Promptliano MCP, the Promptliano MCP will guide you using a method called the "human in the loop" method. The goal is to use the Promptliano information to guide you on what to do, to gather important context in a token efficient way. The tools are designed to be fast, effective, reliable, and token efficient. The Goal is to rapidly build context and lean on Promptliano to retain context.
 
-- Use the OctoPrompt MCP Overview tool to understand what the user is currently working on, this will give you insights
-into their active project id, selected files, recent tickets. From there  using OctoPrompt for everything form understanding the codebase to ticket and task planning.
-- Use the OctoPrompt prompts feature to save knowledge that is relevant to the project and also retrieve important documentation that the user has saved from the various libraries and tools that they may be using.
-- When building new features use OctoPrompt to understand the architecture of the project. try to follow the patterns that the project is already using.
-- Before searching the internet for library docs, check to see if the user already has library docs in their OctoPrompt prompts library
+- Use the Promptliano MCP Overview tool to understand what the user is currently working on, this will give you insights
+into their active project id, selected files, recent tickets. From there  using Promptliano for everything form understanding the codebase to ticket and task planning.
+- Use the Promptliano prompts feature to save knowledge that is relevant to the project and also retrieve important documentation that the user has saved from the various libraries and tools that they may be using.
+- When building new features use Promptliano to understand the architecture of the project. try to follow the patterns that the project is already using.
+- Before searching the internet for library docs, check to see if the user already has library docs in their Promptliano prompts library
 
 Generally a fullstack feature consists of the follow
 
@@ -25,9 +25,11 @@ Generally a fullstack feature consists of the follow
 The AI file suggestion feature has been optimized to use 90-95% fewer tokens. Three MCP methods are available:
 
 ### 1. Project-Level Suggestions (General Discovery)
+
 Use when exploring files based on a text prompt:
+
 ```
-mcp__OctoPrompt__project_manager(
+mcp__Promptliano__project_manager(
   action: "suggest_files",
   projectId: 1750564533014,
   data: {
@@ -38,9 +40,11 @@ mcp__OctoPrompt__project_manager(
 ```
 
 ### 2. Ticket-Level Suggestions (Optimized with Strategies)
+
 Use when working on a specific ticket - supports the new optimization strategies:
+
 ```
-mcp__OctoPrompt__ticket_manager(
+mcp__Promptliano__ticket_manager(
   action: "suggest_files",
   ticketId: 456,
   data: {
@@ -52,9 +56,11 @@ mcp__OctoPrompt__ticket_manager(
 ```
 
 ### 3. Task-Level Suggestions
+
 Use when working on a specific task within a ticket:
+
 ```
-mcp__OctoPrompt__task_manager(
+mcp__Promptliano__task_manager(
   action: "suggest_files",
   ticketId: 456,
   data: {
@@ -65,16 +71,19 @@ mcp__OctoPrompt__task_manager(
 ```
 
 ### Strategies (Ticket-Level Only)
+
 - **`fast`**: No AI, pure relevance scoring (best for large projects or quick suggestions)
-- **`balanced`**: Pre-filters 50 files, AI refines (default, good for most cases) 
+- **`balanced`**: Pre-filters 50 files, AI refines (default, good for most cases)
 - **`thorough`**: Pre-filters 100 files, high-quality AI model (best for complex tickets)
 
 ### When to Use Each Method
+
 - **Project-level**: Initial exploration, understanding codebase structure, finding files by concept
 - **Ticket-level**: Starting work on a ticket, finding all files that need changes
 - **Task-level**: Focused work on a specific task, finding implementation details
 
 ### Tips
+
 - Always use file suggestions before manually searching - it saves significant time
 - Add contextual hints (e.g., "include test files", "focus on API routes", "find UI components")
 - The feature automatically considers keywords, file paths, types, recency, and import relationships
@@ -94,4 +103,4 @@ Implement These Rules For Reducing File Sizes:
 - Follow KISS (Keep it simple stupid)
 - Follow SRP (Single Responsibility Principle)
 
-OctoPrompt Project ID - 1753220774680
+Promptliano Project ID - 1753220774680

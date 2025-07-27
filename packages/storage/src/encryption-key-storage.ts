@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { generateEncryptionKey } from '@octoprompt/shared/src/utils/crypto'
+import { generateEncryptionKey } from '@promptliano/shared/src/utils/crypto'
 
 // Get platform-appropriate data directory (same as database)
 function getDataDirectory(): string {
@@ -10,14 +10,14 @@ function getDataDirectory(): string {
 
   switch (platform) {
     case 'darwin': // macOS
-      return path.join(homeDir, 'Library', 'Application Support', 'OctoPrompt')
+      return path.join(homeDir, 'Library', 'Application Support', 'Promptliano')
     case 'win32': // Windows
-      return path.join(process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming'), 'OctoPrompt')
+      return path.join(process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming'), 'Promptliano')
     case 'linux': // Linux
-      return path.join(process.env.XDG_DATA_HOME || path.join(homeDir, '.local', 'share'), 'octoprompt')
+      return path.join(process.env.XDG_DATA_HOME || path.join(homeDir, '.local', 'share'), 'promptliano')
     default:
       // Fallback to home directory
-      return path.join(homeDir, '.octoprompt')
+      return path.join(homeDir, '.promptliano')
   }
 }
 
@@ -26,7 +26,7 @@ export class EncryptionKeyStorage {
   private encryptionKey: string | null = null
   private readonly keyFileName = 'encryption.key'
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): EncryptionKeyStorage {
     if (!EncryptionKeyStorage.instance) {
@@ -57,7 +57,7 @@ export class EncryptionKeyStorage {
     }
 
     // Check environment variable first (backward compatibility)
-    const envKey = process.env.OCTOPROMPT_ENCRYPTION_KEY
+    const envKey = process.env.PROMPTLIANO_ENCRYPTION_KEY
     if (envKey) {
       this.encryptionKey = envKey
       return envKey
@@ -90,13 +90,13 @@ export class EncryptionKeyStorage {
     try {
       this.ensureDataDirectory()
       const keyPath = this.getKeyPath()
-      
+
       // Write key with restricted permissions
-      fs.writeFileSync(keyPath, key, { 
+      fs.writeFileSync(keyPath, key, {
         encoding: 'utf-8',
         mode: 0o600 // Read/write for owner only
       })
-      
+
       console.log('Encryption key saved to:', keyPath)
     } catch (error) {
       console.error('Failed to save encryption key:', error)
@@ -109,7 +109,7 @@ export class EncryptionKeyStorage {
    */
   hasKey(): boolean {
     return !!(
-      process.env.OCTOPROMPT_ENCRYPTION_KEY || 
+      process.env.PROMPTLIANO_ENCRYPTION_KEY ||
       fs.existsSync(this.getKeyPath())
     )
   }

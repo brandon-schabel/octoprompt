@@ -3,10 +3,10 @@ import { join } from 'path'
 import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { z } from 'zod'
-import { createOctoPromptClient, OctoPromptError } from '@octoprompt/api-client'
-import type { OctoPromptClient } from '@octoprompt/api-client'
+import { createPromptlianoClient, PromptlianoError } from '@promptliano/api-client'
+import type { PromptlianoClient } from '@promptliano/api-client'
 
-import { ProjectFileSchema, type Project, type ProjectFile } from '@octoprompt/schemas'
+import { ProjectFileSchema, type Project, type ProjectFile } from '@promptliano/schemas'
 import { TEST_API_URL } from './test-config'
 
 const BASE_URL = TEST_API_URL
@@ -18,14 +18,14 @@ const SpecificProjectSummaryResponseSchema = z.object({
 })
 
 describe('Project API Tests', () => {
-  let client: OctoPromptClient
+  let client: PromptlianoClient
   let testProjects: Project[] = []
   let testProjectPaths: string[] = []
   let createdFileIdsForBulkOps: number[] = []
 
   beforeAll(() => {
     console.log('Starting Project API Tests...')
-    client = createOctoPromptClient({ baseUrl: BASE_URL })
+    client = createPromptlianoClient({ baseUrl: BASE_URL })
   })
 
   afterAll(async () => {
@@ -34,7 +34,7 @@ describe('Project API Tests', () => {
       try {
         await client.projects.deleteProject(project.id)
       } catch (err) {
-        if (err instanceof OctoPromptError && err.statusCode === 404) {
+        if (err instanceof PromptlianoError && err.statusCode === 404) {
           // Already deleted, ignore
         } else {
           console.error(`Failed to delete project ${project.id}:`, err)
@@ -315,8 +315,8 @@ describe('Project API Tests', () => {
         await client.projects.getProject(project.id)
         expect(true).toBe(false)
       } catch (error) {
-        expect(error).toBeInstanceOf(OctoPromptError)
-        if (error instanceof OctoPromptError) {
+        expect(error).toBeInstanceOf(PromptlianoError)
+        if (error instanceof PromptlianoError) {
           expect(error.statusCode).toBe(404)
         }
       }

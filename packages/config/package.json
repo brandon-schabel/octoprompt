@@ -1,7 +1,7 @@
 {
-  "name": "@octoprompt/config",
+  "name": "@promptliano/config",
   "version": "1.0.0",
-  "description": "Centralized configuration management for OctoPrompt",
+  "description": "Centralized configuration management for Promptliano",
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",

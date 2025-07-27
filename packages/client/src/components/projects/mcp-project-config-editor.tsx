@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { octoClient } from '@/hooks/octo-client'
+import { promptlianoClient } from '@/hooks/promptliano-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
 import { Button } from '@ui'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
@@ -71,7 +71,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   const { data: locationsData, isLoading: isLoadingLocations } = useQuery({
     queryKey: ['mcp-project-config-locations', projectId],
     queryFn: async () => {
-      const result = await octoClient.mcpProjectConfig.getConfigLocations(projectId)
+      const result = await promptlianoClient.mcpProjectConfig.getConfigLocations(projectId)
       return result.data
     }
   })
@@ -80,7 +80,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   const { data: configData, isLoading: isLoadingConfig } = useQuery({
     queryKey: ['mcp-project-config', projectId],
     queryFn: async () => {
-      const result = await octoClient.mcpProjectConfig.loadProjectConfig(projectId)
+      const result = await promptlianoClient.mcpProjectConfig.loadProjectConfig(projectId)
       return result.data
     }
   })
@@ -89,7 +89,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   const { data: mergedConfigData } = useQuery({
     queryKey: ['mcp-merged-config', projectId],
     queryFn: async () => {
-      const result = await octoClient.mcpProjectConfig.getMergedConfig(projectId)
+      const result = await promptlianoClient.mcpProjectConfig.getMergedConfig(projectId)
       return result.data
     }
   })
@@ -98,7 +98,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   const { data: expandedConfigData } = useQuery({
     queryKey: ['mcp-expanded-config', projectId],
     queryFn: async () => {
-      const result = await octoClient.mcpProjectConfig.getExpandedConfig(projectId)
+      const result = await promptlianoClient.mcpProjectConfig.getExpandedConfig(projectId)
       return result.data
     }
   })
@@ -106,7 +106,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   // Save config mutation
   const saveConfigMutation = useMutation({
     mutationFn: async (config: ProjectMCPConfig) => {
-      await octoClient.mcpProjectConfig.saveProjectConfig(projectId, config)
+      await promptlianoClient.mcpProjectConfig.saveProjectConfig(projectId, config)
     },
     onSuccess: () => {
       toast.success('MCP configuration saved successfully')
@@ -170,13 +170,13 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   const initializeConfigMutation = useMutation({
     mutationFn: async (location: MCPConfigLocation) => {
       // Get default config for this location
-      const defaultConfigResult = await octoClient.mcpProjectConfig.getDefaultConfigForLocation(
+      const defaultConfigResult = await promptlianoClient.mcpProjectConfig.getDefaultConfigForLocation(
         projectId,
         location.path
       )
 
       // Save it to the specific location
-      await octoClient.mcpProjectConfig.saveProjectConfigToLocation(
+      await promptlianoClient.mcpProjectConfig.saveProjectConfigToLocation(
         projectId,
         defaultConfigResult.data.config,
         location.path

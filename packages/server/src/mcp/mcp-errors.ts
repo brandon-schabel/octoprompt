@@ -1,4 +1,4 @@
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 /**
