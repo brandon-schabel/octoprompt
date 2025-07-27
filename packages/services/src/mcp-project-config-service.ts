@@ -33,11 +33,10 @@ export const MCPInputConfigSchema = z.object({
 // Support both old 'servers' format and new 'mcpServers' format
 export const ProjectMCPConfigSchema = z.object({
   mcpServers: z.record(MCPServerConfigSchema).optional(),
-  servers: z.record(MCPServerConfigSchema).optional(),
   inputs: z.array(MCPInputConfigSchema).optional(),
   extends: z.union([z.string(), z.array(z.string())]).optional()
 }).refine(
-  (data) => data.mcpServers || data.servers,
+  (data) => data.mcpServers,
   "Config must have either 'mcpServers' or 'servers' field"
 )
 
@@ -73,26 +72,13 @@ export class MCPProjectConfigService extends EventEmitter {
     super()
   }
 
-  /**
-   * Migrate old config format to new format
-   * Converts 'servers' field to 'mcpServers'
-   */
-  private migrateConfigFormat(config: any): ProjectMCPConfig {
-    if (config.servers && !config.mcpServers) {
-      return {
-        ...config,
-        mcpServers: config.servers,
-        servers: undefined
-      }
-    }
-    return config
-  }
+
 
   /**
    * Get the servers from config, handling both formats
    */
   private getServersFromConfig(config: ProjectMCPConfig): Record<string, MCPServerConfig> {
-    return config.mcpServers || config.servers || {}
+    return config.mcpServers || {}
   }
 
   /**
@@ -144,8 +130,7 @@ export class MCPProjectConfigService extends EventEmitter {
     try {
       const content = await fs.readFile(existingConfig.path, 'utf-8')
       const rawConfig = JSON.parse(content)
-      const migratedConfig = this.migrateConfigFormat(rawConfig)
-      const config = ProjectMCPConfigSchema.parse(migratedConfig)
+      const config = ProjectMCPConfigSchema.parse(rawConfig)
 
       const resolved: ResolvedMCPConfig = {
         config,
@@ -274,8 +259,6 @@ export class MCPProjectConfigService extends EventEmitter {
     // Update the config with expanded servers
     if (expandedConfig.mcpServers) {
       expandedConfig.mcpServers = servers
-    } else {
-      expandedConfig.servers = servers
     }
 
     return expandedConfig
@@ -292,11 +275,8 @@ export class MCPProjectConfigService extends EventEmitter {
     const configDir = path.dirname(configPath)
     await fs.mkdir(configDir, { recursive: true })
 
-    // Migrate to new format before saving
-    const migratedConfig = this.migrateConfigFormat(config)
-
     // Write config
-    await fs.writeFile(configPath, JSON.stringify(migratedConfig, null, 2), 'utf-8')
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
 
     // Clear cache
     this.configCache.delete(projectId)
@@ -329,11 +309,8 @@ export class MCPProjectConfigService extends EventEmitter {
     const configDir = path.dirname(fullPath)
     await fs.mkdir(configDir, { recursive: true })
 
-    // Migrate to new format before saving
-    const migratedConfig = this.migrateConfigFormat(config)
-
     // Write config
-    await fs.writeFile(fullPath, JSON.stringify(migratedConfig, null, 2), 'utf-8')
+    await fs.writeFile(fullPath, JSON.stringify(config, null, 2), 'utf-8')
 
     // Clear cache
     this.configCache.delete(projectId)
@@ -371,12 +348,12 @@ export class MCPProjectConfigService extends EventEmitter {
 
     // Get the OctoPrompt installation path - find the root where package.json exists
     let octopromptPath = process.cwd()
-    
+
     // If we're running from within packages/server, go up to the root
     if (octopromptPath.includes('packages/server')) {
       octopromptPath = path.resolve(octopromptPath, '../..')
     }
-    
+
     const scriptPath = process.platform === 'win32'
       ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
       : path.join(octopromptPath, 'packages/server/mcp-start.sh')
@@ -486,7 +463,7 @@ export class MCPProjectConfigService extends EventEmitter {
   private mergeConfigs(base: ProjectMCPConfig, override: ProjectMCPConfig): ProjectMCPConfig {
     const baseServers = this.getServersFromConfig(base)
     const overrideServers = this.getServersFromConfig(override)
-    
+
     return {
       mcpServers: {
         ...baseServers,

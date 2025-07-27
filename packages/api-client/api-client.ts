@@ -2017,13 +2017,6 @@ const FlexibleMCPConfigSchema = z.object({
     env: z.record(z.string()).optional(),
     timeout: z.number().optional()
   })).optional(),
-  servers: z.record(z.object({
-    type: z.enum(['stdio', 'http']).default('stdio'),
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional(),
-    timeout: z.number().optional()
-  })).optional(),
   inputs: z.array(z.object({
     type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
     id: z.string(),
@@ -2033,7 +2026,7 @@ const FlexibleMCPConfigSchema = z.object({
   })).optional(),
   extends: z.union([z.string(), z.array(z.string())]).optional()
 }).refine(
-  (data) => data.mcpServers || data.servers,
+  (data) => data.mcpServers,
   "Config must have either 'mcpServers' or 'servers' field"
 )
 

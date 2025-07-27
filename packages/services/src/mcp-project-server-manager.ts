@@ -19,7 +19,7 @@ interface ProjectServerInfo {
 class MCPProjectServerManager {
   private projectServers = new Map<number, ProjectServerInfo>()
   private serverIdCounter = 100000 // Start with high IDs to avoid conflicts
-  
+
   constructor() {
     // Listen for configuration changes
     mcpProjectConfigService.on('configChanged', async (projectId: number) => {
@@ -35,25 +35,25 @@ class MCPProjectServerManager {
     try {
       const project = await getProjectById(projectId)
       logger.info(`Initializing MCP servers for project ${project.name} (${projectId})`)
-      
+
       // Get the expanded config (with variables resolved)
       const config = await mcpProjectConfigService.getExpandedConfig(projectId)
-      
-      if (!config.servers || Object.keys(config.servers).length === 0) {
+
+      if (!config.mcpServers || Object.keys(config.mcpServers).length === 0) {
         logger.info(`No MCP servers configured for project ${projectId}`)
         return
       }
-      
+
       const serverInfo: ProjectServerInfo = {
         projectId,
         servers: new Map(),
         lastUpdated: Date.now()
       }
-      
+
       const manager = getMCPClientManager()
-      
+
       // Start each configured server
-      for (const [serverName, serverConfig] of Object.entries(config.servers)) {
+      for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
         try {
           // Create an MCPServerConfig from the project config
           const mcpConfig: MCPServerConfig = {
@@ -64,14 +64,15 @@ class MCPProjectServerManager {
             args: serverConfig.args || [],
             env: serverConfig.env || {},
             enabled: true,
-            type: serverConfig.type || 'stdio',
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+            created: Date.now(),
+            updated: Date.now(),
+            autoStart: true,
+
           }
-          
+
           // Store the mapping
           serverInfo.servers.set(serverName, mcpConfig.id)
-          
+
           // Start the server
           await manager.startServer(mcpConfig)
           logger.info(`Started MCP server "${serverName}" for project ${projectId}`)
@@ -79,7 +80,7 @@ class MCPProjectServerManager {
           logger.error(`Failed to start server "${serverName}":`, error)
         }
       }
-      
+
       this.projectServers.set(projectId, serverInfo)
       logger.info(`Initialized ${serverInfo.servers.size} MCP servers for project ${projectId}`)
     } catch (error) {
@@ -100,9 +101,9 @@ class MCPProjectServerManager {
     if (!serverInfo) {
       return
     }
-    
+
     const manager = getMCPClientManager()
-    
+
     for (const [serverName, configId] of serverInfo.servers) {
       try {
         await manager.stopServer(configId)
@@ -111,7 +112,7 @@ class MCPProjectServerManager {
         logger.error(`Failed to stop server "${serverName}":`, error)
       }
     }
-    
+
     this.projectServers.delete(projectId)
   }
 
@@ -149,11 +150,11 @@ class MCPProjectServerManager {
    */
   async cleanup(): Promise<void> {
     const stopPromises: Promise<void>[] = []
-    
+
     for (const projectId of this.projectServers.keys()) {
       stopPromises.push(this.stopProjectServers(projectId))
     }
-    
+
     await Promise.all(stopPromises)
   }
 }
@@ -164,12 +165,12 @@ export const mcpProjectServerManager = new MCPProjectServerManager()
 // Helper function to initialize project servers on demand
 export async function ensureProjectServersInitialized(projectId: number): Promise<void> {
   const serverInfo = mcpProjectServerManager.getProjectServerInfo(projectId)
-  
+
   // If servers are already initialized and recent, skip
   if (serverInfo && Date.now() - serverInfo.lastUpdated < 5 * 60 * 1000) { // 5 minutes
     return
   }
-  
+
   await mcpProjectServerManager.initializeProjectServers(projectId)
 }
 
