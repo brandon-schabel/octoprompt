@@ -80,57 +80,42 @@ export function ModelSettingsPopover() {
     isTempDisabled
   } = useChatModelParams()
 
-  const [temperature, updateTemperature] = useLocalStorage('MODEL_TEMPERATURE', settings.temperature ?? 0.7)
-  const [maxTokens, updateMaxTokens] = useLocalStorage('MODEL_MAX_TOKENS', settings.maxTokens ?? 100000)
-  const [topP, updateTopP] = useLocalStorage('MODEL_TOP_P', settings.topP ?? 0.9)
-  const [freqPenalty, updateFreqPenalty] = useLocalStorage('MODEL_FREQ_PENALTY', settings.frequencyPenalty ?? 0)
-  const [presPenalty, updatePresPenalty] = useLocalStorage('MODEL_PRES_PENALTY', settings.presencePenalty ?? 0)
-  const [provider, updateProvider] = useLocalStorage('MODEL_PROVIDER', settings.provider ?? 'openrouter')
-  const [currentModel, updateCurrentModel] = useLocalStorage('MODEL_CURRENT_MODEL', 'gpt-4o')
-
   const handleSettingsChange = (newSettings: Partial<AiSdkOptions>) => {
     if (newSettings.temperature !== undefined) {
       setTemperature(newSettings.temperature)
-      updateTemperature(newSettings.temperature)
     }
     if (newSettings.maxTokens !== undefined) {
       setMaxTokens(newSettings.maxTokens)
-      updateMaxTokens(newSettings.maxTokens)
     }
     if (newSettings.topP !== undefined) {
       setTopP(newSettings.topP)
-      updateTopP(newSettings.topP)
     }
     if (newSettings.frequencyPenalty !== undefined) {
       setFreqPenalty(newSettings.frequencyPenalty)
-      updateFreqPenalty(newSettings.frequencyPenalty)
     }
     if (newSettings.presencePenalty !== undefined) {
       setPresPenalty(newSettings.presencePenalty)
-      updatePresPenalty(newSettings.presencePenalty)
     }
   }
 
   const handleProviderChange = (value: APIProviders) => {
     setProvider(value)
-    updateProvider(value)
   }
 
   const handleModelChange = (value: string) => {
     setModel(value)
-    updateCurrentModel(value)
   }
 
   return (
     <ReusableModelSettingsPopover
-      provider={provider as APIProviders}
-      model={currentModel}
+      provider={(settings.provider ?? 'openrouter') as APIProviders}
+      model={settings.model ?? 'gpt-4o'}
       settings={{
-        temperature,
-        maxTokens,
-        topP,
-        frequencyPenalty: freqPenalty,
-        presencePenalty: presPenalty
+        temperature: settings.temperature ?? 0.7,
+        maxTokens: settings.maxTokens ?? 100000,
+        topP: settings.topP ?? 0.9,
+        frequencyPenalty: settings.frequencyPenalty ?? 0,
+        presencePenalty: settings.presencePenalty ?? 0
       }}
       onProviderChange={handleProviderChange}
       onModelChange={handleModelChange}
@@ -162,19 +147,29 @@ export function AdaptiveChatInput({
   disabled = false,
   preserveFormatting = true
 }: AdaptiveChatInputProps) {
-  const [localValue, setLocalValue] = useLocalStorage('CHAT_INPUT_VALUE', value)
   const [isMultiline, setIsMultiline] = useState(false)
-  const isInitializedRef = useRef(false)
-
-  const debouncedOnChange = useDebounceCallback(onChange, 200)
-
-  // Initialize only once on mount
-  useEffect(() => {
-    if (!isInitializedRef.current) {
-      onChange(localValue)
-      isInitializedRef.current = true
+  const lastSavedValueRef = useRef(value)
+  
+  // Save to localStorage only when value changes significantly (debounced)
+  const saveToLocalStorage = useDebounceCallback((newValue: string) => {
+    if (lastSavedValueRef.current !== newValue) {
+      lastSavedValueRef.current = newValue
+      localStorage.setItem('CHAT_INPUT_VALUE', JSON.stringify(newValue))
     }
-  }, [localValue, onChange])
+  }, 500)
+
+  // Load from localStorage only on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('CHAT_INPUT_VALUE')
+      if (stored && value === '') {
+        const parsed = JSON.parse(stored)
+        onChange(parsed)
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }, [])
 
   useEffect(() => {
     const shouldBeMultilineInitially = value?.includes('\n') || (value?.length ?? 0) > 100
@@ -186,10 +181,10 @@ export function AdaptiveChatInput({
   const handleInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const newValue = e.target.value
-      setLocalValue(newValue)
-      debouncedOnChange(newValue)
+      onChange(newValue)
+      saveToLocalStorage(newValue)
     },
-    [debouncedOnChange, setLocalValue]
+    [onChange, saveToLocalStorage]
   )
 
   const handlePaste = useCallback(
@@ -226,12 +221,8 @@ export function AdaptiveChatInput({
   )
 
   const triggerSubmit = useCallback(() => {
-    const finalValue = value
-    if (finalValue !== value) {
-      onChange(finalValue)
-    }
     onSubmit?.()
-  }, [value, onChange, onSubmit, value])
+  }, [onSubmit])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -292,6 +283,96 @@ function parseThinkBlock(content: string) {
   }
 }
 
+// Extract MessageWrapper outside to prevent recreation on every render
+const MessageWrapper: React.FC<{
+  children: React.ReactNode
+  isUser: boolean
+  excluded: boolean
+}> = ({ children, isUser, excluded }) => (
+  <div
+    className={cn(
+      'relative rounded-lg p-3 break-words',
+      isUser ? 'bg-muted' : 'bg-muted/50',
+      excluded && 'opacity-50'
+    )}
+  >
+    {children}
+  </div>
+)
+
+// Extract MessageHeader outside to prevent recreation on every render
+const MessageHeader: React.FC<{
+  isUser: boolean
+  msgId: string | number
+  excluded: boolean
+  rawView: boolean
+  popoverOpen: boolean
+  onPopoverChange: (open: boolean) => void
+  onCopy: () => void
+  onFork: () => void
+  onDelete: () => void
+  onToggleExclude: () => void
+  onToggleRaw: () => void
+}> = ({
+  isUser,
+  msgId,
+  excluded,
+  rawView,
+  popoverOpen,
+  onPopoverChange,
+  onCopy,
+  onFork,
+  onDelete,
+  onToggleExclude,
+  onToggleRaw
+}) => (
+  <div className='flex items-center justify-between mb-2'>
+    <div className='font-semibold text-sm'>{isUser ? 'You' : 'Assistant'}</div>
+    <Popover open={popoverOpen} onOpenChange={onPopoverChange}>
+      <PopoverTrigger asChild>
+        <Button variant='ghost' size='sm' className='text-xs h-6 px-1.5 opacity-70 hover:opacity-100'>
+          Options
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align='end' side='bottom' className='w-auto p-2'>
+        <div className='space-y-2'>
+          <div className='flex items-center gap-1'>
+            <Button variant='ghost' size='icon' className='h-6 w-6' onClick={onCopy} title='Copy message'>
+              <Copy className='h-3 w-3' />
+            </Button>
+            <Button variant='ghost' size='icon' className='h-6 w-6' onClick={onFork} title='Fork from here'>
+              <GitFork className='h-3 w-3' />
+            </Button>
+            <Button variant='ghost' size='icon' className='h-6 w-6' onClick={onDelete} title='Delete message'>
+              <Trash className='h-3 w-3' />
+            </Button>
+          </div>
+          <div className='flex items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground'>
+            <Label htmlFor={`exclude-${msgId}`} className='flex items-center gap-1 cursor-pointer'>
+              <Switch
+                id={`exclude-${msgId}`}
+                checked={excluded}
+                onCheckedChange={onToggleExclude}
+                className='scale-75'
+              />
+              Exclude
+            </Label>
+            <Label htmlFor={`raw-${msgId}`} className='flex items-center gap-1 cursor-pointer'>
+              <Switch
+                id={`raw-${msgId}`}
+                checked={rawView}
+                onCheckedChange={onToggleRaw}
+                className='scale-75'
+              />
+              Raw
+            </Label>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  </div>
+)
+
 const ChatMessageItem = React.memo(
   (props: {
     msg: Message
@@ -307,6 +388,7 @@ const ChatMessageItem = React.memo(
       props
 
     const { copyToClipboard } = useCopyClipboard()
+    const [popoverOpen, setPopoverOpen] = useState(false)
 
     if (!msg.id) {
       console.warn('ChatMessageItem: Message missing ID', msg)
@@ -357,70 +439,22 @@ const ChatMessageItem = React.memo(
     }, [messageId, onToggleRawView, msg.id])
     const handleCopyThinkText = useCallback(() => copyToClipboard(thinkContent), [copyToClipboard, thinkContent])
 
-    const MessageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-      <div
-        className={cn(
-          'relative rounded-lg p-3 break-words',
-          isUser ? 'bg-muted' : 'bg-muted/50',
-          excluded && 'opacity-50'
-        )}
-      >
-        {children}
-      </div>
-    )
-
-    const MessageHeader: React.FC = () => (
-      <div className='flex items-center justify-between mb-2'>
-        <div className='font-semibold text-sm'>{isUser ? 'You' : 'Assistant'}</div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant='ghost' size='sm' className='text-xs h-6 px-1.5 opacity-70 hover:opacity-100'>
-              Options
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align='end' side='bottom' className='w-auto p-2'>
-            <div className='space-y-2'>
-              <div className='flex items-center gap-1'>
-                <Button variant='ghost' size='icon' className='h-6 w-6' onClick={handleCopy} title='Copy message'>
-                  <Copy className='h-3 w-3' />
-                </Button>
-                <Button variant='ghost' size='icon' className='h-6 w-6' onClick={handleFork} title='Fork from here'>
-                  <GitFork className='h-3 w-3' />
-                </Button>
-                <Button variant='ghost' size='icon' className='h-6 w-6' onClick={handleDelete} title='Delete message'>
-                  <Trash className='h-3 w-3' />
-                </Button>
-              </div>
-              <div className='flex items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground'>
-                <Label htmlFor={`exclude-${msg.id}`} className='flex items-center gap-1 cursor-pointer'>
-                  <Switch
-                    id={`exclude-${msg.id}`}
-                    checked={excluded}
-                    onCheckedChange={handleToggleExclude}
-                    className='scale-75'
-                  />
-                  Exclude
-                </Label>
-                <Label htmlFor={`raw-${msg.id}`} className='flex items-center gap-1 cursor-pointer'>
-                  <Switch
-                    id={`raw-${msg.id}`}
-                    checked={rawView}
-                    onCheckedChange={handleToggleRaw}
-                    className='scale-75'
-                  />
-                  Raw
-                </Label>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-    )
-
     if (rawView) {
       return (
-        <MessageWrapper>
-          <MessageHeader />
+        <MessageWrapper isUser={isUser} excluded={excluded}>
+          <MessageHeader
+            isUser={isUser}
+            msgId={msg.id}
+            excluded={excluded}
+            rawView={rawView}
+            popoverOpen={popoverOpen}
+            onPopoverChange={setPopoverOpen}
+            onCopy={handleCopy}
+            onFork={handleFork}
+            onDelete={handleDelete}
+            onToggleExclude={handleToggleExclude}
+            onToggleRaw={handleToggleRaw}
+          />
           <pre className='whitespace-pre-wrap font-mono p-2 bg-background/50 rounded text-xs sm:text-sm overflow-x-auto'>
             {msg.content}
           </pre>
@@ -429,8 +463,20 @@ const ChatMessageItem = React.memo(
     }
 
     return (
-      <MessageWrapper>
-        <MessageHeader />
+      <MessageWrapper isUser={isUser} excluded={excluded}>
+        <MessageHeader
+          isUser={isUser}
+          msgId={msg.id}
+          excluded={excluded}
+          rawView={rawView}
+          popoverOpen={popoverOpen}
+          onPopoverChange={setPopoverOpen}
+          onCopy={handleCopy}
+          onFork={handleFork}
+          onDelete={handleDelete}
+          onToggleExclude={handleToggleExclude}
+          onToggleRaw={handleToggleRaw}
+        />
         {hasThinkBlock ? (
           <div className='text-sm space-y-2'>
             {isThinking ? (
@@ -1012,7 +1058,7 @@ function ChatPage() {
       toast.success('Context loaded into input.')
       setInitialChatContent(null) // Clear from localStorage after setting input
     }
-  }, [activeChatId, initialChatContent, setInput, input, messages.length, isAiLoading, setInitialChatContent]) // Use messages.length instead of messages array
+  }, [activeChatId, initialChatContent, messages.length, isAiLoading]) // Remove circular dependencies
 
   // Cleanup effect to ensure ref is reset if chat changes or content is cleared
   useEffect(() => {

@@ -237,11 +237,8 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
           <h4 className='text-sm font-medium'>Configuration Locations</h4>
           <div className='space-y-1'>
             {locations.map((location, index) => {
-              console.log('location', location)
               const editorInfo = getEditorInfoFromPath(location.path)
-              console.log('editorInfo', editorInfo)
               const EditorIcon = editorInfo?.icon ?? null
-              console.log('EditorIcon', EditorIcon)
 
               return (
                 <div

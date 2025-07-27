@@ -690,7 +690,7 @@ export class ProjectService extends BaseApiClient {
                 userPrompt: z.string().optional(),
                 fileSearch: z.string().optional(),
                 contextLimit: z.number().optional(),
-                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm', 'vim', 'emacs', 'sublime', 'atom', 'idea', 'phpstorm', 'pycharm', 'rubymine', 'goland', 'fleet', 'zed', 'neovim', 'xcode', 'androidstudio', 'rider']).optional(),
                 suggestedFileIds: z.array(z.number()).optional(),
                 ticketSearch: z.string().optional(),
                 ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
@@ -723,7 +723,7 @@ export class ProjectService extends BaseApiClient {
         userPrompt?: string
         fileSearch?: string
         contextLimit?: number
-        preferredEditor?: 'vscode' | 'cursor' | 'webstorm'
+        preferredEditor?: 'vscode' | 'cursor' | 'webstorm' | 'vim' | 'emacs' | 'sublime' | 'atom' | 'idea' | 'phpstorm' | 'pycharm' | 'rubymine' | 'goland' | 'fleet' | 'zed' | 'neovim' | 'xcode' | 'androidstudio' | 'rider'
         suggestedFileIds?: number[]
         ticketSearch?: string
         ticketSort?: 'created_asc' | 'created_desc' | 'status' | 'priority'
@@ -754,7 +754,7 @@ export class ProjectService extends BaseApiClient {
               userPrompt: z.string().optional(),
               fileSearch: z.string().optional(),
               contextLimit: z.number().optional(),
-              preferredEditor: z.enum(['vscode', 'cursor', 'webstorm']).optional(),
+              preferredEditor: z.enum(['vscode', 'cursor', 'webstorm', 'vim', 'emacs', 'sublime', 'atom', 'idea', 'phpstorm', 'pycharm', 'rubymine', 'goland', 'fleet', 'zed', 'neovim', 'xcode', 'androidstudio', 'rider']).optional(),
               suggestedFileIds: z.array(z.number()).optional(),
               ticketSearch: z.string().optional(),
               ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),

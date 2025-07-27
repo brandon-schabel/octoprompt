@@ -50,7 +50,7 @@ export function useUpdateGlobalMCPConfig() {
     onSuccess: (data) => {
       // Invalidate all MCP global queries
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.all })
-      toast.success(data.message || 'Global MCP config updated successfully')
+      toast.success(data.data?.message || 'Global MCP config updated successfully')
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update global MCP config')
@@ -72,7 +72,7 @@ export function useInstallGlobalMCP() {
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.status() })
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.config() })
-      toast.success(data.message || 'MCP tool installed globally')
+      toast.success(data.data?.message || 'MCP tool installed globally')
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to install MCP tool globally')
@@ -91,7 +91,7 @@ export function useUninstallGlobalMCP() {
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.status() })
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.config() })
-      toast.success(data.message || 'MCP tool uninstalled globally')
+      toast.success(data.data?.message || 'MCP tool uninstalled globally')
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to uninstall MCP tool globally')

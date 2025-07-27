@@ -300,9 +300,20 @@ export const useSelectSetting = <K extends keyof AppSettings>(key: K) => {
 }
 
 export function useAppSettings(): [AppSettings, (partialSettings: PartialOrFn<AppSettings>) => void] {
-  const [appSettings, setAppSettings] = useAppSettingsKvApi()
+  const [appSettings] = useGetAppSettings()
+  const { mutate: setAppSettingsBase } = useSetKvValue('appSettings')
+  
+  const setAppSettings = useCallback((partialSettings: PartialOrFn<AppSettings>) => {
+    setAppSettingsBase((prev) => {
+      const partial = typeof partialSettings === 'function' ? partialSettings(prev as AppSettings) : partialSettings
+      return {
+        ...prev,
+        ...partial
+      } as AppSettings
+    })
+  }, [setAppSettingsBase])
 
-  return [appSettings as AppSettings, setAppSettings as (partialSettings: PartialOrFn<AppSettings>) => void]
+  return [appSettings as AppSettings, setAppSettings]
 }
 
 export function useActiveProjectTab(): [

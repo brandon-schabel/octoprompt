@@ -38,3 +38,4 @@ export {
 export type { Migration, MigrationFunction, MigrationHistoryEntry, MigrationConfig } from './src/migrations'
 
 export * from './src/mcp-tracking-storage'
+export * from './src/encryption-key-storage'

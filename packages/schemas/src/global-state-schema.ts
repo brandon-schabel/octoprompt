@@ -8,7 +8,22 @@ const defaultModelConfigs = LOW_MODEL_CONFIG
 export const EDITOR_OPTIONS = [
   { value: 'vscode', label: 'VS Code' },
   { value: 'cursor', label: 'Cursor' },
-  { value: 'webstorm', label: 'WebStorm' }
+  { value: 'webstorm', label: 'WebStorm' },
+  { value: 'vim', label: 'Vim' },
+  { value: 'emacs', label: 'Emacs' },
+  { value: 'sublime', label: 'Sublime Text' },
+  { value: 'atom', label: 'Atom' },
+  { value: 'idea', label: 'IntelliJ IDEA' },
+  { value: 'phpstorm', label: 'PhpStorm' },
+  { value: 'pycharm', label: 'PyCharm' },
+  { value: 'rubymine', label: 'RubyMine' },
+  { value: 'goland', label: 'GoLand' },
+  { value: 'fleet', label: 'Fleet' },
+  { value: 'zed', label: 'Zed' },
+  { value: 'neovim', label: 'Neovim' },
+  { value: 'xcode', label: 'Xcode' },
+  { value: 'androidstudio', label: 'Android Studio' },
+  { value: 'rider', label: 'Rider' }
 ] as const
 
 export type EditorType = (typeof EDITOR_OPTIONS)[number]['value']
@@ -59,7 +74,7 @@ export const projectTabStateSchema = z
       .default(false)
       .openapi({ description: 'Whether to attempt resolving imports to include related file context.' }),
     preferredEditor: z
-      .enum(['vscode', 'cursor', 'webstorm'])
+      .enum(['vscode', 'cursor', 'webstorm', 'vim', 'emacs', 'sublime', 'atom', 'idea', 'phpstorm', 'pycharm', 'rubymine', 'goland', 'fleet', 'zed', 'neovim', 'xcode', 'androidstudio', 'rider'])
       .optional()
       .default('vscode')
       .openapi({ description: 'The preferred editor to open files with from this tab.', example: 'cursor' }),

@@ -263,14 +263,14 @@ export function MCPGlobalConfigEditor() {
                           <span>Version: {installation.version}</span>
                         </div>
                       )}
-                      {installation.location && (
+                      {installation && 'location' in installation && installation.location && typeof installation.location === 'string' ? (
                         <div className='flex items-center gap-1'>
                           <FolderOpen className='h-3 w-3' />
-                          <span className='truncate' title={installation.location}>
-                            {installation.location}
+                          <span className='truncate' title={installation.location as string}>
+                            {String(installation.location)}
                           </span>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   )}
                   
@@ -412,25 +412,25 @@ export function MCPGlobalConfigEditor() {
                         </div>
                         <div className='flex items-center gap-1'>
                           <User className='h-3 w-3' />
-                          <span>{installation.installedBy}</span>
+                          <span>{installation.installedAt ? new Date(installation.installedAt).toLocaleString() : 'Unknown'}</span>
                         </div>
                       </div>
-                      {installation.location && (
+                      {installation && 'location' in installation && installation.location && typeof installation.location === 'string' ? (
                         <div className='flex items-center gap-1 text-sm text-muted-foreground'>
                           <FolderOpen className='h-3 w-3' />
-                          <code className='text-xs'>{installation.location}</code>
+                          <code className='text-xs'>{installation.location as string}</code>
                         </div>
-                      )}
-                      {installation.config && (
+                      ) : null}
+                      {installation && 'config' in installation && installation.config && typeof installation.config === 'object' ? (
                         <details className='mt-2'>
                           <summary className='cursor-pointer text-sm text-muted-foreground hover:text-foreground'>
                             View configuration
                           </summary>
                           <pre className='mt-2 p-2 bg-background rounded text-xs overflow-auto'>
-                            {JSON.stringify(installation.config, null, 2)}
+                            {JSON.stringify(installation.config as any, null, 2)}
                           </pre>
                         </details>
-                      )}
+                      ) : null}
                     </div>
                   ))}
                 </div>

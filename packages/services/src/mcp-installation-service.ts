@@ -1565,8 +1565,8 @@ export class MCPInstallationService {
       }
 
       // Add to default servers if not already there
-      if (!config.defaultMcpServers.includes('octoprompt-global')) {
-        config.defaultMcpServers.push('octoprompt-global')
+      if (!config.defaultMcpServers.includes('octoprompt')) {
+        config.defaultMcpServers.push('octoprompt')
       }
 
       // Write updated config
