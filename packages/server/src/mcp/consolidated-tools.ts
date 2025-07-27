@@ -1250,11 +1250,11 @@ Version Info:
                 throw firstError instanceof MCPError
                   ? firstError
                   : MCPError.fromError(firstError, {
-                      tool: 'project_manager',
-                      action: ProjectManagerAction.CREATE_FILE,
-                      parameter: 'path',
-                      value: filePath
-                    })
+                    tool: 'project_manager',
+                    action: ProjectManagerAction.CREATE_FILE,
+                    parameter: 'path',
+                    value: filePath
+                  })
               }
 
               const syncResult = transaction.results.get('sync-project') as any
@@ -1430,9 +1430,9 @@ Version Info:
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'project_manager',
-                  action: args.action
-                })
+                tool: 'project_manager',
+                action: args.action
+              })
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
@@ -1679,9 +1679,9 @@ Version Info:
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'prompt_manager',
-                  action: args.action
-                })
+                tool: 'prompt_manager',
+                action: args.action
+              })
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
@@ -2217,9 +2217,9 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'ticket_manager',
-                  action: args.action
-                })
+                tool: 'ticket_manager',
+                action: args.action
+              })
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
@@ -3008,8 +3008,8 @@ ${result.summary}`
                 typeof config === 'string'
                   ? `${key}: ${config}`
                   : Object.entries(config)
-                      .map(([k, v]) => `${k}: ${v}`)
-                      .join('\n')
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join('\n')
               return { content: [{ type: 'text', text }] }
             }
 
@@ -3352,9 +3352,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'tab_manager',
-                  action: args.action
-                })
+                tool: 'tab_manager',
+                action: args.action
+              })
 
           // Return formatted error response with recovery suggestions
           return formatMCPErrorResponse(mcpError)
@@ -3659,9 +3659,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'job_manager',
-                  action: args.action
-                })
+                tool: 'job_manager',
+                action: args.action
+              })
 
           return formatMCPErrorResponse(mcpError)
         }
@@ -3711,9 +3711,9 @@ ${result.summary}`
 
               const staleFiles = options.includeStale
                 ? await fileSummarizationTracker.getStaleFiles(
-                    projectId,
-                    (options.staleThresholdDays || 30) * 24 * 60 * 60 * 1000
-                  )
+                  projectId,
+                  (options.staleThresholdDays || 30) * 24 * 60 * 60 * 1000
+                )
                 : []
 
               // Combine and deduplicate
@@ -3920,9 +3920,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                  tool: 'file_summarization_manager',
-                  action: args.action
-                })
+                tool: 'file_summarization_manager',
+                action: args.action
+              })
 
           return formatMCPErrorResponse(mcpError)
         }

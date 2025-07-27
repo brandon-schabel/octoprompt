@@ -206,12 +206,12 @@ export async function getMCPAnalyticsOverview(
     const overallSuccessRate =
       totalExecutions > 0
         ? topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number) * (tool.successRate as number), 0) /
-          totalExecutions
+        totalExecutions
         : 0
     const avgExecutionTime =
       totalExecutions > 0
         ? topTools.reduce((sum, tool) => sum + (tool.totalExecutions as number) * (tool.avgDurationMs as number), 0) /
-          totalExecutions
+        totalExecutions
         : 0
 
     return {

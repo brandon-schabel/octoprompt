@@ -46,7 +46,7 @@ mock.module('@promptliano/storage', () => ({
   encryptionKeyStorage: {
     getKey: () => 'mock-encryption-key',
     hasKey: () => true,
-    clearCache: () => {}
+    clearCache: () => { }
   }
 }))
 

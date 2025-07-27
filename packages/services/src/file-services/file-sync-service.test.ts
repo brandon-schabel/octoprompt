@@ -97,8 +97,8 @@ describe('FileSync Service - Utility Functions', () => {
     readdirSyncSpy = spyOn(fs, 'readdirSync') as Mock<typeof fs.readdirSync>
     readFileSyncSpy = spyOn(fs, 'readFileSync') as Mock<typeof fs.readFileSync>
 
-    consoleWarnSpy = spyOn(console, 'warn').mockImplementation(() => {})
-    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {})
+    consoleWarnSpy = spyOn(console, 'warn').mockImplementation(() => { })
+    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => { })
 
     if (typeof Bun !== 'undefined') {
       bunFileTextSpy = spyOn(Bun, 'file').mockReturnValue({ text: async () => '' } as any)
@@ -363,10 +363,10 @@ describe('FileSync Service - Utility Functions', () => {
         if (pathString === dir) {
           return withFileTypes
             ? [
-                createDirent('file.ts', false, dir),
-                createDirent('image.png', false, dir),
-                createDirent('src', true, dir)
-              ]
+              createDirent('file.ts', false, dir),
+              createDirent('image.png', false, dir),
+              createDirent('src', true, dir)
+            ]
             : ['file.ts', 'image.png', 'src']
         }
         if (pathString === subDir) {
@@ -408,11 +408,11 @@ describe('FileSync Service - Utility Functions', () => {
         if (pathStr === dir) {
           return withFileTypes
             ? [
-                createDirent('src', true, dir),
-                createDirent('build.log', false, dir),
-                createDirent('dist', true, dir),
-                createDirent('node_modules', true, dir)
-              ]
+              createDirent('src', true, dir),
+              createDirent('build.log', false, dir),
+              createDirent('dist', true, dir),
+              createDirent('node_modules', true, dir)
+            ]
             : ['src', 'build.log', 'dist', 'node_modules']
         }
         if (pathStr === srcDir) {
@@ -458,13 +458,13 @@ describe('FileSync Service - Utility Functions', () => {
         if (pathString === dir) {
           return withFileTypes
             ? [
-                createDirent('script.js', false, dir),
-                createDirent('types.ts', false, dir),
-                createDirent('config.json', false, dir),
-                createDirent('README.md', false, dir),
-                createDirent('fake-file.ts', false, dir),
-                createDirent('image.jpg', false, dir)
-              ]
+              createDirent('script.js', false, dir),
+              createDirent('types.ts', false, dir),
+              createDirent('config.json', false, dir),
+              createDirent('README.md', false, dir),
+              createDirent('fake-file.ts', false, dir),
+              createDirent('image.jpg', false, dir)
+            ]
             : ['script.js', 'types.ts', 'config.json', 'README.md', '.env', 'image.jpg']
         }
         throw new Error(`Unexpected readdirSync call: ${pathString}`)

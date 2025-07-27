@@ -761,12 +761,12 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   const exportsContext = file.exports?.length
     ? `The file exports: ${file.exports
-        .map((e) => {
-          if (e.type === 'default') return 'default export'
-          if (e.type === 'all') return `all from ${e.source}`
-          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
-        })
-        .join(', ')}`
+      .map((e) => {
+        if (e.type === 'default') return 'default export'
+        if (e.type === 'all') return `all from ${e.source}`
+        return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+      })
+      .join(', ')}`
     : ''
 
   const systemPrompt = `
@@ -935,12 +935,12 @@ export async function summarizeFiles(
 
   logger.info(
     `File summarization batch complete for project ${projectId}. ` +
-      `Total to process: ${totalProcessed}, ` +
-      `Successfully summarized: ${summarizedCount}, ` +
-      `Skipped (empty): ${skippedByEmptyCount}, ` +
-      `Skipped (too large): ${skippedBySizeCount}, ` +
-      `Skipped (errors): ${errorCount}, ` +
-      `Total not summarized: ${finalSkippedCount}`
+    `Total to process: ${totalProcessed}, ` +
+    `Successfully summarized: ${summarizedCount}, ` +
+    `Skipped (empty): ${skippedByEmptyCount}, ` +
+    `Skipped (too large): ${skippedBySizeCount}, ` +
+    `Skipped (errors): ${errorCount}, ` +
+    `Total not summarized: ${finalSkippedCount}`
   )
 
   return {

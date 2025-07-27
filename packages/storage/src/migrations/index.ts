@@ -365,12 +365,12 @@ export function createTransformMigration(
     },
     reverseTransform
       ? async (adapter) => {
-          const all = await adapter.readAll()
-          for (const [id, record] of all) {
-            const reversed = reverseTransform(record)
-            await adapter.write(id, reversed)
-          }
+        const all = await adapter.readAll()
+        for (const [id, record] of all) {
+          const reversed = reverseTransform(record)
+          await adapter.write(id, reversed)
         }
+      }
       : undefined
   )
 }
