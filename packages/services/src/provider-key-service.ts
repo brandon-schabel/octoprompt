@@ -8,6 +8,7 @@ import {
 import { ApiError } from '@octoprompt/shared'
 import { z } from '@hono/zod-openapi'
 import { normalizeToUnixMs } from '@octoprompt/shared'
+import { encryptKey, decryptKey, isEncrypted, type EncryptedData } from '@octoprompt/shared/src/utils/crypto'
 
 // The mapDbRowToProviderKey function is no longer needed as we store objects directly
 // that should conform to the ProviderKey schema.
@@ -48,12 +49,19 @@ export function createProviderKeyService() {
       )
     }
 
+    // Encrypt the API key
+    const encryptedData = await encryptKey(data.key)
+    
     const newKeyData: ProviderKey = {
       id,
-      name: data.name, // Added name
+      name: data.name,
       provider: data.provider,
-      key: data.key, // Stored in plaintext initially
-      isDefault: data.isDefault ?? false, // Added isDefault, defaults to false
+      key: encryptedData.encrypted, // Store encrypted key
+      encrypted: true,
+      iv: encryptedData.iv,
+      tag: encryptedData.tag,
+      salt: encryptedData.salt,
+      isDefault: data.isDefault ?? false,
       created: now,
       updated: now
     }
@@ -84,9 +92,13 @@ export function createProviderKeyService() {
   async function listKeysCensoredKeys(): Promise<ProviderKey[]> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const keyList = Object.values(allKeys).map((key) => {
-      // Mask the API key
+      // For encrypted keys, we don't decrypt them, just show a generic mask
+      if (key.encrypted) {
+        return { ...key, key: '********' }
+      }
+      // For unencrypted keys (legacy), mask them properly
       const maskedKey =
-        key.key.length > 8 ? `${key.key.substring(0, 4)}****${key.key.substring(key.key.length - 4)}` : '********' // Or handle very short keys differently
+        key.key.length > 8 ? `${key.key.substring(0, 4)}****${key.key.substring(key.key.length - 4)}` : '********'
       return { ...key, key: maskedKey }
     })
 
@@ -104,13 +116,31 @@ export function createProviderKeyService() {
 
   async function listKeysUncensored(): Promise<ProviderKey[]> {
     const allKeys = await providerKeyStorage.readProviderKeys()
-    const keyList = Object.values(allKeys)
+    const keyList = await Promise.all(
+      Object.values(allKeys).map(async (key) => {
+        // Decrypt key if encrypted
+        if (key.encrypted && key.iv && key.tag && key.salt) {
+          try {
+            const decryptedKey = await decryptKey({
+              encrypted: key.key,
+              iv: key.iv,
+              tag: key.tag,
+              salt: key.salt
+            })
+            return { ...key, key: decryptedKey }
+          } catch (error) {
+            console.error(`Failed to decrypt key ${key.id}:`, error)
+            return key // Return with encrypted key on error
+          }
+        }
+        return key
+      })
+    )
 
-    // Sort by provider, then by created descending (as in original SQL)
+    // Sort by provider, then by created descending
     keyList.sort((a, b) => {
       if (a.provider < b.provider) return -1
       if (a.provider > b.provider) return 1
-      // Assuming created are valid ISO strings, direct string comparison for descending order
       if (a.created > b.created) return -1
       if (a.created < b.created) return 1
       return 0
@@ -125,25 +155,28 @@ export function createProviderKeyService() {
     if (!foundKeyData) {
       return null
     }
-    // Data should already be validated by readValidatedJson via providerKeyStorage.
-    // If an extra check is desired, uncomment:
-    /*
-    const parseResult = ProviderKeySchema.safeParse(foundKeyData)
-    if (!parseResult.success) {
-      console.error(`Failed to parse provider key data for ID ${id} from storage. Data integrity issue.`, {
-        id,
-        foundData: foundKeyData,
-        error: parseResult.error.flatten()
-      })
-      throw new ApiError(
-        500,
-        `Failed to parse provider key data for ID ${id}. Data integrity issue.`,
-        'PROVIDER_KEY_PARSE_FAILED_ON_READ',
-        { id, foundData: foundKeyData, error: parseResult.error.flatten() }
-      )
+    
+    // Decrypt key if encrypted
+    if (foundKeyData.encrypted && foundKeyData.iv && foundKeyData.tag && foundKeyData.salt) {
+      try {
+        const decryptedKey = await decryptKey({
+          encrypted: foundKeyData.key,
+          iv: foundKeyData.iv,
+          tag: foundKeyData.tag,
+          salt: foundKeyData.salt
+        })
+        return { ...foundKeyData, key: decryptedKey }
+      } catch (error) {
+        console.error(`Failed to decrypt key ${id}:`, error)
+        throw new ApiError(
+          500,
+          `Failed to decrypt provider key`,
+          'PROVIDER_KEY_DECRYPTION_FAILED',
+          { id }
+        )
+      }
     }
-    return parseResult.data
-    */
+    
     return foundKeyData
   }
 
@@ -171,13 +204,28 @@ export function createProviderKeyService() {
       }
     }
 
-    const updatedKeyData: ProviderKey = {
+    let updatedKeyData: ProviderKey = {
       ...existingKey,
       name: data.name ?? existingKey.name,
       provider: data.provider ?? existingKey.provider,
-      key: data.key ?? existingKey.key, // Stored in plaintext initially
       isDefault: data.isDefault !== undefined ? data.isDefault : existingKey.isDefault,
       updated: now
+    }
+    
+    // If key is being updated, encrypt it
+    if (data.key) {
+      const encryptedData = await encryptKey(data.key)
+      updatedKeyData = {
+        ...updatedKeyData,
+        key: encryptedData.encrypted,
+        encrypted: true,
+        iv: encryptedData.iv,
+        tag: encryptedData.tag,
+        salt: encryptedData.salt
+      }
+    } else {
+      // Keep existing encrypted key
+      updatedKeyData.key = existingKey.key
     }
 
     const parseResult = ProviderKeySchema.safeParse(updatedKeyData)

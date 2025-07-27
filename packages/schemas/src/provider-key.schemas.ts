@@ -31,6 +31,22 @@ export const ProviderKeySchema = z
     key: z
       .string()
       .openapi({ example: 'sk-xxxxxxxxxxxxxxxxxxxx', description: 'The actual API Key (handle with care)' }),
+    encrypted: z
+      .boolean()
+      .default(false)
+      .openapi({ example: true, description: 'Whether this key is encrypted' }),
+    iv: z
+      .string()
+      .optional()
+      .openapi({ example: 'base64string', description: 'Initialization vector for encryption' }),
+    tag: z
+      .string()
+      .optional()
+      .openapi({ example: 'base64string', description: 'Authentication tag for AES-GCM' }),
+    salt: z
+      .string()
+      .optional()
+      .openapi({ example: 'base64string', description: 'Salt for key derivation' }),
     isDefault: z
       .boolean()
       .default(false)

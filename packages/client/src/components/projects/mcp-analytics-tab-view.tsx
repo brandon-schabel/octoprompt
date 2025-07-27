@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Activity,
   AlertCircle,
@@ -17,7 +18,10 @@ import {
   CheckCircle,
   XCircle,
   Timer,
-  RefreshCw
+  RefreshCw,
+  Download,
+  Sparkles,
+  HelpCircle
 } from 'lucide-react'
 import {
   useGetMCPAnalyticsOverview,
@@ -26,9 +30,11 @@ import {
   useGetMCPExecutionTimeline,
   useGetMCPErrorPatterns
 } from '@/hooks/api/use-mcp-analytics-api'
+import { useGlobalMCPManager } from '@/hooks/api/use-mcp-global-api'
 import type { MCPAnalyticsRequest, MCPExecutionQuery } from '@octoprompt/schemas'
 import { formatDistanceToNow } from 'date-fns'
 import { MCPExecutionsTable } from './mcp-analytics/mcp-executions-table'
+import { toast } from 'sonner'
 
 interface MCPAnalyticsTabViewProps {
   projectId: number
@@ -49,6 +55,7 @@ function getActionFromParams(inputParams: string | null | undefined): string | n
 export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
   const [timeRange, setTimeRange] = useState<'hour' | 'day' | 'week' | 'month'>('day')
   const [selectedTool, setSelectedTool] = useState<string | undefined>()
+  const [showInstallDialog, setShowInstallDialog] = useState(false)
 
   const analyticsRequest: MCPAnalyticsRequest = {
     projectId,
@@ -65,6 +72,41 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
 
   const { data: timeline, isLoading: timelineLoading } = useGetMCPExecutionTimeline(projectId, analyticsRequest)
   const { data: errorPatterns, isLoading: errorPatternsLoading } = useGetMCPErrorPatterns(projectId, analyticsRequest)
+
+  // Global MCP manager
+  const {
+    config: globalConfig,
+    status: globalStatus,
+    toolStatuses,
+    isLoading: isGlobalLoading,
+    install: installGlobal,
+    isInstalling
+  } = useGlobalMCPManager()
+
+  // Handle universal MCP installation
+  const handleInstallUniversalMCP = async () => {
+    try {
+      // Find tools that don't have OctoPrompt installed
+      const uninstalledTools = toolStatuses?.filter(tool => tool.installed && !tool.hasGlobalOctoPrompt) || []
+      
+      if (uninstalledTools.length === 0) {
+        toast.info('All installed tools already have OctoPrompt MCP configured')
+        return
+      }
+
+      // Install for each tool
+      for (const tool of uninstalledTools) {
+        await installGlobal({ tool: tool.tool as any })
+        toast.success(`Installed OctoPrompt MCP for ${tool.name}`)
+      }
+
+      toast.success('Universal MCP configuration installed successfully!')
+    } catch (error) {
+      toast.error('Failed to install universal MCP configuration', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
 
   if (overviewLoading) {
     return (
@@ -93,46 +135,102 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
     overviewData.topTools && overviewData.topTools.length > 0 ? overviewData.topTools : statistics || []
 
   return (
-    <div className='h-full flex flex-col p-4 md:p-6 overflow-hidden'>
-      {/* Header */}
-      <div className='flex items-center justify-between mb-4'>
-        <div className='flex items-center gap-4'>
-          <h2 className='text-2xl font-semibold flex items-center gap-2'>
-            <BarChart2 className='h-6 w-6' />
-            MCP Tool Analytics
-          </h2>
-          <Badge variant='secondary'>{overviewData.totalExecutions} executions</Badge>
-        </div>
+    <TooltipProvider>
+      <div className='h-full flex flex-col p-4 md:p-6 overflow-hidden'>
+        {/* Header */}
+        <div className='flex items-center justify-between mb-4'>
+          <div className='flex items-center gap-4'>
+            <h2 className='text-2xl font-semibold flex items-center gap-2'>
+              <BarChart2 className='h-6 w-6' />
+              MCP Tool Analytics
+            </h2>
+            <Badge variant='secondary'>{overviewData.totalExecutions} executions</Badge>
+          </div>
 
-        <div className='flex items-center gap-2'>
-          <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
-            <SelectTrigger className='w-[140px]'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='hour'>Last Hour</SelectItem>
-              <SelectItem value='day'>Last 24 Hours</SelectItem>
-              <SelectItem value='week'>Last 7 Days</SelectItem>
-              <SelectItem value='month'>Last 30 Days</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className='flex items-center gap-2'>
+            {/* Universal MCP Installation Button */}
+            {!isGlobalLoading && (
+              <div className='flex items-center gap-1'>
+                {globalStatus && !globalStatus.installed ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={handleInstallUniversalMCP}
+                        disabled={isInstalling}
+                      >
+                        <Sparkles className='h-4 w-4 mr-1' />
+                        Install Universal MCP
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side='bottom' className='max-w-xs'>
+                      <p className='font-medium mb-1'>Install OctoPrompt MCP Globally</p>
+                      <p className='text-sm'>This will install the OctoPrompt MCP server configuration for all supported tools on your system (Claude Desktop, VS Code, Cursor, etc.)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <div className='flex items-center gap-2'>
+                    {toolStatuses && toolStatuses.some(t => t.installed && !t.hasGlobalOctoPrompt) ? (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={handleInstallUniversalMCP}
+                        disabled={isInstalling}
+                      >
+                        <Download className='h-4 w-4 mr-1' />
+                        Update Universal MCP
+                      </Button>
+                    ) : (
+                      <Badge variant='secondary' className='flex items-center gap-1'>
+                        <CheckCircle className='h-3 w-3' />
+                        Universal MCP Installed
+                      </Badge>
+                    )}
+                    {!globalConfig && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className='h-4 w-4 text-muted-foreground cursor-help' />
+                        </TooltipTrigger>
+                        <TooltipContent side='bottom' className='max-w-xs'>
+                          <p className='font-medium mb-1'>No Universal MCP Config Found</p>
+                          <p className='text-sm'>To create a universal MCP configuration file, go to Settings → Global MCP and configure your global MCP settings.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-          <Button
-            size='sm'
-            variant='outline'
-            onClick={() => {
-              refetchOverview()
-              // Also refetch statistics if being used as fallback
-              if (refetchStatistics) {
-                refetchStatistics()
-              }
-            }}
-            disabled={overviewLoading}
-          >
-            <RefreshCw className='h-4 w-4' />
-          </Button>
+            <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
+              <SelectTrigger className='w-[140px]'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='hour'>Last Hour</SelectItem>
+                <SelectItem value='day'>Last 24 Hours</SelectItem>
+                <SelectItem value='week'>Last 7 Days</SelectItem>
+                <SelectItem value='month'>Last 30 Days</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() => {
+                refetchOverview()
+                // Also refetch statistics if being used as fallback
+                if (refetchStatistics) {
+                  refetchStatistics()
+                }
+              }}
+              disabled={overviewLoading}
+            >
+              <RefreshCw className='h-4 w-4' />
+            </Button>
+          </div>
         </div>
-      </div>
 
       {/* Overview Cards */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6'>
@@ -334,5 +432,6 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
         </TabsContent>
       </Tabs>
     </div>
+    </TooltipProvider>
   )
 }

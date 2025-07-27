@@ -29,35 +29,28 @@ const server = new Server(
   }
 )
 
-// Helper to get project ID from environment or use default
-function getProjectId(): number {
+// Helper to get project ID from environment
+function getProjectId(): number | null {
   const projectIdStr = process.env.OCTOPROMPT_PROJECT_ID
   if (projectIdStr) {
     const parsed = parseInt(projectIdStr, 10)
     if (!isNaN(parsed)) return parsed
   }
-  // Fallback to known project ID from rules
-  return 1750564533014
+  return null
 }
 
-// Helper to get project or create default
-async function ensureProject(): Promise<number> {
+// Helper to get project if specified
+async function getProjectIfSpecified(): Promise<number | null> {
   const projectId = getProjectId()
+  if (!projectId) {
+    // No project ID specified - this is fine for global installation
+    return null
+  }
 
   try {
     await getProjectById(projectId)
     return projectId
   } catch (error) {
-    // If project doesn't exist, try to get the first available project
-    try {
-      const projects = await listProjects()
-      if (projects.length > 0) {
-        return projects[0].id
-      }
-    } catch (e) {
-      // Ignore error
-    }
-
     console.error(
       `Project ${projectId} not found. Please set OCTOPROMPT_PROJECT_ID environment variable to a valid project ID.`
     )
@@ -81,11 +74,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params
 
   try {
-    const projectId = await ensureProject()
     const tool = getConsolidatedToolByName(name)
 
     if (!tool) {
       throw new Error(`Unknown tool: ${name}`)
+    }
+
+    // Get project ID from environment or from the tool arguments
+    let projectId = await getProjectIfSpecified()
+    
+    // Some tools (like list_projects) don't need a project ID
+    // Others might have projectId in their arguments
+    if (!projectId && args && 'projectId' in args && typeof args.projectId === 'number') {
+      projectId = args.projectId
     }
 
     const result = await tool.handler(args || {}, projectId)
@@ -109,7 +110,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // List available resources
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
-    const projectId = await ensureProject()
+    const projectId = await getProjectIfSpecified()
+    
+    // If no project ID specified, return general resources
+    if (!projectId) {
+      return {
+        resources: [
+          {
+            uri: 'octoprompt://info',
+            name: 'OctoPrompt Info',
+            description: 'Information about OctoPrompt MCP Server',
+            mimeType: 'text/plain'
+          },
+          {
+            uri: 'octoprompt://projects',
+            name: 'Available Projects',
+            description: 'List of available OctoPrompt projects',
+            mimeType: 'application/json'
+          }
+        ]
+      }
+    }
+    
     const project = await getProjectById(projectId)
     const files = await getProjectFiles(projectId)
 
@@ -157,12 +179,51 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const { uri } = request.params
 
   try {
-    const projectId = await ensureProject()
+    const projectId = await getProjectIfSpecified()
 
     if (uri.startsWith('octoprompt://')) {
       const urlParts = uri.replace('octoprompt://', '').split('/')
+      
+      // Handle general resources (no project context needed)
+      if (urlParts[0] === 'info') {
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'text/plain',
+              text: `OctoPrompt MCP Server v0.8.0
 
-      if (urlParts[0] === 'projects' && urlParts[1] === projectId.toString()) {
+OctoPrompt is a powerful project management and AI assistance tool.
+
+Available tools:
+- list_projects: List all available projects
+- get_project: Get details about a specific project
+- create_project: Create a new project
+- And many more...
+
+To work with a specific project, either:
+1. Set OCTOPROMPT_PROJECT_ID environment variable
+2. Pass projectId in tool arguments
+
+For more information, visit: https://github.com/Ejb503/octoprompt`
+            }
+          ]
+        }
+      } else if (urlParts[0] === 'projects' && !urlParts[1]) {
+        // List all projects
+        const projects = await listProjects()
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'application/json',
+              text: JSON.stringify(projects, null, 2)
+            }
+          ]
+        }
+      }
+
+      if (projectId && urlParts[0] === 'projects' && urlParts[1] === projectId.toString()) {
         if (urlParts[2] === 'summary') {
           // Project summary resource
           const project = await getProjectById(projectId)

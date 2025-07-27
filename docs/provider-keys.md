@@ -209,7 +209,7 @@ Refer to the OctoPrompt documentation on Chat or specific AI features, as well a
 
 ## 8. Important Considerations
 
-- **Security:** Treat your API keys like passwords. Do not share them publicly or commit them to version control (e.g., in a public GitHub repository). OctoPrompt stores them locally on your machine.
+- **Security:** Treat your API keys like passwords. Do not share them publicly or commit them to version control (e.g., in a public GitHub repository). OctoPrompt automatically encrypts your API keys using AES-256-GCM encryption before storing them locally on your machine.
 - **One Key Per Provider:** You generally add one API key per provider. If you update a key, you might need to delete the old one and add the new one.
 - **Usage Costs:** Be aware of the pricing models for any external AI providers you use. Monitor your usage on the provider's platform to avoid unexpected charges.
 - **Troubleshooting:** If AI features are not working, ensure:

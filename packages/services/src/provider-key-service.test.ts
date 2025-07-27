@@ -8,6 +8,28 @@ import { createProviderKeyService } from './provider-key-service'
 // In-memory store for our mock
 let mockProviderKeysDb: ProviderKeysStorage = {}
 
+// Mock the crypto functions to return plain text for testing
+mock.module('@octoprompt/shared/src/utils/crypto', () => ({
+  encryptKey: async (plaintext: string) => ({
+    encrypted: plaintext, // Store plain text for testing
+    iv: 'mock-iv',
+    tag: 'mock-tag',
+    salt: 'mock-salt'
+  }),
+  decryptKey: async (data: any) => data.encrypted || data.key,
+  generateEncryptionKey: () => 'mock-encryption-key',
+  isEncrypted: (value: any) => {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      typeof value.encrypted === 'string' &&
+      typeof value.iv === 'string' &&
+      typeof value.tag === 'string' &&
+      typeof value.salt === 'string'
+    )
+  }
+}))
+
 // Mock the providerKeyStorage utility
 // Ensure the path to the module is correct based on your project structure.
 // If provider-key-storage.ts is in '@octoprompt/storage/', this path should be correct.
@@ -20,6 +42,11 @@ mock.module('@octoprompt/storage', () => ({
     },
     // Ensure the mocked generateId matches the one in the actual module or is sufficient for tests
     generateId: () => normalizeToUnixMs(new Date())
+  },
+  encryptionKeyStorage: {
+    getKey: () => 'mock-encryption-key',
+    hasKey: () => true,
+    clearCache: () => {}
   }
 }))
 
@@ -37,7 +64,11 @@ describe('provider-key-service (File Storage)', () => {
 
     expect(pk.id).toBeDefined()
     expect(pk.provider).toBe(input.provider)
-    expect(pk.key).toBe(input.key)
+    expect(pk.key).toBe(input.key) // With our mock, it returns plain text
+    expect(pk.encrypted).toBe(true)
+    expect(pk.iv).toBe('mock-iv')
+    expect(pk.tag).toBe('mock-tag')
+    expect(pk.salt).toBe('mock-salt')
     expect(pk.created).toBeDefined()
     expect(pk.updated).toBeDefined()
     expect(pk.created).toEqual(pk.updated) // Initially, they should be the same
@@ -82,16 +113,16 @@ describe('provider-key-service (File Storage)', () => {
     // Expected order: alpha_provider (pkA2 then pkA1), beta_provider (pkB), zeta_provider (pkC)
     expect(list[0].id).toBe(pkA2.id) // alpha_provider, newest
     expect(list[0].provider).toBe('alpha_provider')
-    expect(list[0].key).toBe('gsk_****1234') // First 4 + **** + last 4
+    expect(list[0].key).toBe('********') // All encrypted keys show as ********
     expect(list[1].id).toBe(pkA1.id) // alpha_provider, older
     expect(list[1].provider).toBe('alpha_provider')
-    expect(list[1].key).toBe('********') // Short key gets all asterisks
+    expect(list[1].key).toBe('********') // All encrypted keys show as ********
     expect(list[2].id).toBe(pkB.id) // beta_provider
     expect(list[2].provider).toBe('beta_provider')
-    expect(list[2].key).toBe('medi****_123') // First 4 + **** + last 4
+    expect(list[2].key).toBe('********') // All encrypted keys show as ********
     expect(list[3].id).toBe(pkC.id) // zeta_provider
     expect(list[3].provider).toBe('zeta_provider')
-    expect(list[3].key).toBe('sk-1****cdef') // First 4 + **** + last 4
+    expect(list[3].key).toBe('********') // All encrypted keys show as ********
   })
 
   test('listKeysUncensored returns all provider keys with full keys, sorted by provider then by createdAt DESC', async () => {
@@ -164,7 +195,7 @@ describe('provider-key-service (File Storage)', () => {
     expect(censored.updated).toBe(uncensored.updated)
 
     // Different key values
-    expect(censored.key).toBe('sk-1****cdef') // Masked
+    expect(censored.key).toBe('********') // Encrypted keys show as ********
     expect(uncensored.key).toBe(testKey) // Full key
     expect(censored.key).not.toBe(uncensored.key)
   })
@@ -193,10 +224,11 @@ describe('provider-key-service (File Storage)', () => {
     const mediumResult = censoredList.find((k) => k.name === 'medium')
     const longResult = censoredList.find((k) => k.name === 'long')
 
-    expect(veryShortResult?.key).toBe('********') // Very short key gets all asterisks
-    expect(shortResult?.key).toBe('********') // 8 chars or less gets all asterisks
-    expect(mediumResult?.key).toBe('abcd****hijk') // First 4 + **** + last 4
-    expect(longResult?.key).toBe('sk-1****cdef') // First 4 + **** + last 4
+    // All encrypted keys show as ********
+    expect(veryShortResult?.key).toBe('********')
+    expect(shortResult?.key).toBe('********')
+    expect(mediumResult?.key).toBe('********')
+    expect(longResult?.key).toBe('********')
   })
 
   test('getKeyById returns key or null if not found', async () => {
