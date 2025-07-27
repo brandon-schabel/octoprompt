@@ -21,7 +21,6 @@ import {
   Sparkles
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
-import { SettingsDialog } from '@/components/settings/settings-dialog'
 import { useActiveProjectTab, useSelectSetting, useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import {
   Sidebar,
@@ -54,7 +53,6 @@ export function AppSidebar() {
   const [projectFormDialogOpen, setProjectFormDialogOpen] = useState(false)
   const [editProjectId, setEditProjectId] = useState<number | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const matches = useMatches()
   const navigate = useNavigate()
@@ -187,9 +185,11 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2'>
-                <SidebarMenuButton onClick={() => setSettingsOpen(true)} tooltip='Settings'>
-                  <SettingsIcon className='h-4 w-4 flex-shrink-0' />
-                  <span className='truncate'>Settings</span>
+                <SidebarMenuButton asChild tooltip='Settings'>
+                  <Link to='/settings'>
+                    <SettingsIcon className='h-4 w-4 flex-shrink-0' />
+                    <span className='truncate'>Settings</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2'>
@@ -232,7 +232,6 @@ export function AppSidebar() {
 
         <ProjectDialog open={projectFormDialogOpen} projectId={editProjectId} onOpenChange={setProjectFormDialogOpen} />
         <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
-        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       </>
     </ErrorBoundary>
   )

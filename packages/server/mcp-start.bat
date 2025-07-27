@@ -2,10 +2,7 @@
 REM MCP Server startup script for OctoPrompt on Windows
 REM This script ensures the correct environment is set up
 
-REM Set default project ID if not provided
-if not defined OCTOPROMPT_PROJECT_ID (
-    set OCTOPROMPT_PROJECT_ID=1750564533014
-)
+REM Project ID is optional - if not set, server runs without project context
 
 REM Add common bun installation paths to PATH if needed
 REM Adjust these paths based on your Bun installation
@@ -24,5 +21,9 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-echo Starting OctoPrompt MCP server with project ID: %OCTOPROMPT_PROJECT_ID%
+if not defined OCTOPROMPT_PROJECT_ID (
+    echo Starting OctoPrompt MCP server (no project context^)
+) else (
+    echo Starting OctoPrompt MCP server with project ID: %OCTOPROMPT_PROJECT_ID%
+)
 bun run mcp 

@@ -20,13 +20,20 @@ export type Platform = z.infer<typeof PlatformSchema>
 export const MCPToolSchema = z.enum(['claude-desktop', 'vscode', 'cursor', 'continue', 'claude-code', 'windsurf'])
 export type MCPTool = z.infer<typeof MCPToolSchema>
 
-export const MCPConfigSchema = z.object({
-  mcpServers: z.record(z.object({
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional()
-  }))
+// Support both old 'servers' format and new 'mcpServers' format
+const MCPServerSchema = z.object({
+  command: z.string(),
+  args: z.array(z.string()).optional(),
+  env: z.record(z.string()).optional()
 })
+
+export const MCPConfigSchema = z.object({
+  mcpServers: z.record(MCPServerSchema).optional(),
+  servers: z.record(MCPServerSchema).optional()
+}).refine(
+  (data) => data.mcpServers || data.servers,
+  "Config must have either 'mcpServers' or 'servers' field"
+)
 
 export type MCPConfig = z.infer<typeof MCPConfigSchema>
 
@@ -108,6 +115,39 @@ export class MCPInstallationService {
     this.platform = process.platform as Platform
   }
 
+  /**
+   * Migrate old config format to new format
+   * Converts 'servers' field to 'mcpServers'
+   */
+  private migrateConfigFormat(config: any): MCPConfig {
+    if (config.servers && !config.mcpServers) {
+      return {
+        mcpServers: config.servers,
+        servers: undefined
+      }
+    }
+    return config
+  }
+
+  /**
+   * Get the servers from config, handling both formats
+   */
+  private getServersFromConfig(config: MCPConfig): Record<string, any> {
+    return config.mcpServers || config.servers || {}
+  }
+
+  /**
+   * Set servers in config using the correct format
+   */
+  private setServersInConfig(config: MCPConfig, servers: Record<string, any>): MCPConfig {
+    // Always use mcpServers for new configs
+    return {
+      ...config,
+      mcpServers: servers,
+      servers: undefined
+    }
+  }
+
   async detectInstalledTools(): Promise<MCPToolInfo[]> {
     const tools: MCPToolInfo[] = []
 
@@ -162,7 +202,8 @@ export class MCPInstallationService {
 
       try {
         const existingContent = await fs.readFile(configPath, 'utf-8')
-        config = JSON.parse(existingContent) as MCPConfig
+        const parsedConfig = JSON.parse(existingContent)
+        config = this.migrateConfigFormat(parsedConfig)
         
         // Create backup
         backupPath = `${configPath}.backup-${Date.now()}`
@@ -184,13 +225,15 @@ export class MCPInstallationService {
           ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
           : path.join(octopromptPath, 'packages/server/mcp-start.sh')
         
-        config.mcpServers[serverName] = {
+        const servers = this.getServersFromConfig(config)
+        servers[serverName] = {
           command: scriptPath,
           env: {
             OCTOPROMPT_PROJECT_ID: projectId.toString(),
             MCP_DEBUG: debug ? 'true' : 'false'
           }
         }
+        config = this.setServersInConfig(config, servers)
       } else if (tool === 'vscode' || tool === 'cursor' || tool === 'windsurf') {
         // VS Code/Cursor/Windsurf use settings.json format
         const vscodeConfig = await this.installVSCodeStyle(tool, projectId, projectName, projectPath, octopromptPath, debug)
@@ -219,11 +262,14 @@ export class MCPInstallationService {
       
       // Ensure script is executable on Unix-like systems
       if (tool === 'claude-desktop' && this.platform !== 'win32') {
-        const scriptPath = config.mcpServers[serverName].command
-        try {
-          await fs.chmod(scriptPath, 0o755)
-        } catch (error) {
-          console.warn('Could not set script permissions:', error)
+        const servers = this.getServersFromConfig(config)
+        const scriptPath = servers[serverName]?.command
+        if (scriptPath) {
+          try {
+            await fs.chmod(scriptPath, 0o755)
+          } catch (error) {
+            console.warn('Could not set script permissions:', error)
+          }
         }
       }
 
@@ -270,11 +316,14 @@ export class MCPInstallationService {
       const content = await fs.readFile(configPath, 'utf-8')
 
       if (tool === 'claude-desktop') {
-        const config = JSON.parse(content) as MCPConfig
+        const parsedConfig = JSON.parse(content)
+        const config = this.migrateConfigFormat(parsedConfig)
+        const servers = this.getServersFromConfig(config)
         
-        if (serverName in config.mcpServers) {
-          delete config.mcpServers[serverName]
-          await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+        if (serverName in servers) {
+          delete servers[serverName]
+          const updatedConfig = this.setServersInConfig(config, servers)
+          await fs.writeFile(configPath, JSON.stringify(updatedConfig, null, 2), 'utf-8')
           
           return {
             success: true,
@@ -435,7 +484,11 @@ export class MCPInstallationService {
       try {
         const content = await fs.readFile(configPath, 'utf-8')
         configExists = true
-        hasOctoPrompt = content.includes('octoprompt')
+        // Parse JSON and check both mcpServers and servers
+        const parsedConfig = JSON.parse(content)
+        const config = this.migrateConfigFormat(parsedConfig)
+        const servers = this.getServersFromConfig(config)
+        hasOctoPrompt = servers && Object.keys(servers).some(k => k.includes('octoprompt'))
       } catch {
         configExists = false
       }
@@ -535,9 +588,12 @@ export class MCPInstallationService {
         const content = await fs.readFile(configPath, 'utf-8')
         installed = true
         configExists = true
-        hasOctoPrompt = content.includes('octoprompt')
+        // Continue uses a different config format
+        const config = JSON.parse(content)
+        hasOctoPrompt = config.mcpConfigs && Object.keys(config.mcpConfigs).some(k => k.includes('octoprompt'))
       } catch {
         installed = false
+        configExists = false
       }
     }
 
@@ -557,21 +613,25 @@ export class MCPInstallationService {
     let configExists = false
     let hasOctoPrompt = false
 
-    try {
-      // Check if Claude Code CLI is available
-      await execAsync('claude-code --version')
-      installed = true
-    } catch {
-      installed = false
-    }
-
-    // Check config
+    // For Claude Code, check if config exists rather than CLI
+    // since Claude Code might be web-based or use different installation methods
     if (configPath) {
       try {
         const content = await fs.readFile(configPath, 'utf-8')
+        installed = true  // If config exists, assume Claude Code is being used
         configExists = true
-        hasOctoPrompt = content.includes('octoprompt')
+        // Claude Code config format
+        const config = JSON.parse(content)
+        hasOctoPrompt = (config.mcpServers && Object.keys(config.mcpServers).some(k => k.includes('octoprompt'))) ||
+                       (config.defaultMcpServers && config.defaultMcpServers.some((s: any) => s.includes('octoprompt')))
       } catch {
+        // Also check if Claude Code CLI is available as fallback
+        try {
+          await execAsync('claude-code --version')
+          installed = true
+        } catch {
+          installed = false
+        }
         configExists = false
       }
     }
@@ -930,14 +990,16 @@ export class MCPInstallationService {
   ): Promise<{ valid: boolean; error?: string }> {
     try {
       const content = await fs.readFile(configPath, 'utf-8')
-      const config = JSON.parse(content) as MCPConfig
+      const parsedConfig = JSON.parse(content)
+      const config = this.migrateConfigFormat(parsedConfig)
+      const servers = this.getServersFromConfig(config)
 
       // Check if server config exists
-      if (!(serverName in config.mcpServers)) {
+      if (!(serverName in servers)) {
         return { valid: false, error: 'Server configuration not found' }
       }
 
-      const serverConfig = config.mcpServers[serverName]
+      const serverConfig = servers[serverName]
 
       // Validate required fields
       if (!serverConfig.command) {
@@ -993,10 +1055,13 @@ export class MCPInstallationService {
         ? path.join(octopromptPath, 'packages/server/mcp-start.bat')
         : path.join(octopromptPath, 'packages/server/mcp-start.sh')
 
-      // Create the project MCP configuration
+      // Get existing servers if any
+      const existingServers = existingConfig.mcpServers || existingConfig.servers || {}
+      
+      // Create the project MCP configuration using mcpServers format
       const projectConfig = {
-        servers: {
-          ...existingConfig.servers,
+        mcpServers: {
+          ...existingServers,
           octoprompt: {
             type: 'stdio',
             command: this.platform === 'win32' ? 'cmd.exe' : 'sh',
@@ -1036,6 +1101,506 @@ export class MCPInstallationService {
       return {
         success: false,
         message: `Failed to create project configuration: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }
+    }
+  }
+
+  // Global installation methods
+
+  /**
+   * Install OctoPrompt MCP globally for a tool (no project context)
+   */
+  async installGlobalMCP(tool: MCPTool, serverUrl?: string, debug?: boolean): Promise<MCPInstallationResult> {
+    try {
+      // Import global config service
+      const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+      await mcpGlobalConfigService.initialize()
+
+      // Get config path for the tool
+      const configPath = this.getConfigPath(tool)
+      if (!configPath) {
+        return {
+          success: false,
+          message: `Configuration path not found for ${tool}`
+        }
+      }
+
+      // Ensure directory exists
+      const configDir = path.dirname(configPath)
+      await fs.mkdir(configDir, { recursive: true })
+
+      // Get global server configuration
+      const globalServerConfig = await mcpGlobalConfigService.getGlobalServerConfig()
+
+      // Handle different tool types
+      if (tool === 'claude-desktop') {
+        return await this.installGlobalClaudeDesktop(configPath, globalServerConfig, debug)
+      } else if (tool === 'vscode' || tool === 'cursor' || tool === 'windsurf') {
+        return await this.installGlobalVSCodeStyle(tool, configPath, globalServerConfig, debug)
+      } else if (tool === 'continue') {
+        return await this.installGlobalContinue(configPath, globalServerConfig, debug)
+      } else if (tool === 'claude-code') {
+        return await this.installGlobalClaudeCode(configPath, globalServerConfig, debug)
+      }
+
+      return {
+        success: false,
+        message: `Unsupported tool: ${tool}`
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Global installation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }
+    }
+  }
+
+  /**
+   * Uninstall global OctoPrompt MCP for a tool
+   */
+  async uninstallGlobalMCP(tool: MCPTool): Promise<MCPInstallationResult> {
+    try {
+      const configPath = this.getConfigPath(tool)
+      if (!configPath) {
+        return {
+          success: false,
+          message: `Configuration path not found for ${tool}`
+        }
+      }
+
+      const serverName = 'octoprompt'
+      const content = await fs.readFile(configPath, 'utf-8')
+
+      if (tool === 'claude-desktop') {
+        const parsedConfig = JSON.parse(content)
+        const config = this.migrateConfigFormat(parsedConfig)
+        const servers = this.getServersFromConfig(config)
+        
+        if (serverName in servers) {
+          delete servers[serverName]
+          const updatedConfig = this.setServersInConfig(config, servers)
+          await fs.writeFile(configPath, JSON.stringify(updatedConfig, null, 2), 'utf-8')
+          
+          // Update global config service
+          const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+          await mcpGlobalConfigService.removeGlobalInstallation(tool)
+          
+          return {
+            success: true,
+            message: 'Successfully removed global OctoPrompt MCP configuration'
+          }
+        }
+      } else if (tool === 'vscode' || tool === 'cursor' || tool === 'windsurf') {
+        const settings = JSON.parse(content)
+        
+        if (settings['mcp.servers'] && settings['mcp.servers'][serverName]) {
+          delete settings['mcp.servers'][serverName]
+          
+          if (Object.keys(settings['mcp.servers']).length === 0) {
+            delete settings['mcp.servers']
+          }
+          
+          await fs.writeFile(configPath, JSON.stringify(settings, null, 2), 'utf-8')
+          
+          // Update global config service
+          const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+          await mcpGlobalConfigService.removeGlobalInstallation(tool)
+          
+          return {
+            success: true,
+            message: `Successfully removed global OctoPrompt MCP configuration from ${tool}`
+          }
+        }
+      } else if (tool === 'continue') {
+        const config = JSON.parse(content)
+        
+        if (config.mcpConfigs && config.mcpConfigs[serverName]) {
+          delete config.mcpConfigs[serverName]
+          
+          // Remove from models
+          if (config.models && Array.isArray(config.models)) {
+            for (const model of config.models) {
+              if (model.mcpServers && Array.isArray(model.mcpServers)) {
+                model.mcpServers = model.mcpServers.filter((s: string) => s !== serverName)
+              }
+            }
+          }
+          
+          await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+          
+          // Update global config service
+          const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+          await mcpGlobalConfigService.removeGlobalInstallation(tool)
+          
+          return {
+            success: true,
+            message: 'Successfully removed global OctoPrompt MCP configuration from Continue'
+          }
+        }
+      } else if (tool === 'claude-code') {
+        const config = JSON.parse(content) as ClaudeCodeConfig
+        
+        if (config.mcpServers && config.mcpServers[serverName]) {
+          delete config.mcpServers[serverName]
+          
+          // Remove from default servers
+          if (config.defaultMcpServers) {
+            config.defaultMcpServers = config.defaultMcpServers.filter(s => s !== serverName)
+          }
+          
+          await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+          
+          // Update global config service
+          const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+          await mcpGlobalConfigService.removeGlobalInstallation(tool)
+          
+          return {
+            success: true,
+            message: 'Successfully removed global OctoPrompt MCP configuration from Claude Code'
+          }
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Global OctoPrompt MCP configuration not found'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Global uninstall failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }
+    }
+  }
+
+  /**
+   * Detect which tools have global OctoPrompt installations
+   */
+  async detectGlobalInstallations(): Promise<MCPToolInfo[]> {
+    const tools = await this.detectInstalledTools()
+    
+    // Import global config service
+    const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+    await mcpGlobalConfigService.initialize()
+    
+    // The detectInstalledTools already checks for OctoPrompt correctly
+    // Just return the tools as-is since they already have the correct hasOctoPrompt status
+    return tools
+  }
+
+  // Private helper methods for global installations
+
+  private async installGlobalClaudeDesktop(
+    configPath: string,
+    globalServerConfig: any,
+    debug?: boolean
+  ): Promise<MCPInstallationResult> {
+    try {
+      // Read existing config or create new one
+      let config: MCPConfig = { mcpServers: {} }
+      let backedUp = false
+      let backupPath: string | undefined
+
+      try {
+        const existingContent = await fs.readFile(configPath, 'utf-8')
+        const parsedConfig = JSON.parse(existingContent)
+        config = this.migrateConfigFormat(parsedConfig)
+        
+        // Create backup
+        backupPath = `${configPath}.backup-${Date.now()}`
+        await fs.writeFile(backupPath, existingContent)
+        backedUp = true
+      } catch {
+        // No existing config
+      }
+
+      // Add global OctoPrompt configuration
+      const servers = this.getServersFromConfig(config)
+      servers['octoprompt'] = {
+        command: globalServerConfig.command,
+        args: globalServerConfig.args,
+        env: {
+          ...globalServerConfig.env,
+          MCP_DEBUG: debug ? 'true' : 'false'
+        }
+      }
+      config = this.setServersInConfig(config, servers)
+
+      // Write updated config
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+
+      // Ensure script is executable on Unix-like systems
+      if (this.platform !== 'win32' && globalServerConfig.args?.[0]) {
+        try {
+          await fs.chmod(globalServerConfig.args[0], 0o755)
+        } catch (error) {
+          console.warn('Could not set script permissions:', error)
+        }
+      }
+
+      // Update global config service
+      const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+      await mcpGlobalConfigService.addGlobalInstallation({
+        tool: 'claude-desktop',
+        configPath,
+        serverName: 'octoprompt',
+        version: '0.8.0'
+      })
+
+      return {
+        success: true,
+        message: 'Successfully installed global OctoPrompt MCP for Claude Desktop',
+        configPath,
+        backedUp,
+        backupPath
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Installation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }
+    }
+  }
+
+  private async installGlobalVSCodeStyle(
+    tool: MCPTool,
+    configPath: string,
+    globalServerConfig: any,
+    debug?: boolean
+  ): Promise<MCPInstallationResult> {
+    try {
+      // Read existing settings or create new
+      let settings: any = {}
+      let backedUp = false
+      let backupPath: string | undefined
+
+      try {
+        const existingContent = await fs.readFile(configPath, 'utf-8')
+        settings = JSON.parse(existingContent)
+        
+        // Create backup
+        backupPath = `${configPath}.backup-${Date.now()}`
+        await fs.writeFile(backupPath, existingContent)
+        backedUp = true
+      } catch {
+        // No existing config
+      }
+
+      // Initialize mcp.servers if it doesn't exist
+      if (!settings['mcp.servers']) {
+        settings['mcp.servers'] = {}
+      }
+
+      // Add global OctoPrompt configuration
+      settings['mcp.servers']['octoprompt'] = {
+        command: globalServerConfig.args?.[0] || globalServerConfig.command,
+        env: {
+          ...globalServerConfig.env,
+          MCP_DEBUG: debug ? 'true' : 'false'
+        }
+      }
+
+      // Write updated settings
+      await fs.writeFile(configPath, JSON.stringify(settings, null, 2), 'utf-8')
+
+      // Ensure script is executable on Unix-like systems
+      if (this.platform !== 'win32' && globalServerConfig.args?.[0]) {
+        try {
+          await fs.chmod(globalServerConfig.args[0], 0o755)
+        } catch (error) {
+          console.warn('Could not set script permissions:', error)
+        }
+      }
+
+      // Update global config service
+      const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+      await mcpGlobalConfigService.addGlobalInstallation({
+        tool,
+        configPath,
+        serverName: 'octoprompt',
+        version: '0.8.0'
+      })
+
+      return {
+        success: true,
+        message: `Successfully installed global OctoPrompt MCP for ${tool}`,
+        configPath,
+        backedUp,
+        backupPath
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Installation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }
+    }
+  }
+
+  private async installGlobalContinue(
+    configPath: string,
+    globalServerConfig: any,
+    debug?: boolean
+  ): Promise<MCPInstallationResult> {
+    try {
+      // Read existing config or create new
+      let config: any = {
+        models: [],
+        mcpConfigs: {}
+      }
+      let backedUp = false
+      let backupPath: string | undefined
+
+      try {
+        const existingContent = await fs.readFile(configPath, 'utf-8')
+        config = JSON.parse(existingContent)
+        
+        // Create backup
+        backupPath = `${configPath}.backup-${Date.now()}`
+        await fs.writeFile(backupPath, existingContent)
+        backedUp = true
+      } catch {
+        // No existing config
+      }
+
+      // Add global OctoPrompt configuration
+      if (!config.mcpConfigs) {
+        config.mcpConfigs = {}
+      }
+
+      config.mcpConfigs['octoprompt-global'] = {
+        transport: 'stdio',
+        command: globalServerConfig.args?.[0] || globalServerConfig.command,
+        env: {
+          ...globalServerConfig.env,
+          MCP_DEBUG: debug ? 'true' : 'false'
+        }
+      }
+
+      // Update models to include the MCP server
+      if (config.models && Array.isArray(config.models)) {
+        for (const model of config.models) {
+          if (!model.mcpServers) {
+            model.mcpServers = []
+          }
+          if (!model.mcpServers.includes('octoprompt-global')) {
+            model.mcpServers.push('octoprompt-global')
+          }
+        }
+      }
+
+      // Write updated config
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+
+      // Ensure script is executable on Unix-like systems
+      if (this.platform !== 'win32' && globalServerConfig.args?.[0]) {
+        try {
+          await fs.chmod(globalServerConfig.args[0], 0o755)
+        } catch (error) {
+          console.warn('Could not set script permissions:', error)
+        }
+      }
+
+      // Update global config service
+      const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+      await mcpGlobalConfigService.addGlobalInstallation({
+        tool: 'continue',
+        configPath,
+        serverName: 'octoprompt',
+        version: '0.8.0'
+      })
+
+      return {
+        success: true,
+        message: 'Successfully installed global OctoPrompt MCP for Continue',
+        configPath,
+        backedUp,
+        backupPath
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Installation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }
+    }
+  }
+
+  private async installGlobalClaudeCode(
+    configPath: string,
+    globalServerConfig: any,
+    debug?: boolean
+  ): Promise<MCPInstallationResult> {
+    try {
+      // Read existing config or create new
+      let config: ClaudeCodeConfig = {
+        defaultMcpServers: [],
+        projectBindings: {},
+        mcpServers: {}
+      }
+      let backedUp = false
+      let backupPath: string | undefined
+
+      try {
+        const existingContent = await fs.readFile(configPath, 'utf-8')
+        config = JSON.parse(existingContent)
+        
+        // Create backup
+        backupPath = `${configPath}.backup-${Date.now()}`
+        await fs.writeFile(backupPath, existingContent)
+        backedUp = true
+      } catch {
+        // No existing config
+      }
+
+      // Initialize structures if needed
+      if (!config.defaultMcpServers) config.defaultMcpServers = []
+      if (!config.mcpServers) config.mcpServers = {}
+
+      // Add global OctoPrompt server configuration
+      config.mcpServers['octoprompt'] = {
+        command: globalServerConfig.args?.[0] || globalServerConfig.command,
+        env: {
+          ...globalServerConfig.env,
+          MCP_DEBUG: debug ? 'true' : 'false'
+        }
+      }
+
+      // Add to default servers if not already there
+      if (!config.defaultMcpServers.includes('octoprompt-global')) {
+        config.defaultMcpServers.push('octoprompt-global')
+      }
+
+      // Write updated config
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+
+      // Ensure script is executable on Unix-like systems
+      if (this.platform !== 'win32' && globalServerConfig.args?.[0]) {
+        try {
+          await fs.chmod(globalServerConfig.args[0], 0o755)
+        } catch (error) {
+          console.warn('Could not set script permissions:', error)
+        }
+      }
+
+      // Update global config service
+      const { mcpGlobalConfigService } = await import('./mcp-global-config-service')
+      await mcpGlobalConfigService.addGlobalInstallation({
+        tool: 'claude-code',
+        configPath,
+        serverName: 'octoprompt',
+        version: '0.8.0'
+      })
+
+      return {
+        success: true,
+        message: 'Successfully installed global OctoPrompt MCP for Claude Code',
+        configPath,
+        backedUp,
+        backupPath
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Installation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       }
     }
   }

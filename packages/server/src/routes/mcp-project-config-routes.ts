@@ -208,6 +208,65 @@ const loadProjectConfigRoute = createRoute({
   }
 })
 
+// Save project configuration to specific location
+const saveProjectConfigToLocationRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/config/save-to-location',
+  request: {
+    params: z.object({
+      projectId: z.string().transform(Number)
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            config: ProjectMCPConfigSchema,
+            location: z.string()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Config saved to location',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean()
+          })
+        }
+      }
+    }
+  }
+})
+
+// Get default config for location
+const getDefaultConfigForLocationRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/config/default-for-location',
+  request: {
+    params: z.object({
+      projectId: z.string().transform(Number)
+    }),
+    query: z.object({
+      location: z.string()
+    })
+  },
+  responses: {
+    200: {
+      description: 'Default config retrieved',
+      content: {
+        'application/json': {
+          schema: z.object({
+            config: ProjectMCPConfigSchema
+          })
+        }
+      }
+    }
+  }
+})
+
 mcpProjectConfigApp.openapi(loadProjectConfigRoute, async (c) => {
   const { projectId } = c.req.valid('param')
   
@@ -225,6 +284,42 @@ mcpProjectConfigApp.openapi(loadProjectConfigRoute, async (c) => {
     }
   } catch (error) {
     console.error('Failed to load project config:', error)
+    if (error instanceof ApiError) {
+      return c.json(
+        { success: false, error: { message: error.message, code: error.code } },
+        error.status
+      )
+    }
+    return c.json({ success: false, error: { message: 'Internal server error' } }, 500)
+  }
+})
+.openapi(saveProjectConfigToLocationRoute, async (c) => {
+  const { projectId } = c.req.valid('param')
+  const { config, location } = c.req.valid('json')
+  
+  try {
+    await mcpProjectConfigService.saveProjectConfigToLocation(projectId, config, location)
+    return c.json({ success: true, data: { success: true } })
+  } catch (error) {
+    console.error('Failed to save config to location:', error)
+    if (error instanceof ApiError) {
+      return c.json(
+        { success: false, error: { message: error.message, code: error.code } },
+        error.status
+      )
+    }
+    return c.json({ success: false, error: { message: 'Internal server error' } }, 500)
+  }
+})
+.openapi(getDefaultConfigForLocationRoute, async (c) => {
+  const { projectId } = c.req.valid('param')
+  const { location } = c.req.valid('query')
+  
+  try {
+    const config = await mcpProjectConfigService.getDefaultConfigForLocation(projectId, location)
+    return c.json({ success: true, data: { config } })
+  } catch (error) {
+    console.error('Failed to get default config:', error)
     if (error instanceof ApiError) {
       return c.json(
         { success: false, error: { message: error.message, code: error.code } },

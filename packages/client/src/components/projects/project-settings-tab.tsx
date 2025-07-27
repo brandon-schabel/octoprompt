@@ -9,9 +9,8 @@ import { useEffect, useState } from 'react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { MCPStatusIndicator } from './mcp-status-indicator'
 import { AgentFilesManager } from './agent-files-manager'
-import { MCPPlatformDetector } from './mcp-platform-detector'
 import { MCPTroubleshooting } from './mcp-troubleshooting'
-import { MCPProjectInstaller } from './mcp-project-installer'
+// import { MCPProjectInstaller } from './mcp-project-installer'
 import { MCPProjectConfigEditor } from './mcp-project-config-editor'
 
 export function ProjectSettingsTab() {
@@ -221,17 +220,7 @@ export function ProjectSettingsTab() {
           </CardContent>
         </Card>
 
-        {projectId && projectData && (
-          <MCPProjectInstaller 
-            projectId={projectId} 
-            projectName={projectData.name}
-            projectPath={projectData.path}
-          />
-        )}
-
-        {projectId && <MCPPlatformDetector projectId={projectId} />}
-
-        <Card>
+        {/* <Card>
           <CardHeader>
             <div className='flex items-center justify-between'>
               <div>
@@ -253,9 +242,9 @@ export function ProjectSettingsTab() {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
-        {showAgentFiles && projectId && <AgentFilesManager projectId={projectId} />}
+        {/* {showAgentFiles && projectId && <AgentFilesManager projectId={projectId} />} */}
 
         {showTroubleshooting && <MCPTroubleshooting />}
 

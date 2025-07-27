@@ -2008,6 +2008,35 @@ export class AgentFilesService extends BaseApiClient {
   }
 }
 
+// Flexible MCP config schema that supports both old 'servers' and new 'mcpServers' format
+const FlexibleMCPConfigSchema = z.object({
+  mcpServers: z.record(z.object({
+    type: z.enum(['stdio', 'http']).default('stdio'),
+    command: z.string(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string()).optional(),
+    timeout: z.number().optional()
+  })).optional(),
+  servers: z.record(z.object({
+    type: z.enum(['stdio', 'http']).default('stdio'),
+    command: z.string(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string()).optional(),
+    timeout: z.number().optional()
+  })).optional(),
+  inputs: z.array(z.object({
+    type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
+    id: z.string(),
+    description: z.string(),
+    default: z.any().optional(),
+    password: z.boolean().optional()
+  })).optional(),
+  extends: z.union([z.string(), z.array(z.string())]).optional()
+}).refine(
+  (data) => data.mcpServers || data.servers,
+  "Config must have either 'mcpServers' or 'servers' field"
+)
+
 export class MCPProjectConfigService extends BaseApiClient {
   async getConfigLocations(projectId: number) {
     const result = await this.request('GET', `/projects/${projectId}/mcp/config/locations`, {
@@ -2030,23 +2059,7 @@ export class MCPProjectConfigService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          config: z.object({
-            servers: z.record(z.object({
-              type: z.enum(['stdio', 'http']).default('stdio'),
-              command: z.string(),
-              args: z.array(z.string()).optional(),
-              env: z.record(z.string()).optional(),
-              timeout: z.number().optional()
-            })),
-            inputs: z.array(z.object({
-              type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
-              id: z.string(),
-              description: z.string(),
-              default: z.any().optional(),
-              password: z.boolean().optional()
-            })).optional(),
-            extends: z.union([z.string(), z.array(z.string())]).optional()
-          })
+          config: FlexibleMCPConfigSchema
         })
       })
     })
@@ -2058,23 +2071,7 @@ export class MCPProjectConfigService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          config: z.object({
-            servers: z.record(z.object({
-              type: z.enum(['stdio', 'http']).default('stdio'),
-              command: z.string(),
-              args: z.array(z.string()).optional(),
-              env: z.record(z.string()).optional(),
-              timeout: z.number().optional()
-            })),
-            inputs: z.array(z.object({
-              type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
-              id: z.string(),
-              description: z.string(),
-              default: z.any().optional(),
-              password: z.boolean().optional()
-            })).optional(),
-            extends: z.union([z.string(), z.array(z.string())]).optional()
-          })
+          config: FlexibleMCPConfigSchema
         })
       })
     })
@@ -2086,23 +2083,7 @@ export class MCPProjectConfigService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          config: z.object({
-            servers: z.record(z.object({
-              type: z.enum(['stdio', 'http']).default('stdio'),
-              command: z.string(),
-              args: z.array(z.string()).optional(),
-              env: z.record(z.string()).optional(),
-              timeout: z.number().optional()
-            })),
-            inputs: z.array(z.object({
-              type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
-              id: z.string(),
-              description: z.string(),
-              default: z.any().optional(),
-              password: z.boolean().optional()
-            })).optional(),
-            extends: z.union([z.string(), z.array(z.string())]).optional()
-          }).nullable(),
+          config: FlexibleMCPConfigSchema.nullable(),
           source: z.string().optional()
         })
       })
@@ -2117,6 +2098,29 @@ export class MCPProjectConfigService extends BaseApiClient {
         success: z.boolean(),
         data: z.object({
           success: z.boolean()
+        })
+      })
+    })
+    return result
+  }
+  async saveProjectConfigToLocation(projectId: number, config: any, location: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/config/save-to-location`, {
+      body: { config, location },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          success: z.boolean()
+        })
+      })
+    })
+    return result
+  }
+  async getDefaultConfigForLocation(projectId: number, location: string) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/config/default-for-location?location=${encodeURIComponent(location)}`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          config: FlexibleMCPConfigSchema
         })
       })
     })
@@ -2358,6 +2362,182 @@ export class JobService extends BaseApiClient {
   }
 }
 
+// MCP Global Config Service
+export class MCPGlobalConfigService extends BaseApiClient {
+  async getGlobalConfig() {
+    const result = await this.request('GET', '/mcp/global/config', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          servers: z.record(z.object({
+            type: z.enum(['stdio', 'http']).default('stdio'),
+            command: z.string(),
+            args: z.array(z.string()).optional(),
+            env: z.record(z.string()).optional(),
+            timeout: z.number().optional()
+          })),
+          inputs: z.array(z.object({
+            type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
+            id: z.string(),
+            description: z.string(),
+            default: z.any().optional(),
+            password: z.boolean().optional()
+          })).optional(),
+          extends: z.union([z.string(), z.array(z.string())]).optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      servers: Record<string, {
+        type: 'stdio' | 'http'
+        command: string
+        args?: string[]
+        env?: Record<string, string>
+        timeout?: number
+      }>
+      inputs?: Array<{
+        type: 'promptString' | 'promptNumber' | 'promptBoolean'
+        id: string
+        description: string
+        default?: any
+        password?: boolean
+      }>
+      extends?: string | string[]
+    }>
+  }
+
+  async updateGlobalConfig(updates: any) {
+    const result = await this.request('POST', '/mcp/global/config', {
+      body: { config: updates },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          success: z.boolean(),
+          message: z.string(),
+          configPath: z.string()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      success: boolean
+      message: string
+      configPath: string
+    }>
+  }
+
+  async getGlobalInstallations() {
+    const result = await this.request('GET', '/mcp/global/installations', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          installations: z.array(z.object({
+            tool: z.string(),
+            installedAt: z.number(),
+            configPath: z.string(),
+            serverName: z.string(),
+            version: z.string().optional()
+          })),
+          toolStatuses: z.array(z.object({
+            tool: z.string(),
+            name: z.string(),
+            installed: z.boolean(),
+            hasGlobalOctoPrompt: z.boolean(),
+            configPath: z.string().optional()
+          }))
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      installations: Array<{
+        tool: string
+        installedAt: number
+        configPath: string
+        serverName: string
+        version?: string
+      }>
+      toolStatuses: Array<{
+        tool: string
+        name: string
+        installed: boolean
+        hasGlobalOctoPrompt: boolean
+        configPath?: string
+      }>
+    }>
+  }
+
+  async installGlobalMCP(data: { tool: string; serverName?: string; debug?: boolean }) {
+    const result = await this.request('POST', '/mcp/global/install', {
+      body: data,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          message: z.string(),
+          configPath: z.string(),
+          backedUp: z.boolean(),
+          backupPath: z.string().optional(),
+          serverName: z.string()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      message: string
+      configPath: string
+      backedUp: boolean
+      backupPath?: string
+      serverName: string
+    }>
+  }
+
+  async uninstallGlobalMCP(data: { tool: string }) {
+    const result = await this.request('POST', '/mcp/global/uninstall', {
+      body: data,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          success: z.boolean(),
+          message: z.string()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      success: boolean
+      message: string
+    }>
+  }
+
+  async getGlobalStatus() {
+    const result = await this.request('GET', '/mcp/global/status', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          installed: z.boolean(),
+          configPath: z.string().optional(),
+          servers: z.array(z.object({
+            name: z.string(),
+            type: z.enum(['stdio', 'http']),
+            command: z.string(),
+            status: z.enum(['running', 'stopped', 'unknown'])
+          })).optional(),
+          totalServers: z.number(),
+          runningServers: z.number()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      installed: boolean
+      configPath?: string
+      servers?: Array<{
+        name: string
+        type: 'stdio' | 'http'
+        command: string
+        status: 'running' | 'stopped' | 'unknown'
+      }>
+      totalServers: number
+      runningServers: number
+    }>
+  }
+}
+
 // Main OctoPrompt Client
 export class OctoPromptClient {
   public readonly chats: ChatService
@@ -2374,6 +2554,7 @@ export class OctoPromptClient {
   public readonly agentFiles: AgentFilesService
   public readonly mcpInstallation: MCPInstallationService
   public readonly mcpProjectConfig: MCPProjectConfigService
+  public readonly mcpGlobalConfig: MCPGlobalConfigService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -2390,6 +2571,7 @@ export class OctoPromptClient {
     this.agentFiles = new AgentFilesService(config)
     this.mcpInstallation = new MCPInstallationService(config)
     this.mcpProjectConfig = new MCPProjectConfigService(config)
+    this.mcpGlobalConfig = new MCPGlobalConfigService(config)
   }
 }
 
