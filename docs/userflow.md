@@ -117,14 +117,12 @@ By using saved prompts for common patterns, you ensure consistent implementation
 1. **User Input**: "Implement JWT-based authentication with login, logout, and protected routes. Need login form component, auth context, API endpoints for login/logout, and middleware for protecting routes."
 
 2. **Suggested Files**:
-
    - `/src/contexts/AuthContext.tsx` (existing auth setup)
    - `/src/components/forms/FormInput.tsx` (reusable form component)
    - `/server/middleware/auth.js` (existing middleware patterns)
    - `/server/routes/users.js` (user route patterns)
 
 3. **Suggested Prompts**:
-
    - "React Authentication Best Practices"
    - "JWT Token Security Guidelines"
    - "API Error Handling Patterns"

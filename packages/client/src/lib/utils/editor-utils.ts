@@ -29,7 +29,7 @@ export const EDITOR_CONFIGS: Record<string, EditorInfo> = {
     icon: Code2,
     color: 'text-green-500',
     description: 'Universal MCP configuration (works with all editors)'
-  },
+  }
   // promptliano: {
   //   type: 'promptliano',
   //   name: 'Promptliano',
@@ -47,7 +47,7 @@ export function getEditorInfoFromPath(path: string): EditorInfo {
   }
   // else if (path.includes('.promptliano/mcp.json')) {
   //   return EDITOR_CONFIGS.promptliano
-  // } 
+  // }
   // else if (path.includes('.mcp.json')) {
   // return EDITOR_CONFIGS.universal
   // }

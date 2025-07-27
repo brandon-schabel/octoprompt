@@ -241,7 +241,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
                 <ChevronRight className={cn('h-4 w-4 transition-transform', !isCollapsed && 'rotate-90')} />
                 <div className='text-md font-medium flex items-center gap-2'>
                   <span>
-                    <Badge variant={selectedPrompts.length > 0 && isCollapsed ? 'default' : 'secondary'}>
+                    <Badge variant={selectedPrompts.length > 0 && isCollapsed ? 'default' : 'default'}>
                       {selectedPrompts.length}
                     </Badge>{' '}
                     Project Prompts

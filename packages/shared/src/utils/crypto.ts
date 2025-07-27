@@ -26,13 +26,7 @@ export function generateEncryptionKey(): string {
  */
 async function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
   const encoder = new TextEncoder()
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveBits']
-  )
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits'])
 
   const derivedBits = await crypto.subtle.deriveBits(
     {
@@ -63,13 +57,7 @@ export async function encryptKey(plaintext: string): Promise<EncryptedData> {
   const derivedKey = await deriveKey(envKey, Buffer.from(salt))
 
   // Use Web Crypto API for encryption
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    derivedKey,
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt']
-  )
+  const cryptoKey = await crypto.subtle.importKey('raw', derivedKey, { name: 'AES-GCM' }, false, ['encrypt'])
 
   const encrypted = await crypto.subtle.encrypt(
     {
@@ -112,13 +100,7 @@ export async function decryptKey(encryptedData: EncryptedData): Promise<string> 
   combined.set(ciphertext)
   combined.set(tag, ciphertext.length)
 
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    derivedKey,
-    { name: 'AES-GCM' },
-    false,
-    ['decrypt']
-  )
+  const cryptoKey = await crypto.subtle.importKey('raw', derivedKey, { name: 'AES-GCM' }, false, ['decrypt'])
 
   const decrypted = await crypto.subtle.decrypt(
     {

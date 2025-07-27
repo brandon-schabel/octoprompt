@@ -56,7 +56,7 @@ describe('Crypto utilities', () => {
       'openrouter-key-123456789',
       'AIzaSyB1234567890abcdefg',
       'a'.repeat(100), // Long key
-      '12345', // Short key
+      '12345' // Short key
     ]
 
     for (const key of testKeys) {

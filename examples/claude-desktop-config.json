@@ -2,9 +2,7 @@
   "mcpServers": {
     "promptliano": {
       "command": "node",
-      "args": [
-        "REPLACE_WITH_PATH/promptliano/packages/server/mcp-universal.js"
-      ],
+      "args": ["REPLACE_WITH_PATH/promptliano/packages/server/mcp-universal.js"],
       "env": {
         "MCP_HTTP_URL": "http://localhost:3147/api/mcp",
         "MCP_DEBUG": "false"
@@ -12,9 +10,7 @@
     },
     "promptliano-with-project": {
       "command": "node",
-      "args": [
-        "REPLACE_WITH_PATH/promptliano/packages/server/mcp-universal.js"
-      ],
+      "args": ["REPLACE_WITH_PATH/promptliano/packages/server/mcp-universal.js"],
       "env": {
         "MCP_HTTP_URL": "http://localhost:3147/api/mcp",
         "PROMPTLIANO_PROJECT_ID": "REPLACE_WITH_YOUR_PROJECT_ID",

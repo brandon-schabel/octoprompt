@@ -22,12 +22,12 @@ const assetTypeMapping: Record<string, string> = {
   'database-doc': 'database-schema',
   'user-guide': 'user-guide',
   // SVG types still use old generator
-  'icon': 'svg',
-  'illustration': 'svg',
-  'logo': 'svg',
-  'pattern': 'svg',
+  icon: 'svg',
+  illustration: 'svg',
+  logo: 'svg',
+  pattern: 'svg',
   'ui-element': 'svg',
-  'chart': 'svg'
+  chart: 'svg'
 }
 
 /**
@@ -62,12 +62,5 @@ export function AssetGeneratorWrapper({
   }
 
   // Fall back to old asset generator for SVG types
-  return (
-    <AssetGeneratorDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      assetType={assetType}
-      onSuccess={onSuccess}
-    />
-  )
+  return <AssetGeneratorDialog open={open} onOpenChange={onOpenChange} assetType={assetType} onSuccess={onSuccess} />
 }

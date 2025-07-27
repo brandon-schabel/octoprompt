@@ -593,9 +593,7 @@ export async function getCommitLog(
 
     // Use simple-git's log method with built-in options
     // Pass branch as first argument if specified
-    const logResult = options?.branch
-      ? await git.log([options.branch], logOptions)
-      : await git.log(logOptions)
+    const logResult = options?.branch ? await git.log([options.branch], logOptions) : await git.log(logOptions)
 
     // Map the results to our schema
     const allEntries = logResult.all.map((commit: any) => ({
@@ -1595,7 +1593,7 @@ export async function removeWorktree(projectId: number, worktreePath: string, fo
     // Get current worktrees to validate
     const worktrees = await getWorktrees(projectId)
     const targetPath = path.resolve(worktreePath)
-    const worktree = worktrees.find(w => path.resolve(w.path) === targetPath)
+    const worktree = worktrees.find((w) => path.resolve(w.path) === targetPath)
 
     if (!worktree) {
       throw new ApiError(404, 'Worktree not found', 'WORKTREE_NOT_FOUND')
@@ -1758,7 +1756,10 @@ function parseRefs(refsString: string): string[] {
   const cleaned = refsString.replace(/HEAD\s*->\s*/, '')
   if (!cleaned) return []
 
-  return cleaned.split(',').map(ref => ref.trim()).filter(Boolean)
+  return cleaned
+    .split(',')
+    .map((ref) => ref.trim())
+    .filter(Boolean)
 }
 
 /**
@@ -1818,9 +1819,7 @@ export async function getCommitLogEnhanced(
     }
 
     // Get commit log - pass branch as first argument if specified
-    const logResult = request.branch
-      ? await git.log([request.branch], logOptions)
-      : await git.log(logOptions)
+    const logResult = request.branch ? await git.log([request.branch], logOptions) : await git.log(logOptions)
     const allCommits = logResult.all
 
     // Slice for pagination
@@ -1859,12 +1858,7 @@ export async function getCommitLogEnhanced(
         if (request.includeStats || request.includeFileDetails) {
           try {
             // Get numstat for this commit
-            const numstat = await git.raw([
-              'show',
-              '--numstat',
-              '--format=',
-              commit.hash
-            ])
+            const numstat = await git.raw(['show', '--numstat', '--format=', commit.hash])
 
             const fileStats: GitFileStats[] = []
             let totalAdditions = 0
@@ -1969,10 +1963,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
     const currentBranch = status.current
 
     // Get all branches with verbose info
-    const [localBranches, remoteBranches] = await Promise.all([
-      git.branchLocal('-v'),
-      git.branch(['-r', '-v'])
-    ])
+    const [localBranches, remoteBranches] = await Promise.all([git.branchLocal('-v'), git.branch(['-r', '-v'])])
 
     // Determine default branch (main or master)
     let defaultBranch = 'main'
@@ -2028,12 +2019,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
       if (name !== defaultBranch) {
         try {
           // Get ahead/behind counts
-          const revList = await git.raw([
-            'rev-list',
-            '--left-right',
-            '--count',
-            `${defaultBranch}...${name}`
-          ])
+          const revList = await git.raw(['rev-list', '--left-right', '--count', `${defaultBranch}...${name}`])
 
           const [behindStr, aheadStr] = revList.trim().split('\t')
           behind = parseInt(behindStr, 10) || 0
@@ -2162,59 +2148,37 @@ export async function getCommitDetail(
 
     // Get commit info using show
     const commitFormat = [
-      '%H',  // hash
-      '%h',  // abbreviated hash
-      '%s',  // subject
-      '%b',  // body
+      '%H', // hash
+      '%h', // abbreviated hash
+      '%s', // subject
+      '%b', // body
       '%an', // author name
       '%ae', // author email
       '%aI', // author date ISO
       '%cn', // committer name
       '%ce', // committer email
       '%cI', // committer date ISO
-      '%P',  // parents
-      '%D'   // refs
+      '%P', // parents
+      '%D' // refs
     ].join('%n')
 
-    const showResult = await git.show([
-      commitHash,
-      `--format=${commitFormat}`,
-      '--no-patch'
-    ])
+    const showResult = await git.show([commitHash, `--format=${commitFormat}`, '--no-patch'])
 
     const lines = showResult.split('\n')
-    const [
-      hash,
-      abbreviatedHash,
-      subject,
-      ...bodyAndRest
-    ] = lines
+    const [hash, abbreviatedHash, subject, ...bodyAndRest] = lines
 
     // Find where the body ends (empty line after body)
-    let bodyEndIndex = bodyAndRest.findIndex(line => line === '')
+    let bodyEndIndex = bodyAndRest.findIndex((line) => line === '')
     if (bodyEndIndex === -1) bodyEndIndex = bodyAndRest.length
 
     const body = bodyAndRest.slice(0, bodyEndIndex).join('\n')
     const metadataLines = bodyAndRest.slice(bodyEndIndex + 1)
 
-    const [
-      authorName,
-      authorEmail,
-      authorDate,
-      committerName,
-      committerEmail,
-      committerDate,
-      parents,
-      refs
-    ] = metadataLines
+    const [authorName, authorEmail, authorDate, committerName, committerEmail, committerDate, parents, refs] =
+      metadataLines
 
     // Get file changes with numstat
-    const numstatResult = await git.raw([
-      'show',
-      '--numstat',
-      '--format=',
-      commitHash
-    ])
+    const numstatResult = await git.raw(['show', '--numstat', '--format=', commitHash])
 
     const fileDiffs: GitFileDiff[] = []
     let totalAdditions = 0
@@ -2308,7 +2272,7 @@ export async function getCommitDetail(
         additions: totalAdditions,
         deletions: totalDeletions
       },
-      fileStats: fileDiffs.map(f => ({
+      fileStats: fileDiffs.map((f) => ({
         path: f.path,
         additions: f.additions,
         deletions: f.deletions,

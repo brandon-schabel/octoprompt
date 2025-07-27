@@ -228,52 +228,46 @@ export function ArchitectureView({ projectId, projectName = 'Project' }: Archite
   }
 
   return (
-    <div className="h-full flex flex-col p-6 space-y-6">
+    <div className='h-full flex flex-col p-6 space-y-6'>
       <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Building2 className="h-6 w-6" />
+        <h2 className='text-2xl font-bold flex items-center gap-2'>
+          <Building2 className='h-6 w-6' />
           Architecture Diagrams
         </h2>
-        <p className="text-muted-foreground mt-1">
-          Create architecture diagrams and documentation for {projectName}
-        </p>
+        <p className='text-muted-foreground mt-1'>Create architecture diagrams and documentation for {projectName}</p>
       </div>
 
-      <Tabs defaultValue="templates" className="flex-1">
+      <Tabs defaultValue='templates' className='flex-1'>
         <TabsList>
-          <TabsTrigger value="templates">Diagram Templates</TabsTrigger>
-          <TabsTrigger value="custom">Custom Diagram</TabsTrigger>
-          <TabsTrigger value="examples">Examples</TabsTrigger>
+          <TabsTrigger value='templates'>Diagram Templates</TabsTrigger>
+          <TabsTrigger value='custom'>Custom Diagram</TabsTrigger>
+          <TabsTrigger value='examples'>Examples</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value='templates' className='space-y-4'>
+          <div className='grid gap-4 md:grid-cols-2'>
             {Object.entries(architectureTemplates).map(([key, template]) => {
               const Icon = template.icon
               return (
-                <Card 
+                <Card
                   key={key}
-                  className={`cursor-pointer transition-all ${
-                    selectedTemplate === key ? 'ring-2 ring-primary' : ''
-                  }`}
+                  className={`cursor-pointer transition-all ${selectedTemplate === key ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => setSelectedTemplate(key as keyof typeof architectureTemplates)}
                 >
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <Icon className="h-5 w-5 text-primary" />
+                    <div className='flex items-start justify-between'>
+                      <div className='flex items-center gap-3'>
+                        <Icon className='h-5 w-5 text-primary' />
                         <div>
-                          <CardTitle className="text-base">{template.name}</CardTitle>
-                          <CardDescription className="text-sm">{template.description}</CardDescription>
+                          <CardTitle className='text-base'>{template.name}</CardTitle>
+                          <CardDescription className='text-sm'>{template.description}</CardDescription>
                         </div>
                       </div>
-                      {selectedTemplate === key && (
-                        <Badge>Selected</Badge>
-                      )}
+                      {selectedTemplate === key && <Badge>Selected</Badge>}
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant='secondary' className='text-xs'>
                       {template.diagramType}
                     </Badge>
                   </CardContent>
@@ -286,33 +280,33 @@ export function ArchitectureView({ projectId, projectName = 'Project' }: Archite
             <CardHeader>
               <CardTitle>Diagram Options</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+            <CardContent className='space-y-4'>
+              <div className='grid gap-4 md:grid-cols-2'>
+                <div className='space-y-2'>
                   <Label>Diagram Style</Label>
                   <Select value={diagramStyle} onValueChange={setDiagramStyle}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="default">Default</SelectItem>
-                      <SelectItem value="dark">Dark Theme</SelectItem>
-                      <SelectItem value="sketch">Hand-drawn</SelectItem>
-                      <SelectItem value="clean">Minimalist</SelectItem>
+                      <SelectItem value='default'>Default</SelectItem>
+                      <SelectItem value='dark'>Dark Theme</SelectItem>
+                      <SelectItem value='sketch'>Hand-drawn</SelectItem>
+                      <SelectItem value='clean'>Minimalist</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className='space-y-2'>
                   <Label>Detail Level</Label>
-                  <Select defaultValue="detailed">
+                  <Select defaultValue='detailed'>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="high-level">High Level</SelectItem>
-                      <SelectItem value="detailed">Detailed</SelectItem>
-                      <SelectItem value="technical">Technical</SelectItem>
+                      <SelectItem value='high-level'>High Level</SelectItem>
+                      <SelectItem value='detailed'>Detailed</SelectItem>
+                      <SelectItem value='technical'>Technical</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -320,86 +314,82 @@ export function ArchitectureView({ projectId, projectName = 'Project' }: Archite
             </CardContent>
           </Card>
 
-          <div className="flex gap-2">
-            <Button onClick={handleGenerateArchitecture} className="flex-1">
-              <Sparkles className="h-4 w-4 mr-2" />
+          <div className='flex gap-2'>
+            <Button onClick={handleGenerateArchitecture} className='flex-1'>
+              <Sparkles className='h-4 w-4 mr-2' />
               Generate Architecture Diagram
             </Button>
-            <Button variant="outline" onClick={handleCopyPrompt}>
-              <Copy className="h-4 w-4" />
+            <Button variant='outline' onClick={handleCopyPrompt}>
+              <Copy className='h-4 w-4' />
             </Button>
           </div>
         </TabsContent>
 
-        <TabsContent value="custom" className="space-y-4">
+        <TabsContent value='custom' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>Custom Architecture Diagram</CardTitle>
-              <CardDescription>
-                Design your own architecture diagram with specific requirements
-              </CardDescription>
+              <CardDescription>Design your own architecture diagram with specific requirements</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className='space-y-4'>
+              <div className='space-y-2'>
                 <Label>Diagram Description</Label>
                 <Textarea
-                  placeholder="Describe the architecture diagram you need..."
+                  placeholder='Describe the architecture diagram you need...'
                   value={customPrompt}
                   onChange={(e) => setCustomPrompt(e.target.value)}
-                  className="min-h-[150px]"
+                  className='min-h-[150px]'
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Diagram Type</Label>
-                <Select defaultValue="flowchart">
+                <Select defaultValue='flowchart'>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="flowchart">Flowchart</SelectItem>
-                    <SelectItem value="sequence">Sequence Diagram</SelectItem>
-                    <SelectItem value="class">Class Diagram</SelectItem>
-                    <SelectItem value="state">State Diagram</SelectItem>
-                    <SelectItem value="er">Entity Relationship</SelectItem>
-                    <SelectItem value="gantt">Gantt Chart</SelectItem>
+                    <SelectItem value='flowchart'>Flowchart</SelectItem>
+                    <SelectItem value='sequence'>Sequence Diagram</SelectItem>
+                    <SelectItem value='class'>Class Diagram</SelectItem>
+                    <SelectItem value='state'>State Diagram</SelectItem>
+                    <SelectItem value='er'>Entity Relationship</SelectItem>
+                    <SelectItem value='gantt'>Gantt Chart</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <Button onClick={handleGenerateArchitecture} className="w-full">
-                <Sparkles className="h-4 w-4 mr-2" />
+              <Button onClick={handleGenerateArchitecture} className='w-full'>
+                <Sparkles className='h-4 w-4 mr-2' />
                 Generate Custom Diagram
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="examples" className="space-y-4">
+        <TabsContent value='examples' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>Architecture Examples</CardTitle>
-              <CardDescription>
-                Common architecture patterns and best practices
-              </CardDescription>
+              <CardDescription>Common architecture patterns and best practices</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Microservices Architecture</h4>
-                  <p className="text-sm text-muted-foreground">
+              <div className='space-y-4'>
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Microservices Architecture</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Distributed system with independent services communicating via APIs
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Event-Driven Architecture</h4>
-                  <p className="text-sm text-muted-foreground">
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Event-Driven Architecture</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Components communicate through events and message queues
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Serverless Architecture</h4>
-                  <p className="text-sm text-muted-foreground">
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Serverless Architecture</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Cloud functions triggered by events with managed infrastructure
                   </p>
                 </div>
@@ -412,7 +402,7 @@ export function ArchitectureView({ projectId, projectName = 'Project' }: Archite
       <DocumentationGeneratorDialog
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        documentationType="architecture-doc"
+        documentationType='architecture-doc'
         projectContext={{
           name: projectName,
           description: template.prompt.replace('{projectName}', projectName)

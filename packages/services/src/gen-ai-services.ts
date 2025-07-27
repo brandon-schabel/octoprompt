@@ -47,7 +47,7 @@ export async function handleChatMessage({
   }))
 
   // Check if this is the first user message for auto-naming
-  const isFirstUserMessage = dbMessages.filter(msg => msg.role === 'user').length === 0
+  const isFirstUserMessage = dbMessages.filter((msg) => msg.role === 'user').length === 0
 
   messagesToProcess.push(...dbMessages)
 
@@ -111,7 +111,7 @@ export async function handleChatMessage({
         try {
           // Get current chat to check if it has a default name
           const allChats = await chatService.getAllChats()
-          const currentChat = allChats.find(chat => chat.id === chatId)
+          const currentChat = allChats.find((chat) => chat.id === chatId)
 
           if (currentChat && (currentChat.title.startsWith('New Chat') || currentChat.title.startsWith('Chat '))) {
             // Generate a name based on the user's message
@@ -543,14 +543,19 @@ export async function generateChatName(chatContent: string): Promise<string> {
   }
 }
 
-export async function generateTabName(projectName: string, selectedFiles: string[] = [], context?: string): Promise<string> {
+export async function generateTabName(
+  projectName: string,
+  selectedFiles: string[] = [],
+  context?: string
+): Promise<string> {
   try {
     const tabNamingConfig = structuredDataSchemas.tabNaming
 
     // Prepare the prompt with the provided information
-    const selectedFilesStr = selectedFiles.length > 0
-      ? selectedFiles.slice(0, 5).join(', ') + (selectedFiles.length > 5 ? '...' : '')
-      : 'No specific files selected'
+    const selectedFilesStr =
+      selectedFiles.length > 0
+        ? selectedFiles.slice(0, 5).join(', ') + (selectedFiles.length > 5 ? '...' : '')
+        : 'No specific files selected'
 
     const promptData = `Project Name: ${projectName}, Selected Files: ${selectedFilesStr}, Context: ${context || 'General project work'}`
 

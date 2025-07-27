@@ -39,7 +39,7 @@ export const CollapsibleSelectedFilesList = forwardRef<SelectedFilesListRef, Col
                 <ChevronRight className={cn('h-4 w-4 transition-transform', !isCollapsed && 'rotate-90')} />
                 <div className='text-md font-medium flex items-center gap-2'>
                   <span>
-                    <Badge variant={selectedFiles.length > 0 && isCollapsed ? 'default' : 'secondary'}>
+                    <Badge variant={selectedFiles.length > 0 && isCollapsed ? 'default' : 'default'}>
                       {selectedFiles.length}
                     </Badge>{' '}
                     Selected Files

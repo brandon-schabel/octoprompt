@@ -28,11 +28,13 @@ export const FileGroupSchema = z.object({
   relationships: z.array(FileRelationshipSchema).optional(),
   estimatedTokens: z.number().optional(),
   priority: z.number().min(0).max(10).default(5),
-  metadata: z.object({
-    directory: z.string().optional(),
-    primaryFile: z.number().optional(),
-    semanticCategory: z.string().optional()
-  }).optional()
+  metadata: z
+    .object({
+      directory: z.string().optional(),
+      primaryFile: z.number().optional(),
+      semanticCategory: z.string().optional()
+    })
+    .optional()
 })
 export type FileGroup = z.infer<typeof FileGroupSchema>
 
@@ -87,11 +89,15 @@ export type SummaryProgress = z.infer<typeof SummaryProgressSchema>
 export const EnhancedFileSummarySchema = z.object({
   fileId: z.number(),
   summary: z.string(),
-  relationships: z.array(z.object({
-    relatedFileId: z.number(),
-    relationshipType: FileRelationshipTypeEnum,
-    context: z.string().optional()
-  })).optional(),
+  relationships: z
+    .array(
+      z.object({
+        relatedFileId: z.number(),
+        relationshipType: FileRelationshipTypeEnum,
+        context: z.string().optional()
+      })
+    )
+    .optional(),
   groupContext: z.string().optional(),
   generatedAt: z.number()
 })
@@ -119,12 +125,16 @@ export const BatchSummaryResultSchema = z.object({
   progress: SummaryProgressSchema,
   totalTokensUsed: z.number(),
   duration: z.number(),
-  errors: z.array(z.object({
-    fileId: z.number().optional(),
-    groupId: z.string().optional(),
-    error: z.string(),
-    timestamp: z.number()
-  })).optional()
+  errors: z
+    .array(
+      z.object({
+        fileId: z.number().optional(),
+        groupId: z.string().optional(),
+        error: z.string(),
+        timestamp: z.number()
+      })
+    )
+    .optional()
 })
 export type BatchSummaryResult = z.infer<typeof BatchSummaryResultSchema>
 

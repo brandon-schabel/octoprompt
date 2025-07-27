@@ -83,7 +83,7 @@ export class JobQueueService extends EventEmitter {
       input: validated.input,
       metadata: validated.metadata,
       created: now,
-      updated: now,
+      updated: now
     }
 
     // Insert into database
@@ -109,7 +109,7 @@ export class JobQueueService extends EventEmitter {
 
     const createdJob: Job = {
       ...job,
-      id: result.lastInsertRowid as number,
+      id: result.lastInsertRowid as number
     }
 
     // Emit creation event
@@ -181,7 +181,7 @@ export class JobQueueService extends EventEmitter {
     const stmt = this.db.prepare(query)
     const rows = stmt.all(...params) as any[]
 
-    return rows.map(row => this.rowToJob(row))
+    return rows.map((row) => this.rowToJob(row))
   }
 
   // Job cancellation
@@ -222,7 +222,7 @@ export class JobQueueService extends EventEmitter {
 
     this.processing = true
     this.processInterval = setInterval(() => {
-      this.processNextJob().catch(error => {
+      this.processNextJob().catch((error) => {
         console.error('[JobQueue] Error processing jobs:', error)
       })
     }, intervalMs)
@@ -369,9 +369,7 @@ export class JobQueueService extends EventEmitter {
     const job = await this.getJob(jobId)
     if (job) {
       this.emitJobEvent(
-        status === 'running' ? 'job.started' :
-          status === 'cancelled' ? 'job.cancelled' :
-            'job.progress',
+        status === 'running' ? 'job.started' : status === 'cancelled' ? 'job.cancelled' : 'job.progress',
         job
       )
     }
@@ -385,7 +383,7 @@ export class JobQueueService extends EventEmitter {
     const updatedProgress = {
       ...job.progress,
       ...progress,
-      percentage: progress.total ? Math.round((progress.current || 0) / progress.total * 100) : undefined
+      percentage: progress.total ? Math.round(((progress.current || 0) / progress.total) * 100) : undefined
     }
 
     const stmt = this.db.prepare(`
@@ -460,7 +458,7 @@ export class JobQueueService extends EventEmitter {
       created: row.created_at,
       started: row.started_at || undefined,
       completed: row.completed_at || undefined,
-      updated: row.updated_at,
+      updated: row.updated_at
     }
   }
 
@@ -477,7 +475,7 @@ export class JobQueueService extends EventEmitter {
 
   // Cleanup old jobs
   async cleanupOldJobs(olderThanDays: number = 30): Promise<number> {
-    const cutoffTime = Date.now() - (olderThanDays * 24 * 60 * 60 * 1000)
+    const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000
 
     // Archive to job_history first
     const archiveStmt = this.db.prepare(`

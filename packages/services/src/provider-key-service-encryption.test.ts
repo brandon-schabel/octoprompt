@@ -81,7 +81,7 @@ describe('Provider Key Service Encryption', () => {
     expect(listed).toHaveLength(3)
 
     for (let i = 0; i < keys.length; i++) {
-      const listedKey = listed.find(k => k.name === keys[i].name)
+      const listedKey = listed.find((k) => k.name === keys[i].name)
       expect(listedKey?.key).toBe(keys[i].key)
     }
   })
@@ -153,8 +153,8 @@ describe('Provider Key Service Encryption', () => {
     const listed = await service.listKeysUncensored()
     expect(listed).toHaveLength(2)
 
-    const legacy = listed.find(k => k.name === 'Legacy Key')
-    const newKey = listed.find(k => k.name === 'New Key')
+    const legacy = listed.find((k) => k.name === 'Legacy Key')
+    const newKey = listed.find((k) => k.name === 'New Key')
 
     expect(legacy?.key).toBe('sk-plain-text-key')
     expect(newKey?.key).toBe('sk-encrypted-key')

@@ -1,0 +1,20 @@
+{
+  "name": "@promptliano/brand-kit",
+  "version": "1.0.0",
+  "description": "Promptliano brand kit with color system, guidelines, and utilities",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "generate-exports": "tsx src/scripts/generate-exports.ts",
+    "generate-preview": "tsx src/scripts/generate-preview.ts",
+    "generate-all": "npm run generate-exports && npm run generate-preview"
+  },
+  "dependencies": {
+    "color": "^4.2.3"
+  },
+  "devDependencies": {
+    "@types/color": "^3.0.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

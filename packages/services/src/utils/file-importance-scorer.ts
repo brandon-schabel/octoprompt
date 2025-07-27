@@ -58,23 +58,23 @@ const FILE_TYPE_WEIGHTS: Record<string, number> = {
 
 // Directory importance weights
 const DIRECTORY_WEIGHTS: Record<string, number> = {
-  'src': 2.0,
-  'services': 2.5,
-  'api': 2.5,
-  'routes': 2.5,
-  'controllers': 2.5,
-  'components': 1.5,
-  'hooks': 1.5,
-  'utils': 1.0,
-  'lib': 1.0,
-  'core': 2.0,
-  'domain': 2.0,
-  'test': 0.5,
-  'tests': 0.5,
-  '__tests__': 0.5,
-  'docs': 0.3,
-  'examples': 0.3,
-  'node_modules': 0.1,
+  src: 2.0,
+  services: 2.5,
+  api: 2.5,
+  routes: 2.5,
+  controllers: 2.5,
+  components: 1.5,
+  hooks: 1.5,
+  utils: 1.0,
+  lib: 1.0,
+  core: 2.0,
+  domain: 2.0,
+  test: 0.5,
+  tests: 0.5,
+  __tests__: 0.5,
+  docs: 0.3,
+  examples: 0.3,
+  node_modules: 0.1,
   '.git': 0.1
 }
 
@@ -92,13 +92,14 @@ export function getFileImportance(file: ProjectFile): FileImportance {
   }
 
   // Calculate weighted total score
-  const score = Math.min(10,
+  const score = Math.min(
+    10,
     factors.type * 0.3 +
-    factors.location * 0.2 +
-    factors.imports * 0.15 +
-    factors.exports * 0.15 +
-    factors.size * 0.1 +
-    factors.recency * 0.1
+      factors.location * 0.2 +
+      factors.imports * 0.15 +
+      factors.exports * 0.15 +
+      factors.size * 0.1 +
+      factors.recency * 0.1
   )
 
   return {
@@ -202,14 +203,14 @@ function getRecencyScore(lastUpdated: number): number {
  * Sort files by importance score (descending)
  */
 export function sortFilesByImportance(files: ProjectFile[]): ProjectFile[] {
-  const filesWithScores = files.map(file => ({
+  const filesWithScores = files.map((file) => ({
     file,
     importance: getFileImportance(file)
   }))
 
   filesWithScores.sort((a, b) => b.importance.score - a.importance.score)
 
-  return filesWithScores.map(item => item.file)
+  return filesWithScores.map((item) => item.file)
 }
 
 /**
@@ -223,5 +224,5 @@ export function getTopImportantFiles(files: ProjectFile[], topN: number): Projec
  * Filter files by minimum importance score
  */
 export function filterByImportance(files: ProjectFile[], minScore: number): ProjectFile[] {
-  return files.filter(file => getFileImportance(file).score >= minScore)
+  return files.filter((file) => getFileImportance(file).score >= minScore)
 }

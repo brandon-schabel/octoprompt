@@ -202,12 +202,17 @@ export const SuggestionCacheEntrySchema = z
 export const BatchFileSuggestionRequestSchema = z
   .object({
     projectId: z.number(),
-    tickets: z.array(z.object({
-      ticketId: z.number(),
-      includeTaskContext: z.boolean().default(false)
-    })).max(20).openapi({
-      description: 'Batch of tickets to get suggestions for (max 20)',
-    }),
+    tickets: z
+      .array(
+        z.object({
+          ticketId: z.number(),
+          includeTaskContext: z.boolean().default(false)
+        })
+      )
+      .max(20)
+      .openapi({
+        description: 'Batch of tickets to get suggestions for (max 20)'
+      }),
     strategy: FileSuggestionStrategyEnum.default('fast'),
     maxResultsPerTicket: z.number().int().positive().max(20).default(5)
   })

@@ -398,8 +398,8 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
 export async function suggestFilesForTicket(
   ticketId: number,
   options: {
-    extraUserInput?: string,
-    strategy?: 'fast' | 'balanced' | 'thorough',
+    extraUserInput?: string
+    strategy?: 'fast' | 'balanced' | 'thorough'
     maxResults?: number
   } = {}
 ): Promise<{ recommendedFileIds: string[]; combinedSummaries?: string; message?: string }> {
@@ -408,7 +408,7 @@ export async function suggestFilesForTicket(
   try {
     // Determine strategy based on project size if not specified
     const { FileSuggestionStrategyService } = await import('./file-suggestion-strategy-service')
-    const strategy = options.strategy || await FileSuggestionStrategyService.recommendStrategy(ticket.projectId)
+    const strategy = options.strategy || (await FileSuggestionStrategyService.recommendStrategy(ticket.projectId))
 
     // Use the new file suggestion strategy service
     const suggestionResponse = await fileSuggestionStrategyService.suggestFiles(
@@ -419,7 +419,7 @@ export async function suggestFilesForTicket(
     )
 
     // Convert file IDs to strings
-    const suggestedFileIds = suggestionResponse.suggestions.map(id => id.toString())
+    const suggestedFileIds = suggestionResponse.suggestions.map((id) => id.toString())
 
     // Merge with existing suggestions to preserve any manually added files
     const allFileIds = [...new Set([...ticket.suggestedFileIds, ...suggestedFileIds])]

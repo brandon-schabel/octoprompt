@@ -27,39 +27,50 @@ const MCPServerSchema = z.object({
   env: z.record(z.string()).optional()
 })
 
-export const MCPConfigSchema = z.object({
-  mcpServers: z.record(MCPServerSchema).optional(),
-}).refine(
-  (data) => data.mcpServers,
-  "Config must have either 'mcpServers' field"
-)
+export const MCPConfigSchema = z
+  .object({
+    mcpServers: z.record(MCPServerSchema).optional()
+  })
+  .refine((data) => data.mcpServers, "Config must have either 'mcpServers' field")
 
 export type MCPConfig = z.infer<typeof MCPConfigSchema>
 
 // VS Code/Cursor specific config
 export const VSCodeSettingsSchema = z.object({
-  'mcp.servers': z.record(z.object({
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional()
-  })).optional()
+  'mcp.servers': z
+    .record(
+      z.object({
+        command: z.string(),
+        args: z.array(z.string()).optional(),
+        env: z.record(z.string()).optional()
+      })
+    )
+    .optional()
 })
 
 export type VSCodeSettings = z.infer<typeof VSCodeSettingsSchema>
 
 // Continue specific config
 export const ContinueConfigSchema = z.object({
-  models: z.array(z.object({
-    provider: z.string(),
-    model: z.string(),
-    mcpServers: z.array(z.string()).optional()
-  })).optional(),
-  mcpConfigs: z.record(z.object({
-    transport: z.string(),
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional()
-  })).optional()
+  models: z
+    .array(
+      z.object({
+        provider: z.string(),
+        model: z.string(),
+        mcpServers: z.array(z.string()).optional()
+      })
+    )
+    .optional(),
+  mcpConfigs: z
+    .record(
+      z.object({
+        transport: z.string(),
+        command: z.string(),
+        args: z.array(z.string()).optional(),
+        env: z.record(z.string()).optional()
+      })
+    )
+    .optional()
 })
 
 export type ContinueConfig = z.infer<typeof ContinueConfigSchema>
@@ -67,15 +78,23 @@ export type ContinueConfig = z.infer<typeof ContinueConfigSchema>
 // Claude Code specific config
 export const ClaudeCodeConfigSchema = z.object({
   defaultMcpServers: z.array(z.string()).optional(),
-  projectBindings: z.record(z.object({
-    projectId: z.string(),
-    autoConnect: z.boolean().optional()
-  })).optional(),
-  mcpServers: z.record(z.object({
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional()
-  })).optional()
+  projectBindings: z
+    .record(
+      z.object({
+        projectId: z.string(),
+        autoConnect: z.boolean().optional()
+      })
+    )
+    .optional(),
+  mcpServers: z
+    .record(
+      z.object({
+        command: z.string(),
+        args: z.array(z.string()).optional(),
+        env: z.record(z.string()).optional()
+      })
+    )
+    .optional()
 })
 
 export type ClaudeCodeConfig = z.infer<typeof ClaudeCodeConfigSchema>
@@ -121,7 +140,7 @@ export class MCPInstallationService {
   private migrateConfigFormat(config: any): MCPConfig {
     if (config.servers && !config.mcpServers) {
       return {
-        mcpServers: config.servers,
+        mcpServers: config.servers
       }
     }
     return config
@@ -141,7 +160,7 @@ export class MCPInstallationService {
     // Always use mcpServers for new configs
     return {
       ...config,
-      mcpServers: servers,
+      mcpServers: servers
     }
   }
 
@@ -218,9 +237,10 @@ export class MCPInstallationService {
 
       if (tool === 'claude-desktop') {
         // Claude Desktop requires stdio communication, so we use platform-specific scripts
-        const scriptPath = this.platform === 'win32'
-          ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
-          : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+        const scriptPath =
+          this.platform === 'win32'
+            ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+            : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
         const servers = this.getServersFromConfig(config)
         servers[serverName] = {
@@ -233,7 +253,14 @@ export class MCPInstallationService {
         config = this.setServersInConfig(config, servers)
       } else if (tool === 'vscode' || tool === 'cursor' || tool === 'windsurf') {
         // VS Code/Cursor/Windsurf use settings.json format
-        const vscodeConfig = await this.installVSCodeStyle(tool, projectId, projectName, projectPath, promptlianoPath, debug)
+        const vscodeConfig = await this.installVSCodeStyle(
+          tool,
+          projectId,
+          projectName,
+          projectPath,
+          promptlianoPath,
+          debug
+        )
         if (!vscodeConfig.success) {
           return vscodeConfig
         }
@@ -250,7 +277,13 @@ export class MCPInstallationService {
         return continueConfig
       } else if (tool === 'claude-code') {
         // Claude Code uses a hybrid config format
-        const claudeCodeConfig = await this.installClaudeCode(projectId, projectName, projectPath, promptlianoPath, debug)
+        const claudeCodeConfig = await this.installClaudeCode(
+          projectId,
+          projectName,
+          projectPath,
+          promptlianoPath,
+          debug
+        )
         return claudeCodeConfig
       }
 
@@ -375,7 +408,7 @@ export class MCPInstallationService {
 
           // Remove from default servers
           if (config.defaultMcpServers) {
-            config.defaultMcpServers = config.defaultMcpServers.filter(s => s !== serverName)
+            config.defaultMcpServers = config.defaultMcpServers.filter((s) => s !== serverName)
           }
 
           // Remove project bindings for this server
@@ -480,7 +513,7 @@ export class MCPInstallationService {
         const parsedConfig = JSON.parse(content)
         const config = this.migrateConfigFormat(parsedConfig)
         const servers = this.getServersFromConfig(config)
-        hasPromptliano = servers && Object.keys(servers).some(k => k.includes('promptliano'))
+        hasPromptliano = servers && Object.keys(servers).some((k) => k.includes('promptliano'))
       } catch {
         configExists = false
       }
@@ -516,7 +549,8 @@ export class MCPInstallationService {
         const content = await fs.readFile(configPath, 'utf-8')
         configExists = true
         const parsed = JSON.parse(content)
-        hasPromptliano = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('promptliano'))
+        hasPromptliano =
+          parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some((k) => k.includes('promptliano'))
       } catch {
         configExists = false
       }
@@ -552,7 +586,8 @@ export class MCPInstallationService {
         const content = await fs.readFile(configPath, 'utf-8')
         configExists = true
         const parsed = JSON.parse(content)
-        hasPromptliano = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('promptliano'))
+        hasPromptliano =
+          parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some((k) => k.includes('promptliano'))
       } catch {
         configExists = false
       }
@@ -582,7 +617,7 @@ export class MCPInstallationService {
         configExists = true
         // Continue uses a different config format
         const config = JSON.parse(content)
-        hasPromptliano = config.mcpConfigs && Object.keys(config.mcpConfigs).some(k => k.includes('promptliano'))
+        hasPromptliano = config.mcpConfigs && Object.keys(config.mcpConfigs).some((k) => k.includes('promptliano'))
       } catch {
         installed = false
         configExists = false
@@ -610,11 +645,12 @@ export class MCPInstallationService {
     if (configPath) {
       try {
         const content = await fs.readFile(configPath, 'utf-8')
-        installed = true  // If config exists, assume Claude Code is being used
+        installed = true // If config exists, assume Claude Code is being used
         configExists = true
         // Claude Code config format
         const config = JSON.parse(content)
-        hasPromptliano = (config.mcpServers && Object.keys(config.mcpServers).some(k => k.includes('promptliano'))) ||
+        hasPromptliano =
+          (config.mcpServers && Object.keys(config.mcpServers).some((k) => k.includes('promptliano'))) ||
           (config.defaultMcpServers && config.defaultMcpServers.some((s: any) => s.includes('promptliano')))
       } catch {
         // Also check if Claude Code CLI is available as fallback
@@ -673,7 +709,8 @@ export class MCPInstallationService {
         const content = await fs.readFile(configPath, 'utf-8')
         configExists = true
         const parsed = JSON.parse(content)
-        hasPromptliano = parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some(k => k.includes('promptliano'))
+        hasPromptliano =
+          parsed['mcp.servers'] && Object.keys(parsed['mcp.servers']).some((k) => k.includes('promptliano'))
       } catch {
         configExists = false
       }
@@ -740,9 +777,10 @@ export class MCPInstallationService {
 
       // Add Promptliano MCP configuration
       const serverName = `promptliano-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
-      const scriptPath = this.platform === 'win32'
-        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
-        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+      const scriptPath =
+        this.platform === 'win32'
+          ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+          : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       settings['mcp.servers'][serverName] = {
         command: scriptPath,
@@ -822,9 +860,10 @@ export class MCPInstallationService {
 
       // Add Promptliano MCP configuration
       const serverName = `promptliano-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
-      const scriptPath = this.platform === 'win32'
-        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
-        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+      const scriptPath =
+        this.platform === 'win32'
+          ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+          : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       if (!config.mcpConfigs) {
         config.mcpConfigs = {}
@@ -926,9 +965,10 @@ export class MCPInstallationService {
 
       // Add Promptliano MCP server configuration
       const serverName = `promptliano-${projectName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
-      const scriptPath = this.platform === 'win32'
-        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
-        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+      const scriptPath =
+        this.platform === 'win32'
+          ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+          : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       config.mcpServers[serverName] = {
         command: scriptPath,
@@ -1043,9 +1083,10 @@ export class MCPInstallationService {
 
       // Get the Promptliano installation path
       const promptlianoPath = await this.getPromptlianoPath()
-      const scriptPath = this.platform === 'win32'
-        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
-        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+      const scriptPath =
+        this.platform === 'win32'
+          ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+          : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       // Get existing servers if any
       const existingServers = existingConfig.mcpServers || existingConfig.servers || {}
@@ -1057,9 +1098,7 @@ export class MCPInstallationService {
           promptliano: {
             type: 'stdio',
             command: this.platform === 'win32' ? 'cmd.exe' : 'sh',
-            args: this.platform === 'win32'
-              ? ['/c', scriptPath]
-              : [scriptPath],
+            args: this.platform === 'win32' ? ['/c', scriptPath] : [scriptPath],
             env: {
               PROMPTLIANO_PROJECT_ID: projectId.toString(),
               PROMPTLIANO_PROJECT_PATH: projectPath,
@@ -1237,7 +1276,7 @@ export class MCPInstallationService {
 
           // Remove from default servers
           if (config.defaultMcpServers) {
-            config.defaultMcpServers = config.defaultMcpServers.filter(s => s !== serverName)
+            config.defaultMcpServers = config.defaultMcpServers.filter((s) => s !== serverName)
           }
 
           await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')

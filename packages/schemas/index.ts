@@ -19,6 +19,7 @@ export * from './src/file-relevance.schemas'
 export * from './src/job.schemas'
 export * from './src/summary-options.schemas'
 export * from './src/file-summarization.schemas'
+export * from './src/claude-agent.schemas'
 
 // export constants
 export * from './src/constants/models-temp-not-allowed'

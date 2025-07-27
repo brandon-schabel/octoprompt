@@ -26,7 +26,7 @@ export class EncryptionKeyStorage {
   private encryptionKey: string | null = null
   private readonly keyFileName = 'encryption.key'
 
-  private constructor() { }
+  private constructor() {}
 
   static getInstance(): EncryptionKeyStorage {
     if (!EncryptionKeyStorage.instance) {
@@ -108,10 +108,7 @@ export class EncryptionKeyStorage {
    * Checks if an encryption key exists
    */
   hasKey(): boolean {
-    return !!(
-      process.env.PROMPTLIANO_ENCRYPTION_KEY ||
-      fs.existsSync(this.getKeyPath())
-    )
+    return !!(process.env.PROMPTLIANO_ENCRYPTION_KEY || fs.existsSync(this.getKeyPath()))
   }
 
   /**

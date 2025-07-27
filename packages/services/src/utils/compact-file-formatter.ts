@@ -26,7 +26,7 @@ export class CompactFileFormatter {
    * Only includes id and path
    */
   static ultraCompact(files: ProjectFile[]): string {
-    const data = files.map(f => ({
+    const data = files.map((f) => ({
       i: f.id,
       p: this.truncatePath(f.path, 50)
     }))
@@ -38,7 +38,7 @@ export class CompactFileFormatter {
    * Includes id, path, and brief summary
    */
   static compact(files: ProjectFile[]): string {
-    const data = files.map(f => ({
+    const data = files.map((f) => ({
       i: f.id,
       p: this.truncatePath(f.path, 50),
       s: this.truncateSummary(f.summary, 40)
@@ -51,7 +51,7 @@ export class CompactFileFormatter {
    * Includes id, path, summary, type, and modification time
    */
   static standard(files: ProjectFile[]): string {
-    const data = files.map(f => ({
+    const data = files.map((f) => ({
       i: f.id,
       p: this.truncatePath(f.path, 60),
       s: this.truncateSummary(f.summary, 50),
@@ -69,13 +69,13 @@ export class CompactFileFormatter {
 
     switch (level) {
       case 'ultra':
-        formattedFiles = files.map(f => ({
+        formattedFiles = files.map((f) => ({
           i: f.id,
           p: this.truncatePath(f.path, 50)
         }))
         break
       case 'standard':
-        formattedFiles = files.map(f => ({
+        formattedFiles = files.map((f) => ({
           i: f.id,
           p: this.truncatePath(f.path, 60),
           s: this.truncateSummary(f.summary, 50),
@@ -85,7 +85,7 @@ export class CompactFileFormatter {
         break
       case 'compact':
       default:
-        formattedFiles = files.map(f => ({
+        formattedFiles = files.map((f) => ({
           i: f.id,
           p: this.truncatePath(f.path, 50),
           s: this.truncateSummary(f.summary, 40)
@@ -134,7 +134,8 @@ export class CompactFileFormatter {
     let summary = ''
     for (const [category, categoryFiles] of categories) {
       summary += `\n${category} (${categoryFiles.length}):\n`
-      for (const file of categoryFiles.slice(0, 5)) { // Show max 5 per category
+      for (const file of categoryFiles.slice(0, 5)) {
+        // Show max 5 per category
         summary += `- [${file.id}] ${this.getFileName(file.path)}`
         if (file.summary) {
           summary += `: ${this.truncateSummary(file.summary, 30)}`

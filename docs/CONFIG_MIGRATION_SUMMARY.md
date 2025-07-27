@@ -109,13 +109,13 @@ All tests have been updated and are passing. The configuration package includes 
 To use the new configuration system:
 
 ```typescript
-import { 
-  getGlobalConfig,      // Get all configurations
-  getModelsConfig,      // Get model configurations
-  getServerConfig,      // Get server configurations
-  getFilesConfig,       // Get file configurations
-  getProvidersConfig,   // Get provider configurations
-  LOW_MODEL_CONFIG,     // Direct access to specific configs
+import {
+  getGlobalConfig, // Get all configurations
+  getModelsConfig, // Get model configurations
+  getServerConfig, // Get server configurations
+  getFilesConfig, // Get file configurations
+  getProvidersConfig, // Get provider configurations
+  LOW_MODEL_CONFIG, // Direct access to specific configs
   MEDIUM_MODEL_CONFIG,
   HIGH_MODEL_CONFIG
 } from '@promptliano/config'

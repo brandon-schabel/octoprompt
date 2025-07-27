@@ -74,7 +74,26 @@ export const projectTabStateSchema = z
       .default(false)
       .openapi({ description: 'Whether to attempt resolving imports to include related file context.' }),
     preferredEditor: z
-      .enum(['vscode', 'cursor', 'webstorm', 'vim', 'emacs', 'sublime', 'atom', 'idea', 'phpstorm', 'pycharm', 'rubymine', 'goland', 'fleet', 'zed', 'neovim', 'xcode', 'androidstudio', 'rider'])
+      .enum([
+        'vscode',
+        'cursor',
+        'webstorm',
+        'vim',
+        'emacs',
+        'sublime',
+        'atom',
+        'idea',
+        'phpstorm',
+        'pycharm',
+        'rubymine',
+        'goland',
+        'fleet',
+        'zed',
+        'neovim',
+        'xcode',
+        'androidstudio',
+        'rider'
+      ])
       .optional()
       .default('vscode')
       .openapi({ description: 'The preferred editor to open files with from this tab.', example: 'cursor' }),
@@ -137,7 +156,12 @@ export const projectTabStateSchema = z
       .date()
       .nullable()
       .optional()
-      .openapi({ description: 'Timestamp when the tab name was generated' })
+      .openapi({ description: 'Timestamp when the tab name was generated' }),
+    claudeCodeEnabled: z
+      .boolean()
+      .optional()
+      .default(false)
+      .openapi({ description: 'Whether Claude Code integration features are enabled for this project.' })
   })
   .openapi('ProjectTabState', {
     description:
@@ -417,7 +441,8 @@ export const createSafeGlobalState = (): GlobalState => ({
       ticketStatusFilter: 'all' as const,
       promptsPanelCollapsed: true,
       selectedFilesCollapsed: false,
-      enableChatAutoNaming: false
+      enableChatAutoNaming: false,
+      claudeCodeEnabled: false
     }
   },
   projectActiveTabId: 1,

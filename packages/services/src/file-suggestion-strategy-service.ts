@@ -85,23 +85,18 @@ export class FileSuggestionStrategyService {
         )
 
         // Map AI suggestions back to relevance scores
-        scores = finalSuggestions.map(fileId => {
-          const score = relevanceScores.find(s => s.fileId === fileId)
+        scores = finalSuggestions.map((fileId) => {
+          const score = relevanceScores.find((s) => s.fileId === fileId)
           return score || this.createDefaultScore(fileId)
         })
       } else {
         // Fast mode: Use only pre-filtering results
-        finalSuggestions = relevanceScores
-          .slice(0, maxResults)
-          .map(score => score.fileId)
+        finalSuggestions = relevanceScores.slice(0, maxResults).map((score) => score.fileId)
         scores = relevanceScores.slice(0, maxResults)
       }
 
       // Calculate token savings
-      const tokensSaved = await this.calculateTokenSavings(
-        ticket.projectId,
-        strategyConfig.maxAIFiles
-      )
+      const tokensSaved = await this.calculateTokenSavings(ticket.projectId, strategyConfig.maxAIFiles)
 
       return {
         suggestions: finalSuggestions,
@@ -135,20 +130,13 @@ export class FileSuggestionStrategyService {
     }
 
     // Get relevance scores for all files
-    const scores = await fileRelevanceService.scoreFilesForTicket(
-      ticket,
-      ticket.projectId,
-      userContext
-    )
+    const scores = await fileRelevanceService.scoreFilesForTicket(ticket, ticket.projectId, userContext)
 
     // Return top scored files
     return scores.slice(0, maxFiles)
   }
 
-  private async getFilesByScores(
-    projectId: number,
-    scores: RelevanceScore[]
-  ): Promise<ProjectFile[]> {
+  private async getFilesByScores(projectId: number, scores: RelevanceScore[]): Promise<ProjectFile[]> {
     const { getProjectFiles } = await import('./project-service')
     const allFiles = await getProjectFiles(projectId)
 
@@ -158,10 +146,8 @@ export class FileSuggestionStrategyService {
       return []
     }
 
-    const fileMap = new Map(allFiles.map(f => [f.id, f]))
-    return scores
-      .map(score => fileMap.get(score.fileId))
-      .filter((file): file is ProjectFile => file !== undefined)
+    const fileMap = new Map(allFiles.map((f) => [f.id, f]))
+    return scores.map((score) => fileMap.get(score.fileId)).filter((file): file is ProjectFile => file !== undefined)
   }
 
   private async aiRefineSuggestions(
@@ -228,10 +214,7 @@ Select the ${maxResults} most relevant file IDs from the above list.`
     return files?.length || 0
   }
 
-  private async calculateTokenSavings(
-    projectId: number,
-    analyzedFiles: number
-  ): Promise<number> {
+  private async calculateTokenSavings(projectId: number, analyzedFiles: number): Promise<number> {
     const { getProjectFiles } = await import('./project-service')
     const allFiles = await getProjectFiles(projectId)
 
@@ -286,10 +269,10 @@ Select the ${maxResults} most relevant file IDs from the above list.`
     for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
       const batch = tickets.slice(i, i + BATCH_SIZE)
       const batchResults = await Promise.all(
-        batch.map(ticket =>
+        batch.map((ticket) =>
           this.suggestFiles(ticket, strategy, maxResultsPerTicket)
-            .then(result => ({ ticketId: ticket.id, result }))
-            .catch(error => ({
+            .then((result) => ({ ticketId: ticket.id, result }))
+            .catch((error) => ({
               ticketId: ticket.id,
               result: this.createErrorResponse(error, strategy)
             }))
@@ -304,10 +287,7 @@ Select the ${maxResults} most relevant file IDs from the above list.`
     return results
   }
 
-  private createErrorResponse(
-    error: any,
-    strategy: FileSuggestionStrategy
-  ): FileSuggestionResponse {
+  private createErrorResponse(error: any, strategy: FileSuggestionStrategy): FileSuggestionResponse {
     return {
       suggestions: [],
       metadata: {

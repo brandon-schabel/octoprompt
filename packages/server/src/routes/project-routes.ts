@@ -88,15 +88,17 @@ const RevertToVersionBodySchema = z.object({
 // Batch summarization schemas
 const StartBatchSummarizationBodySchema = z.object({
   strategy: z.enum(['imports', 'directory', 'semantic', 'mixed']).default('mixed'),
-  options: z.object({
-    maxGroupSize: z.number().min(1).max(50).optional(),
-    maxTokensPerGroup: z.number().min(1000).max(100000).optional(),
-    priorityThreshold: z.number().min(0).max(10).optional(),
-    maxConcurrentGroups: z.number().min(1).max(10).optional(),
-    staleThresholdDays: z.number().min(1).max(365).optional(),
-    includeStaleFiles: z.boolean().optional(),
-    retryFailedFiles: z.boolean().optional()
-  }).optional()
+  options: z
+    .object({
+      maxGroupSize: z.number().min(1).max(50).optional(),
+      maxTokensPerGroup: z.number().min(1000).max(100000).optional(),
+      priorityThreshold: z.number().min(0).max(10).optional(),
+      maxConcurrentGroups: z.number().min(1).max(10).optional(),
+      staleThresholdDays: z.number().min(1).max(365).optional(),
+      includeStaleFiles: z.boolean().optional(),
+      retryFailedFiles: z.boolean().optional()
+    })
+    .optional()
 })
 
 const BatchProgressResponseSchema = z.object({
@@ -137,14 +139,16 @@ const FileSummarizationStatsResponseSchema = z.object({
 const FileGroupsResponseSchema = z.object({
   success: z.literal(true),
   data: z.object({
-    groups: z.array(z.object({
-      id: z.string(),
-      name: z.string(),
-      strategy: z.enum(['imports', 'directory', 'semantic', 'mixed']),
-      fileIds: z.array(z.number()),
-      estimatedTokens: z.number().optional(),
-      priority: z.number()
-    })),
+    groups: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        strategy: z.enum(['imports', 'directory', 'semantic', 'mixed']),
+        fileIds: z.array(z.number()),
+        estimatedTokens: z.number().optional(),
+        priority: z.number()
+      })
+    ),
     totalFiles: z.number(),
     totalGroups: z.number(),
     estimatedTotalTokens: z.number()
@@ -1254,10 +1258,7 @@ export const projectRoutes = new OpenAPIHono()
       })
 
       // Start batch summarization (async iterator)
-      const progressIterator = enhancedSummarizationService.batchSummarizeWithProgress(
-        projectId,
-        batchOptions
-      )
+      const progressIterator = enhancedSummarizationService.batchSummarizeWithProgress(projectId, batchOptions)
 
       // Get first progress update
       const firstProgress = await progressIterator.next()
@@ -1399,14 +1400,12 @@ export const projectRoutes = new OpenAPIHono()
 
       // Get files to group
       const unsummarizedFiles = await fileSummarizationTracker.getUnsummarizedFiles(projectId)
-      const staleFiles = includeStaleFiles
-        ? await fileSummarizationTracker.getStaleFiles(projectId)
-        : []
+      const staleFiles = includeStaleFiles ? await fileSummarizationTracker.getStaleFiles(projectId) : []
 
       // Combine and deduplicate
       const fileMap = new Map()
       const allFilesToGroup = [...unsummarizedFiles, ...staleFiles]
-      allFilesToGroup.forEach(f => fileMap.set(f.id, f))
+      allFilesToGroup.forEach((f) => fileMap.set(f.id, f))
       const filesToGroup = Array.from(fileMap.values())
 
       if (filesToGroup.length === 0) {
@@ -1423,15 +1422,11 @@ export const projectRoutes = new OpenAPIHono()
       }
 
       // Group files
-      const groups = fileGroupingService.groupFilesByStrategy(
-        filesToGroup,
-        strategy,
-        { maxGroupSize }
-      )
+      const groups = fileGroupingService.groupFilesByStrategy(filesToGroup, strategy, { maxGroupSize })
 
       // Estimate tokens
       let totalTokens = 0
-      const groupsWithTokens = groups.map(group => {
+      const groupsWithTokens = groups.map((group) => {
         const estimatedTokens = group.fileIds.reduce((sum, fileId) => {
           const file = fileMap.get(fileId)
           return sum + Math.ceil((file?.content?.length || 0) / 4)

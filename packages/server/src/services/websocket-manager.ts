@@ -27,7 +27,8 @@ export class WebSocketManager extends EventEmitter {
   // Send message to a specific client
   sendToClient(clientId: string, message: any): boolean {
     const ws = this.clients.get(clientId)
-    if (ws && ws.readyState === 1) { // 1 = OPEN
+    if (ws && ws.readyState === 1) {
+      // 1 = OPEN
       ws.send(JSON.stringify(message))
       return true
     }
@@ -40,7 +41,8 @@ export class WebSocketManager extends EventEmitter {
     let sent = 0
 
     for (const [clientId, ws] of this.clients) {
-      if (ws.readyState === 1) { // 1 = OPEN
+      if (ws.readyState === 1) {
+        // 1 = OPEN
         ws.send(messageStr)
         sent++
       } else {

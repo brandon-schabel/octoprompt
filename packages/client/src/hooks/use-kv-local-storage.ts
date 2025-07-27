@@ -134,7 +134,7 @@ export const useAppSettingsKvApi = () => {
 
 export const useInvalidateKv = (key: KVKey) => {
   // No-op for local storage, as updates are synchronous
-  return () => { }
+  return () => {}
 }
 
 export const useGetProjectTabById = (
@@ -275,7 +275,7 @@ export function useProjectTabField<K extends keyof ProjectTabState>(
       const newVal =
         typeof valueOrFn === 'function'
           ? // @ts-ignore
-          (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
+            (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
           : valueOrFn
 
       // Call the refactored updateTab hook, which handles the API call
@@ -303,15 +303,18 @@ export function useAppSettings(): [AppSettings, (partialSettings: PartialOrFn<Ap
   const [appSettings] = useGetAppSettings()
   const { mutate: setAppSettingsBase } = useSetKvValue('appSettings')
 
-  const setAppSettings = useCallback((partialSettings: PartialOrFn<AppSettings>) => {
-    setAppSettingsBase((prev) => {
-      const partial = typeof partialSettings === 'function' ? partialSettings(prev as AppSettings) : partialSettings
-      return {
-        ...prev,
-        ...partial
-      } as AppSettings
-    })
-  }, [setAppSettingsBase])
+  const setAppSettings = useCallback(
+    (partialSettings: PartialOrFn<AppSettings>) => {
+      setAppSettingsBase((prev) => {
+        const partial = typeof partialSettings === 'function' ? partialSettings(prev as AppSettings) : partialSettings
+        return {
+          ...prev,
+          ...partial
+        } as AppSettings
+      })
+    },
+    [setAppSettingsBase]
+  )
 
   return [appSettings as AppSettings, setAppSettings]
 }

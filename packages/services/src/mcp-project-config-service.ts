@@ -31,14 +31,13 @@ export const MCPInputConfigSchema = z.object({
 })
 
 // Support both old 'servers' format and new 'mcpServers' format
-export const ProjectMCPConfigSchema = z.object({
-  mcpServers: z.record(MCPServerConfigSchema).optional(),
-  inputs: z.array(MCPInputConfigSchema).optional(),
-  extends: z.union([z.string(), z.array(z.string())]).optional()
-}).refine(
-  (data) => data.mcpServers,
-  "Config must have either 'mcpServers' or 'servers' field"
-)
+export const ProjectMCPConfigSchema = z
+  .object({
+    mcpServers: z.record(MCPServerConfigSchema).optional(),
+    inputs: z.array(MCPInputConfigSchema).optional(),
+    extends: z.union([z.string(), z.array(z.string())]).optional()
+  })
+  .refine((data) => data.mcpServers, "Config must have either 'mcpServers' or 'servers' field")
 
 export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>
 export type MCPInputConfig = z.infer<typeof MCPInputConfigSchema>
@@ -46,9 +45,9 @@ export type ProjectMCPConfig = z.infer<typeof ProjectMCPConfigSchema>
 
 // Configuration file paths by priority (highest to lowest)
 const CONFIG_FILE_NAMES = [
-  '.vscode/mcp.json',      // VS Code workspace-specific
-  '.cursor/mcp.json',      // Cursor IDE project-specific
-  '.mcp.json',             // Universal project root (primary)
+  '.vscode/mcp.json', // VS Code workspace-specific
+  '.cursor/mcp.json', // Cursor IDE project-specific
+  '.mcp.json' // Universal project root (primary)
   // '.promptliano/mcp.json'   // Promptliano-specific
 ]
 
@@ -71,8 +70,6 @@ export class MCPProjectConfigService extends EventEmitter {
   constructor() {
     super()
   }
-
-
 
   /**
    * Get the servers from config, handling both formats
@@ -118,9 +115,7 @@ export class MCPProjectConfigService extends EventEmitter {
     const locations = await this.getConfigLocations(projectId)
 
     // Find the first existing config file (highest priority)
-    const existingConfig = locations
-      .sort((a, b) => b.priority - a.priority)
-      .find(loc => loc.exists)
+    const existingConfig = locations.sort((a, b) => b.priority - a.priority).find((loc) => loc.exists)
 
     if (!existingConfig) {
       logger.debug(`No MCP config found for project ${projectId}`)
@@ -241,9 +236,7 @@ export class MCPProjectConfigService extends EventEmitter {
 
       // Expand in args
       if (serverConfig.args) {
-        serverConfig.args = serverConfig.args.map(arg =>
-          this.expandString(arg, variables)
-        )
+        serverConfig.args = serverConfig.args.map((arg) => this.expandString(arg, variables))
       }
 
       // Expand in env
@@ -290,15 +283,11 @@ export class MCPProjectConfigService extends EventEmitter {
   /**
    * Save project configuration to a specific location
    */
-  async saveProjectConfigToLocation(
-    projectId: number,
-    config: ProjectMCPConfig,
-    locationPath: string
-  ): Promise<void> {
+  async saveProjectConfigToLocation(projectId: number, config: ProjectMCPConfig, locationPath: string): Promise<void> {
     const project = await getProjectById(projectId)
 
     // Validate that the location is one of the allowed paths
-    const allowedPaths = CONFIG_FILE_NAMES.map(name => path.join(project.path, name))
+    const allowedPaths = CONFIG_FILE_NAMES.map((name) => path.join(project.path, name))
     const fullPath = path.isAbsolute(locationPath) ? locationPath : path.join(project.path, locationPath)
 
     if (!allowedPaths.includes(fullPath)) {
@@ -332,7 +321,7 @@ export class MCPProjectConfigService extends EventEmitter {
     }
     // else if (locationPath.includes('.promptliano/mcp.json')) {
     //   return 'promptliano'
-    // } 
+    // }
     else if (locationPath.includes('.mcp.json')) {
       return 'universal'
     }
@@ -354,9 +343,10 @@ export class MCPProjectConfigService extends EventEmitter {
       promptlianoPath = path.resolve(promptlianoPath, '../..')
     }
 
-    const scriptPath = process.platform === 'win32'
-      ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
-      : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+    const scriptPath =
+      process.platform === 'win32'
+        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
     // Base config that works for all editors (using new format)
     const baseConfig: ProjectMCPConfig = {
@@ -364,9 +354,7 @@ export class MCPProjectConfigService extends EventEmitter {
         promptliano: {
           type: 'stdio',
           command: process.platform === 'win32' ? 'cmd.exe' : 'sh',
-          args: process.platform === 'win32'
-            ? ['/c', scriptPath]
-            : [scriptPath],
+          args: process.platform === 'win32' ? ['/c', scriptPath] : [scriptPath],
           env: {
             PROMPTLIANO_PROJECT_ID: projectId.toString(),
             PROMPTLIANO_PROJECT_PATH: project.path,

@@ -8,12 +8,14 @@ interface WebSocketHook {
   unsubscribe: (event: string, handler: (event: MessageEvent) => void) => void
 }
 
-const WS_URL = import.meta.env.VITE_WS_URL || (() => {
-  const host = window.location.hostname
-  const port = import.meta.env.VITE_PORT || 8787
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${host}:${port}/ws`
-})()
+const WS_URL =
+  import.meta.env.VITE_WS_URL ||
+  (() => {
+    const host = window.location.hostname
+    const port = import.meta.env.VITE_PORT || 8787
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${host}:${port}/ws`
+  })()
 
 export function useWebSocket(): WebSocketHook {
   const [isConnected, setIsConnected] = useState(false)
@@ -27,12 +29,12 @@ export function useWebSocket(): WebSocketHook {
 
     try {
       const ws = new WebSocket(WS_URL)
-      
+
       ws.onopen = () => {
         console.log('[WebSocket] Connected')
         setIsConnected(true)
         reconnectAttemptsRef.current = 0
-        
+
         // Send initial ping
         ws.send(JSON.stringify({ type: 'ping' }))
       }
@@ -41,11 +43,11 @@ export function useWebSocket(): WebSocketHook {
         console.log('[WebSocket] Disconnected')
         setIsConnected(false)
         wsRef.current = null
-        
+
         // Attempt reconnection with exponential backoff
         const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000)
         reconnectAttemptsRef.current++
-        
+
         reconnectTimeoutRef.current = setTimeout(() => {
           console.log('[WebSocket] Attempting reconnection...')
           connect()
@@ -64,11 +66,11 @@ export function useWebSocket(): WebSocketHook {
         } catch {
           // Not JSON, continue with normal handling
         }
-        
+
         // Notify all message listeners
         const messageHandlers = listenersRef.current.get('message')
         if (messageHandlers) {
-          messageHandlers.forEach(handler => handler(event))
+          messageHandlers.forEach((handler) => handler(event))
         }
       }
 

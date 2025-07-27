@@ -26,15 +26,14 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/AppIcon-29.png",
+      "icons/AppIcon@2x.png",
+      "icons/AppIcon@3x.png",
+      "icons/AppIcon-40@2x.png",
+      "icons/AppIcon-83.5@2x~ipad.png",
+      "icons/AppIcon~ios-marketing.png"
     ],
-    "externalBin": [
-      "binaries/promptliano-server"
-    ],
+    "externalBin": ["binaries/promptliano-server"],
     "macOS": {
       "signingIdentity": null,
       "providerShortName": null,

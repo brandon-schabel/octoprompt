@@ -1,5 +1,8 @@
 # Promptliano
 
+[![Website Deployment](https://github.com/brandon-schabel/promptliano/actions/workflows/deploy-website.yml/badge.svg)](https://github.com/brandon-schabel/promptliano/actions/workflows/deploy-website.yml)
+[![GitHub Pages](https://img.shields.io/badge/Website-promptliano.com-blue)](https://promptliano.com)
+
 Your AI toolkit for context engineering.
 
 ## Introduction
@@ -46,7 +49,6 @@ Connect Promptliano to Claude Desktop or Cursor for AI-powered codebase access.
 ### Claude Desktop Setup
 
 1. **Edit config file:**
-
    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
@@ -68,7 +70,6 @@ Connect Promptliano to Claude Desktop or Cursor for AI-powered codebase access.
 
 1. **Open Cursor Settings** → **Features** → **Model Context Protocol**
 2. **Add server:**
-
    - **Name**: `promptliano`
    - **Command**: `/absolute/path/to/promptliano/packages/server/mcp-start.sh`
 
@@ -466,7 +467,6 @@ Promptliano now includes a native desktop app built with Tauri for better perfor
 ### Build Types
 
 1. **Development Build** - Quick builds for testing
-
    - No code signing required
    - Runs immediately on your machine
    - Output: `tauri-builds/` directory
@@ -501,7 +501,6 @@ Promptliano is designed with a streamlined production build process where the cl
 ### Build Process
 
 1. **Client Build**
-
    - The client's Vite configuration (`vite.config.ts`) is set up to output the production build to `../server/client-dist`
    - This means the built client files will be directly available to the server for serving static content
    - All test files are automatically excluded from the production build

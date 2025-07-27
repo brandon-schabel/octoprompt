@@ -16,7 +16,10 @@ import {
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { generateSingleText, generateStructuredData, genTextStream, providerKeyService } from '@promptliano/services' // Import the service instance
 import { APIProviders, ProviderKey } from '@promptliano/schemas'
-import { ProviderKeysConfig, ModelFetcherService } from '@promptliano/services/src/model-providers/model-fetcher-service'
+import {
+  ProviderKeysConfig,
+  ModelFetcherService
+} from '@promptliano/services/src/model-providers/model-fetcher-service'
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@promptliano/services/src/model-providers/provider-defaults'
 import { stream } from 'hono/streaming'
 

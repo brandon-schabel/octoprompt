@@ -39,10 +39,7 @@ export class AgentFileDetectionService {
       type: 'claude',
       name: 'Claude',
       patterns: {
-        global: [
-          path.join(os.homedir(), '.claude', 'CLAUDE.md'),
-          path.join(os.homedir(), 'CLAUDE.md')
-        ],
+        global: [path.join(os.homedir(), '.claude', 'CLAUDE.md'), path.join(os.homedir(), 'CLAUDE.md')],
         project: ['CLAUDE.md', '.claude/CLAUDE.md']
       }
     },
@@ -79,12 +76,7 @@ export class AgentFileDetectionService {
       type: 'codebase',
       name: 'Codebase Instructions',
       patterns: {
-        project: [
-          'codebase-instructions.md',
-          '.ai/instructions.md',
-          'AI_INSTRUCTIONS.md',
-          'docs/ai-instructions.md'
-        ]
+        project: ['codebase-instructions.md', '.ai/instructions.md', 'AI_INSTRUCTIONS.md', 'docs/ai-instructions.md']
       }
     },
     {
@@ -177,7 +169,7 @@ export class AgentFileDetectionService {
   ): Promise<DetectedAgentFile | null> {
     try {
       const stats = await fs.stat(filePath)
-      
+
       if (!stats.isFile()) return null
 
       // Check if file is writable
@@ -225,16 +217,13 @@ export class AgentFileDetectionService {
     }
   }
 
-  async createAgentFile(
-    filePath: string,
-    initialContent: string = ''
-  ): Promise<{ success: boolean; message: string }> {
+  async createAgentFile(filePath: string, initialContent: string = ''): Promise<{ success: boolean; message: string }> {
     try {
       const dir = path.dirname(filePath)
-      
+
       // Ensure directory exists
       await fs.mkdir(dir, { recursive: true })
-      
+
       // Check if file already exists
       try {
         await fs.access(filePath)
@@ -262,18 +251,18 @@ export class AgentFileDetectionService {
   }
 
   getSuggestedFiles(projectPath: string, existingFiles: DetectedAgentFile[]): AgentFilePattern[] {
-    const existingTypes = new Set(existingFiles.map(f => f.type))
-    
+    const existingTypes = new Set(existingFiles.map((f) => f.type))
+
     return this.patterns
-      .filter(pattern => !existingTypes.has(pattern.type))
-      .map(pattern => ({
+      .filter((pattern) => !existingTypes.has(pattern.type))
+      .map((pattern) => ({
         ...pattern,
         suggestedPath: path.join(projectPath, pattern.patterns.project[0])
       }))
   }
 
   getFileTypeInfo(type: string): AgentFilePattern | undefined {
-    return this.patterns.find(p => p.type === type)
+    return this.patterns.find((p) => p.type === type)
   }
 }
 

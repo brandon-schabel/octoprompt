@@ -81,18 +81,22 @@ const getInstallationStatusRoute = createRoute({
           schema: z.object({
             success: z.boolean(),
             data: z.object({
-              projectConfig: z.object({
-                projectId: z.number(),
-                projectName: z.string(),
-                mcpEnabled: z.boolean(),
-                installedTools: z.array(z.object({
-                  tool: z.string(),
-                  installedAt: z.number(),
-                  configPath: z.string().optional(),
-                  serverName: z.string()
-                })),
-                customInstructions: z.string().optional()
-              }).nullable(),
+              projectConfig: z
+                .object({
+                  projectId: z.number(),
+                  projectName: z.string(),
+                  mcpEnabled: z.boolean(),
+                  installedTools: z.array(
+                    z.object({
+                      tool: z.string(),
+                      installedAt: z.number(),
+                      configPath: z.string().optional(),
+                      serverName: z.string()
+                    })
+                  ),
+                  customInstructions: z.string().optional()
+                })
+                .nullable(),
               connectionStatus: z.object({
                 connected: z.boolean(),
                 sessionId: z.string().optional(),
@@ -193,12 +197,14 @@ const getGlobalMCPStatusRoute = createRoute({
             data: z.object({
               totalSessions: z.number(),
               projectSessions: z.number(),
-              projectStatuses: z.array(z.object({
-                projectId: z.number(),
-                connected: z.boolean(),
-                sessionId: z.string().optional(),
-                lastActivity: z.number().optional()
-              }))
+              projectStatuses: z.array(
+                z.object({
+                  projectId: z.number(),
+                  connected: z.boolean(),
+                  sessionId: z.string().optional(),
+                  lastActivity: z.number().optional()
+                })
+              )
             })
           })
         }
@@ -275,14 +281,16 @@ const batchInstallMCPRoute = createRoute({
           schema: z.object({
             success: z.boolean(),
             data: z.object({
-              results: z.array(z.object({
-                tool: z.string(),
-                success: z.boolean(),
-                message: z.string(),
-                configPath: z.string().optional(),
-                backedUp: z.boolean().optional(),
-                backupPath: z.string().optional()
-              })),
+              results: z.array(
+                z.object({
+                  tool: z.string(),
+                  success: z.boolean(),
+                  message: z.string(),
+                  configPath: z.string().optional(),
+                  backedUp: z.boolean().optional(),
+                  backupPath: z.string().optional()
+                })
+              ),
               summary: z.object({
                 total: z.number(),
                 succeeded: z.number(),
@@ -414,12 +422,7 @@ export const mcpInstallationRoutes = new OpenAPIHono()
 
       // Update project config
       const serverName = `promptliano-${project.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
-      await mcpConfigManager.addInstalledTool(
-        projectId,
-        tool,
-        result.configPath,
-        serverName
-      )
+      await mcpConfigManager.addInstalledTool(projectId, tool, result.configPath, serverName)
 
       return c.json({
         success: true,
@@ -557,12 +560,7 @@ export const mcpInstallationRoutes = new OpenAPIHono()
             succeeded++
             // Update project config
             const serverName = `promptliano-${project.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
-            await mcpConfigManager.addInstalledTool(
-              projectId,
-              tool,
-              result.configPath,
-              serverName
-            )
+            await mcpConfigManager.addInstalledTool(projectId, tool, result.configPath, serverName)
           } else {
             failed++
           }
@@ -603,11 +601,7 @@ export const mcpInstallationRoutes = new OpenAPIHono()
       }
 
       // Install project-level MCP configuration
-      const result = await mcpInstallationService.installProjectConfig(
-        projectId,
-        project.path,
-        serverUrl
-      )
+      const result = await mcpInstallationService.installProjectConfig(projectId, project.path, serverUrl)
 
       if (!result.success) {
         throw new ApiError(500, result.message, 'INSTALL_FAILED')

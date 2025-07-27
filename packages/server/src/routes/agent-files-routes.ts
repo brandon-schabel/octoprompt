@@ -59,11 +59,13 @@ const detectAgentFilesRoute = createRoute({
             data: z.object({
               projectFiles: z.array(DetectedAgentFileResponseSchema),
               globalFiles: z.array(DetectedAgentFileResponseSchema),
-              suggestedFiles: z.array(z.object({
-                type: z.string(),
-                name: z.string(),
-                suggestedPath: z.string()
-              }))
+              suggestedFiles: z.array(
+                z.object({
+                  type: z.string(),
+                  name: z.string(),
+                  suggestedPath: z.string()
+                })
+              )
             })
           })
         }
@@ -163,13 +165,15 @@ const getAgentFileStatusRoute = createRoute({
             success: z.boolean(),
             data: z.object({
               currentVersion: z.string(),
-              files: z.array(z.object({
-                path: z.string(),
-                exists: z.boolean(),
-                hasInstructions: z.boolean(),
-                instructionVersion: z.string().optional(),
-                isOutdated: z.boolean()
-              }))
+              files: z.array(
+                z.object({
+                  path: z.string(),
+                  exists: z.boolean(),
+                  hasInstructions: z.boolean(),
+                  instructionVersion: z.string().optional(),
+                  isOutdated: z.boolean()
+                })
+              )
             })
           })
         }
@@ -248,10 +252,7 @@ export const agentFilesRoutes = new OpenAPIHono()
       )
 
       // Get suggested files
-      const suggestedFiles = agentFileDetectionService.getSuggestedFiles(
-        project.path,
-        projectFiles
-      )
+      const suggestedFiles = agentFileDetectionService.getSuggestedFiles(project.path, projectFiles)
 
       return c.json({
         success: true,
@@ -340,7 +341,7 @@ export const agentFilesRoutes = new OpenAPIHono()
       const currentVersion = agentInstructionService.getCurrentVersion()
       const agentFiles = await agentInstructionService.detectAgentFiles(project.path)
 
-      const fileStatuses = agentFiles.map(file => ({
+      const fileStatuses = agentFiles.map((file) => ({
         path: file.path,
         exists: file.exists,
         hasInstructions: file.hasInstructions,

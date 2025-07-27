@@ -85,7 +85,7 @@ export function updateSearchParams<T extends Record<string, any>>(updates: Parti
       if (value === undefined) {
         delete updated[key]
       } else {
-        (updated as any)[key] = value
+        ;(updated as any)[key] = value
       }
     })
 

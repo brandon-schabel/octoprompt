@@ -13,14 +13,7 @@ const INSTRUCTION_VERSION = '1.0'
 const INSTRUCTION_START_MARKER = '<!-- PROMPTLIANO_MCP_INSTRUCTIONS_START'
 const INSTRUCTION_END_MARKER = '<!-- PROMPTLIANO_MCP_INSTRUCTIONS_END -->'
 
-export const AgentFileTypeSchema = z.enum([
-  'claude',
-  'copilot',
-  'cursor',
-  'aider',
-  'codebase',
-  'custom'
-])
+export const AgentFileTypeSchema = z.enum(['claude', 'copilot', 'cursor', 'aider', 'codebase', 'custom'])
 
 export type AgentFileType = z.infer<typeof AgentFileTypeSchema>
 

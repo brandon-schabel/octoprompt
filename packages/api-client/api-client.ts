@@ -3,11 +3,19 @@ import { z } from 'zod'
 // Import only the actual types we need (not response schemas)
 import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage } from '@promptliano/schemas'
 
-import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody, ProjectStatistics } from '@promptliano/schemas'
+import type {
+  CreateProjectBody,
+  Project,
+  ProjectFile,
+  UpdateProjectBody,
+  ProjectStatistics
+} from '@promptliano/schemas'
 
 import type { CreatePromptBody, UpdatePromptBody, OptimizePromptRequest, Prompt } from '@promptliano/schemas'
 
 import type { CreateProviderKeyBody, ProviderKey, UpdateProviderKeyBody } from '@promptliano/schemas'
+
+import type { CreateClaudeAgentBody, UpdateClaudeAgentBody, ClaudeAgent } from '@promptliano/schemas'
 
 // Import the actual schemas for validation
 import {
@@ -50,6 +58,15 @@ import {
   ProviderKeyListResponseSchema as ProviderKeyListResponseSchemaZ,
   CreateProviderKeyBodySchema,
   UpdateProviderKeyBodySchema
+} from '@promptliano/schemas'
+
+import {
+  ClaudeAgentResponseSchema as ClaudeAgentResponseSchemaZ,
+  ClaudeAgentListResponseSchema as ClaudeAgentListResponseSchemaZ,
+  CreateClaudeAgentBodySchema,
+  UpdateClaudeAgentBodySchema,
+  SuggestAgentsRequestSchema,
+  AgentSuggestionsResponseSchema as AgentSuggestionsResponseSchemaZ
 } from '@promptliano/schemas'
 
 import {
@@ -690,7 +707,28 @@ export class ProjectService extends BaseApiClient {
                 userPrompt: z.string().optional(),
                 fileSearch: z.string().optional(),
                 contextLimit: z.number().optional(),
-                preferredEditor: z.enum(['vscode', 'cursor', 'webstorm', 'vim', 'emacs', 'sublime', 'atom', 'idea', 'phpstorm', 'pycharm', 'rubymine', 'goland', 'fleet', 'zed', 'neovim', 'xcode', 'androidstudio', 'rider']).optional(),
+                preferredEditor: z
+                  .enum([
+                    'vscode',
+                    'cursor',
+                    'webstorm',
+                    'vim',
+                    'emacs',
+                    'sublime',
+                    'atom',
+                    'idea',
+                    'phpstorm',
+                    'pycharm',
+                    'rubymine',
+                    'goland',
+                    'fleet',
+                    'zed',
+                    'neovim',
+                    'xcode',
+                    'androidstudio',
+                    'rider'
+                  ])
+                  .optional(),
                 suggestedFileIds: z.array(z.number()).optional(),
                 ticketSearch: z.string().optional(),
                 ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
@@ -723,7 +761,25 @@ export class ProjectService extends BaseApiClient {
         userPrompt?: string
         fileSearch?: string
         contextLimit?: number
-        preferredEditor?: 'vscode' | 'cursor' | 'webstorm' | 'vim' | 'emacs' | 'sublime' | 'atom' | 'idea' | 'phpstorm' | 'pycharm' | 'rubymine' | 'goland' | 'fleet' | 'zed' | 'neovim' | 'xcode' | 'androidstudio' | 'rider'
+        preferredEditor?:
+        | 'vscode'
+        | 'cursor'
+        | 'webstorm'
+        | 'vim'
+        | 'emacs'
+        | 'sublime'
+        | 'atom'
+        | 'idea'
+        | 'phpstorm'
+        | 'pycharm'
+        | 'rubymine'
+        | 'goland'
+        | 'fleet'
+        | 'zed'
+        | 'neovim'
+        | 'xcode'
+        | 'androidstudio'
+        | 'rider'
         suggestedFileIds?: number[]
         ticketSearch?: string
         ticketSort?: 'created_asc' | 'created_desc' | 'status' | 'priority'
@@ -754,7 +810,28 @@ export class ProjectService extends BaseApiClient {
               userPrompt: z.string().optional(),
               fileSearch: z.string().optional(),
               contextLimit: z.number().optional(),
-              preferredEditor: z.enum(['vscode', 'cursor', 'webstorm', 'vim', 'emacs', 'sublime', 'atom', 'idea', 'phpstorm', 'pycharm', 'rubymine', 'goland', 'fleet', 'zed', 'neovim', 'xcode', 'androidstudio', 'rider']).optional(),
+              preferredEditor: z
+                .enum([
+                  'vscode',
+                  'cursor',
+                  'webstorm',
+                  'vim',
+                  'emacs',
+                  'sublime',
+                  'atom',
+                  'idea',
+                  'phpstorm',
+                  'pycharm',
+                  'rubymine',
+                  'goland',
+                  'fleet',
+                  'zed',
+                  'neovim',
+                  'xcode',
+                  'androidstudio',
+                  'rider'
+                ])
+                .optional(),
               suggestedFileIds: z.array(z.number()).optional(),
               ticketSearch: z.string().optional(),
               ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
@@ -785,22 +862,30 @@ export class ProjectService extends BaseApiClient {
     return result
   }
 
-  async generateProjectTabName(tabId: number, data: {
-    projectId: number
-    tabData?: {
-      selectedFiles?: number[]
-      userPrompt?: string
+  async generateProjectTabName(
+    tabId: number,
+    data: {
+      projectId: number
+      tabData?: {
+        selectedFiles?: number[]
+        userPrompt?: string
+      }
+      existingNames?: string[]
     }
-    existingNames?: string[]
-  }) {
-    const validatedData = this.validateBody(z.object({
-      projectId: z.number(),
-      tabData: z.object({
-        selectedFiles: z.array(z.number()).optional(),
-        userPrompt: z.string().optional()
-      }).optional(),
-      existingNames: z.array(z.string()).optional()
-    }), data)
+  ) {
+    const validatedData = this.validateBody(
+      z.object({
+        projectId: z.number(),
+        tabData: z
+          .object({
+            selectedFiles: z.array(z.number()).optional(),
+            userPrompt: z.string().optional()
+          })
+          .optional(),
+        existingNames: z.array(z.string()).optional()
+      }),
+      data
+    )
 
     const result = await this.request('POST', `/project-tabs/${tabId}/generate-name`, {
       body: validatedData,
@@ -821,18 +906,22 @@ export class ProjectService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          projectConfig: z.object({
-            projectId: z.number(),
-            projectName: z.string(),
-            mcpEnabled: z.boolean(),
-            installedTools: z.array(z.object({
-              tool: z.string(),
-              installedAt: z.number(),
-              configPath: z.string().optional(),
-              serverName: z.string()
-            })),
-            customInstructions: z.string().optional()
-          }).nullable(),
+          projectConfig: z
+            .object({
+              projectId: z.number(),
+              projectName: z.string(),
+              mcpEnabled: z.boolean(),
+              installedTools: z.array(
+                z.object({
+                  tool: z.string(),
+                  installedAt: z.number(),
+                  configPath: z.string().optional(),
+                  serverName: z.string()
+                })
+              ),
+              customInstructions: z.string().optional()
+            })
+            .nullable(),
           connectionStatus: z.object({
             connected: z.boolean(),
             sessionId: z.string().optional(),
@@ -943,6 +1032,83 @@ export class PromptService extends BaseApiClient {
       responseSchema: SuggestPromptsResponseSchemaZ
     })
     return result as DataResponseSchema<{ prompts: Prompt[] }>
+  }
+}
+
+// Claude Agent Service
+export class ClaudeAgentService extends BaseApiClient {
+  async listAgents(projectId?: number) {
+    const result = await this.request('GET', '/agents', {
+      params: projectId ? { projectId } : undefined,
+      responseSchema: ClaudeAgentListResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeAgent[]>
+  }
+
+  async createAgent(data: CreateClaudeAgentBody, projectId?: number) {
+    const validatedData = this.validateBody(CreateClaudeAgentBodySchema, data)
+    const result = await this.request('POST', '/agents', {
+      params: projectId ? { projectId } : undefined,
+      body: validatedData,
+      responseSchema: ClaudeAgentResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeAgent>
+  }
+
+  async getAgent(agentId: number, projectId?: number) {
+    const result = await this.request('GET', `/agents/${agentId}`, {
+      params: projectId ? { projectId } : undefined,
+      responseSchema: ClaudeAgentResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeAgent>
+  }
+
+  async updateAgent(agentId: number, data: UpdateClaudeAgentBody, projectId?: number) {
+    const validatedData = this.validateBody(UpdateClaudeAgentBodySchema, data)
+    const result = await this.request('PATCH', `/agents/${agentId}`, {
+      params: projectId ? { projectId } : undefined,
+      body: validatedData,
+      responseSchema: ClaudeAgentResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeAgent>
+  }
+
+  async deleteAgent(agentId: number, projectId?: number): Promise<boolean> {
+    await this.request('DELETE', `/agents/${agentId}`, {
+      params: projectId ? { projectId } : undefined,
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async listProjectAgents(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/agents`, {
+      responseSchema: ClaudeAgentListResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeAgent[]>
+  }
+
+  async addAgentToProject(projectId: number, agentId: number): Promise<boolean> {
+    await this.request('POST', `/projects/${projectId}/agents/${agentId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async removeAgentFromProject(projectId: number, agentId: number): Promise<boolean> {
+    await this.request('DELETE', `/projects/${projectId}/agents/${agentId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async suggestAgents(projectId: number, userInput: string, limit?: number) {
+    const validatedData = this.validateBody(SuggestAgentsRequestSchema, { userInput, limit })
+    const result = await this.request('POST', `/projects/${projectId}/suggest-agents`, {
+      body: validatedData,
+      responseSchema: AgentSuggestionsResponseSchemaZ
+    })
+    return result
   }
 }
 
@@ -1675,10 +1841,14 @@ export class GitService extends BaseApiClient {
   }
 
   async deleteBranch(projectId: number, branchName: string, force?: boolean) {
-    const result = await this.request('DELETE', `/projects/${projectId}/git/branches/${encodeURIComponent(branchName)}`, {
-      params: force ? { force: 'true' } : undefined,
-      responseSchema: gitOperationResponseSchema
-    })
+    const result = await this.request(
+      'DELETE',
+      `/projects/${projectId}/git/branches/${encodeURIComponent(branchName)}`,
+      {
+        params: force ? { force: 'true' } : undefined,
+        responseSchema: gitOperationResponseSchema
+      }
+    )
     return result as GitOperationResponse
   }
 
@@ -1901,52 +2071,60 @@ export class AgentFilesService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          projectFiles: z.array(z.object({
-            type: z.string(),
-            name: z.string(),
-            path: z.string(),
-            scope: z.enum(['global', 'project']),
-            exists: z.boolean(),
-            writable: z.boolean(),
-            content: z.string().optional(),
-            hasInstructions: z.boolean().optional(),
-            instructionVersion: z.string().optional()
-          })),
-          globalFiles: z.array(z.object({
-            type: z.string(),
-            name: z.string(),
-            path: z.string(),
-            scope: z.enum(['global', 'project']),
-            exists: z.boolean(),
-            writable: z.boolean(),
-            content: z.string().optional(),
-            hasInstructions: z.boolean().optional(),
-            instructionVersion: z.string().optional()
-          })),
-          suggestedFiles: z.array(z.object({
-            type: z.string(),
-            name: z.string(),
-            suggestedPath: z.string()
-          }))
+          projectFiles: z.array(
+            z.object({
+              type: z.string(),
+              name: z.string(),
+              path: z.string(),
+              scope: z.enum(['global', 'project']),
+              exists: z.boolean(),
+              writable: z.boolean(),
+              content: z.string().optional(),
+              hasInstructions: z.boolean().optional(),
+              instructionVersion: z.string().optional()
+            })
+          ),
+          globalFiles: z.array(
+            z.object({
+              type: z.string(),
+              name: z.string(),
+              path: z.string(),
+              scope: z.enum(['global', 'project']),
+              exists: z.boolean(),
+              writable: z.boolean(),
+              content: z.string().optional(),
+              hasInstructions: z.boolean().optional(),
+              instructionVersion: z.string().optional()
+            })
+          ),
+          suggestedFiles: z.array(
+            z.object({
+              type: z.string(),
+              name: z.string(),
+              suggestedPath: z.string()
+            })
+          )
         })
       })
     })
     return result
   }
 
-  async updateFile(projectId: number, data: { files?: { path: string, update: boolean }[] }) {
+  async updateFile(projectId: number, data: { files?: { path: string; update: boolean }[] }) {
     const result = await this.request('POST', `/projects/${projectId}/agent-files/update`, {
       body: data,
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
           projectId: z.number(),
-          results: z.array(z.object({
-            path: z.string(),
-            success: z.boolean(),
-            message: z.string(),
-            backedUp: z.boolean().optional()
-          }))
+          results: z.array(
+            z.object({
+              path: z.string(),
+              success: z.boolean(),
+              message: z.string(),
+              backedUp: z.boolean().optional()
+            })
+          )
         })
       })
     })
@@ -1978,21 +2156,23 @@ export class AgentFilesService extends BaseApiClient {
           existingFiles: z.number(),
           withInstructions: z.number(),
           needsUpdate: z.number(),
-          files: z.array(z.object({
-            path: z.string(),
-            filename: z.string(),
-            exists: z.boolean(),
-            hasInstructions: z.boolean(),
-            version: z.string().optional(),
-            needsUpdate: z.boolean()
-          }))
+          files: z.array(
+            z.object({
+              path: z.string(),
+              filename: z.string(),
+              exists: z.boolean(),
+              hasInstructions: z.boolean(),
+              version: z.string().optional(),
+              needsUpdate: z.boolean()
+            })
+          )
         })
       })
     })
     return result
   }
 
-  async createFile(projectId: number, data: { path: string, content?: string }) {
+  async createFile(projectId: number, data: { path: string; content?: string }) {
     const result = await this.request('POST', `/projects/${projectId}/agent-files/create`, {
       body: data,
       responseSchema: z.object({
@@ -2009,26 +2189,33 @@ export class AgentFilesService extends BaseApiClient {
 }
 
 // Flexible MCP config schema that supports both old 'servers' and new 'mcpServers' format
-const FlexibleMCPConfigSchema = z.object({
-  mcpServers: z.record(z.object({
-    type: z.enum(['stdio', 'http']).default('stdio'),
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional(),
-    timeout: z.number().optional()
-  })).optional(),
-  inputs: z.array(z.object({
-    type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
-    id: z.string(),
-    description: z.string(),
-    default: z.any().optional(),
-    password: z.boolean().optional()
-  })).optional(),
-  extends: z.union([z.string(), z.array(z.string())]).optional()
-}).refine(
-  (data) => data.mcpServers,
-  "Config must have either 'mcpServers' or 'servers' field"
-)
+const FlexibleMCPConfigSchema = z
+  .object({
+    mcpServers: z
+      .record(
+        z.object({
+          type: z.enum(['stdio', 'http']).default('stdio'),
+          command: z.string(),
+          args: z.array(z.string()).optional(),
+          env: z.record(z.string()).optional(),
+          timeout: z.number().optional()
+        })
+      )
+      .optional(),
+    inputs: z
+      .array(
+        z.object({
+          type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
+          id: z.string(),
+          description: z.string(),
+          default: z.any().optional(),
+          password: z.boolean().optional()
+        })
+      )
+      .optional(),
+    extends: z.union([z.string(), z.array(z.string())]).optional()
+  })
+  .refine((data) => data.mcpServers, "Config must have either 'mcpServers' or 'servers' field")
 
 export class MCPProjectConfigService extends BaseApiClient {
   async getConfigLocations(projectId: number) {
@@ -2036,11 +2223,13 @@ export class MCPProjectConfigService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          locations: z.array(z.object({
-            path: z.string(),
-            exists: z.boolean(),
-            priority: z.number()
-          }))
+          locations: z.array(
+            z.object({
+              path: z.string(),
+              exists: z.boolean(),
+              priority: z.number()
+            })
+          )
         })
       })
     })
@@ -2109,14 +2298,18 @@ export class MCPProjectConfigService extends BaseApiClient {
     return result
   }
   async getDefaultConfigForLocation(projectId: number, location: string) {
-    const result = await this.request('GET', `/projects/${projectId}/mcp/config/default-for-location?location=${encodeURIComponent(location)}`, {
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.object({
-          config: FlexibleMCPConfigSchema
+    const result = await this.request(
+      'GET',
+      `/projects/${projectId}/mcp/config/default-for-location?location=${encodeURIComponent(location)}`,
+      {
+        responseSchema: z.object({
+          success: z.boolean(),
+          data: z.object({
+            config: FlexibleMCPConfigSchema
+          })
         })
-      })
-    })
+      }
+    )
     return result
   }
 }
@@ -2127,14 +2320,16 @@ export class MCPInstallationService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          tools: z.array(z.object({
-            tool: z.string(),
-            name: z.string(),
-            installed: z.boolean(),
-            configPath: z.string().optional(),
-            configExists: z.boolean().optional(),
-            hasPromptliano: z.boolean().optional()
-          })),
+          tools: z.array(
+            z.object({
+              tool: z.string(),
+              name: z.string(),
+              installed: z.boolean(),
+              configPath: z.string().optional(),
+              configExists: z.boolean().optional(),
+              hasPromptliano: z.boolean().optional()
+            })
+          ),
           platform: z.string()
         })
       })
@@ -2147,18 +2342,22 @@ export class MCPInstallationService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          projectConfig: z.object({
-            projectId: z.number(),
-            projectName: z.string(),
-            mcpEnabled: z.boolean(),
-            installedTools: z.array(z.object({
-              tool: z.string(),
-              installedAt: z.number(),
-              configPath: z.string().optional(),
-              serverName: z.string()
-            })),
-            customInstructions: z.string().optional()
-          }).nullable(),
+          projectConfig: z
+            .object({
+              projectId: z.number(),
+              projectName: z.string(),
+              mcpEnabled: z.boolean(),
+              installedTools: z.array(
+                z.object({
+                  tool: z.string(),
+                  installedAt: z.number(),
+                  configPath: z.string().optional(),
+                  serverName: z.string()
+                })
+              ),
+              customInstructions: z.string().optional()
+            })
+            .nullable(),
           connectionStatus: z.object({
             connected: z.boolean(),
             sessionId: z.string().optional(),
@@ -2171,7 +2370,7 @@ export class MCPInstallationService extends BaseApiClient {
     return result
   }
 
-  async install(projectId: number, data: { platform?: string, debug?: boolean }) {
+  async install(projectId: number, data: { platform?: string; debug?: boolean }) {
     const result = await this.request('POST', `/projects/${projectId}/mcp/installation/install`, {
       body: {
         tool: data.platform,
@@ -2190,7 +2389,7 @@ export class MCPInstallationService extends BaseApiClient {
     return result
   }
 
-  async batchInstall(projectId: number, data: { tools: string[], debug?: boolean }) {
+  async batchInstall(projectId: number, data: { tools: string[]; debug?: boolean }) {
     const result = await this.request('POST', `/projects/${projectId}/mcp/installation/batch-install`, {
       body: {
         tools: data.tools,
@@ -2199,14 +2398,16 @@ export class MCPInstallationService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          results: z.array(z.object({
-            tool: z.string(),
-            success: z.boolean(),
-            message: z.string(),
-            configPath: z.string().optional(),
-            backedUp: z.boolean().optional(),
-            backupPath: z.string().optional()
-          })),
+          results: z.array(
+            z.object({
+              tool: z.string(),
+              success: z.boolean(),
+              message: z.string(),
+              configPath: z.string().optional(),
+              backedUp: z.boolean().optional(),
+              backupPath: z.string().optional()
+            })
+          ),
           summary: z.object({
             total: z.number(),
             succeeded: z.number(),
@@ -2260,20 +2461,24 @@ export class MCPInstallationService extends BaseApiClient {
           lastActivity: z.string().optional(),
           activeSessions: z.number(),
           platform: z.string(),
-          detectedAgents: z.array(z.object({
-            name: z.string(),
-            displayName: z.string(),
-            detected: z.boolean(),
-            configPath: z.string().optional(),
-            executable: z.string().optional(),
-            version: z.string().optional()
-          })),
-          mcpSessions: z.array(z.object({
-            id: z.string(),
-            projectId: z.number().optional(),
-            createdAt: z.number(),
-            lastActivity: z.number()
-          })),
+          detectedAgents: z.array(
+            z.object({
+              name: z.string(),
+              displayName: z.string(),
+              detected: z.boolean(),
+              configPath: z.string().optional(),
+              executable: z.string().optional(),
+              version: z.string().optional()
+            })
+          ),
+          mcpSessions: z.array(
+            z.object({
+              id: z.string(),
+              projectId: z.number().optional(),
+              createdAt: z.number(),
+              lastActivity: z.number()
+            })
+          ),
           serverRunning: z.boolean()
         })
       })
@@ -2362,32 +2567,41 @@ export class MCPGlobalConfigService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          servers: z.record(z.object({
-            type: z.enum(['stdio', 'http']).default('stdio'),
-            command: z.string(),
-            args: z.array(z.string()).optional(),
-            env: z.record(z.string()).optional(),
-            timeout: z.number().optional()
-          })),
-          inputs: z.array(z.object({
-            type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
-            id: z.string(),
-            description: z.string(),
-            default: z.any().optional(),
-            password: z.boolean().optional()
-          })).optional(),
+          servers: z.record(
+            z.object({
+              type: z.enum(['stdio', 'http']).default('stdio'),
+              command: z.string(),
+              args: z.array(z.string()).optional(),
+              env: z.record(z.string()).optional(),
+              timeout: z.number().optional()
+            })
+          ),
+          inputs: z
+            .array(
+              z.object({
+                type: z.enum(['promptString', 'promptNumber', 'promptBoolean']),
+                id: z.string(),
+                description: z.string(),
+                default: z.any().optional(),
+                password: z.boolean().optional()
+              })
+            )
+            .optional(),
           extends: z.union([z.string(), z.array(z.string())]).optional()
         })
       })
     })
     return result as DataResponseSchema<{
-      servers: Record<string, {
-        type: 'stdio' | 'http'
-        command: string
-        args?: string[]
-        env?: Record<string, string>
-        timeout?: number
-      }>
+      servers: Record<
+        string,
+        {
+          type: 'stdio' | 'http'
+          command: string
+          args?: string[]
+          env?: Record<string, string>
+          timeout?: number
+        }
+      >
       inputs?: Array<{
         type: 'promptString' | 'promptNumber' | 'promptBoolean'
         id: string
@@ -2423,20 +2637,24 @@ export class MCPGlobalConfigService extends BaseApiClient {
       responseSchema: z.object({
         success: z.boolean(),
         data: z.object({
-          installations: z.array(z.object({
-            tool: z.string(),
-            installedAt: z.number(),
-            configPath: z.string(),
-            serverName: z.string(),
-            version: z.string().optional()
-          })),
-          toolStatuses: z.array(z.object({
-            tool: z.string(),
-            name: z.string(),
-            installed: z.boolean(),
-            hasGlobalPromptliano: z.boolean(),
-            configPath: z.string().optional()
-          }))
+          installations: z.array(
+            z.object({
+              tool: z.string(),
+              installedAt: z.number(),
+              configPath: z.string(),
+              serverName: z.string(),
+              version: z.string().optional()
+            })
+          ),
+          toolStatuses: z.array(
+            z.object({
+              tool: z.string(),
+              name: z.string(),
+              installed: z.boolean(),
+              hasGlobalPromptliano: z.boolean(),
+              configPath: z.string().optional()
+            })
+          )
         })
       })
     })
@@ -2505,12 +2723,16 @@ export class MCPGlobalConfigService extends BaseApiClient {
         data: z.object({
           installed: z.boolean(),
           configPath: z.string().optional(),
-          servers: z.array(z.object({
-            name: z.string(),
-            type: z.enum(['stdio', 'http']),
-            command: z.string(),
-            status: z.enum(['running', 'stopped', 'unknown'])
-          })).optional(),
+          servers: z
+            .array(
+              z.object({
+                name: z.string(),
+                type: z.enum(['stdio', 'http']),
+                command: z.string(),
+                status: z.enum(['running', 'stopped', 'unknown'])
+              })
+            )
+            .optional(),
           totalServers: z.number(),
           runningServers: z.number()
         })
@@ -2536,6 +2758,7 @@ export class PromptlianoClient {
   public readonly chats: ChatService
   public readonly projects: ProjectService
   public readonly prompts: PromptService
+  public readonly agents: ClaudeAgentService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
   public readonly system: SystemService
@@ -2553,6 +2776,7 @@ export class PromptlianoClient {
     this.chats = new ChatService(config)
     this.projects = new ProjectService(config)
     this.prompts = new PromptService(config)
+    this.agents = new ClaudeAgentService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
     this.system = new SystemService(config)

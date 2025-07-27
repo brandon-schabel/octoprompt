@@ -1,12 +1,5 @@
 import { type JobHandler } from '../job-service'
-import {
-  getWorktrees,
-  addWorktree,
-  removeWorktree,
-  pruneWorktrees,
-  lockWorktree,
-  unlockWorktree
-} from '../git-service'
+import { getWorktrees, addWorktree, removeWorktree, pruneWorktrees, lockWorktree, unlockWorktree } from '../git-service'
 import {
   gitWorktreeAddRequestSchema,
   gitWorktreeRemoveRequestSchema,

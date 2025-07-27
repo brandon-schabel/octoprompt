@@ -86,7 +86,9 @@ export function createProviderKeyService() {
 
     allKeys[validatedNewKey.id] = validatedNewKey
     await providerKeyStorage.writeProviderKeys(allKeys)
-    return validatedNewKey
+    
+    // Return the key with decrypted value (similar to getKeyById)
+    return { ...validatedNewKey, key: data.key }
   }
 
   async function listKeysCensoredKeys(): Promise<ProviderKey[]> {
@@ -168,12 +170,7 @@ export function createProviderKeyService() {
         return { ...foundKeyData, key: decryptedKey }
       } catch (error) {
         console.error(`Failed to decrypt key ${id}:`, error)
-        throw new ApiError(
-          500,
-          `Failed to decrypt provider key`,
-          'PROVIDER_KEY_DECRYPTION_FAILED',
-          { id }
-        )
+        throw new ApiError(500, `Failed to decrypt provider key`, 'PROVIDER_KEY_DECRYPTION_FAILED', { id })
       }
     }
 
@@ -247,6 +244,23 @@ export function createProviderKeyService() {
     const validatedUpdatedKey = parseResult.data
     allKeys[id] = validatedUpdatedKey
     await providerKeyStorage.writeProviderKeys(allKeys)
+    
+    // Return the key with decrypted value (similar to getKeyById)
+    if (validatedUpdatedKey.encrypted && validatedUpdatedKey.iv && validatedUpdatedKey.tag && validatedUpdatedKey.salt) {
+      try {
+        const decryptedKey = await decryptKey({
+          encrypted: validatedUpdatedKey.key,
+          iv: validatedUpdatedKey.iv,
+          tag: validatedUpdatedKey.tag,
+          salt: validatedUpdatedKey.salt
+        })
+        return { ...validatedUpdatedKey, key: decryptedKey }
+      } catch (error) {
+        console.error(`Failed to decrypt key ${id}:`, error)
+        throw new ApiError(500, `Failed to decrypt provider key`, 'PROVIDER_KEY_DECRYPTION_FAILED', { id })
+      }
+    }
+    
     return validatedUpdatedKey
   }
 

@@ -1,0 +1,254 @@
+{
+  "brand": {
+    "primary": {
+      "name": "Promptliano Purple",
+      "hex": "#9333ea",
+      "rgb": "rgb(147, 51, 234)",
+      "hsl": "hsl(266, 100%, 64%)",
+      "usage": "Primary brand color, main CTAs, key UI elements",
+      "accessibility": {
+        "onWhite": "AA",
+        "onBlack": "AAA"
+      }
+    },
+    "secondary": {
+      "name": "Promptliano Blue",
+      "hex": "#3b82f6",
+      "rgb": "rgb(59, 130, 246)",
+      "hsl": "hsl(217, 91%, 60%)",
+      "usage": "Secondary actions, links, informational elements",
+      "accessibility": {
+        "onWhite": "AA",
+        "onBlack": "AAA"
+      }
+    },
+    "accent": {
+      "name": "Promptliano Teal",
+      "hex": "#14b8a6",
+      "rgb": "rgb(20, 184, 166)",
+      "hsl": "hsl(161, 94%, 30%)",
+      "usage": "Accent elements, success states, highlights",
+      "accessibility": {
+        "onWhite": "AAA",
+        "onBlack": "AA"
+      }
+    }
+  },
+  "semantic": {
+    "success": {
+      "name": "Success Green",
+      "hex": "#22c55e",
+      "rgb": "rgb(34, 197, 94)",
+      "hsl": "hsl(142, 71%, 45%)",
+      "usage": "Success messages, positive states, confirmations",
+      "accessibility": {
+        "onWhite": "AA",
+        "onBlack": "AAA"
+      }
+    },
+    "warning": {
+      "name": "Warning Amber",
+      "hex": "#f59e0b",
+      "rgb": "rgb(245, 158, 11)",
+      "hsl": "hsl(45, 93%, 47%)",
+      "usage": "Warning messages, caution states, pending actions",
+      "accessibility": {
+        "onWhite": "AA",
+        "onBlack": "AAA"
+      }
+    },
+    "error": {
+      "name": "Error Red",
+      "hex": "#ef4444",
+      "rgb": "rgb(239, 68, 68)",
+      "hsl": "hsl(0, 84.2%, 60.2%)",
+      "usage": "Error messages, destructive actions, validation errors",
+      "accessibility": {
+        "onWhite": "AA",
+        "onBlack": "AAA"
+      }
+    },
+    "info": {
+      "name": "Info Blue",
+      "hex": "#0ea5e9",
+      "rgb": "rgb(14, 165, 233)",
+      "hsl": "hsl(199, 89%, 48%)",
+      "usage": "Informational messages, tips, help content",
+      "accessibility": {
+        "onWhite": "AA",
+        "onBlack": "AAA"
+      }
+    }
+  },
+  "extended": {
+    "green-500": {
+      "name": "Emerald",
+      "hex": "#10b981",
+      "rgb": "rgb(16, 185, 129)",
+      "hsl": "hsl(158, 84%, 39%)",
+      "usage": "Online indicators, success badges, completed states",
+      "contexts": ["status indicators", "progress tracking", "live states"]
+    },
+    "yellow-500": {
+      "name": "Amber",
+      "hex": "#eab308",
+      "rgb": "rgb(234, 179, 8)",
+      "hsl": "hsl(45, 93%, 47%)",
+      "usage": "Beta badges, in-progress states, warnings",
+      "contexts": ["feature flags", "development status", "alerts"]
+    },
+    "red-500": {
+      "name": "Rose",
+      "hex": "#ef4444",
+      "rgb": "rgb(239, 68, 68)",
+      "hsl": "hsl(0, 84%, 60%)",
+      "usage": "Advanced/expert badges, errors, destructive actions",
+      "contexts": ["difficulty levels", "danger zones", "deletions"]
+    },
+    "orange-500": {
+      "name": "Orange",
+      "hex": "#f97316",
+      "rgb": "rgb(249, 115, 22)",
+      "hsl": "hsl(25, 95%, 53%)",
+      "usage": "Summary visualizations, highlights, attention",
+      "contexts": ["data visualization", "file summaries", "analytics"]
+    },
+    "pink-500": {
+      "name": "Pink",
+      "hex": "#ec4899",
+      "rgb": "rgb(236, 72, 153)",
+      "hsl": "hsl(330, 81%, 60%)",
+      "usage": "Git-related features, version control elements",
+      "contexts": ["git status", "commits", "branches"]
+    },
+    "blue-500": {
+      "name": "Sky Blue",
+      "hex": "#3b82f6",
+      "rgb": "rgb(59, 130, 246)",
+      "hsl": "hsl(217, 91%, 60%)",
+      "usage": "File type indicators, links, interactive elements",
+      "contexts": ["file browser", "navigation", "clickable items"]
+    },
+    "purple-500": {
+      "name": "Violet",
+      "hex": "#a855f7",
+      "rgb": "rgb(168, 85, 247)",
+      "hsl": "hsl(271, 91%, 65%)",
+      "usage": "Prompt indicators, AI-related features",
+      "contexts": ["prompts", "AI agents", "intelligence features"]
+    },
+    "indigo-400": {
+      "name": "Indigo",
+      "hex": "#818cf8",
+      "rgb": "rgb(129, 140, 248)",
+      "hsl": "hsl(234, 89%, 74%)",
+      "usage": "Discord integration, social features",
+      "contexts": ["community", "chat", "social links"]
+    }
+  },
+  "neutrals": {
+    "gray-50": {
+      "hex": "#fafafa",
+      "rgb": "rgb(250, 250, 250)",
+      "hsl": "hsl(210, 40%, 98%)"
+    },
+    "gray-100": {
+      "hex": "#f5f5f5",
+      "rgb": "rgb(245, 245, 245)",
+      "hsl": "hsl(210, 40%, 96.1%)"
+    },
+    "gray-200": {
+      "hex": "#e5e5e5",
+      "rgb": "rgb(229, 229, 229)",
+      "hsl": "hsl(214.3, 31.8%, 91.4%)"
+    },
+    "gray-300": {
+      "hex": "#d4d4d4",
+      "rgb": "rgb(212, 212, 212)",
+      "hsl": "hsl(213.4, 30.8%, 84.3%)"
+    },
+    "gray-400": {
+      "hex": "#a3a3a3",
+      "rgb": "rgb(163, 163, 163)",
+      "hsl": "hsl(215, 20.2%, 65.1%)"
+    },
+    "gray-500": {
+      "hex": "#737373",
+      "rgb": "rgb(115, 115, 115)",
+      "hsl": "hsl(215.4, 16.3%, 46.9%)"
+    },
+    "gray-600": {
+      "hex": "#525252",
+      "rgb": "rgb(82, 82, 82)",
+      "hsl": "hsl(215.3, 19.3%, 34.5%)"
+    },
+    "gray-700": {
+      "hex": "#404040",
+      "rgb": "rgb(64, 64, 64)",
+      "hsl": "hsl(215.3, 25%, 26.7%)"
+    },
+    "gray-800": {
+      "hex": "#262626",
+      "rgb": "rgb(38, 38, 38)",
+      "hsl": "hsl(217.2, 32.6%, 17.5%)"
+    },
+    "gray-900": {
+      "hex": "#171717",
+      "rgb": "rgb(23, 23, 23)",
+      "hsl": "hsl(222.2, 47.4%, 11.2%)"
+    },
+    "gray-950": {
+      "hex": "#0a0a0a",
+      "rgb": "rgb(10, 10, 10)",
+      "hsl": "hsl(222.2, 84%, 4.9%)"
+    }
+  },
+  "gradients": {
+    "primary-secondary": {
+      "name": "Brand Gradient",
+      "from": "#9333ea",
+      "to": "#3b82f6",
+      "direction": "to bottom right",
+      "usage": "Hero sections, premium features, main CTAs"
+    },
+    "primary-accent": {
+      "name": "Vibrant Gradient",
+      "from": "#9333ea",
+      "to": "#14b8a6",
+      "direction": "to right",
+      "usage": "Feature highlights, special sections"
+    },
+    "subtle-overlay": {
+      "name": "Subtle Overlay",
+      "from": "rgba(147, 51, 234, 0.05)",
+      "to": "transparent",
+      "direction": "to bottom",
+      "usage": "Background overlays, subtle emphasis"
+    },
+    "glass-effect": {
+      "name": "Glassmorphism",
+      "background": "rgba(255, 255, 255, 0.1)",
+      "backdropBlur": "12px",
+      "border": "1px solid rgba(255, 255, 255, 0.1)",
+      "usage": "Cards, modals, floating elements"
+    }
+  },
+  "themes": {
+    "dark": {
+      "background": "#0a0a0a",
+      "foreground": "#fafafa",
+      "card": "#171717",
+      "muted": "#262626",
+      "mutedForeground": "#a3a3a3",
+      "border": "#262626"
+    },
+    "light": {
+      "background": "#ffffff",
+      "foreground": "#171717",
+      "card": "#ffffff",
+      "muted": "#f5f5f5",
+      "mutedForeground": "#525252",
+      "border": "#e5e5e5"
+    }
+  }
+}

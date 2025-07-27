@@ -45,8 +45,7 @@ export function useUpdateGlobalMCPConfig() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (updates: any) =>
-      promptlianoClient.mcpGlobalConfig.updateGlobalConfig(updates),
+    mutationFn: (updates: any) => promptlianoClient.mcpGlobalConfig.updateGlobalConfig(updates),
     onSuccess: (data) => {
       // Invalidate all MCP global queries
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.all })
@@ -62,11 +61,8 @@ export function useInstallGlobalMCP() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: {
-      tool: string
-      serverName?: string
-      debug?: boolean
-    }) => promptlianoClient.mcpGlobalConfig.installGlobalMCP(data),
+    mutationFn: (data: { tool: string; serverName?: string; debug?: boolean }) =>
+      promptlianoClient.mcpGlobalConfig.installGlobalMCP(data),
     onSuccess: (data) => {
       // Invalidate installations and status
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })
@@ -84,8 +80,7 @@ export function useUninstallGlobalMCP() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { tool: string }) =>
-      promptlianoClient.mcpGlobalConfig.uninstallGlobalMCP(data),
+    mutationFn: (data: { tool: string }) => promptlianoClient.mcpGlobalConfig.uninstallGlobalMCP(data),
     onSuccess: (data) => {
       // Invalidate installations and status
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })
@@ -161,15 +156,11 @@ export function useGlobalMCPManager() {
 
     // Helper methods
     isToolInstalled: (tool: string) => {
-      return installations?.data?.installations?.some(
-        (installation: any) => installation.tool === tool
-      ) ?? false
+      return installations?.data?.installations?.some((installation: any) => installation.tool === tool) ?? false
     },
 
     getInstallation: (tool: string) => {
-      return installations?.data?.installations?.find(
-        (installation: any) => installation.tool === tool
-      )
+      return installations?.data?.installations?.find((installation: any) => installation.tool === tool)
     }
   }
 }

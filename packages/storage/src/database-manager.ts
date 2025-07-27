@@ -503,7 +503,9 @@ export class DatabaseManager {
       // Run migration in a transaction
       this.db.transaction(() => {
         migration.up(this.db)
-        const insertQuery = this.db.prepare('INSERT INTO migrations (version, description, applied_at) VALUES (?, ?, ?)')
+        const insertQuery = this.db.prepare(
+          'INSERT INTO migrations (version, description, applied_at) VALUES (?, ?, ?)'
+        )
         insertQuery.run(migration.version, migration.description || `Migration ${migration.version}`, Date.now())
       })()
     }
