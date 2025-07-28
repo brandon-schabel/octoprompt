@@ -11,7 +11,7 @@ const benefits = [
   {
     icon: <Zap className='w-6 h-6' />,
     title: 'Lightning Fast',
-    description: '90-95% token reduction with intelligent file suggestions and caching'
+    description: '60-70% token reduction with intelligent file suggestions and caching'
   },
   {
     icon: <Shield className='w-6 h-6' />,

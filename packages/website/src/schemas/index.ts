@@ -16,6 +16,9 @@ export * from './hero.schemas'
 // Feature schemas
 export * from './feature.schemas'
 
+// Features section schemas (comprehensive features grid)
+export * from './features.schemas'
+
 // MCP integration schemas
 export * from './mcp-integration.schemas'
 
@@ -34,8 +37,6 @@ export * from './metrics.schemas'
 // SEO and metadata schemas
 export * from './seo.schemas'
 
-// Pricing schemas
-export * from './pricing.schemas'
 
 // Interactive demo schemas
 export * from './demo.schemas'

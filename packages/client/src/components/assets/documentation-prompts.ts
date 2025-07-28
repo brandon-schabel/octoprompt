@@ -279,8 +279,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 - 📧 Email: support@example.com
-- 💬 Discord: [Join our server](https://discord.link)
-- 📚 Documentation: [Read the docs](https://docs.link)
+- 💬 Discord: [Join our server](https://discord.gg/Z2nDnVQKKm)
+- 📚 Documentation: [Read the docs](https://promptliano.com/docs)
 
 ---
 

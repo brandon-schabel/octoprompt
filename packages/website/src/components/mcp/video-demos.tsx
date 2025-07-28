@@ -49,7 +49,7 @@ const videoDemos: VideoDemo[] = [
   {
     id: 'file-suggestions',
     title: 'Smart File Suggestions',
-    description: 'How AI-powered file search saves 90% of tokens',
+    description: 'How AI-powered file search saves 60-70% of tokens',
     duration: '5:20',
     thumbnail: '/demos/file-search-thumb.jpg',
     videoUrl: 'https://youtube.com/embed/demo4',

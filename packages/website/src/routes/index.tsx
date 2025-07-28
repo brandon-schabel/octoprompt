@@ -12,7 +12,7 @@ export const Route = createFileRoute('/')({
       meta: {
         title: 'Promptliano - Supercharge AI Development with Context',
         description:
-          'Promptliano is the MCP server that gives AI assistants deep understanding of your codebase. Reduce tokens by 90%, work across all editors, and build faster with intelligent context management.',
+          'Promptliano is the MCP server that gives AI assistants deep understanding of your codebase. Reduce tokens by 60-70%, work across all editors, and build faster with intelligent context management.',
         keywords: [
           'AI development',
           'MCP server',
@@ -30,7 +30,7 @@ export const Route = createFileRoute('/')({
         openGraph: {
           title: 'Promptliano - Supercharge AI Development with Context',
           description:
-            'The MCP server that gives AI assistants deep understanding of your codebase. Reduce tokens by 90% while building faster.',
+            'The MCP server that gives AI assistants deep understanding of your codebase. Reduce tokens by 60-70% while building faster.',
           type: 'website',
           images: [
             {
@@ -45,7 +45,7 @@ export const Route = createFileRoute('/')({
           card: 'summary_large_image',
           title: 'Promptliano - Supercharge AI Development with Context',
           description:
-            'The MCP server that gives AI assistants deep understanding of your codebase. Reduce tokens by 90% while building faster.',
+            'The MCP server that gives AI assistants deep understanding of your codebase. Reduce tokens by 60-70% while building faster.',
           image: 'https://promptliano.com/og-image.png'
         }
       } as SeoMetadata

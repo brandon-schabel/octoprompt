@@ -93,7 +93,7 @@ export function Contributors({ contributors = mockContributors, totalCount = 127
           <p className='text-muted-foreground'>Amazing developers building Promptliano</p>
         </div>
         <a
-          href='https://github.com/promptliano/promptliano/graphs/contributors'
+          href='https://github.com/brandon-schabel/promptliano/graphs/contributors'
           target='_blank'
           rel='noopener noreferrer'
           className='inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors'
@@ -157,7 +157,7 @@ export function Contributors({ contributors = mockContributors, totalCount = 127
         <p className='text-sm text-center'>
           Want to contribute? Check out our{' '}
           <a
-            href='https://github.com/promptliano/promptliano/blob/main/CONTRIBUTING.md'
+            href='https://github.com/brandon-schabel/promptliano/blob/main/CONTRIBUTING.md'
             className='font-medium text-primary hover:underline'
             target='_blank'
             rel='noopener noreferrer'

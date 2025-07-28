@@ -1,6 +1,7 @@
 // Landing page sections
 export { HeroSection } from './hero-section'
 export { FeatureShowcase } from './feature-showcase'
+export { FeaturesSection } from './features-section'
 export { VisualShowcaseSection } from './visual-showcase'
 export { McpIntegrationSection } from './mcp-integration'
 export { QuickStartSection } from './quick-start'

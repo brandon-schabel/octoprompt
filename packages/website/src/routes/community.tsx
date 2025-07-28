@@ -27,22 +27,16 @@ interface SocialLink {
 
 const socialLinks: SocialLink[] = [
   {
-    platform: 'GitHub',
-    title: 'Star on GitHub',
-    url: 'https://github.com/promptliano/promptliano',
-    icon: <Github className='w-5 h-5' />
+    platform: 'Discord',
+    title: 'Join our Discord',
+    url: 'https://discord.gg/Z2nDnVQKKm',
+    icon: <MessageSquare className='w-5 h-5' />
   },
   {
-    platform: 'Twitter',
-    title: 'Follow on Twitter',
+    platform: 'X',
+    title: 'Follow on X',
     url: 'https://twitter.com/promptliano',
     icon: <Twitter className='w-5 h-5' />
-  },
-  {
-    platform: 'YouTube',
-    title: 'Subscribe on YouTube',
-    url: 'https://youtube.com/@promptliano',
-    icon: <Youtube className='w-5 h-5' />
   }
 ]
 
@@ -76,24 +70,23 @@ function CommunityPage() {
         </div>
 
         {/* Discord Widget */}
-        <section className='mb-16'>
-          <DiscordWidget inviteLink='https://discord.gg/promptliano' />
-        </section>
+        {/* <section className='mb-16'>
+          <DiscordWidget inviteLink='https://discord.gg/Z2nDnVQKKm' />
+        </section> */}
 
         {/* Contributors Section */}
-        <section className='mb-16'>
+        {/* <section className='mb-16'>
           <Contributors />
-        </section>
+        </section> */}
 
         {/* Two Column Layout: Roadmap & Newsletter */}
-        <div className='grid lg:grid-cols-3 gap-8 mb-16'>
+        {/* <div className='grid lg:grid-cols-3 gap-8 mb-16'>
           <div className='lg:col-span-2'>
             <Roadmap />
           </div>
           <div>
             <NewsletterSignup />
 
-            {/* Community Events */}
             <GlassCard className='p-6 mt-8'>
               <div className='flex items-center gap-2 mb-4'>
                 <Calendar className='w-5 h-5 text-primary' />
@@ -115,15 +108,15 @@ function CommunityPage() {
               </div>
             </GlassCard>
           </div>
-        </div>
+        </div> */}
 
         {/* Resources Section */}
-        <section className='mb-16'>
+        {/* <section className='mb-16'>
           <Resources />
-        </section>
+        </section> */}
 
         {/* Community Guidelines */}
-        <GlassCard className='p-8 text-center'>
+        {/* <GlassCard className='p-8 text-center'>
           <Users className='w-12 h-12 text-primary mx-auto mb-4' />
           <h2 className='text-2xl font-bold mb-4'>Community Guidelines</h2>
           <p className='text-muted-foreground mb-6 max-w-2xl mx-auto'>
@@ -152,7 +145,7 @@ function CommunityPage() {
           </div>
           <div className='mt-8'>
             <a
-              href='https://github.com/promptliano/promptliano/blob/main/CODE_OF_CONDUCT.md'
+              href='https://github.com/brandon-schabel/promptliano/blob/main/CODE_OF_CONDUCT.md'
               className='text-primary hover:underline font-medium'
               target='_blank'
               rel='noopener noreferrer'
@@ -160,7 +153,7 @@ function CommunityPage() {
               Read our full Code of Conduct →
             </a>
           </div>
-        </GlassCard>
+        </GlassCard> */}
       </div>
     </div>
   )

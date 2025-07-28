@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll } from '@/components/ui'
+import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll, FeatureScreenshot } from '@/components/ui'
 import { Bot, Check, FileJson, Sparkles, Terminal, ArrowRight } from 'lucide-react'
 
 export const Route = createFileRoute('/integrations/claude-desktop')({
@@ -30,7 +30,7 @@ const features = [
   {
     icon: <FileJson className='w-6 h-6' />,
     title: 'Smart Suggestions',
-    description: 'AI-powered file suggestions with 90% token reduction'
+    description: 'AI-powered file suggestions with 60-70% token reduction'
   },
   {
     icon: <Terminal className='w-6 h-6' />,
@@ -119,6 +119,16 @@ function ClaudeDesktopPage() {
                 <p className='text-muted-foreground'>Quit and reopen Claude Desktop to load the MCP server</p>
               </div>
             </div>
+
+            <div className='mt-6'>
+              <FeatureScreenshot
+                src='/assets/screenshots/mcp-tools-configuration.webp'
+                alt='MCP Configuration'
+                title='MCP Tools in Claude Desktop'
+                description='Once configured, Claude Desktop will have access to all Promptliano MCP tools'
+                layout='centered'
+              />
+            </div>
           </GlassCard>
         </AnimateOnScroll>
 
@@ -149,6 +159,16 @@ function ClaudeDesktopPage() {
                 <div className='text-sm text-primary'>Access and manage your project tickets directly in Claude</div>
               </GlassCard>
             </div>
+          </div>
+
+          <div className='mt-6'>
+            <FeatureScreenshot
+              src='/assets/screenshots/project-chat-interface.webp'
+              alt='Claude Desktop Chat'
+              title='Claude Desktop with Promptliano Context'
+              description='Claude can access your entire project structure and provide contextual assistance'
+              layout='centered'
+            />
           </div>
         </AnimateOnScroll>
 

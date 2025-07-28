@@ -229,8 +229,8 @@ export function CodeBlock({
       </div>
 
       {/* Code */}
-      <div className='overflow-x-auto'>
-        <pre className='p-4 text-sm'>
+      <div className='overflow-x-auto max-w-full'>
+        <pre className='p-4 text-sm break-all sm:break-normal'>
           <code>
             {lines.map((line, index) => (
               <div key={index} className='flex'>

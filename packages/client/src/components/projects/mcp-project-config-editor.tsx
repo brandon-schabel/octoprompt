@@ -287,7 +287,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
                         className='h-7 px-2 text-xs'
                       >
                         <Sparkles className='h-3 w-3 mr-1' />
-                        Initialize
+                        Install MCP
                       </Button>
                     )}
                   </div>

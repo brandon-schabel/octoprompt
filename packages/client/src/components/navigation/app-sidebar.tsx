@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
 import { useActiveProjectTab, useSelectSetting, useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
+import { Logo } from '@/components/ui/logo'
 import {
   Sidebar,
   SidebarContent,
@@ -117,9 +118,11 @@ export function AppSidebar() {
     <ErrorBoundary>
       <>
         <Sidebar collapsible='icon' side='left' variant='sidebar'>
-          <SidebarHeader className='p-2 flex items-center justify-center group-data-[collapsible=icon]:hidden'>
-            {/* You can add a logo or App Name here */}
-            <span className='text-lg font-semibold'>Promptliano</span>
+          <SidebarHeader className='p-2 group-data-[collapsible=icon]:hidden'>
+            <div className='flex items-center justify-center relative'>
+              <Logo size='sm' className='absolute left-0' />
+              <span className='text-lg font-semibold'>Promptliano</span>
+            </div>
           </SidebarHeader>
           <SidebarContent className='p-2'>
             <SidebarMenu>

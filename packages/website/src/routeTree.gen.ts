@@ -9,10 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as LocalFirstRouteImport } from './routes/local-first'
 import { Route as IntegrationsRouteImport } from './routes/integrations'
+import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as DocsRouteImport } from './routes/docs'
-import { Route as DemosRouteImport } from './routes/demos'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -28,13 +28,18 @@ import { Route as IntegrationsConfigRouteImport } from './routes/integrations.co
 import { Route as IntegrationsCompatibilityRouteImport } from './routes/integrations.compatibility'
 import { Route as IntegrationsClaudeDesktopRouteImport } from './routes/integrations.claude-desktop'
 import { Route as IntegrationsClaudeCodeRouteImport } from './routes/integrations.claude-code'
+import { Route as DocsUiOverviewRouteImport } from './routes/docs.ui-overview'
 import { Route as DocsGuidesRouteImport } from './routes/docs.guides'
 import { Route as DocsGettingStartedRouteImport } from './routes/docs.getting-started'
+import { Route as DocsDownloadInstallationRouteImport } from './routes/docs.download-installation'
 import { Route as DocsApiRouteImport } from './routes/docs.api'
+import { Route as DocsHowToTicketsTasksRouteImport } from './routes/docs.how-to.tickets-tasks'
+import { Route as DocsHowToFirstProjectRouteImport } from './routes/docs.how-to.first-project'
+import { Route as DocsHowToBuildingContextRouteImport } from './routes/docs.how-to.building-context'
 
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
+const LocalFirstRoute = LocalFirstRouteImport.update({
+  id: '/local-first',
+  path: '/local-first',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntegrationsRoute = IntegrationsRouteImport.update({
@@ -42,14 +47,14 @@ const IntegrationsRoute = IntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocsRoute = DocsRouteImport.update({
   id: '/docs',
   path: '/docs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemosRoute = DemosRouteImport.update({
-  id: '/demos',
-  path: '/demos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunityRoute = CommunityRouteImport.update({
@@ -130,6 +135,11 @@ const IntegrationsClaudeCodeRoute = IntegrationsClaudeCodeRouteImport.update({
   path: '/claude-code',
   getParentRoute: () => IntegrationsRoute,
 } as any)
+const DocsUiOverviewRoute = DocsUiOverviewRouteImport.update({
+  id: '/ui-overview',
+  path: '/ui-overview',
+  getParentRoute: () => DocsRoute,
+} as any)
 const DocsGuidesRoute = DocsGuidesRouteImport.update({
   id: '/guides',
   path: '/guides',
@@ -140,23 +150,47 @@ const DocsGettingStartedRoute = DocsGettingStartedRouteImport.update({
   path: '/getting-started',
   getParentRoute: () => DocsRoute,
 } as any)
+const DocsDownloadInstallationRoute =
+  DocsDownloadInstallationRouteImport.update({
+    id: '/download-installation',
+    path: '/download-installation',
+    getParentRoute: () => DocsRoute,
+  } as any)
 const DocsApiRoute = DocsApiRouteImport.update({
   id: '/api',
   path: '/api',
   getParentRoute: () => DocsRoute,
 } as any)
+const DocsHowToTicketsTasksRoute = DocsHowToTicketsTasksRouteImport.update({
+  id: '/how-to/tickets-tasks',
+  path: '/how-to/tickets-tasks',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsHowToFirstProjectRoute = DocsHowToFirstProjectRouteImport.update({
+  id: '/how-to/first-project',
+  path: '/how-to/first-project',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsHowToBuildingContextRoute =
+  DocsHowToBuildingContextRouteImport.update({
+    id: '/how-to/building-context',
+    path: '/how-to/building-context',
+    getParentRoute: () => DocsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/community': typeof CommunityRoute
-  '/demos': typeof DemosRoute
   '/docs': typeof DocsRouteWithChildren
+  '/downloads': typeof DownloadsRoute
   '/integrations': typeof IntegrationsRouteWithChildren
-  '/pricing': typeof PricingRoute
+  '/local-first': typeof LocalFirstRoute
   '/docs/api': typeof DocsApiRoute
+  '/docs/download-installation': typeof DocsDownloadInstallationRoute
   '/docs/getting-started': typeof DocsGettingStartedRoute
   '/docs/guides': typeof DocsGuidesRoute
+  '/docs/ui-overview': typeof DocsUiOverviewRoute
   '/integrations/claude-code': typeof IntegrationsClaudeCodeRoute
   '/integrations/claude-desktop': typeof IntegrationsClaudeDesktopRoute
   '/integrations/compatibility': typeof IntegrationsCompatibilityRoute
@@ -169,16 +203,21 @@ export interface FileRoutesByFullPath {
   '/integrations/vscode': typeof IntegrationsVscodeRoute
   '/docs/': typeof DocsIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
+  '/docs/how-to/building-context': typeof DocsHowToBuildingContextRoute
+  '/docs/how-to/first-project': typeof DocsHowToFirstProjectRoute
+  '/docs/how-to/tickets-tasks': typeof DocsHowToTicketsTasksRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/community': typeof CommunityRoute
-  '/demos': typeof DemosRoute
-  '/pricing': typeof PricingRoute
+  '/downloads': typeof DownloadsRoute
+  '/local-first': typeof LocalFirstRoute
   '/docs/api': typeof DocsApiRoute
+  '/docs/download-installation': typeof DocsDownloadInstallationRoute
   '/docs/getting-started': typeof DocsGettingStartedRoute
   '/docs/guides': typeof DocsGuidesRoute
+  '/docs/ui-overview': typeof DocsUiOverviewRoute
   '/integrations/claude-code': typeof IntegrationsClaudeCodeRoute
   '/integrations/claude-desktop': typeof IntegrationsClaudeDesktopRoute
   '/integrations/compatibility': typeof IntegrationsCompatibilityRoute
@@ -191,19 +230,24 @@ export interface FileRoutesByTo {
   '/integrations/vscode': typeof IntegrationsVscodeRoute
   '/docs': typeof DocsIndexRoute
   '/integrations': typeof IntegrationsIndexRoute
+  '/docs/how-to/building-context': typeof DocsHowToBuildingContextRoute
+  '/docs/how-to/first-project': typeof DocsHowToFirstProjectRoute
+  '/docs/how-to/tickets-tasks': typeof DocsHowToTicketsTasksRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/community': typeof CommunityRoute
-  '/demos': typeof DemosRoute
   '/docs': typeof DocsRouteWithChildren
+  '/downloads': typeof DownloadsRoute
   '/integrations': typeof IntegrationsRouteWithChildren
-  '/pricing': typeof PricingRoute
+  '/local-first': typeof LocalFirstRoute
   '/docs/api': typeof DocsApiRoute
+  '/docs/download-installation': typeof DocsDownloadInstallationRoute
   '/docs/getting-started': typeof DocsGettingStartedRoute
   '/docs/guides': typeof DocsGuidesRoute
+  '/docs/ui-overview': typeof DocsUiOverviewRoute
   '/integrations/claude-code': typeof IntegrationsClaudeCodeRoute
   '/integrations/claude-desktop': typeof IntegrationsClaudeDesktopRoute
   '/integrations/compatibility': typeof IntegrationsCompatibilityRoute
@@ -216,6 +260,9 @@ export interface FileRoutesById {
   '/integrations/vscode': typeof IntegrationsVscodeRoute
   '/docs/': typeof DocsIndexRoute
   '/integrations/': typeof IntegrationsIndexRoute
+  '/docs/how-to/building-context': typeof DocsHowToBuildingContextRoute
+  '/docs/how-to/first-project': typeof DocsHowToFirstProjectRoute
+  '/docs/how-to/tickets-tasks': typeof DocsHowToTicketsTasksRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -223,13 +270,15 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/community'
-    | '/demos'
     | '/docs'
+    | '/downloads'
     | '/integrations'
-    | '/pricing'
+    | '/local-first'
     | '/docs/api'
+    | '/docs/download-installation'
     | '/docs/getting-started'
     | '/docs/guides'
+    | '/docs/ui-overview'
     | '/integrations/claude-code'
     | '/integrations/claude-desktop'
     | '/integrations/compatibility'
@@ -242,16 +291,21 @@ export interface FileRouteTypes {
     | '/integrations/vscode'
     | '/docs/'
     | '/integrations/'
+    | '/docs/how-to/building-context'
+    | '/docs/how-to/first-project'
+    | '/docs/how-to/tickets-tasks'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
     | '/community'
-    | '/demos'
-    | '/pricing'
+    | '/downloads'
+    | '/local-first'
     | '/docs/api'
+    | '/docs/download-installation'
     | '/docs/getting-started'
     | '/docs/guides'
+    | '/docs/ui-overview'
     | '/integrations/claude-code'
     | '/integrations/claude-desktop'
     | '/integrations/compatibility'
@@ -264,18 +318,23 @@ export interface FileRouteTypes {
     | '/integrations/vscode'
     | '/docs'
     | '/integrations'
+    | '/docs/how-to/building-context'
+    | '/docs/how-to/first-project'
+    | '/docs/how-to/tickets-tasks'
   id:
     | '__root__'
     | '/'
     | '/about'
     | '/community'
-    | '/demos'
     | '/docs'
+    | '/downloads'
     | '/integrations'
-    | '/pricing'
+    | '/local-first'
     | '/docs/api'
+    | '/docs/download-installation'
     | '/docs/getting-started'
     | '/docs/guides'
+    | '/docs/ui-overview'
     | '/integrations/claude-code'
     | '/integrations/claude-desktop'
     | '/integrations/compatibility'
@@ -288,25 +347,28 @@ export interface FileRouteTypes {
     | '/integrations/vscode'
     | '/docs/'
     | '/integrations/'
+    | '/docs/how-to/building-context'
+    | '/docs/how-to/first-project'
+    | '/docs/how-to/tickets-tasks'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   CommunityRoute: typeof CommunityRoute
-  DemosRoute: typeof DemosRoute
   DocsRoute: typeof DocsRouteWithChildren
+  DownloadsRoute: typeof DownloadsRoute
   IntegrationsRoute: typeof IntegrationsRouteWithChildren
-  PricingRoute: typeof PricingRoute
+  LocalFirstRoute: typeof LocalFirstRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
+    '/local-first': {
+      id: '/local-first'
+      path: '/local-first'
+      fullPath: '/local-first'
+      preLoaderRoute: typeof LocalFirstRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/integrations': {
@@ -316,18 +378,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/docs': {
       id: '/docs'
       path: '/docs'
       fullPath: '/docs'
       preLoaderRoute: typeof DocsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demos': {
-      id: '/demos'
-      path: '/demos'
-      fullPath: '/demos'
-      preLoaderRoute: typeof DemosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community': {
@@ -435,6 +497,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsClaudeCodeRouteImport
       parentRoute: typeof IntegrationsRoute
     }
+    '/docs/ui-overview': {
+      id: '/docs/ui-overview'
+      path: '/ui-overview'
+      fullPath: '/docs/ui-overview'
+      preLoaderRoute: typeof DocsUiOverviewRouteImport
+      parentRoute: typeof DocsRoute
+    }
     '/docs/guides': {
       id: '/docs/guides'
       path: '/guides'
@@ -449,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsGettingStartedRouteImport
       parentRoute: typeof DocsRoute
     }
+    '/docs/download-installation': {
+      id: '/docs/download-installation'
+      path: '/download-installation'
+      fullPath: '/docs/download-installation'
+      preLoaderRoute: typeof DocsDownloadInstallationRouteImport
+      parentRoute: typeof DocsRoute
+    }
     '/docs/api': {
       id: '/docs/api'
       path: '/api'
@@ -456,21 +532,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsApiRouteImport
       parentRoute: typeof DocsRoute
     }
+    '/docs/how-to/tickets-tasks': {
+      id: '/docs/how-to/tickets-tasks'
+      path: '/how-to/tickets-tasks'
+      fullPath: '/docs/how-to/tickets-tasks'
+      preLoaderRoute: typeof DocsHowToTicketsTasksRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/how-to/first-project': {
+      id: '/docs/how-to/first-project'
+      path: '/how-to/first-project'
+      fullPath: '/docs/how-to/first-project'
+      preLoaderRoute: typeof DocsHowToFirstProjectRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/how-to/building-context': {
+      id: '/docs/how-to/building-context'
+      path: '/how-to/building-context'
+      fullPath: '/docs/how-to/building-context'
+      preLoaderRoute: typeof DocsHowToBuildingContextRouteImport
+      parentRoute: typeof DocsRoute
+    }
   }
 }
 
 interface DocsRouteChildren {
   DocsApiRoute: typeof DocsApiRoute
+  DocsDownloadInstallationRoute: typeof DocsDownloadInstallationRoute
   DocsGettingStartedRoute: typeof DocsGettingStartedRoute
   DocsGuidesRoute: typeof DocsGuidesRoute
+  DocsUiOverviewRoute: typeof DocsUiOverviewRoute
   DocsIndexRoute: typeof DocsIndexRoute
+  DocsHowToBuildingContextRoute: typeof DocsHowToBuildingContextRoute
+  DocsHowToFirstProjectRoute: typeof DocsHowToFirstProjectRoute
+  DocsHowToTicketsTasksRoute: typeof DocsHowToTicketsTasksRoute
 }
 
 const DocsRouteChildren: DocsRouteChildren = {
   DocsApiRoute: DocsApiRoute,
+  DocsDownloadInstallationRoute: DocsDownloadInstallationRoute,
   DocsGettingStartedRoute: DocsGettingStartedRoute,
   DocsGuidesRoute: DocsGuidesRoute,
+  DocsUiOverviewRoute: DocsUiOverviewRoute,
   DocsIndexRoute: DocsIndexRoute,
+  DocsHowToBuildingContextRoute: DocsHowToBuildingContextRoute,
+  DocsHowToFirstProjectRoute: DocsHowToFirstProjectRoute,
+  DocsHowToTicketsTasksRoute: DocsHowToTicketsTasksRoute,
 }
 
 const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
@@ -511,10 +618,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   CommunityRoute: CommunityRoute,
-  DemosRoute: DemosRoute,
   DocsRoute: DocsRouteWithChildren,
+  DownloadsRoute: DownloadsRoute,
   IntegrationsRoute: IntegrationsRouteWithChildren,
-  PricingRoute: PricingRoute,
+  LocalFirstRoute: LocalFirstRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

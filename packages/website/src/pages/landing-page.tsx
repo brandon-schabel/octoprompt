@@ -1,14 +1,10 @@
 import { PageTransition } from '@/components/ui'
 import {
   HeroSection,
-  FeatureShowcase,
-  VisualShowcaseSection,
-  McpIntegrationSection,
+  FeaturesSection,
   QuickStartSection,
   MetricsSection,
-  TestimonialsCarousel,
-  ComparisonTable,
-  FooterSection
+  ComparisonTable
 } from '@/components/sections'
 
 export function LandingPage() {
@@ -18,14 +14,8 @@ export function LandingPage() {
         {/* Hero Section */}
         <HeroSection />
 
-        {/* Feature Showcase */}
-        <FeatureShowcase />
-
-        {/* Visual Showcase */}
-        <VisualShowcaseSection />
-
-        {/* MCP Integration */}
-        <McpIntegrationSection />
+        {/* Comprehensive Features Section */}
+        <FeaturesSection />
 
         {/* Quick Start Guide */}
         <QuickStartSection />
@@ -33,14 +23,8 @@ export function LandingPage() {
         {/* Metrics & Statistics */}
         <MetricsSection />
 
-        {/* Testimonials */}
-        <TestimonialsCarousel />
-
         {/* Comparison Table */}
         <ComparisonTable />
-
-        {/* Footer */}
-        <FooterSection />
       </div>
     </PageTransition>
   )

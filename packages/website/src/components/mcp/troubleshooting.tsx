@@ -223,15 +223,15 @@ export function Troubleshooting() {
   return (
     <div className='space-y-8'>
       {/* Header */}
-      <div className='text-center'>
+      {/* <div className='text-center'>
         <h2 className='text-3xl font-bold mb-4'>Troubleshooting Guide</h2>
         <p className='text-muted-foreground max-w-2xl mx-auto'>
           Find solutions to common issues and learn how to debug problems with Promptliano MCP integration
         </p>
       </div>
 
-      {/* Quick Debug Commands */}
-      <AnimateOnScroll>
+      Quick Debug Commands */}
+      {/* <AnimateOnScroll>
         <GlassCard className='p-6'>
           <h3 className='text-xl font-semibold mb-4 flex items-center gap-2'>
             <Terminal className='w-5 h-5' />
@@ -263,10 +263,10 @@ export function Troubleshooting() {
             ))}
           </div>
         </GlassCard>
-      </AnimateOnScroll>
+      </AnimateOnScroll> */}
 
       {/* Search and Filter */}
-      <div className='flex flex-col md:flex-row gap-4'>
+      {/* <div className='flex flex-col md:flex-row gap-4'>
         <div className='relative flex-1'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground' />
           <input
@@ -294,10 +294,10 @@ export function Troubleshooting() {
             </button>
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* FAQ Items */}
-      <div className='space-y-4'>
+      {/* <div className='space-y-4'>
         <AnimatePresence>
           {filteredItems.map((item) => {
             const isExpanded = expandedItems.includes(item.id)
@@ -403,18 +403,18 @@ export function Troubleshooting() {
             )
           })}
         </AnimatePresence>
-      </div>
+      </div> */}
 
       {/* No Results */}
-      {filteredItems.length === 0 && (
+      {/* {filteredItems.length === 0 && (
         <div className='text-center py-12'>
           <XCircle className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
           <p className='text-muted-foreground'>No troubleshooting items found matching your criteria</p>
         </div>
-      )}
+      )} */}
 
       {/* Still Need Help */}
-      <AnimateOnScroll>
+      {/* <AnimateOnScroll>
         <GlassCard className='p-8 text-center'>
           <h3 className='text-2xl font-bold mb-4'>Still Need Help?</h3>
           <p className='text-muted-foreground mb-6'>
@@ -422,7 +422,7 @@ export function Troubleshooting() {
           </p>
           <div className='flex gap-4 justify-center'>
             <a
-              href='https://github.com/promptliano/promptliano/issues'
+              href='https://github.com/brandon-schabel/promptliano/issues'
               target='_blank'
               rel='noopener noreferrer'
               className='px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors'
@@ -437,7 +437,7 @@ export function Troubleshooting() {
             </a>
           </div>
         </GlassCard>
-      </AnimateOnScroll>
+      </AnimateOnScroll> */}
     </div>
   )
 }

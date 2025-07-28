@@ -26,7 +26,7 @@ Generally a fullstack feature consists of the follow
 
 ## File Suggestions Feature
 
-The AI file suggestion feature has been optimized to use 90-95% fewer tokens. Three MCP methods are available:
+The AI file suggestion feature has been optimized to use 60-70% fewer tokens. Three MCP methods are available:
 
 ### 1. Project-Level Suggestions (General Discovery)
 
@@ -91,7 +91,7 @@ mcp__Promptliano__task_manager(
 - Always use file suggestions before manually searching - it saves significant time
 - Add contextual hints (e.g., "include test files", "focus on API routes", "find UI components")
 - The feature automatically considers keywords, file paths, types, recency, and import relationships
-- Ticket-level suggestions include performance metrics showing tokens saved (90-95% reduction)
+- Ticket-level suggestions include performance metrics showing tokens saved (60-70% reduction)
 
 ## Agents Feature
 

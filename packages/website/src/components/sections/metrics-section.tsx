@@ -8,7 +8,7 @@ const metrics: Metric[] = [
   {
     id: 'token-reduction',
     label: 'Token Reduction',
-    value: 90,
+    value: 65,
     unit: '%',
     icon: 'TrendingUp',
     color: 'text-green-500',
@@ -28,42 +28,42 @@ const metrics: Metric[] = [
     color: 'text-yellow-500',
     description: 'Average context retrieval time'
   },
-  {
-    id: 'active-users',
-    label: 'Active Developers',
-    value: 5000,
-    unit: '+',
-    icon: 'Users',
-    color: 'text-blue-500',
-    description: 'Developers using Promptliano daily',
-    trend: {
-      direction: 'up',
-      percentage: 120,
-      period: 'month'
-    }
-  },
+  // {
+  //   id: 'active-users',
+  //   label: 'Active Developers',
+  //   value: 5000,
+  //   unit: '+',
+  //   icon: 'Users',
+  //   color: 'text-blue-500',
+  //   description: 'Developers using Promptliano daily',
+  //   trend: {
+  //     direction: 'up',
+  //     percentage: 120,
+  //     period: 'month'
+  //   }
+  // },
   {
     id: 'files-managed',
     label: 'Files Managed',
-    value: 1000000,
+    value: 1000,
     unit: '+',
     icon: 'Code',
     color: 'text-purple-500',
-    description: 'Total files under context management'
+    description: 'Tested on apps with 1000+ files, scalable to any project size'
   },
-  {
-    id: 'time-saved',
-    label: 'Time Saved',
-    value: 40,
-    unit: '%',
-    icon: 'Clock',
-    color: 'text-orange-500',
-    description: 'Average development time saved'
-  },
+  // {
+  //   id: 'time-saved',
+  //   label: 'Time Saved',
+  //   value: 40,
+  //   unit: '%',
+  //   icon: 'Clock',
+  //   color: 'text-orange-500',
+  //   description: 'Average development time saved'
+  // },
   {
     id: 'accuracy',
     label: 'AI Accuracy',
-    value: 95,
+    value: 70,
     unit: '%',
     icon: 'CheckCircle',
     color: 'text-emerald-500',
@@ -110,8 +110,8 @@ function AnimatedCounter({ value, duration = 2, delay = 0 }: { value: number; du
 
 export function MetricsSection() {
   const metricsData: MetricsSectionType = {
-    title: 'Proven Results at Scale',
-    subtitle: 'Join thousands of developers who are building faster and smarter with Promptliano',
+    title: 'Proven Results',
+    subtitle: 'Build faster, smarter, and more accurately with Promptliano and any size project.',
     metrics,
     layout: 'stats',
     animated: true
@@ -195,18 +195,18 @@ export function MetricsSection() {
         </div>
 
         {/* Social proof */}
-        <AnimateOnScroll>
+        {/* <AnimateOnScroll>
           <div className='mt-16 text-center'>
             <p className='text-sm text-muted-foreground'>Trusted by developers at</p>
             <div className='mt-6 flex justify-center items-center gap-8 opacity-50 grayscale'>
               {/* Placeholder for company logos */}
-              <div className='h-8 w-24 bg-muted rounded' />
+        {/* <div className='h-8 w-24 bg-muted rounded' />
               <div className='h-8 w-24 bg-muted rounded' />
               <div className='h-8 w-24 bg-muted rounded' />
               <div className='h-8 w-24 bg-muted rounded' />
             </div>
           </div>
-        </AnimateOnScroll>
+        </AnimateOnScroll> */}
       </div>
     </section>
   )

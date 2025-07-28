@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import {
@@ -28,59 +28,62 @@ const navigation: NavItem[] = [
     icon: Book,
     items: [
       { title: 'Introduction', href: '/docs' },
-      { title: 'Installation', href: '/docs/getting-started#installation' },
-      { title: 'Quick Start', href: '/docs/getting-started#quick-start' },
-      { title: 'Configuration', href: '/docs/getting-started#configuration' }
+      { title: 'Download & Installation', href: '/docs/download-installation' },
+      { title: 'Quick Start', href: '/docs/getting-started' },
+      { title: 'UI Overview', href: '/docs/ui-overview', badge: 'New' }
     ]
   },
   {
-    title: 'Core Concepts',
+    title: 'How-To Guides',
+    icon: FileText,
+    items: [
+      { title: 'Your First Project', href: '/docs/how-to/first-project' },
+      { title: 'Building Context for AI', href: '/docs/how-to/building-context' },
+      { title: 'Managing Tickets & Tasks', href: '/docs/how-to/tickets-tasks' },
+      { title: 'Using File Suggestions', href: '/docs/guides#file-suggestions' },
+      { title: 'Working with Prompts', href: '/docs/guides#prompts' }
+    ]
+  },
+  {
+    title: 'Features',
     icon: Zap,
     items: [
-      { title: 'Projects', href: '/docs/guides#projects' },
-      { title: 'Tickets & Tasks', href: '/docs/guides#tickets' },
-      { title: 'Prompts', href: '/docs/guides#prompts' },
-      { title: 'File Context', href: '/docs/guides#context' }
+      { title: 'Features Overview', href: '/docs/features' },
+      { title: 'Project Management', href: '/docs/guides#projects' },
+      { title: 'Smart File Discovery', href: '/docs/guides#file-suggestions', badge: 'AI' },
+      { title: 'Ticket System', href: '/docs/guides#tickets' },
+      { title: 'Prompt Library', href: '/docs/guides#prompts' },
+      { title: 'Git Integration', href: '/docs/guides#git-worktrees' }
+    ]
+  },
+  {
+    title: 'MCP Integration',
+    icon: Terminal,
+    items: [
+      { title: 'What is MCP?', href: '/docs/guides#mcp-overview' },
+      { title: 'Setup Guide', href: '/integrations' },
+      { title: 'MCP Tools Reference', href: '/docs/api#mcp-tools' },
+      { title: 'Best Practices', href: '/docs/guides#mcp-best-practices' }
     ]
   },
   {
     title: 'API Reference',
     icon: Code,
     items: [
+      { title: 'Overview', href: '/docs/api' },
       { title: 'Project Manager', href: '/docs/api#project-manager' },
-      { title: 'Prompt Manager', href: '/docs/api#prompt-manager' },
       { title: 'Ticket Manager', href: '/docs/api#ticket-manager' },
       { title: 'Task Manager', href: '/docs/api#task-manager' },
-      { title: 'Git Manager', href: '/docs/api#git-manager', badge: 'Enhanced' },
-      { title: 'File Summarization', href: '/docs/api#file-summarization', badge: 'New' }
+      { title: 'Git Manager', href: '/docs/api#git-manager' },
+      { title: 'All MCP Tools', href: '/docs/api#mcp-tools' }
     ]
   },
   {
-    title: 'MCP Tools',
-    icon: Terminal,
-    items: [
-      { title: 'Overview', href: '/docs/guides#mcp-overview' },
-      { title: 'Tool Reference', href: '/docs/guides#mcp-tools' },
-      { title: 'Integration Guide', href: '/docs/guides#mcp-integration' },
-      { title: 'Best Practices', href: '/docs/guides#mcp-best-practices' }
-    ]
-  },
-  {
-    title: 'Advanced Features',
+    title: 'Advanced Topics',
     icon: Settings,
     items: [
-      { title: 'File Suggestions', href: '/docs/guides#file-suggestions', badge: 'Optimized' },
       { title: 'AI Agents', href: '/docs/guides#agents' },
       { title: 'Git Worktrees', href: '/docs/guides#git-worktrees' },
-      { title: 'Background Jobs', href: '/docs/guides#jobs' }
-    ]
-  },
-  {
-    title: 'Guides',
-    icon: FileText,
-    items: [
-      { title: 'Building Context', href: '/docs/guides#building-context' },
-      { title: 'Workflow Patterns', href: '/docs/guides#workflow-patterns' },
       { title: 'Performance Tips', href: '/docs/guides#performance' },
       { title: 'Troubleshooting', href: '/docs/guides#troubleshooting' }
     ]
@@ -89,9 +92,9 @@ const navigation: NavItem[] = [
     title: 'Community',
     icon: Users,
     items: [
-      { title: 'Contributing', href: '/docs/guides#contributing' },
-      { title: 'Discord Server', href: '/community' },
-      { title: 'GitHub', href: 'https://github.com/Promptliano/promptliano' }
+      { title: 'Discord Server', href: 'https://discord.gg/dTSy42g8bV' },
+      { title: 'GitHub', href: 'https://github.com/brandon-schabel/promptliano' },
+      { title: 'Contributing', href: '/docs/guides#contributing' }
     ]
   }
 ]
@@ -99,32 +102,36 @@ const navigation: NavItem[] = [
 interface CollapsibleSectionProps {
   item: NavItem
   depth?: number
+  isOpen: boolean
+  onToggle: () => void
 }
 
-function CollapsibleSection({ item, depth = 0 }: CollapsibleSectionProps) {
+function CollapsibleSection({ item, depth = 0, isOpen, onToggle }: CollapsibleSectionProps) {
   const location = useLocation()
-  const [isOpen, setIsOpen] = useState(() => {
-    // Auto-expand if current route is within this section
-    if (item.items) {
-      return item.items.some((subItem) => subItem.href && location.pathname.startsWith(subItem.href.split('#')[0]))
-    }
-    return false
-  })
-
-  const hasActiveChild = item.items?.some(
-    (subItem) => subItem.href && location.pathname.startsWith(subItem.href.split('#')[0])
-  )
-
   const Icon = item.icon
 
+  // More precise path matching
+  const isActive = (href: string) => {
+    const [path, hash] = href.split('#')
+    const currentPath = location.pathname
+    const currentHash = location.hash.slice(1)
+
+    if (hash && currentPath === path) {
+      return currentHash === hash
+    }
+    return currentPath === path
+  }
+
   if (!item.items) {
+    const active = item.href && isActive(item.href)
+
     return (
       <Link
         to={item.href || '#'}
         className={cn(
           'flex items-center justify-between px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground rounded-md transition-colors',
           depth > 0 && 'ml-6',
-          item.href && location.pathname.startsWith(item.href.split('#')[0]) && 'bg-accent text-accent-foreground'
+          active && 'bg-accent text-accent-foreground'
         )}
       >
         <span className='flex items-center gap-2'>
@@ -136,10 +143,12 @@ function CollapsibleSection({ item, depth = 0 }: CollapsibleSectionProps) {
     )
   }
 
+  const hasActiveChild = item.items.some((subItem) => subItem.href && isActive(subItem.href))
+
   return (
     <div>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onToggle}
         className={cn(
           'flex items-center justify-between w-full px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md transition-colors',
           hasActiveChild && 'text-primary'
@@ -154,7 +163,7 @@ function CollapsibleSection({ item, depth = 0 }: CollapsibleSectionProps) {
       {isOpen && (
         <div className='mt-1 space-y-1'>
           {item.items.map((subItem, index) => (
-            <CollapsibleSection key={index} item={subItem} depth={depth + 1} />
+            <CollapsibleSection key={index} item={subItem} depth={depth + 1} isOpen={false} onToggle={() => {}} />
           ))}
         </div>
       )}
@@ -163,11 +172,46 @@ function CollapsibleSection({ item, depth = 0 }: CollapsibleSectionProps) {
 }
 
 export function DocsSidebar() {
+  const location = useLocation()
+
+  const findActiveSection = () => {
+    for (let i = 0; i < navigation.length; i++) {
+      const item = navigation[i]
+      if (item.items) {
+        const hasActive = item.items.some((subItem) => {
+          if (!subItem.href) return false
+          const [path, hash] = subItem.href.split('#')
+          if (hash && location.pathname === path) {
+            return location.hash.slice(1) === hash
+          }
+          return location.pathname === path
+        })
+        if (hasActive) return i
+      }
+    }
+    return null
+  }
+
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(findActiveSection)
+
+  // Update expanded section when route changes
+  useEffect(() => {
+    const activeSection = findActiveSection()
+    if (activeSection !== null) {
+      setExpandedIndex(activeSection)
+    }
+  }, [location.pathname, location.hash])
+
   return (
     <nav className='flex-1 overflow-y-auto px-4 pb-6'>
       <div className='space-y-1'>
         {navigation.map((item, index) => (
-          <CollapsibleSection key={index} item={item} />
+          <CollapsibleSection
+            key={index}
+            item={item}
+            isOpen={expandedIndex === index}
+            onToggle={() => setExpandedIndex(expandedIndex === index ? null : index)}
+          />
         ))}
       </div>
     </nav>
