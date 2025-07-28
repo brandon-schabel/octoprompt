@@ -162,8 +162,8 @@ export function VisualShowcaseSection() {
               Ready to experience these features yourself?
             </p>
             <div className='flex gap-4 justify-center'>
-              <a href='/demos' className='btn btn-primary'>
-                Try Interactive Demos
+              <a href='/downloads' className='btn btn-primary'>
+                Download Promptliano
               </a>
               <a href='/docs/getting-started' className='btn btn-outline'>
                 Get Started

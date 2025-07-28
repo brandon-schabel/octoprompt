@@ -3,6 +3,7 @@ import { SeoMetadata } from '@/schemas/seo.schemas'
 import { GlassCard } from '@/components/ui/glass-card'
 import { CodeTerminal } from '@/components/ui/code-terminal'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
+import { FeatureScreenshot } from '@/components/ui'
 
 export const Route = createFileRoute('/docs/api')({
   loader: () => {
@@ -96,6 +97,28 @@ function ApiReferencePage() {
                   language='typescript'
                 />
               </div>
+            </div>
+
+            <div className='mt-6'>
+              <h4 className='font-medium mb-2'>Example: Project Statistics Overview</h4>
+              <FeatureScreenshot
+                src='/assets/screenshots/project-statistics-overview.webp'
+                alt='Project Statistics'
+                title='Comprehensive Project Insights'
+                description='Get detailed statistics about your project including file counts, token usage, and summarization coverage'
+                layout='centered'
+              />
+            </div>
+
+            <div className='mt-6'>
+              <h4 className='font-medium mb-2'>MCP Tools Configuration</h4>
+              <FeatureScreenshot
+                src='/assets/screenshots/mcp-tools-configuration.webp'
+                alt='MCP Tools Configuration'
+                title='Available MCP Tools'
+                description='View and configure all available MCP tools for your project'
+                layout='centered'
+              />
             </div>
           </section>
 
@@ -213,6 +236,39 @@ const worktrees = await mcp__promptliano__git_manager(
   projectId: 1753220774680
 )`}
                 language='typescript'
+              />
+            </div>
+
+            <div className='mt-6'>
+              <h4 className='font-medium mb-2'>Git Branches Management</h4>
+              <FeatureScreenshot
+                src='/assets/screenshots/git-branches-list.webp'
+                alt='Git Branches'
+                title='Branch Management Interface'
+                description='View and manage all Git branches with visual indicators for current branch and remote tracking'
+                layout='centered'
+              />
+            </div>
+
+            <div className='mt-6'>
+              <h4 className='font-medium mb-2'>Git Worktrees Overview</h4>
+              <FeatureScreenshot
+                src='/assets/screenshots/git-worktrees-overview.webp'
+                alt='Git Worktrees'
+                title='Parallel Development with Worktrees'
+                description='Manage multiple worktrees for parallel development workflows'
+                layout='centered'
+              />
+            </div>
+
+            <div className='mt-6'>
+              <h4 className='font-medium mb-2'>Git Commit History</h4>
+              <FeatureScreenshot
+                src='/assets/screenshots/git-commit-history-view.webp'
+                alt='Git History'
+                title='Detailed Commit History'
+                description='Browse commit history with full details, diffs, and file changes'
+                layout='centered'
               />
             </div>
           </section>

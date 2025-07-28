@@ -44,3 +44,13 @@ export {
 export { FeatureScreenshot } from './feature-screenshot'
 export { ScreenshotGallery } from './screenshot-gallery'
 export { ScreenshotCarousel } from './screenshot-carousel'
+
+// Download button components
+export { DownloadButton, DownloadButtonCompact } from './download-button'
+
+// Core UI components
+export { Badge } from './badge'
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card'
+export { Button } from './button'
+export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
+export { Logo } from './logo'

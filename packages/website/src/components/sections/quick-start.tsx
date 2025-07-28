@@ -6,49 +6,66 @@ const steps = [
   {
     number: 1,
     title: 'Install Promptliano',
-    description: 'Install the Promptliano MCP server globally via npm',
+    description: 'Clone the repository and set up Promptliano with Bun',
     icon: Terminal,
-    code: `# Install globally
-npm install -g @promptliano/mcp-server
+    code: `# Clone the repository
+git clone https://github.com/brandon-schabel/promptliano.git
 
-# Or use npx
-npx @promptliano/mcp-server init`,
+# Install Bun globally (if not already installed)
+npm install -g bun
+
+# Navigate to the directory
+cd promptliano
+
+# Install dependencies
+bun install
+
+# Start the application
+bun run start`,
     language: 'bash'
   },
   {
     number: 2,
     title: 'Configure Your Editor',
-    description: 'Add Promptliano to your MCP configuration',
+    description: 'Set up MCP integration with your AI editor',
     icon: Settings,
-    code: `{
-  "mcpServers": {
-    "promptliano": {
-      "command": "promptliano",
-      "args": ["serve"],
-      "env": {
-        "PROMPTLIANO_PORT": "3182"
-      }
-    }
-  }
-}`,
-    language: 'json',
-    filename: 'mcp.json'
+    code: `# Promptliano includes a quick installer!
+
+Once Promptliano is running:
+1. Navigate to http://localhost:3579
+2. Click on "settings" in the project tab navigation
+3. Scrll down to "Project MCP Configuration" and install the MCP server for your editor
+4. Find your editor (VSCode, Cursor, Universal, etc.)
+5. Click "
+
+The installer will generate the correct configuration
+based on your system and editor choice.`,
+    language: 'bash'
   },
   {
     number: 3,
     title: 'Start Building',
-    description: 'Launch your editor and start using AI with full context',
+    description: 'Access Promptliano and start using AI with full context',
     icon: Rocket,
-    code: `// Your AI assistant now has access to:
-// ✓ Full project context and structure
-// ✓ Git history and branch information
-// ✓ Ticket and task management
-// ✓ Smart file suggestions
-// ✓ Optimized token usage
+    code: `# Promptliano is now running!
 
-// Example: Ask Claude to implement a feature
+# Access the web interface:
+http://localhost:1420
+
+# The MCP server runs on port 3147 (default)
+
+# Your AI assistant now has access to:
+✓ Full project context and structure
+✓ Git history and branch information  
+✓ Ticket and task management
+✓ Smart file suggestions
+✓ Optimized token usage
+
+# Example prompts to try:
+"Show me the project overview"
+"What tickets are open?"
 "Help me implement the user authentication flow"`,
-    language: 'typescript'
+    language: 'bash'
   }
 ]
 
@@ -65,7 +82,7 @@ export function QuickStartSection() {
           </div>
         </AnimateOnScroll>
 
-        <div className='max-w-5xl mx-auto'>
+        <div className='max-w-5xl mx-auto overflow-hidden'>
           <div className='grid gap-8 md:gap-12'>
             {steps.map((step, index) => (
               <AnimateOnScroll key={step.number} delay={index * 0.2}>
@@ -107,7 +124,6 @@ export function QuickStartSection() {
                       <CodeBlock
                         code={step.code}
                         language={step.language}
-                        filename={step.filename}
                         showLineNumbers={false}
                         className='shadow-lg'
                       />

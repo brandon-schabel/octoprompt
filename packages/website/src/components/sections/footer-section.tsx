@@ -5,7 +5,8 @@ import { Github, Twitter, MessageSquare, Mail, ExternalLink, Heart, Code2 } from
 const footerLinks = {
   product: [
     { label: 'Features', href: '/features' },
-    { label: 'Pricing', href: '/pricing' },
+    { label: 'Downloads', href: '/downloads' },
+    { label: 'Local First', href: '/local-first' },
     { label: 'Changelog', href: '/changelog' },
     { label: 'Roadmap', href: '/roadmap' }
   ],
@@ -31,7 +32,7 @@ const footerLinks = {
 const socialLinks = [
   {
     icon: Github,
-    href: 'https://github.com/promptliano/promptliano',
+    href: 'https://github.com/brandon-schabel/promptliano',
     label: 'GitHub',
     color: 'hover:text-gray-400'
   },
@@ -43,7 +44,7 @@ const socialLinks = [
   },
   {
     icon: MessageSquare,
-    href: 'https://discord.gg/promptliano',
+    href: 'https://discord.gg/Z2nDnVQKKm',
     label: 'Discord',
     color: 'hover:text-indigo-400'
   }
@@ -53,7 +54,7 @@ export function FooterSection() {
   return (
     <footer className='relative mt-24 border-t border-border'>
       {/* Newsletter Section */}
-      <div className='container mx-auto px-4 py-12'>
+      {/* <div className='container mx-auto px-4 py-12'>
         <GlassCard className='p-8 md:p-12 text-center max-w-2xl mx-auto'>
           <h3 className='text-2xl font-bold mb-4'>Stay Updated</h3>
           <p className='text-muted-foreground mb-6'>
@@ -75,7 +76,7 @@ export function FooterSection() {
           </form>
           <p className='text-xs text-muted-foreground mt-4'>No spam, unsubscribe anytime. We respect your privacy.</p>
         </GlassCard>
-      </div>
+      </div> */}
 
       {/* Main Footer */}
       <div className='container mx-auto px-4 py-12'>

@@ -160,7 +160,7 @@ CTAButtonAnimated.displayName = 'CTAButtonAnimated'
 
 // Outline button with animated border
 export const CTAButtonOutline = forwardRef<HTMLButtonElement, CTAButtonProps>(
-  ({ className, size = 'md', href, target, children, ...props }, ref) => {
+  ({ className, size = 'md', href, target, children, icon: Icon, iconPosition = 'left', ...props }, ref) => {
     const classes = cn(
       'relative inline-flex items-center justify-center font-medium rounded-lg',
       'bg-background text-foreground',
@@ -180,13 +180,24 @@ export const CTAButtonOutline = forwardRef<HTMLButtonElement, CTAButtonProps>(
       transition: { type: 'spring', stiffness: 400, damping: 17 }
     }
 
+    const iconSizes = {
+      sm: 'h-4 w-4',
+      md: 'h-5 w-5',
+      lg: 'h-6 w-6',
+      xl: 'h-7 w-7'
+    }
+
     const content = (
       <>
         <motion.span
           className='absolute inset-0 rounded-lg bg-gradient-to-r from-primary via-secondary to-accent opacity-0 transition-opacity duration-300'
           whileHover={{ opacity: 0.1 }}
         />
-        <span className='relative z-10'>{children as React.ReactNode}</span>
+        <span className='relative z-10 inline-flex items-center gap-2'>
+          {Icon && iconPosition === 'left' && <Icon className={iconSizes[size]} />}
+          {children as React.ReactNode}
+          {Icon && iconPosition === 'right' && <Icon className={iconSizes[size]} />}
+        </span>
       </>
     )
 

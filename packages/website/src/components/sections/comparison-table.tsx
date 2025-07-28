@@ -20,7 +20,7 @@ const comparisonData: ComparisonFeature[] = [
   },
   {
     feature: 'Token Efficiency',
-    description: 'Optimized context reduces API costs by 90%',
+    description: 'Optimized context reduces API costs by 60-70%',
     withPromptliano: true,
     withoutPromptliano: false,
     highlight: true

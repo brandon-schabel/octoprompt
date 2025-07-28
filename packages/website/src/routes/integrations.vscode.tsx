@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll } from '@/components/ui'
+import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll, FeatureScreenshot } from '@/components/ui'
 import { FileCode, Check, Settings, Puzzle, Terminal, ArrowRight } from 'lucide-react'
 
 export const Route = createFileRoute('/integrations/vscode')({
@@ -143,6 +143,16 @@ function VSCodeIntegrationPage() {
                 </p>
               </div>
             </div>
+
+            <div className='mt-6'>
+              <FeatureScreenshot
+                src='/assets/screenshots/provider-keys-management.webp'
+                alt='API Key Management'
+                title='API Key Management in VS Code'
+                description='Securely manage your API keys for different AI providers'
+                layout='centered'
+              />
+            </div>
           </GlassCard>
         </AnimateOnScroll>
 
@@ -212,6 +222,16 @@ function VSCodeIntegrationPage() {
                   </span>
                 </li>
               </ul>
+            </div>
+
+            <div className='mt-6'>
+              <FeatureScreenshot
+                src='/assets/screenshots/mcp-analytics-overview.webp'
+                alt='MCP Analytics'
+                title='Performance Analytics'
+                description='Monitor token usage and API performance metrics directly in VS Code'
+                layout='centered'
+              />
             </div>
           </GlassCard>
         </AnimateOnScroll>

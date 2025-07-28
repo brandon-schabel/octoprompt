@@ -557,6 +557,6 @@ Promptliano is **open-source** under the [MIT License](./LICENSE). See [LICENSE]
 
 ### Need Help or Have Questions?
 
-Join our **[Promptliano Discord](https://discord.gg/dTSy42g8bV)** community for real-time support, feature requests, or casual chit-chat.
+Join our **[Promptliano Discord](https://discord.gg/Z2nDnVQKKm)** community for real-time support, feature requests, or casual chit-chat.
 
 Stay local, stay customizable, and have fun building with **Promptliano**! Enjoy!

@@ -63,7 +63,7 @@ MEDIUM RELEVANCE:
 - /src/schemas/auth.schemas.ts (Validation schemas)
 - /tests/auth.test.ts (Unit tests)
 
-Token usage: 95% reduction compared to full file scan`
+Token usage: 70% reduction compared to full file scan`
   },
   {
     id: 'ticket-management',

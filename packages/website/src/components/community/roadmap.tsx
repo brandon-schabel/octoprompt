@@ -186,7 +186,7 @@ export function Roadmap() {
         <p className='text-sm'>
           Have a feature request?{' '}
           <a
-            href='https://github.com/promptliano/promptliano/issues/new?template=feature_request.md'
+            href='https://github.com/brandon-schabel/promptliano/issues/new?template=feature_request.md'
             className='font-medium text-primary hover:underline'
             target='_blank'
             rel='noopener noreferrer'

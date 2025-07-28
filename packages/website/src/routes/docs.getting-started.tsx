@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
 import { GlassCard } from '@/components/ui/glass-card'
 import { CodeBlock } from '@/components/docs'
-import { FeatureScreenshot } from '@/components/ui'
+import { FeatureScreenshot, DownloadButton } from '@/components/ui'
 
 export const Route = createFileRoute('/docs/getting-started')({
   loader: () => {
@@ -29,144 +29,167 @@ function GettingStartedPage() {
       </div>
 
       <GlassCard className='p-8'>
-        <h2 className='text-2xl font-semibold mb-4'>Prerequisites</h2>
+        <h2 className='text-2xl font-semibold mb-4'>What You'll Need</h2>
         <ul className='space-y-2 list-disc list-inside text-muted-foreground'>
-          <li>Node.js 18.0.0 or later</li>
-          <li>VS Code, Cursor, Claude Desktop, or Claude Code</li>
-          <li>Git installed on your system</li>
+          <li>A computer running macOS, Windows, or Linux</li>
+          <li>An AI-powered editor (VS Code, Cursor, Claude Desktop, or Claude Code) for MCP integration</li>
+          <li>5 minutes to get up and running</li>
         </ul>
       </GlassCard>
 
-      <section id='installation' className='space-y-6'>
-        <h2 className='text-3xl font-semibold'>Installation</h2>
+      <section id='quickstart' className='space-y-6'>
+        <h2 className='text-3xl font-semibold'>Quick Start (3 Steps)</h2>
 
-        <div className='space-y-3'>
-          <h3 className='text-xl font-medium'>1. Install the MCP Server</h3>
-          <CodeBlock code='npm install -g @promptliano/mcp-server' language='bash' />
-        </div>
+        <div className='space-y-6'>
+          <div className='space-y-3'>
+            <h3 className='text-xl font-medium'>1. Download Promptliano</h3>
+            <p className='text-muted-foreground mb-4'>
+              Download the right version for your platform. The button below will auto-detect your system.
+            </p>
+            <DownloadButton variant='dropdown' size='lg' />
+            <p className='text-sm text-muted-foreground mt-2'>
+              Need help? See our <a href='/docs/download-installation' className='text-primary hover:underline'>detailed installation guide</a>.
+            </p>
+          </div>
 
-        <div className='space-y-3'>
-          <h3 className='text-xl font-medium'>2. Initialize Promptliano</h3>
-          <CodeBlock code='promptliano init' language='bash' />
-        </div>
+          <div className='space-y-3'>
+            <h3 className='text-xl font-medium'>2. Run Promptliano</h3>
+            <p className='text-muted-foreground'>Extract the download and start Promptliano:</p>
+            <CodeBlock 
+              code={`# For Bun bundle (recommended)
+cd promptliano-0.8.0-bun-bundle
+bun run start
 
-        <div className='space-y-3'>
-          <h3 className='text-xl font-medium'>3. Configure your editor</h3>
-          <p className='text-muted-foreground'>Choose your editor for specific setup instructions:</p>
-          <div className='grid md:grid-cols-2 gap-4'>
-            <a
-              href='/integrations/vscode'
-              className='block p-4 border rounded-md hover:border-primary transition-colors'
-            >
-              <div className='font-medium'>VS Code</div>
-              <div className='text-sm text-muted-foreground'>Configure Promptliano for VS Code</div>
-            </a>
-            <a
-              href='/integrations/cursor'
-              className='block p-4 border rounded-md hover:border-primary transition-colors'
-            >
-              <div className='font-medium'>Cursor</div>
-              <div className='text-sm text-muted-foreground'>Set up Promptliano in Cursor</div>
-            </a>
-            <a
-              href='/integrations/claude-desktop'
-              className='block p-4 border rounded-md hover:border-primary transition-colors'
-            >
-              <div className='font-medium'>Claude Desktop</div>
-              <div className='text-sm text-muted-foreground'>Use with Claude Desktop app</div>
-            </a>
-            <a
-              href='/integrations/claude-code'
-              className='block p-4 border rounded-md hover:border-primary transition-colors'
-            >
-              <div className='font-medium'>Claude Code</div>
-              <div className='text-sm text-muted-foreground'>Integrate with Claude Code</div>
-            </a>
+# For native binaries
+./promptliano  # macOS/Linux
+promptliano.exe  # Windows`} 
+              language='bash' 
+            />
+            <p className='text-sm text-muted-foreground'>
+              Promptliano will start on <a href='http://localhost:3579' className='text-primary hover:underline'>http://localhost:3579</a>
+            </p>
+          </div>
+
+          <div className='space-y-3'>
+            <h3 className='text-xl font-medium'>3. Configure Your AI Editor (Optional)</h3>
+            <p className='text-muted-foreground'>Connect Promptliano to your AI-powered editor for seamless integration:</p>
+            <div className='grid md:grid-cols-2 gap-4'>
+              <a
+                href='/integrations/cursor'
+                className='block p-4 border rounded-md hover:border-primary transition-colors'
+              >
+                <div className='font-medium'>Cursor</div>
+                <div className='text-sm text-muted-foreground'>Popular AI-first code editor</div>
+              </a>
+              <a
+                href='/integrations/claude-desktop'
+                className='block p-4 border rounded-md hover:border-primary transition-colors'
+              >
+                <div className='font-medium'>Claude Desktop</div>
+                <div className='text-sm text-muted-foreground'>Anthropic's official desktop app</div>
+              </a>
+            </div>
           </div>
         </div>
       </section>
 
       <section id='first-project' className='space-y-6'>
-        <h2 className='text-3xl font-semibold'>Creating Your First Project</h2>
+        <h2 className='text-3xl font-semibold'>Your First Project</h2>
 
         <div className='space-y-6'>
           <div className='space-y-3'>
-            <h3 className='text-lg font-medium'>1. Create a new project</h3>
-            <CodeBlock
-              code="promptliano project create --name 'My First Project' --path ./my-project"
-              language='bash'
-            />
+            <h3 className='text-lg font-medium'>1. Open Promptliano and Create a Project</h3>
+            <p className='text-muted-foreground'>When you first open Promptliano, you'll see the project creation dialog:</p>
             <FeatureScreenshot
               src='/assets/screenshots/project-selector-dialog.webp'
               alt='Project Selector Dialog'
-              title='Select Your Project'
-              description='Choose or create a project to start working with Promptliano'
+              title='Create Your First Project'
+              description='Click "Create New Project" and point it to your codebase folder'
               layout='centered'
             />
           </div>
 
           <div className='space-y-3'>
-            <h3 className='text-lg font-medium'>2. Add your first prompt</h3>
-            <CodeBlock
-              code={`promptliano prompt add --name "Code Review" --content "Review this code for best practices and potential improvements"`}
-              language='bash'
+            <h3 className='text-lg font-medium'>2. Explore Your Project Overview</h3>
+            <p className='text-muted-foreground'>
+              Once created, you'll see your project overview with file browser, context builder, and more:
+            </p>
+            <FeatureScreenshot
+              src='/assets/screenshots/project-context-overview.webp'
+              alt='Project Overview'
+              title='Project Overview'
+              description='Your command center for building AI context from your codebase'
+              layout='centered'
             />
           </div>
 
           <div className='space-y-3'>
-            <h3 className='text-lg font-medium'>3. Create a ticket</h3>
-            <CodeBlock
-              code={`promptliano ticket create --title "Implement user authentication" --priority high`}
-              language='bash'
-            />
+            <h3 className='text-lg font-medium'>3. Start Building Context</h3>
+            <p className='text-muted-foreground'>
+              Select files from the file browser to add them to your context. Watch the token counter to manage context size:
+            </p>
             <FeatureScreenshot
-              src='/assets/screenshots/tickets-overview-with-tasks.webp'
-              alt='Tickets Overview'
-              title='Manage Your Work'
-              description='Track features and bugs with AI-generated task suggestions'
+              src='/assets/screenshots/project-context-selected-files.webp'
+              alt='Selected Files'
+              title='Building Context'
+              description='Selected files appear on the right with token counts'
               layout='centered'
             />
           </div>
         </div>
       </section>
 
-      <section id='configuration' className='space-y-6'>
-        <h2 className='text-3xl font-semibold'>Configuration</h2>
+      <section id='key-features' className='space-y-6'>
+        <h2 className='text-3xl font-semibold'>Key Features to Explore</h2>
 
-        <p className='text-muted-foreground'>
-          Promptliano can be configured through the{' '}
-          <code className='px-1.5 py-0.5 bg-muted rounded text-sm'>.promptliano/config.json</code> file in your project
-          root:
-        </p>
+        <div className='grid md:grid-cols-2 gap-6'>
+          <GlassCard className='p-6'>
+            <h3 className='text-lg font-medium mb-3'>🎯 Smart File Suggestions</h3>
+            <p className='text-sm text-muted-foreground mb-3'>
+              Let AI suggest relevant files based on what you're working on. Saves 60-70% tokens compared to manual search.
+            </p>
+            <FeatureScreenshot
+              src='/assets/screenshots/recommended-files-dialog.webp'
+              alt='File Suggestions'
+              title='AI-Powered File Discovery'
+              layout='centered'
+            />
+          </GlassCard>
 
-        <CodeBlock
-          code={`{
-  "project": {
-    "name": "My Project",
-    "description": "A sample project",
-    "excludePatterns": ["node_modules", ".git", "dist"]
-  },
-  "ai": {
-    "maxTokens": 10000,
-    "temperature": 0.7
-  },
-  "git": {
-    "autoCommit": false,
-    "commitMessageTemplate": "feat: {description}"
-  }
-}`}
-          language='json'
-          filename='.promptliano/config.json'
-          showLineNumbers
-        />
-        
-        <FeatureScreenshot
-          src='/assets/screenshots/settings-dialog.webp'
-          alt='Settings Dialog'
-          title='Configure Your Preferences'
-          description='Customize Promptliano settings through the UI or configuration files'
-          layout='centered'
-        />
+          <GlassCard className='p-6'>
+            <h3 className='text-lg font-medium mb-3'>📝 Prompt Library</h3>
+            <p className='text-sm text-muted-foreground mb-3'>
+              Save and reuse your best prompts. Import them into any project for consistent AI interactions.
+            </p>
+            <FeatureScreenshot
+              src='/assets/screenshots/prompt-management-library.webp'
+              alt='Prompt Library'
+              title='Your Prompt Collection'
+              layout='centered'
+            />
+          </GlassCard>
+
+          <GlassCard className='p-6'>
+            <h3 className='text-lg font-medium mb-3'>🎫 Ticket & Task Management</h3>
+            <p className='text-sm text-muted-foreground mb-3'>
+              Plan features with tickets and let AI generate implementation tasks based on your codebase.
+            </p>
+            <FeatureScreenshot
+              src='/assets/screenshots/tickets-overview-with-tasks.webp'
+              alt='Tickets'
+              title='AI-Assisted Planning'
+              layout='centered'
+            />
+          </GlassCard>
+
+          <GlassCard className='p-6'>
+            <h3 className='text-lg font-medium mb-3'>🔄 MCP Integration</h3>
+            <p className='text-sm text-muted-foreground mb-3'>
+              Connect to AI editors via Model Context Protocol for seamless codebase access.
+            </p>
+            <a href='/integrations' className='text-primary text-sm hover:underline'>View integration guides →</a>
+          </GlassCard>
+        </div>
       </section>
 
       <GlassCard className='p-8 bg-primary/5 border-primary/20'>
@@ -189,10 +212,10 @@ function GettingStartedPage() {
           </li>
           <li className='flex items-center gap-2'>
             <span>→</span>
-            <a href='/demos' className='text-primary hover:underline'>
-              Watch demos
+            <a href='/docs/download-installation' className='text-primary hover:underline'>
+              Download & Installation
             </a>
-            <span className='text-muted-foreground'>to see Promptliano in action</span>
+            <span className='text-muted-foreground'>for your platform</span>
           </li>
           <li className='flex items-center gap-2'>
             <span>→</span>

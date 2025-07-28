@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll } from '@/components/ui'
+import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll, FeatureScreenshot } from '@/components/ui'
 import { Zap, Check, Brain, Sparkles, Command, ArrowRight } from 'lucide-react'
 
 export const Route = createFileRoute('/integrations/cursor')({
@@ -139,6 +139,16 @@ function CursorIntegrationPage() {
                 <p className='text-muted-foreground'>Quit and reopen Cursor to activate the MCP server</p>
               </div>
             </div>
+
+            <div className='mt-6'>
+              <FeatureScreenshot
+                src='/assets/screenshots/settings-dialog.webp'
+                alt='Cursor Settings'
+                title='Cursor Configuration Settings'
+                description='Configure Promptliano integration in Cursor settings for optimal performance'
+                layout='centered'
+              />
+            </div>
           </GlassCard>
         </AnimateOnScroll>
 
@@ -194,6 +204,16 @@ function CursorIntegrationPage() {
                 </p>
               </div>
             </div>
+
+            <div className='mt-6'>
+              <FeatureScreenshot
+                src='/assets/screenshots/project-context-multiple-files-selected.webp'
+                alt='Multi-File Context'
+                title='Multi-File Operations in Cursor'
+                description='Select multiple files to provide comprehensive context for complex refactoring tasks'
+                layout='centered'
+              />
+            </div>
           </GlassCard>
         </AnimateOnScroll>
 
@@ -203,7 +223,7 @@ function CursorIntegrationPage() {
             <h2 className='text-2xl font-bold mb-6 text-center'>Performance Impact</h2>
             <div className='grid md:grid-cols-3 gap-6 text-center'>
               <div>
-                <div className='text-3xl font-bold text-primary mb-2'>90%</div>
+                <div className='text-3xl font-bold text-primary mb-2'>65%</div>
                 <p className='text-muted-foreground'>Fewer tokens used</p>
               </div>
               <div>

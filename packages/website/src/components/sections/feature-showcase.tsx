@@ -44,7 +44,7 @@ const features: ExtendedFeature[] = [
     id: 'context-management',
     title: 'Intelligent Context Management',
     description:
-      'Automatically provides relevant context to AI assistants, reducing token usage by up to 90% while improving accuracy.',
+      'Automatically provides relevant context to AI assistants, reducing token usage by up to 60-70% while improving accuracy.',
     icon: {
       type: 'icon',
       value: 'Brain',

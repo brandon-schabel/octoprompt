@@ -78,7 +78,7 @@ mcp__Promptliano__project_manager(
 
 ## Key Features
 
-- **Token-Efficient File Suggestions**: 90-95% token reduction with smart pre-filtering
+- **Token-Efficient File Suggestions**: 60-70% token reduction with smart pre-filtering
 - **Project-Aware Context**: All tools understand your current project context
 - **Integrated Workflow**: Seamlessly move from planning to implementation
 - **Git Worktree Support**: Manage multiple working directories efficiently`

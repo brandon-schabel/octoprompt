@@ -1,14 +1,15 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { NavigationMenu, NavigationItem } from '@/schemas/navigation.schemas'
 import { cn } from '@/lib/utils'
+import { Logo } from '@/components/ui'
 
 const navigationItems: NavigationItem[] = [
   { id: 'home', label: 'Home', href: '/' },
+  { id: 'local-first', label: 'Local First', href: '/local-first' },
   { id: 'integrations', label: 'Integrations', href: '/integrations' },
-  { id: 'docs', label: 'Documentation', href: '/docs' },
-  { id: 'demos', label: 'Demos', href: '/demos' },
+  { id: 'docs', label: 'Docs', href: '/docs' },
+  { id: 'downloads', label: 'Downloads', href: '/downloads' },
   { id: 'community', label: 'Community', href: '/community' },
-  { id: 'pricing', label: 'Pricing', href: '/pricing' },
   { id: 'about', label: 'About', href: '/about' }
 ]
 
@@ -17,11 +18,12 @@ export function Header() {
   const currentPath = router.location.pathname
 
   return (
-    <header className='sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur'>
+    <header className='sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
       <div className='container mx-auto px-4'>
-        <div className='flex h-16 items-center justify-between'>
-          <Link to='/' className='flex items-center space-x-2'>
-            <span className='text-2xl font-bold'>Promptliano</span>
+        <div className='flex h-14 items-center justify-between'>
+          <Link to='/' className='flex items-center space-x-3 group'>
+            <Logo size='sm' showGlow={false} className='transition-transform group-hover:scale-105' />
+            <span className='text-xl font-bold'>Promptliano</span>
           </Link>
 
           <nav className='hidden md:flex items-center space-x-6'>
@@ -48,7 +50,7 @@ export function Header() {
 
           <div className='flex items-center space-x-4'>
             <a
-              href='https://github.com/promptliano/promptliano'
+              href='https://github.com/brandon-schabel/promptliano'
               target='_blank'
               rel='noopener noreferrer'
               className='text-muted-foreground hover:text-primary'

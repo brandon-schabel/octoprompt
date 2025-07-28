@@ -17,10 +17,11 @@ export const Route = createFileRoute('/integrations/troubleshooting')({
 
 function TroubleshootingPage() {
   return (
-    <div className='py-20 px-4 md:px-6 lg:px-8'>
-      <div className='mx-auto max-w-5xl'>
-        <Troubleshooting />
-      </div>
-    </div>
+    <div />
+    // <div className='py-20 px-4 md:px-6 lg:px-8'>
+    //   <div className='mx-auto max-w-5xl'>
+    //     <Troubleshooting />
+    //   </div>
+    // </div>
   )
 }

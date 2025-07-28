@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
 import { GlassCard } from '@/components/ui/glass-card'
 import { CodeBlock, MultiFileCodeBlock } from '@/components/docs'
+import { FeatureScreenshot } from '@/components/ui'
 import { AlertCircle, Lightbulb, Zap, GitBranch } from 'lucide-react'
 
 export const Route = createFileRoute('/docs/guides')({
@@ -96,7 +97,7 @@ mcp__promptliano__ticket_manager(
 
           <div className='bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-4'>
             <p className='text-sm'>
-              <span className='font-medium'>Token Savings:</span> The file suggestion feature uses 90-95% fewer tokens
+              <span className='font-medium'>Token Savings:</span> The file suggestion feature uses 60-70% fewer tokens
               compared to manual searches!
             </p>
           </div>
@@ -184,7 +185,7 @@ await mcp__promptliano__task_manager(
             <div>
               <h3 className='text-lg font-medium mb-2'>Optimized for Token Efficiency</h3>
               <p className='text-muted-foreground'>
-                The file suggestion feature has been optimized to use 90-95% fewer tokens while maintaining high
+                The file suggestion feature has been optimized to use 60-70% fewer tokens while maintaining high
                 accuracy.
               </p>
             </div>
@@ -223,7 +224,17 @@ await mcp__promptliano__task_manager(
           </GlassCard>
         </div>
 
-        <div className='space-y-4'>
+        <div className='mt-6'>
+          <FeatureScreenshot
+            src='/assets/screenshots/recommended-files-dialog-filtered.webp'
+            alt='File Suggestions Filtered'
+            title='AI-Powered File Suggestions with Filtering'
+            description='Use different strategies to optimize token usage while maintaining high accuracy'
+            layout='centered'
+          />
+        </div>
+
+        <div className='space-y-4 mt-6'>
           <h3 className='text-xl font-medium'>Usage Examples</h3>
           <CodeBlock
             code={`// Project-level suggestions (general discovery)
@@ -284,7 +295,17 @@ mcp__promptliano__task_manager(
           </div>
         </GlassCard>
 
-        <div className='space-y-4'>
+        <div className='mt-6'>
+          <FeatureScreenshot
+            src='/assets/screenshots/prompt-management-library.webp'
+            alt='Prompt Library'
+            title='Prompt Management for Agents'
+            description='Save and organize reusable prompts and agent instructions for consistent AI workflows'
+            layout='centered'
+          />
+        </div>
+
+        <div className='space-y-4 mt-6'>
           <h3 className='text-xl font-medium'>Agent Workflow Example</h3>
           <MultiFileCodeBlock
             files={[
@@ -365,7 +386,17 @@ const agents = [
           </div>
         </GlassCard>
 
-        <div className='space-y-4'>
+        <div className='mt-6'>
+          <FeatureScreenshot
+            src='/assets/screenshots/git-worktrees-overview.webp'
+            alt='Git Worktrees'
+            title='Git Worktrees Management'
+            description='Manage multiple worktrees for parallel development on different features'
+            layout='centered'
+          />
+        </div>
+
+        <div className='space-y-4 mt-6'>
           <h3 className='text-xl font-medium'>Worktree Workflow</h3>
           <CodeBlock
             code={`// 1. Add a worktree for a new feature
@@ -406,6 +437,29 @@ await mcp__promptliano__git_manager(
             language='typescript'
             showLineNumbers
           />
+        </div>
+
+        <div className='mt-6'>
+          <h3 className='text-xl font-medium'>Git Stash Management</h3>
+          <p className='text-muted-foreground mb-4'>
+            Temporarily save work in progress with Git stash operations:
+          </p>
+          <div className='grid md:grid-cols-2 gap-4'>
+            <FeatureScreenshot
+              src='/assets/screenshots/git-stash-management.webp'
+              alt='Git Stash Management'
+              title='Stash Management Interface'
+              description='Save and manage work in progress with Git stash'
+              layout='centered'
+            />
+            <FeatureScreenshot
+              src='/assets/screenshots/git-stashes-list.webp'
+              alt='Git Stashes List'
+              title='List of Stashed Changes'
+              description='View all stashed changes with descriptions and timestamps'
+              layout='centered'
+            />
+          </div>
         </div>
       </section>
 
@@ -477,8 +531,8 @@ await mcp__promptliano__git_manager(
           <a href='/docs/api' className='btn btn-primary'>
             Explore API Reference
           </a>
-          <a href='/demos' className='btn btn-outline'>
-            Watch Demos
+          <a href='/downloads' className='btn btn-outline'>
+            Download Promptliano
           </a>
         </div>
       </GlassCard>

@@ -3,8 +3,10 @@ import { CTAButton, CTAButtonOutline } from '@/components/ui'
 import { CodeTerminal } from '@/components/ui'
 import { AnimateOnScroll } from '@/components/ui'
 import { ScreenshotCarousel } from '@/components/ui'
+import { DownloadButtonCompact } from '@/components/ui'
+import { Logo } from '@/components/ui'
 import type { HeroSection } from '@/schemas'
-import { ArrowRight, Github } from 'lucide-react'
+import { ArrowRight, Github, Download } from 'lucide-react'
 
 const heroScreenshots = [
   {
@@ -29,9 +31,11 @@ const heroScreenshots = [
 
 export function HeroSection() {
   const heroData: HeroSection = {
-    title: 'Supercharge AI Development with Context',
+    title: 'Supercharge AI Development with Promptliano',
+    // subtitle:
+    // 'Promptliano is the MCP server that gives AI assistants deep understanding of your codebase, enabling faster and more accurate development.',
     subtitle:
-      'Promptliano is the MCP server that gives AI assistants deep understanding of your codebase, enabling faster and more accurate development.',
+      'Promptliano augments your AI assistant with deep understanding of your codebase using the MCP protocol. It comes with a powerful UI that works as the central command hub for your AI workflow.',
     ctas: [
       {
         id: 'get-started',
@@ -44,7 +48,7 @@ export function HeroSection() {
       {
         id: 'view-github',
         text: 'View on GitHub',
-        href: 'https://github.com/promptliano/promptliano',
+        href: 'https://github.com/brandon-schabel/promptliano',
         variant: 'outline',
         size: 'lg',
         icon: 'Github',
@@ -76,13 +80,23 @@ export function HeroSection() {
         <div className='grid gap-12 lg:grid-cols-2 lg:gap-16 items-center'>
           {/* Left column - Content */}
           <div className='space-y-8'>
+            {/* <AnimateOnScroll> */}
+            {/* <div className='flex justify-center md:justify-start mb-6'> */}
+            {/* <Logo size='lg' showGlow={true} /> */}
+            {/* </div> */}
+            {/* </AnimateOnScroll> */}
+
             <HeroGradient title={heroData.title} subtitle={heroData.subtitle} centered={false} className='text-left'>
               <div className='flex flex-wrap gap-4'>
                 <CTAButton href={heroData.ctas[0].href} size='lg'>
                   {heroData.ctas[0].text}
                   <ArrowRight className='ml-2 h-4 w-4' />
                 </CTAButton>
-                <CTAButtonOutline href={heroData.ctas[1].href} size='lg' target='_blank'>
+                <CTAButton href='/downloads' size='lg' variant='secondary'>
+                  <Download className='mr-2 h-4 w-4' />
+                  Downloads
+                </CTAButton>
+                <CTAButtonOutline href={heroData.ctas[1].href} size='lg' target='_blank' className='whitespace-nowrap'>
                   <Github className='mr-2 h-4 w-4' />
                   {heroData.ctas[1].text}
                 </CTAButtonOutline>
@@ -98,7 +112,7 @@ export function HeroSection() {
                 </div>
                 <div className='flex items-center gap-3'>
                   <div className='h-2 w-2 rounded-full bg-accent' />
-                  <span className='text-muted-foreground'>90% fewer tokens with intelligent context management</span>
+                  <span className='text-muted-foreground'>60-70% fewer tokens with intelligent context management</span>
                 </div>
                 <div className='flex items-center gap-3'>
                   <div className='h-2 w-2 rounded-full bg-accent' />
@@ -109,16 +123,25 @@ export function HeroSection() {
           </div>
 
           {/* Right column - Screenshot carousel */}
-          <AnimateOnScroll>
-            <ScreenshotCarousel 
-              screenshots={heroScreenshots}
-              autoPlay={true}
-              interval={4000}
-              showIndicators={true}
-              showControls={true}
-              className='shadow-2xl'
-            />
-          </AnimateOnScroll>
+          <div className='space-y-4'>
+            <AnimateOnScroll>
+              <ScreenshotCarousel
+                screenshots={heroScreenshots}
+                autoPlay={true}
+                interval={4000}
+                showIndicators={true}
+                showControls={true}
+                className='shadow-2xl'
+              />
+            </AnimateOnScroll>
+
+            {/* Download button */}
+            <AnimateOnScroll>
+              <div className='flex justify-center'>
+                <DownloadButtonCompact />
+              </div>
+            </AnimateOnScroll>
+          </div>
         </div>
       </div>
     </div>
