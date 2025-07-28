@@ -44,7 +44,7 @@
     "rehype-highlight": "^7.0.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "web-vitals": "^4.2.4",
+    "web-vitals": "^5.0.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {
