@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
+
 import { visualizer } from 'rollup-plugin-visualizer'
 import viteCompression from 'vite-plugin-compression'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -10,7 +11,7 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    TanStackRouterVite({
+    tanstackRouter({
       routesDirectory: 'src/routes',
       generatedRouteTree: 'src/routeTree.gen.ts',
       autoCodeSplitting: true
@@ -20,11 +21,11 @@ export default defineConfig({
     // Bundle visualization
     ...(process.env.ANALYZE
       ? [visualizer({
-          open: true,
-          filename: 'dist/stats.html',
-          gzipSize: true,
-          brotliSize: true
-        })]
+        open: true,
+        filename: 'dist/stats.html',
+        gzipSize: true,
+        brotliSize: true
+      })]
       : []),
     // Compression
     viteCompression({
