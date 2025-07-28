@@ -54,10 +54,10 @@ async function buildProject() {
   // Build a simple binary for the current platform (for development)
   console.log('Building binary for current platform...')
   const currentPlatformExt = process.platform === 'win32' ? '.exe' : ''
-  await $`cd ${serverDir} && bun build --compile ./server.ts --outfile ${join(distDir, `${pkg.name}-bundle${currentPlatformExt}`)}`
+  await $`cd ${serverDir} && bun build --compile ./server.ts --outfile ${join(distDir, `promptliano-bundle${currentPlatformExt}`)}`
 
   // Define targets with proper executable extensions
-  const bundleNamePrefix = `${pkg.name}-${pkg.version}`
+  const bundleNamePrefix = `promptliano-${pkg.version}`
 
   // Create a zip archive for the Bun-runnable bundle
   console.log('Creating Bun-runnable bundle zip archive...')
@@ -76,31 +76,31 @@ async function buildProject() {
       name: `${bundleNamePrefix}-linux-arm64`,
       target: 'bun-linux-arm64',
       executableExt: '',
-      outputDirName: `${pkg.name}-${pkg.version}-linux-arm64`
+      outputDirName: `promptliano-${pkg.version}-linux-arm64`
     },
     {
       name: `${bundleNamePrefix}-linux-x64`,
       target: 'bun-linux-x64',
       executableExt: '',
-      outputDirName: `${pkg.name}-${pkg.version}-linux-x64`
+      outputDirName: `promptliano-${pkg.version}-linux-x64`
     },
     {
       name: `${bundleNamePrefix}-macos-x64`,
       target: 'bun-darwin-x64',
       executableExt: '',
-      outputDirName: `${pkg.name}-${pkg.version}-macos-x64`
+      outputDirName: `promptliano-${pkg.version}-macos-x64`
     },
     {
       name: `${bundleNamePrefix}-macos-arm64`,
       target: 'bun-darwin-arm64',
       executableExt: '',
-      outputDirName: `${pkg.name}-${pkg.version}-macos-arm64`
+      outputDirName: `promptliano-${pkg.version}-macos-arm64`
     },
     {
       name: `${bundleNamePrefix}-windows-x64`,
       target: 'bun-windows-x64',
       executableExt: '.exe',
-      outputDirName: `${pkg.name}-${pkg.version}-windows-x64`
+      outputDirName: `promptliano-${pkg.version}-windows-x64`
     }
   ]
 
@@ -113,7 +113,7 @@ async function buildProject() {
     await $`cp -r ${clientBuildOutputDir} ${join(platformDir, 'client-dist')}`
 
     // Build the standalone binary with version in the name
-    const executableName = `${pkg.name}${executableExt}`
+    const executableName = `promptliano${executableExt}`
     await $`cd ${serverDir} && bun build --compile --target=${target} ./server.ts --outfile ${join(platformDir, executableName)}`
 
     // Fix permissions for all executables (including Windows .exe files on Linux)
@@ -125,7 +125,7 @@ async function buildProject() {
 
     // Also copy the standalone binary to the dist root for Tauri sidecar preparation
     const simplePlatformName = target.replace('bun-', '')
-    const standaloneExecName = `${pkg.name}-${simplePlatformName}${executableExt}`
+    const standaloneExecName = `promptliano-${simplePlatformName}${executableExt}`
 
     // Copy the standalone binary to dist root for Tauri sidecar preparation
     try {
