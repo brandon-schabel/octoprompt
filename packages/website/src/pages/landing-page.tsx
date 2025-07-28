@@ -2,6 +2,7 @@ import { PageTransition } from '@/components/ui'
 import {
   HeroSection,
   FeatureShowcase,
+  VisualShowcaseSection,
   McpIntegrationSection,
   QuickStartSection,
   MetricsSection,
@@ -19,6 +20,9 @@ export function LandingPage() {
 
         {/* Feature Showcase */}
         <FeatureShowcase />
+
+        {/* Visual Showcase */}
+        <VisualShowcaseSection />
 
         {/* MCP Integration */}
         <McpIntegrationSection />

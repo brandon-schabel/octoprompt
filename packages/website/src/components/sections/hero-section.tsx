@@ -2,17 +2,29 @@ import { HeroGradient } from '@/components/ui'
 import { CTAButton, CTAButtonOutline } from '@/components/ui'
 import { CodeTerminal } from '@/components/ui'
 import { AnimateOnScroll } from '@/components/ui'
+import { ScreenshotCarousel } from '@/components/ui'
 import type { HeroSection } from '@/schemas'
 import { ArrowRight, Github } from 'lucide-react'
 
-const terminalLines = [
-  { type: 'comment' as const, content: 'Install Promptliano MCP server', delay: 300 },
-  { type: 'command' as const, content: 'npm install -g @promptliano/mcp-server', delay: 500 },
-  { type: 'output' as const, content: '✓ Installed @promptliano/mcp-server@latest', delay: 300 },
-  { type: 'command' as const, content: 'promptliano init', delay: 500 },
-  { type: 'output' as const, content: '✓ Created configuration file', delay: 300 },
-  { type: 'output' as const, content: '✓ MCP server ready at http://localhost:3182', delay: 300 },
-  { type: 'comment' as const, content: 'Connect your AI editor and boost productivity!', delay: 500 }
+const heroScreenshots = [
+  {
+    src: '/assets/screenshots/project-context-overview.webp',
+    alt: 'Promptliano Project Context Overview',
+    title: 'Intelligent Context Management',
+    description: 'Build context with file selection, prompts, and user input'
+  },
+  {
+    src: '/assets/screenshots/recommended-files-dialog.webp',
+    alt: 'AI-Powered File Suggestions',
+    title: 'Smart File Recommendations',
+    description: 'AI suggests the most relevant files for your task'
+  },
+  {
+    src: '/assets/screenshots/tickets-overview-with-tasks.webp',
+    alt: 'Project Management with Tickets',
+    title: 'Organized Project Management',
+    description: 'Track progress with tickets, tasks, and AI-generated suggestions'
+  }
 ]
 
 export function HeroSection() {
@@ -96,9 +108,16 @@ export function HeroSection() {
             </AnimateOnScroll>
           </div>
 
-          {/* Right column - Terminal demo */}
+          {/* Right column - Screenshot carousel */}
           <AnimateOnScroll>
-            <CodeTerminal title='Quick Start' lines={terminalLines} animated={true} className='shadow-2xl' />
+            <ScreenshotCarousel 
+              screenshots={heroScreenshots}
+              autoPlay={true}
+              interval={4000}
+              showIndicators={true}
+              showControls={true}
+              className='shadow-2xl'
+            />
           </AnimateOnScroll>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { SeoMetadata } from '@/schemas/seo.schemas'
 import { GlassCard } from '@/components/ui/glass-card'
 import { CodeTerminal } from '@/components/ui/code-terminal'
+import { ScreenshotGallery, FeatureScreenshot } from '@/components/ui'
 import { LiveDemo, ContextVisualizer, CodePlayground, MCPToolsDemo } from '@/components/demos'
 import { ArrowLeft } from 'lucide-react'
 
@@ -246,6 +247,117 @@ function DemoPlayer({ demoId }: { demoId: string }) {
 
       case 'mcp-tools':
         return <MCPToolsDemo />
+
+      case 'file-suggestions':
+        return (
+          <GlassCard className='p-8'>
+            <div className='mb-6'>
+              <h2 className='text-3xl font-bold mb-2'>{demo.title}</h2>
+              <p className='text-muted-foreground'>{demo.description}</p>
+            </div>
+            <ScreenshotGallery
+              screenshots={[
+                {
+                  src: '/assets/screenshots/recommended-files-dialog.webp',
+                  alt: 'AI File Recommendations',
+                  title: 'Initial Suggestions',
+                  description: 'AI analyzes your prompt and suggests relevant files'
+                },
+                {
+                  src: '/assets/screenshots/recommended-files-dialog-filtered.webp',
+                  alt: 'Filtered File Recommendations',
+                  title: 'Refined Results',
+                  description: 'Filter and refine suggestions for better accuracy'
+                }
+              ]}
+              columns={{ mobile: 1, tablet: 2, desktop: 2 }}
+            />
+          </GlassCard>
+        )
+
+      case 'project-context':
+        return (
+          <GlassCard className='p-8'>
+            <div className='mb-6'>
+              <h2 className='text-3xl font-bold mb-2'>{demo.title}</h2>
+              <p className='text-muted-foreground'>{demo.description}</p>
+            </div>
+            <ScreenshotGallery
+              screenshots={[
+                {
+                  src: '/assets/screenshots/project-context-overview.webp',
+                  alt: 'Project Context Overview',
+                  title: 'Main Context View',
+                  description: 'Central hub for managing project context'
+                },
+                {
+                  src: '/assets/screenshots/project-context-selected-files.webp',
+                  alt: 'Selected Files',
+                  title: 'File Selection',
+                  description: 'Choose and organize relevant files'
+                },
+                {
+                  src: '/assets/screenshots/project-context-multiple-files-selected.webp',
+                  alt: 'Multiple Files',
+                  title: 'Batch Management',
+                  description: 'Work with multiple files simultaneously'
+                }
+              ]}
+              columns={{ mobile: 1, tablet: 2, desktop: 3 }}
+            />
+          </GlassCard>
+        )
+
+      case 'git-workflow':
+        return (
+          <GlassCard className='p-8'>
+            <div className='mb-6'>
+              <h2 className='text-3xl font-bold mb-2'>{demo.title}</h2>
+              <p className='text-muted-foreground'>{demo.description}</p>
+            </div>
+            <ScreenshotGallery
+              screenshots={[
+                {
+                  src: '/assets/screenshots/git-commit-history-view.webp',
+                  alt: 'Git Commit History',
+                  title: 'Commit History',
+                  description: 'Visual timeline of project commits'
+                },
+                {
+                  src: '/assets/screenshots/git-branch-management.webp',
+                  alt: 'Branch Management',
+                  title: 'Branch Operations',
+                  description: 'Create, switch, and manage branches'
+                },
+                {
+                  src: '/assets/screenshots/git-stashes-list.webp',
+                  alt: 'Git Stashes',
+                  title: 'Stash Management',
+                  description: 'Save and restore work in progress'
+                }
+              ]}
+              columns={{ mobile: 1, tablet: 2, desktop: 3 }}
+            />
+          </GlassCard>
+        )
+
+      case 'prompt-library':
+        return (
+          <GlassCard className='p-8'>
+            <div className='mb-6'>
+              <h2 className='text-3xl font-bold mb-2'>{demo.title}</h2>
+              <p className='text-muted-foreground'>{demo.description}</p>
+            </div>
+            <FeatureScreenshot
+              src='/assets/screenshots/prompt-management-library.webp'
+              alt='Prompt Management Library'
+              title='Organized Prompt Collection'
+              description='Build a library of reusable prompts for different scenarios'
+              layout='centered'
+              priority
+            />
+          </GlassCard>
+        )
 
       // Legacy demos using simple display
       default:
