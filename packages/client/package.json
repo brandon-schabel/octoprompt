@@ -96,11 +96,11 @@
     "@vitejs/plugin-react-swc": "^3.9.0",
     "autoprefixer": "^10.4.20",
     "bun-types": "latest",
-    "globals": "^15.14.0",
+    "globals": "^16.3.0",
     "postcss": "^8.5.1",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^4.1.11",
     "typescript": "^5.7.3",
-    "vite": "6.3.3",
+    "vite": "7.0.6",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }
