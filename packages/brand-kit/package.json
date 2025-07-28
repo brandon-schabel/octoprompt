@@ -10,7 +10,7 @@
     "generate-all": "npm run generate-exports && npm run generate-preview"
   },
   "dependencies": {
-    "color": "^4.2.3"
+    "color": "^5.0.0"
   },
   "devDependencies": {
     "@types/color": "^3.0.6",
