@@ -39,3 +39,8 @@ export {
   hoverRotate,
   hoverGlow
 } from './animation-utils'
+
+// Screenshot components
+export { FeatureScreenshot } from './feature-screenshot'
+export { ScreenshotGallery } from './screenshot-gallery'
+export { ScreenshotCarousel } from './screenshot-carousel'

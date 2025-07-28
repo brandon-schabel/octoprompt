@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
 import { GlassCard } from '@/components/ui/glass-card'
 import { CodeBlock } from '@/components/docs'
+import { FeatureScreenshot } from '@/components/ui'
 
 export const Route = createFileRoute('/docs/getting-started')({
   loader: () => {
@@ -95,6 +96,13 @@ function GettingStartedPage() {
               code="promptliano project create --name 'My First Project' --path ./my-project"
               language='bash'
             />
+            <FeatureScreenshot
+              src='/assets/screenshots/project-selector-dialog.webp'
+              alt='Project Selector Dialog'
+              title='Select Your Project'
+              description='Choose or create a project to start working with Promptliano'
+              layout='centered'
+            />
           </div>
 
           <div className='space-y-3'>
@@ -110,6 +118,13 @@ function GettingStartedPage() {
             <CodeBlock
               code={`promptliano ticket create --title "Implement user authentication" --priority high`}
               language='bash'
+            />
+            <FeatureScreenshot
+              src='/assets/screenshots/tickets-overview-with-tasks.webp'
+              alt='Tickets Overview'
+              title='Manage Your Work'
+              description='Track features and bugs with AI-generated task suggestions'
+              layout='centered'
             />
           </div>
         </div>
@@ -143,6 +158,14 @@ function GettingStartedPage() {
           language='json'
           filename='.promptliano/config.json'
           showLineNumbers
+        />
+        
+        <FeatureScreenshot
+          src='/assets/screenshots/settings-dialog.webp'
+          alt='Settings Dialog'
+          title='Configure Your Preferences'
+          description='Customize Promptliano settings through the UI or configuration files'
+          layout='centered'
         />
       </section>
 

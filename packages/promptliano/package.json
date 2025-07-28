@@ -1,0 +1,45 @@
+{
+  "name": "promptliano",
+  "version": "0.8.0",
+  "description": "Setup and manage Promptliano - Your AI toolkit for context engineering",
+  "bin": {
+    "promptliano": "./dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node --format esm && bun run build:types",
+    "build:types": "tsc --emitDeclarationOnly",
+    "dev": "bun run src/index.ts",
+    "prepublishOnly": "bun run build",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["promptliano", "mcp", "ai", "claude", "context", "cli"],
+  "author": "Brandon Schabel",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brandon-schabel/promptliano.git"
+  },
+  "homepage": "https://promptliano.com",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "inquirer": "^9.2.15",
+    "ora": "^8.0.1",
+    "simple-git": "^3.22.0",
+    "tar": "^7.0.1"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^20.11.25",
+    "@types/tar": "^6.1.11",
+    "bun-types": "^1.0.0",
+    "typescript": "^5.4.2"
+  }
+}

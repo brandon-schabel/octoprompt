@@ -37,7 +37,7 @@ function KeysPage() {
   const providerData = PROVIDERS.find((p) => p.id === selectedProvider)
 
   return (
-    <div className='p-4 space-y-4 bg-secondary h-full'>
+    <div className='p-4 space-y-4 bg-background h-full'>
       <Card>
         <CardHeader>
           <div className='flex items-center gap-2'>
