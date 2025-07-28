@@ -13,7 +13,7 @@
     "color": "^4.2.3"
   },
   "devDependencies": {
-    "@types/color": "^3.0.6",
+    "@types/color": "^4.2.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }
