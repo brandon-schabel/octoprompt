@@ -38,7 +38,7 @@
     "@swc/wasm": "^1.13.1",
     "@types/archiver": "^6.0.3",
     "@types/bun": "latest",
-    "@types/picomatch": "^3.0.2",
+    "@types/picomatch": "^4.0.1",
     "archiver": "^7.0.1",
     "bun-types": "latest",
     "prettier": "^3.5.3",
