@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
-import { routeTree } from './routeTree.gen'
+import { routeTree } from './routeTree.gen.ts'
 import { NotFound } from './components/NotFound'
 import { performanceMonitor, registerServiceWorker, addResourceHints } from './utils/performance'
 import './styles/globals.css'

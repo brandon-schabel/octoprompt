@@ -6,21 +6,25 @@ import { CodeTerminal } from '@/components/ui/code-terminal'
 import { LiveDemo, ContextVisualizer, CodePlayground, MCPToolsDemo } from '@/components/demos'
 import { ArrowLeft } from 'lucide-react'
 
+const demoSchema = z.object({
+  demo: z
+    .enum([
+      'file-suggestions',
+      'project-context',
+      'git-workflow',
+      'prompt-library',
+      'live-walkthrough',
+      'context-visualization',
+      'code-improvement',
+      'mcp-tools'
+    ])
+    .optional()
+})
+
+type DemoId = z.infer<typeof demoSchema>['demo']
+
 export const Route = createFileRoute('/demos')({
-  validateSearch: z.object({
-    demo: z
-      .enum([
-        'file-suggestions',
-        'project-context',
-        'git-workflow',
-        'prompt-library',
-        'live-walkthrough',
-        'context-visualization',
-        'code-improvement',
-        'mcp-tools'
-      ])
-      .optional()
-  }),
+  validateSearch: demoSchema,
   loader: () => {
     return {
       meta: {
@@ -34,7 +38,7 @@ export const Route = createFileRoute('/demos')({
 })
 
 interface Demo {
-  id: string
+  id: NonNullable<DemoId>
   title: string
   description: string
   icon: string
@@ -119,7 +123,7 @@ function DemosPage() {
             {demos.map((demoItem) => (
               <button
                 key={demoItem.id}
-                onClick={() => navigate({ search: { demo: demoItem.id as any } })}
+                onClick={() => navigate({ search: { demo: demoItem.id } })}
                 className='text-left transition-transform hover:scale-[1.02]'
               >
                 <GlassCard className='p-8 h-full hover:border-primary/50'>
@@ -270,7 +274,7 @@ function DemoPlayer({ demoId }: { demoId: string }) {
   return (
     <div className='max-w-5xl mx-auto'>
       <button
-        onClick={() => navigate({ search: {} })}
+        onClick={() => navigate({ search: { demo: undefined } })}
         className='mb-8 text-primary hover:underline flex items-center space-x-2'
       >
         <ArrowLeft className='h-4 w-4' />

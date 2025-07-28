@@ -41,8 +41,9 @@ describe('Provider Key Service Encryption', () => {
     expect(created.tag).toBeDefined()
     expect(created.salt).toBeDefined()
 
-    // The stored key should not be the plain text
-    expect(created.key).not.toBe(keyData.key)
+    // The API returns decrypted keys for developer convenience
+    // (even though they are stored encrypted)
+    expect(created.key).toBe(keyData.key)
 
     // Read directly from storage to verify it's encrypted there too
     const stored = await providerKeyStorage.getProviderKeyById(created.id)

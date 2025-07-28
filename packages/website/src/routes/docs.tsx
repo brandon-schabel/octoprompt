@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
 import { DocsLayout } from '@/components/docs'
 
-export const Route = createFileRoute('/docs')({
+export const Route = createFileRoute()({
   loader: () => {
     return {
       meta: {
@@ -14,4 +14,4 @@ export const Route = createFileRoute('/docs')({
     }
   },
   component: DocsLayout
-})
+}) as any

@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useLocation } from '@tanstack/react-rout
 import { SeoMetadata } from '@/schemas/seo.schemas'
 import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute('/integrations')({
+export const Route = createFileRoute()({
   loader: () => {
     return {
       meta: {
@@ -14,7 +14,7 @@ export const Route = createFileRoute('/integrations')({
     }
   },
   component: IntegrationsLayout
-})
+}) as any
 
 const navItems = [
   { path: '/integrations', label: 'Overview', exact: true },

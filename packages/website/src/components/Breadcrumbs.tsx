@@ -10,7 +10,7 @@ export function Breadcrumbs() {
     .map((match) => {
       // Extract readable name from pathname
       const segments = match.pathname.split('/').filter(Boolean)
-      const name = segments[segments.length - 1]?.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      const name = segments[segments.length - 1]?.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
 
       return {
         path: match.pathname,

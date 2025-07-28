@@ -18,43 +18,43 @@ interface ContextVisualizerProps {
   scenario?: 'file-search' | 'project-context' | 'git-workflow'
 }
 
-const scenarios = {
+const scenarios: Record<string, { before: ContextNode[]; after: ContextNode[] }> = {
   'file-search': {
     before: [
-      { id: '1', type: 'file', name: 'src/**/*.tsx', tokens: 25000, relevance: 0.3, icon: FileText },
-      { id: '2', type: 'file', name: 'packages/**/*.ts', tokens: 35000, relevance: 0.2, icon: FileText },
-      { id: '3', type: 'file', name: 'tests/**/*.test.ts', tokens: 15000, relevance: 0.1, icon: FileText }
+      { id: '1', type: 'file' as const, name: 'src/**/*.tsx', tokens: 25000, relevance: 0.3, icon: FileText },
+      { id: '2', type: 'file' as const, name: 'packages/**/*.ts', tokens: 35000, relevance: 0.2, icon: FileText },
+      { id: '3', type: 'file' as const, name: 'tests/**/*.test.ts', tokens: 15000, relevance: 0.1, icon: FileText }
     ],
     after: [
-      { id: '4', type: 'file', name: 'src/auth/login.tsx', tokens: 500, relevance: 0.95, icon: FileText },
-      { id: '5', type: 'file', name: 'src/auth/hooks.ts', tokens: 300, relevance: 0.87, icon: FileText },
-      { id: '6', type: 'file', name: 'src/api/auth.ts', tokens: 400, relevance: 0.82, icon: FileText }
-    ]
+      { id: '4', type: 'file' as const, name: 'src/auth/login.tsx', tokens: 500, relevance: 0.95, icon: FileText },
+      { id: '5', type: 'file' as const, name: 'src/auth/hooks.ts', tokens: 300, relevance: 0.87, icon: FileText },
+      { id: '6', type: 'file' as const, name: 'src/api/auth.ts', tokens: 400, relevance: 0.82, icon: FileText }
+    ] satisfies ContextNode[]
   },
   'project-context': {
     before: [
-      { id: '7', type: 'file', name: 'Full Codebase', tokens: 100000, relevance: 0.1, icon: Database },
-      { id: '8', type: 'prompt', name: 'Generic Instructions', tokens: 5000, relevance: 0.2, icon: Brain }
+      { id: '7', type: 'file' as const, name: 'Full Codebase', tokens: 100000, relevance: 0.1, icon: Database },
+      { id: '8', type: 'prompt' as const, name: 'Generic Instructions', tokens: 5000, relevance: 0.2, icon: Brain }
     ],
     after: [
-      { id: '9', type: 'ticket', name: 'Current Ticket Context', tokens: 200, relevance: 0.95, icon: Zap },
-      { id: '10', type: 'summary', name: 'File Summaries', tokens: 1500, relevance: 0.9, icon: FileText },
-      { id: '11', type: 'prompt', name: 'Project Prompts', tokens: 800, relevance: 0.85, icon: Brain },
-      { id: '12', type: 'git', name: 'Git Status', tokens: 300, relevance: 0.8, icon: GitBranch }
+      { id: '9', type: 'ticket' as const, name: 'Current Ticket Context', tokens: 200, relevance: 0.95, icon: Zap },
+      { id: '10', type: 'summary' as const, name: 'File Summaries', tokens: 1500, relevance: 0.9, icon: FileText },
+      { id: '11', type: 'prompt' as const, name: 'Project Prompts', tokens: 800, relevance: 0.85, icon: Brain },
+      { id: '12', type: 'git' as const, name: 'Git Status', tokens: 300, relevance: 0.8, icon: GitBranch }
     ]
   },
   'git-workflow': {
     before: [
-      { id: '13', type: 'git', name: 'All Git History', tokens: 50000, relevance: 0.1, icon: GitBranch },
-      { id: '14', type: 'file', name: 'All Changed Files', tokens: 30000, relevance: 0.2, icon: FileText }
+      { id: '13', type: 'git' as const, name: 'All Git History', tokens: 50000, relevance: 0.1, icon: GitBranch },
+      { id: '14', type: 'file' as const, name: 'All Changed Files', tokens: 30000, relevance: 0.2, icon: FileText }
     ],
     after: [
-      { id: '15', type: 'git', name: 'Recent Commits', tokens: 500, relevance: 0.95, icon: GitBranch },
-      { id: '16', type: 'git', name: 'Current Changes', tokens: 800, relevance: 0.9, icon: GitBranch },
-      { id: '17', type: 'file', name: 'Modified Files Only', tokens: 1200, relevance: 0.85, icon: FileText }
+      { id: '15', type: 'git' as const, name: 'Recent Commits', tokens: 500, relevance: 0.95, icon: GitBranch },
+      { id: '16', type: 'git' as const, name: 'Current Changes', tokens: 800, relevance: 0.9, icon: GitBranch },
+      { id: '17', type: 'file' as const, name: 'Modified Files Only', tokens: 1200, relevance: 0.85, icon: FileText }
     ]
   }
-} as const
+}
 
 export function ContextVisualizer({
   title = 'Context Building Visualization',
@@ -66,14 +66,14 @@ export function ContextVisualizer({
 
   const currentScenario = scenarios[scenario]
   const nodes = showAfter ? currentScenario.after : currentScenario.before
-  const totalTokens = nodes.reduce((sum, node) => sum + node.tokens, 0)
-  const avgRelevance = nodes.reduce((sum, node) => sum + node.relevance, 0) / nodes.length
+  const totalTokens = nodes.reduce((sum: number, node: ContextNode) => sum + node.tokens, 0)
+  const avgRelevance = nodes.reduce((sum: number, node: ContextNode) => sum + node.relevance, 0) / nodes.length
 
   const tokenReduction =
-    currentScenario.before.reduce((sum, node) => sum + node.tokens, 0) -
-    currentScenario.after.reduce((sum, node) => sum + node.tokens, 0)
+    currentScenario.before.reduce((sum: number, node: ContextNode) => sum + node.tokens, 0) -
+    currentScenario.after.reduce((sum: number, node: ContextNode) => sum + node.tokens, 0)
   const reductionPercentage = Math.round(
-    (tokenReduction / currentScenario.before.reduce((sum, node) => sum + node.tokens, 0)) * 100
+    (tokenReduction / currentScenario.before.reduce((sum: number, node: ContextNode) => sum + node.tokens, 0)) * 100
   )
 
   const handleTransform = () => {
