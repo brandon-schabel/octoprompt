@@ -12,25 +12,108 @@ export function extractKeywords(
     customStopWords?: string[]
   } = {}
 ): string[] {
-  const {
-    maxKeywords = 20,
-    minWordLength = 3,
-    customStopWords = []
-  } = options
+  const { maxKeywords = 20, minWordLength = 3, customStopWords = [] } = options
 
   const defaultStopWords = [
-    'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are',
-    'was', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does',
-    'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must',
-    'shall', 'to', 'of', 'in', 'for', 'with', 'by', 'from', 'up',
-    'about', 'into', 'through', 'during', 'before', 'after', 'above',
-    'below', 'between', 'under', 'again', 'further', 'then', 'once',
-    'that', 'this', 'these', 'those', 'it', 'its', 'they', 'them',
-    'their', 'our', 'your', 'his', 'her', 'my', 'we', 'you', 'he',
-    'she', 'who', 'what', 'when', 'where', 'why', 'how', 'all',
-    'each', 'every', 'some', 'any', 'many', 'more', 'most', 'other',
-    'such', 'no', 'not', 'only', 'own', 'same', 'so', 'than',
-    'too', 'very', 'can', 'just', 'but', 'or', 'if', 'because'
+    'the',
+    'is',
+    'at',
+    'which',
+    'on',
+    'and',
+    'a',
+    'an',
+    'as',
+    'are',
+    'was',
+    'were',
+    'been',
+    'be',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'could',
+    'should',
+    'may',
+    'might',
+    'must',
+    'shall',
+    'to',
+    'of',
+    'in',
+    'for',
+    'with',
+    'by',
+    'from',
+    'up',
+    'about',
+    'into',
+    'through',
+    'during',
+    'before',
+    'after',
+    'above',
+    'below',
+    'between',
+    'under',
+    'again',
+    'further',
+    'then',
+    'once',
+    'that',
+    'this',
+    'these',
+    'those',
+    'it',
+    'its',
+    'they',
+    'them',
+    'their',
+    'our',
+    'your',
+    'his',
+    'her',
+    'my',
+    'we',
+    'you',
+    'he',
+    'she',
+    'who',
+    'what',
+    'when',
+    'where',
+    'why',
+    'how',
+    'all',
+    'each',
+    'every',
+    'some',
+    'any',
+    'many',
+    'more',
+    'most',
+    'other',
+    'such',
+    'no',
+    'not',
+    'only',
+    'own',
+    'same',
+    'so',
+    'than',
+    'too',
+    'very',
+    'can',
+    'just',
+    'but',
+    'or',
+    'if',
+    'because'
   ]
 
   const stopWords = new Set([...defaultStopWords, ...customStopWords])
@@ -40,10 +123,8 @@ export function extractKeywords(
     .toLowerCase()
     .replace(/[^a-z0-9\s-_]/g, ' ')
     .split(/\s+/)
-    .filter(word =>
-      word.length >= minWordLength &&
-      !stopWords.has(word) &&
-      !word.match(/^\d+$/) // Filter out pure numbers
+    .filter(
+      (word) => word.length >= minWordLength && !stopWords.has(word) && !word.match(/^\d+$/) // Filter out pure numbers
     )
 
   // Count word frequencies
@@ -69,7 +150,7 @@ export function calculateTextRelevance(text1: string, text2: string): number {
   if (keywords1.size === 0 || keywords2.size === 0) return 0
 
   // Calculate Jaccard similarity
-  const intersection = new Set([...keywords1].filter(k => keywords2.has(k)))
+  const intersection = new Set([...keywords1].filter((k) => keywords2.has(k)))
   const union = new Set([...keywords1, ...keywords2])
 
   return intersection.size / union.size
@@ -133,12 +214,11 @@ export function mergeFileSuggestions(
   }
 
   // Sort by total score and number of sources
-  const sortedEntries = Array.from(fileScoreMap.entries())
-    .sort((a, b) => {
-      const scoreA = a[1].score.totalScore + (a[1].sources.length * 0.1)
-      const scoreB = b[1].score.totalScore + (b[1].sources.length * 0.1)
-      return scoreB - scoreA
-    })
+  const sortedEntries = Array.from(fileScoreMap.entries()).sort((a, b) => {
+    const scoreA = a[1].score.totalScore + a[1].sources.length * 0.1
+    const scoreB = b[1].score.totalScore + b[1].sources.length * 0.1
+    return scoreB - scoreA
+  })
 
   return {
     mergedFileIds: sortedEntries.map(([fileId]) => fileId),
@@ -160,19 +240,15 @@ export function filterFilesByPattern(
 
   // Apply include patterns
   if (patterns.include && patterns.include.length > 0) {
-    filtered = filtered.filter(file =>
-      patterns.include!.some(pattern =>
-        file.path.toLowerCase().includes(pattern.toLowerCase())
-      )
+    filtered = filtered.filter((file) =>
+      patterns.include!.some((pattern) => file.path.toLowerCase().includes(pattern.toLowerCase()))
     )
   }
 
   // Apply exclude patterns
   if (patterns.exclude && patterns.exclude.length > 0) {
-    filtered = filtered.filter(file =>
-      !patterns.exclude!.some(pattern =>
-        file.path.toLowerCase().includes(pattern.toLowerCase())
-      )
+    filtered = filtered.filter(
+      (file) => !patterns.exclude!.some((pattern) => file.path.toLowerCase().includes(pattern.toLowerCase()))
     )
   }
 
@@ -213,11 +289,7 @@ export interface SuggestionMetrics {
 export class SuggestionMetricsTracker {
   private metrics: Map<string, SuggestionMetrics> = new Map()
 
-  startTracking(
-    id: string,
-    totalFiles: number,
-    strategy: string
-  ): void {
+  startTracking(id: string, totalFiles: number, strategy: string): void {
     this.metrics.set(id, {
       startTime: Date.now(),
       filesAnalyzed: 0,
@@ -227,21 +299,14 @@ export class SuggestionMetricsTracker {
     })
   }
 
-  updateMetrics(
-    id: string,
-    updates: Partial<SuggestionMetrics>
-  ): void {
+  updateMetrics(id: string, updates: Partial<SuggestionMetrics>): void {
     const current = this.metrics.get(id)
     if (current) {
       this.metrics.set(id, { ...current, ...updates })
     }
   }
 
-  finishTracking(
-    id: string,
-    filesAnalyzed: number,
-    files: ProjectFile[]
-  ): SuggestionMetrics | undefined {
+  finishTracking(id: string, filesAnalyzed: number, files: ProjectFile[]): SuggestionMetrics | undefined {
     const metrics = this.metrics.get(id)
     if (!metrics) return undefined
 
@@ -278,8 +343,7 @@ export class SuggestionMetricsTracker {
     avgTokensSaved: number
     totalSuggestions: number
   } {
-    const allMetrics = Array.from(this.metrics.values())
-      .filter(m => m.endTime !== undefined)
+    const allMetrics = Array.from(this.metrics.values()).filter((m) => m.endTime !== undefined)
 
     if (allMetrics.length === 0) {
       return {
@@ -290,15 +354,9 @@ export class SuggestionMetricsTracker {
       }
     }
 
-    const totalDuration = allMetrics.reduce((sum, m) =>
-      sum + (m.endTime! - m.startTime), 0
-    )
-    const totalFilesAnalyzed = allMetrics.reduce((sum, m) =>
-      sum + m.filesAnalyzed, 0
-    )
-    const totalTokensSaved = allMetrics.reduce((sum, m) =>
-      sum + (m.tokensSaved || 0), 0
-    )
+    const totalDuration = allMetrics.reduce((sum, m) => sum + (m.endTime! - m.startTime), 0)
+    const totalFilesAnalyzed = allMetrics.reduce((sum, m) => sum + m.filesAnalyzed, 0)
+    const totalTokensSaved = allMetrics.reduce((sum, m) => sum + (m.tokensSaved || 0), 0)
 
     return {
       avgDuration: totalDuration / allMetrics.length,

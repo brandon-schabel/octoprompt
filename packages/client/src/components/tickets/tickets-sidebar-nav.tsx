@@ -45,16 +45,13 @@ export function TicketsSidebarNav({ activeView, onViewChange, className }: Ticke
         <Button
           key={item.id}
           variant={activeView === item.id ? 'secondary' : 'ghost'}
-          className={cn(
-            'w-full justify-start gap-3 h-auto py-3 px-3',
-            activeView === item.id && 'bg-secondary'
-          )}
+          className={cn('w-full justify-start gap-3 h-auto py-3 px-3', activeView === item.id && 'bg-secondary')}
           onClick={() => onViewChange(item.id)}
         >
-          <item.icon className="h-4 w-4 shrink-0" />
-          <div className="flex flex-col items-start text-left">
-            <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{item.description}</span>
+          <item.icon className='h-4 w-4 shrink-0' />
+          <div className='flex flex-col items-start text-left'>
+            <span className='text-sm font-medium whitespace-nowrap'>{item.label}</span>
+            <span className='text-xs text-muted-foreground whitespace-nowrap'>{item.description}</span>
           </div>
         </Button>
       ))}

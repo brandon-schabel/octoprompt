@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { resolve } from 'path'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
@@ -17,10 +17,10 @@ export default defineConfig({
     host: host || false,
     hmr: host
       ? {
-          protocol: 'ws',
-          host,
-          port: 1421
-        }
+        protocol: 'ws',
+        host,
+        port: 1421
+      }
       : undefined,
     watch: {
       // 3. tell vite to ignore watching `src-tauri`
@@ -29,7 +29,7 @@ export default defineConfig({
   },
   plugins: [
     // TanStackRouterVite automatically generates routeTree.gen.ts during dev and build
-    TanStackRouterVite(),
+    tanstackRouter(),
     react({}),
     tsconfigPaths()
   ],

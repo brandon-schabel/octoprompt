@@ -35,11 +35,11 @@ class Logger {
     const timestamp = new Date().toISOString()
     const prefix = this.context ? `[${this.context}]` : ''
     const dataStr = data ? ` ${JSON.stringify(data)}` : ''
-    
+
     if (process.env.NODE_ENV === 'production') {
       return `${timestamp} ${level.toUpperCase()} ${prefix} ${message}${dataStr}`
     }
-    
+
     const color = LOG_COLORS[level]
     return `${color}${timestamp} ${level.toUpperCase()} ${prefix} ${message}${dataStr}${LOG_COLORS.reset}`
   }

@@ -33,16 +33,15 @@ export class FileGroupingService {
     const edges: FileRelationship[] = []
 
     // Build nodes map
-    files.forEach(file => nodes.set(file.id, file))
+    files.forEach((file) => nodes.set(file.id, file))
 
     // Detect import/export relationships
     for (const file of files) {
       if (file.imports && file.imports.length > 0) {
         for (const imp of file.imports) {
           // Find files that match the import source
-          const targetFile = files.find(f =>
-            f.path.endsWith(imp.source) ||
-            f.path.includes(imp.source.replace(/\.\//g, ''))
+          const targetFile = files.find(
+            (f) => f.path.endsWith(imp.source) || f.path.includes(imp.source.replace(/\.\//g, ''))
           )
 
           if (targetFile) {
@@ -83,9 +82,10 @@ export class FileGroupingService {
         const file2 = files[j]
 
         // Skip if already have a stronger relationship
-        const existingRelation = edges.find(e =>
-          (e.sourceFileId === file1.id && e.targetFileId === file2.id) ||
-          (e.sourceFileId === file2.id && e.targetFileId === file1.id)
+        const existingRelation = edges.find(
+          (e) =>
+            (e.sourceFileId === file1.id && e.targetFileId === file2.id) ||
+            (e.sourceFileId === file2.id && e.targetFileId === file1.id)
         )
 
         if (!existingRelation) {
@@ -112,11 +112,7 @@ export class FileGroupingService {
   /**
    * Group files using the specified strategy
    */
-  groupFilesByStrategy(
-    files: ProjectFile[],
-    strategy: GroupingStrategy,
-    options: GroupingOptions = {}
-  ): FileGroup[] {
+  groupFilesByStrategy(files: ProjectFile[], strategy: GroupingStrategy, options: GroupingOptions = {}): FileGroup[] {
     const {
       maxGroupSize = this.DEFAULT_MAX_GROUP_SIZE,
       minRelationshipStrength = this.DEFAULT_MIN_RELATIONSHIP_STRENGTH,
@@ -144,19 +140,13 @@ export class FileGroupingService {
   /**
    * Group files based on import relationships
    */
-  private groupByImports(
-    files: ProjectFile[],
-    maxGroupSize: number,
-    minStrength: number
-  ): FileGroup[] {
+  private groupByImports(files: ProjectFile[], maxGroupSize: number, minStrength: number): FileGroup[] {
     const graph = this.detectFileRelationships(files)
     const groups: FileGroup[] = []
     const assigned = new Set<number>()
 
     // Find strongly connected components via imports
-    const importEdges = graph.edges.filter(e =>
-      e.type === 'imports' && e.strength >= minStrength
-    )
+    const importEdges = graph.edges.filter((e) => e.type === 'imports' && e.strength >= minStrength)
 
     for (const file of files) {
       if (assigned.has(file.id)) continue
@@ -179,9 +169,7 @@ export class FileGroupingService {
         if (processed.has(currentId)) continue
         processed.add(currentId)
 
-        const relatedEdges = importEdges.filter(e =>
-          e.sourceFileId === currentId || e.targetFileId === currentId
-        )
+        const relatedEdges = importEdges.filter((e) => e.sourceFileId === currentId || e.targetFileId === currentId)
 
         for (const edge of relatedEdges) {
           const otherId = edge.sourceFileId === currentId ? edge.targetFileId : edge.sourceFileId
@@ -229,15 +217,13 @@ export class FileGroupingService {
       // Split large directories into smaller groups
       for (let i = 0; i < dirFiles.length; i += maxGroupSize) {
         const groupFiles = dirFiles.slice(i, i + maxGroupSize)
-        const avgPriority = groupFiles.reduce((sum, f) =>
-          sum + getFileImportance(f).score, 0
-        ) / groupFiles.length
+        const avgPriority = groupFiles.reduce((sum, f) => sum + getFileImportance(f).score, 0) / groupFiles.length
 
         groups.push({
           id: `dir-group-${++groupIndex}`,
           name: `${dir || 'Root'} (${groupFiles.length} files)`,
           strategy: 'directory',
-          fileIds: groupFiles.map(f => f.id),
+          fileIds: groupFiles.map((f) => f.id),
           priority: avgPriority,
           metadata: { directory: dir }
         })
@@ -250,24 +236,16 @@ export class FileGroupingService {
   /**
    * Group files by semantic similarity
    */
-  private groupBySemantic(
-    files: ProjectFile[],
-    maxGroupSize: number,
-    minStrength: number
-  ): FileGroup[] {
+  private groupBySemantic(files: ProjectFile[], maxGroupSize: number, minStrength: number): FileGroup[] {
     const graph = this.detectFileRelationships(files)
     const groups: FileGroup[] = []
     const assigned = new Set<number>()
 
     // Filter semantic edges
-    const semanticEdges = graph.edges.filter(e =>
-      e.type === 'semantic' && e.strength >= minStrength
-    )
+    const semanticEdges = graph.edges.filter((e) => e.type === 'semantic' && e.strength >= minStrength)
 
     // Sort files by importance to start with high-priority files
-    const sortedFiles = [...files].sort((a, b) =>
-      getFileImportance(b).score - getFileImportance(a).score
-    )
+    const sortedFiles = [...files].sort((a, b) => getFileImportance(b).score - getFileImportance(a).score)
 
     for (const file of sortedFiles) {
       if (assigned.has(file.id)) continue
@@ -284,7 +262,7 @@ export class FileGroupingService {
 
       // Find semantically similar files
       const similarities = semanticEdges
-        .filter(e => e.sourceFileId === file.id || e.targetFileId === file.id)
+        .filter((e) => e.sourceFileId === file.id || e.targetFileId === file.id)
         .sort((a, b) => b.strength - a.strength)
 
       for (const edge of similarities) {
@@ -341,9 +319,7 @@ export class FileGroupingService {
     }
 
     // Sort files by composite score
-    const sortedFiles = [...files].sort((a, b) =>
-      (fileScores.get(b.id) || 0) - (fileScores.get(a.id) || 0)
-    )
+    const sortedFiles = [...files].sort((a, b) => (fileScores.get(b.id) || 0) - (fileScores.get(a.id) || 0))
 
     // Group high-priority files first
     for (const file of sortedFiles) {
@@ -361,10 +337,7 @@ export class FileGroupingService {
 
       // Get all relationships for this file
       const fileEdges = graph.edges
-        .filter(e =>
-          (e.sourceFileId === file.id || e.targetFileId === file.id) &&
-          e.strength >= minStrength
-        )
+        .filter((e) => (e.sourceFileId === file.id || e.targetFileId === file.id) && e.strength >= minStrength)
         .sort((a, b) => {
           // Prioritize by relationship type: imports > sibling > semantic
           const typeOrder = { imports: 3, exports: 2, sibling: 1, semantic: 0 }
@@ -391,14 +364,16 @@ export class FileGroupingService {
     }
 
     // Group remaining files by directory
-    const remainingFiles = files.filter(f => !assigned.has(f.id))
+    const remainingFiles = files.filter((f) => !assigned.has(f.id))
     if (remainingFiles.length > 0) {
       const dirGroups = this.groupByDirectory(remainingFiles, maxGroupSize)
-      groups.push(...dirGroups.map(g => ({
-        ...g,
-        id: g.id.replace('dir-', 'mixed-dir-'),
-        strategy: 'mixed' as GroupingStrategy
-      })))
+      groups.push(
+        ...dirGroups.map((g) => ({
+          ...g,
+          id: g.id.replace('dir-', 'mixed-dir-'),
+          strategy: 'mixed' as GroupingStrategy
+        }))
+      )
     }
 
     return groups
@@ -407,18 +382,12 @@ export class FileGroupingService {
   /**
    * Optimize groups for token limits by splitting or merging
    */
-  optimizeGroupsForTokenLimit(
-    groups: FileGroup[],
-    files: ProjectFile[],
-    tokenLimit: number
-  ): FileGroup[] {
-    const fileMap = new Map(files.map(f => [f.id, f]))
+  optimizeGroupsForTokenLimit(groups: FileGroup[], files: ProjectFile[], tokenLimit: number): FileGroup[] {
+    const fileMap = new Map(files.map((f) => [f.id, f]))
     const optimizedGroups: FileGroup[] = []
 
     for (const group of groups) {
-      const groupFiles = group.fileIds
-        .map(id => fileMap.get(id))
-        .filter(f => f !== undefined) as ProjectFile[]
+      const groupFiles = group.fileIds.map((id) => fileMap.get(id)).filter((f) => f !== undefined) as ProjectFile[]
 
       // Estimate tokens for group
       const estimatedTokens = this.estimateGroupTokens(groupFiles)
@@ -468,20 +437,14 @@ export class FileGroupingService {
     return Math.ceil(totalChars / 4)
   }
 
-  private splitGroupByTokens(
-    group: FileGroup,
-    files: ProjectFile[],
-    tokenLimit: number
-  ): FileGroup[] {
+  private splitGroupByTokens(group: FileGroup, files: ProjectFile[], tokenLimit: number): FileGroup[] {
     const chunks: FileGroup[] = []
     let currentChunk: ProjectFile[] = []
     let currentTokens = 0
     let chunkIndex = 0
 
     // Sort files by importance within group
-    const sortedFiles = files.sort((a, b) =>
-      getFileImportance(b).score - getFileImportance(a).score
-    )
+    const sortedFiles = files.sort((a, b) => getFileImportance(b).score - getFileImportance(a).score)
 
     for (const file of sortedFiles) {
       const fileTokens = this.estimateGroupTokens([file])
@@ -492,7 +455,7 @@ export class FileGroupingService {
           ...group,
           id: `${group.id}-chunk-${++chunkIndex}`,
           name: `${group.name} (part ${chunkIndex})`,
-          fileIds: currentChunk.map(f => f.id),
+          fileIds: currentChunk.map((f) => f.id),
           estimatedTokens: currentTokens
         })
 
@@ -510,7 +473,7 @@ export class FileGroupingService {
         ...group,
         id: `${group.id}-chunk-${++chunkIndex}`,
         name: `${group.name} (part ${chunkIndex})`,
-        fileIds: currentChunk.map(f => f.id),
+        fileIds: currentChunk.map((f) => f.id),
         estimatedTokens: currentTokens
       })
     }
@@ -518,12 +481,8 @@ export class FileGroupingService {
     return chunks
   }
 
-  private mergeSmallGroups(
-    groups: FileGroup[],
-    files: ProjectFile[],
-    tokenLimit: number
-  ): FileGroup[] {
-    const fileMap = new Map(files.map(f => [f.id, f]))
+  private mergeSmallGroups(groups: FileGroup[], files: ProjectFile[], tokenLimit: number): FileGroup[] {
+    const fileMap = new Map(files.map((f) => [f.id, f]))
     const merged: FileGroup[] = []
     let i = 0
 
@@ -559,10 +518,7 @@ export class FileGroupingService {
               name: `Merged: ${mergedGroup.name} + ${candidateGroup.name}`,
               strategy: 'mixed',
               fileIds: [...mergedGroup.fileIds, ...candidateGroup.fileIds],
-              relationships: [
-                ...(mergedGroup.relationships || []),
-                ...(candidateGroup.relationships || [])
-              ],
+              relationships: [...(mergedGroup.relationships || []), ...(candidateGroup.relationships || [])],
               estimatedTokens: combinedTokens,
               priority: Math.max(mergedGroup.priority, candidateGroup.priority)
             }

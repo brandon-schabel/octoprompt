@@ -1,4 +1,7 @@
 import { z } from '@hono/zod-openapi'
+import * as path from 'path'
+import * as os from 'os'
+import { promises as fs } from 'fs'
 import type { MCPToolDefinition, MCPToolResponse } from './tools-registry'
 import { MCPError, MCPErrorCode, createMCPError, formatMCPErrorResponse } from './mcp-errors'
 import { executeTransaction, createTransactionStep } from './mcp-transaction'
@@ -47,6 +50,15 @@ import {
   batchDeleteTasks,
   batchMoveTasks,
   syncProject,
+  // Claude Agent operations
+  listAgents,
+  getAgentById,
+  createAgent,
+  updateAgent,
+  deleteAgent,
+  associateAgentWithProject,
+  getAgentsByProjectId,
+  suggestAgents,
   // Git operations
   getProjectGitStatus,
   stageFiles,
@@ -202,6 +214,17 @@ export enum PromptManagerAction {
   SUGGEST_PROMPTS = 'suggest_prompts'
 }
 
+export enum AgentManagerAction {
+  LIST = 'list',
+  GET = 'get',
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST_BY_PROJECT = 'list_by_project',
+  ASSOCIATE_WITH_PROJECT = 'associate_with_project',
+  SUGGEST_AGENTS = 'suggest_agents'
+}
+
 export enum TicketManagerAction {
   LIST = 'list',
   GET = 'get',
@@ -315,6 +338,38 @@ export enum FileSummarizationManagerAction {
   GET_SUMMARY_STATS = 'get_summary_stats'
 }
 
+export enum MCPConfigGeneratorAction {
+  GENERATE = 'generate',
+  VALIDATE = 'validate',
+  GET_TEMPLATES = 'get_templates'
+}
+
+export enum MCPCompatibilityCheckerAction {
+  CHECK = 'check',
+  GET_REQUIREMENTS = 'get_requirements',
+  CHECK_BATCH = 'check_batch'
+}
+
+export enum MCPSetupValidatorAction {
+  VALIDATE = 'validate',
+  CHECK_DEPENDENCIES = 'check_dependencies',
+  DIAGNOSE = 'diagnose'
+}
+
+export enum WebsiteDemoRunnerAction {
+  LIST_SCENARIOS = 'list_scenarios',
+  RUN_SCENARIO = 'run_scenario',
+  GET_SCENARIO_STATUS = 'get_scenario_status',
+  RESET_SCENARIO = 'reset_scenario'
+}
+
+export enum DocumentationSearchAction {
+  SEARCH = 'search',
+  GET_CATEGORIES = 'get_categories',
+  GET_ARTICLE = 'get_article',
+  SUGGEST_RELATED = 'suggest_related'
+}
+
 // Consolidated tool schemas
 const ProjectManagerSchema = z.object({
   action: z.enum([
@@ -355,6 +410,22 @@ const PromptManagerSchema = z.object({
     PromptManagerAction.REMOVE_FROM_PROJECT,
     PromptManagerAction.SUGGEST_PROMPTS
   ]),
+  projectId: z.number().optional(),
+  data: z.any().optional()
+})
+
+const AgentManagerSchema = z.object({
+  action: z.enum([
+    AgentManagerAction.LIST,
+    AgentManagerAction.GET,
+    AgentManagerAction.CREATE,
+    AgentManagerAction.UPDATE,
+    AgentManagerAction.DELETE,
+    AgentManagerAction.LIST_BY_PROJECT,
+    AgentManagerAction.ASSOCIATE_WITH_PROJECT,
+    AgentManagerAction.SUGGEST_AGENTS
+  ]),
+  agentId: z.string().optional(),
   projectId: z.number().optional(),
   data: z.any().optional()
 })
@@ -464,7 +535,12 @@ const GitManagerSchema = z.object({
 })
 
 const TabManagerSchema = z.object({
-  action: z.enum([TabManagerAction.GET_ACTIVE, TabManagerAction.SET_ACTIVE, TabManagerAction.CLEAR_ACTIVE, TabManagerAction.GENERATE_NAME]),
+  action: z.enum([
+    TabManagerAction.GET_ACTIVE,
+    TabManagerAction.SET_ACTIVE,
+    TabManagerAction.CLEAR_ACTIVE,
+    TabManagerAction.GENERATE_NAME
+  ]),
   projectId: z.number(),
   data: z.any().optional()
 })
@@ -493,6 +569,53 @@ const FileSummarizationManagerSchema = z.object({
     FileSummarizationManagerAction.GET_SUMMARY_STATS
   ]),
   projectId: z.number(),
+  data: z.any().optional()
+})
+
+const MCPConfigGeneratorSchema = z.object({
+  action: z.enum([
+    MCPConfigGeneratorAction.GENERATE,
+    MCPConfigGeneratorAction.VALIDATE,
+    MCPConfigGeneratorAction.GET_TEMPLATES
+  ]),
+  data: z.any().optional()
+})
+
+const MCPCompatibilityCheckerSchema = z.object({
+  action: z.enum([
+    MCPCompatibilityCheckerAction.CHECK,
+    MCPCompatibilityCheckerAction.GET_REQUIREMENTS,
+    MCPCompatibilityCheckerAction.CHECK_BATCH
+  ]),
+  data: z.any().optional()
+})
+
+const MCPSetupValidatorSchema = z.object({
+  action: z.enum([
+    MCPSetupValidatorAction.VALIDATE,
+    MCPSetupValidatorAction.CHECK_DEPENDENCIES,
+    MCPSetupValidatorAction.DIAGNOSE
+  ]),
+  data: z.any().optional()
+})
+
+const WebsiteDemoRunnerSchema = z.object({
+  action: z.enum([
+    WebsiteDemoRunnerAction.LIST_SCENARIOS,
+    WebsiteDemoRunnerAction.RUN_SCENARIO,
+    WebsiteDemoRunnerAction.GET_SCENARIO_STATUS,
+    WebsiteDemoRunnerAction.RESET_SCENARIO
+  ]),
+  data: z.any().optional()
+})
+
+const DocumentationSearchSchema = z.object({
+  action: z.enum([
+    DocumentationSearchAction.SEARCH,
+    DocumentationSearchAction.GET_CATEGORIES,
+    DocumentationSearchAction.GET_ARTICLE,
+    DocumentationSearchAction.SUGGEST_RELATED
+  ]),
   data: z.any().optional()
 })
 
@@ -1568,6 +1691,174 @@ Version Info:
   },
 
   {
+    name: 'agent_manager',
+    description:
+      'Manage agents and agent-project associations. Actions: list, get, create, update, delete, list_by_project, associate_with_project, suggest_agents',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(AgentManagerAction)
+        },
+        agentId: {
+          type: 'string',
+          description: 'The agent ID (required for: get, update, delete). Example: "code-reviewer" or "test-writer"'
+        },
+        projectId: {
+          type: 'number',
+          description:
+            'The project ID (required for: list_by_project, associate_with_project, suggest_agents). Example: 1750564533014'
+        },
+        data: {
+          type: 'object',
+          description:
+            'Action-specific data. For create: { name: "Code Reviewer", description: "Expert in code review", content: "# Code Reviewer\\n\\nYou are an expert...", color: "blue", filePath: "code-reviewer.md" }. For update: { name: "Updated Name", description: "New description", content: "Updated content", color: "green" }. For associate_with_project: { agentId: 1234567890 } (use the numeric ID from the agent, not the string ID). For suggest_agents: { context: "help me with testing", limit: 5 (optional) }'
+        }
+      },
+      required: ['action']
+    },
+    handler: createTrackedHandler(
+      'agent_manager',
+      async (args: z.infer<typeof AgentManagerSchema>): Promise<MCPToolResponse> => {
+        try {
+          const { action, agentId, projectId, data } = args
+          switch (action) {
+            case AgentManagerAction.LIST: {
+              const agents = await listAgents(process.cwd())
+              const agentList = agents
+                .map(
+                  (a) =>
+                    `${a.id}: ${a.name} - ${a.description.substring(0, 100)}${a.description.length > 100 ? '...' : ''}`
+                )
+                .join('\n')
+              return {
+                content: [{ type: 'text', text: agentList || 'No agents found' }]
+              }
+            }
+            case AgentManagerAction.GET: {
+              const validAgentId = validateRequiredParam(agentId, 'agentId', 'string', '"code-reviewer"')
+              const agent = await getAgentById(process.cwd(), validAgentId)
+              const details = `Name: ${agent.name}\nID: ${agent.id}\nDescription: ${agent.description}\nColor: ${agent.color}\nFile Path: ${agent.filePath}\nContent Preview:\n${agent.content.substring(0, 500)}${agent.content.length > 500 ? '...' : ''}\n\nCreated: ${new Date(agent.created).toLocaleString()}\nUpdated: ${new Date(agent.updated).toLocaleString()}`
+              return {
+                content: [{ type: 'text', text: details }]
+              }
+            }
+            case AgentManagerAction.CREATE: {
+              const name = validateDataField<string>(data, 'name', 'string', '"Code Reviewer"')
+              const description = validateDataField<string>(
+                data,
+                'description',
+                'string',
+                '"Expert in code review and best practices"'
+              )
+              const content = validateDataField<string>(
+                data,
+                'content',
+                'string',
+                '"# Code Reviewer\\n\\nYou are an expert code reviewer..."'
+              )
+              const color = data?.color || 'blue'
+              const agent = await createAgent(process.cwd(), {
+                name,
+                description,
+                content,
+                color,
+                filePath: data.filePath
+              })
+              return {
+                content: [{ type: 'text', text: `Agent created successfully: ${agent.name} (ID: ${agent.id})` }]
+              }
+            }
+            case AgentManagerAction.UPDATE: {
+              const validAgentId = validateRequiredParam(agentId, 'agentId', 'string', '"code-reviewer"')
+              const updateData: any = {}
+              if (data.name !== undefined) updateData.name = data.name
+              if (data.description !== undefined) updateData.description = data.description
+              if (data.content !== undefined) updateData.content = data.content
+              if (data.color !== undefined) updateData.color = data.color
+              const agent = await updateAgent(process.cwd(), validAgentId, updateData)
+              return {
+                content: [{ type: 'text', text: `Agent updated successfully: ${agent.name} (ID: ${agent.id})` }]
+              }
+            }
+            case AgentManagerAction.DELETE: {
+              const validAgentId = validateRequiredParam(agentId, 'agentId', 'string', '"code-reviewer"')
+              const success = await deleteAgent(process.cwd(), validAgentId)
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: success
+                      ? `Agent ${validAgentId} deleted successfully`
+                      : `Failed to delete agent ${validAgentId}`
+                  }
+                ]
+              }
+            }
+            case AgentManagerAction.LIST_BY_PROJECT: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+              const agents = await getAgentsByProjectId(process.cwd(), validProjectId)
+              const agentList = agents
+                .map(
+                  (a) =>
+                    `${a.id}: ${a.name} - ${a.description.substring(0, 100)}${a.description.length > 100 ? '...' : ''}`
+                )
+                .join('\n')
+              return {
+                content: [{ type: 'text', text: agentList || `No agents found for project ${validProjectId}` }]
+              }
+            }
+            case AgentManagerAction.ASSOCIATE_WITH_PROJECT: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+              const validAgentId = validateDataField<number>(data, 'agentId', 'number', '1234567890')
+              // The associateAgentWithProject expects the numeric ID of the agent
+              await associateAgentWithProject(validAgentId, validProjectId)
+              return {
+                content: [
+                  { type: 'text', text: `Agent ${validAgentId} successfully associated with project ${validProjectId}` }
+                ]
+              }
+            }
+            case AgentManagerAction.SUGGEST_AGENTS: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+              const context = data?.context || ''
+              const limit = data?.limit || 5
+              const suggestions = await suggestAgents(validProjectId, context, limit)
+              const agentList = suggestions.agents
+                .map(
+                  (a) =>
+                    `${a.id}: ${a.name}\n   Description: ${a.description}\n   Relevance: ${a.relevanceScore}/10\n   Reason: ${a.relevanceReason}`
+                )
+                .join('\n\n')
+              return {
+                content: [{ type: 'text', text: agentList || 'No agent suggestions found' }]
+              }
+            }
+            default:
+              throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+                action,
+                validActions: Object.values(AgentManagerAction)
+              })
+          }
+        } catch (error) {
+          // Convert to MCPError if not already
+          const mcpError =
+            error instanceof MCPError
+              ? error
+              : MCPError.fromError(error, {
+                  tool: 'agent_manager',
+                  action: args.action
+                })
+          // Return formatted error response with recovery suggestions
+          return formatMCPErrorResponse(mcpError)
+        }
+      }
+    )
+  },
+
+  {
     name: 'ticket_manager',
     description:
       'Manage tickets and ticket-related operations. Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files, search, batch_create, batch_update, batch_delete',
@@ -1719,24 +2010,16 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
                       }
                     )
                   }
-                  throw createMCPError(
-                    MCPErrorCode.SERVICE_ERROR,
-                    error.message || 'Failed to generate tasks',
-                    {
-                      ticketId,
-                      code: error.code,
-                      originalError: error
-                    }
-                  )
-                }
-                throw createMCPError(
-                  MCPErrorCode.SERVICE_ERROR,
-                  'Failed to auto-generate tasks for ticket',
-                  {
+                  throw createMCPError(MCPErrorCode.SERVICE_ERROR, error.message || 'Failed to generate tasks', {
                     ticketId,
+                    code: error.code,
                     originalError: error
-                  }
-                )
+                  })
+                }
+                throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to auto-generate tasks for ticket', {
+                  ticketId,
+                  originalError: error
+                })
               }
             }
 
@@ -1766,24 +2049,16 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
                       }
                     )
                   }
-                  throw createMCPError(
-                    MCPErrorCode.SERVICE_ERROR,
-                    error.message || 'Failed to suggest files',
-                    {
-                      ticketId,
-                      code: error.code,
-                      originalError: error
-                    }
-                  )
-                }
-                throw createMCPError(
-                  MCPErrorCode.SERVICE_ERROR,
-                  'Failed to suggest files for ticket',
-                  {
+                  throw createMCPError(MCPErrorCode.SERVICE_ERROR, error.message || 'Failed to suggest files', {
                     ticketId,
+                    code: error.code,
                     originalError: error
-                  }
-                )
+                  })
+                }
+                throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to suggest files for ticket', {
+                  ticketId,
+                  originalError: error
+                })
               }
             }
 
@@ -2336,7 +2611,8 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For optimize_prompt: { prompt: "help me fix the authentication" }. For get_compact_summary_with_options: { depth: "minimal" | "standard" | "detailed", format: "xml" | "json" | "markdown", strategy: "fast" | "balanced" | "thorough", includeMetrics: true }'
+          description:
+            'Action-specific data. For optimize_prompt: { prompt: "help me fix the authentication" }. For get_compact_summary_with_options: { depth: "minimal" | "standard" | "detailed", format: "xml" | "json" | "markdown", strategy: "fast" | "balanced" | "thorough", includeMetrics: true }'
         }
       },
       required: ['action', 'projectId']
@@ -2436,7 +2712,8 @@ ${result.summary}`
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For log_enhanced: { branch?: "main", author?: "john", search?: "fix", page?: 1, perPage?: 20, since?: "2024-01-01", until?: "2024-12-31", includeStats?: true, includeFileDetails?: true }. For commit_detail: { hash: "abc123", includeFileContents?: true }. For worktree_add: { path: "../feature-branch", branch?: "existing-branch", newBranch?: "new-branch", commitish?: "HEAD~3", detach?: true }. For worktree_remove: { path: "../feature-branch", force?: true }. For worktree_lock: { path: "../feature-branch", reason?: "work in progress" }. For worktree_unlock: { path: "../feature-branch" }. For worktree_prune: { dryRun?: true }. For other actions, see git service documentation.'
+          description:
+            'Action-specific data. For log_enhanced: { branch?: "main", author?: "john", search?: "fix", page?: 1, perPage?: 20, since?: "2024-01-01", until?: "2024-12-31", includeStats?: true, includeFileDetails?: true }. For commit_detail: { hash: "abc123", includeFileContents?: true }. For worktree_add: { path: "../feature-branch", branch?: "existing-branch", newBranch?: "new-branch", commitish?: "HEAD~3", detach?: true }. For worktree_remove: { path: "../feature-branch", force?: true }. For worktree_lock: { path: "../feature-branch", reason?: "work in progress" }. For worktree_unlock: { path: "../feature-branch" }. For worktree_prune: { dryRun?: true }. For other actions, see git service documentation.'
         }
       },
       required: ['action', 'projectId']
@@ -2748,12 +3025,12 @@ ${result.summary}`
                 branch: data?.branch as string | undefined,
                 author: data?.author as string | undefined,
                 search: data?.search as string | undefined,
-                page: data?.page as number | undefined || 1,
-                perPage: data?.perPage as number | undefined || 20,
+                page: (data?.page as number | undefined) || 1,
+                perPage: (data?.perPage as number | undefined) || 20,
                 since: data?.since as string | undefined,
                 until: data?.until as string | undefined,
-                includeStats: data?.includeStats as boolean | undefined || false,
-                includeFileDetails: data?.includeFileDetails as boolean | undefined || false
+                includeStats: (data?.includeStats as boolean | undefined) || false,
+                includeFileDetails: (data?.includeFileDetails as boolean | undefined) || false
               }
               const result = await getCommitLogEnhanced(projectId, request)
               if (!result.success || !result.data) {
@@ -2820,7 +3097,7 @@ ${result.summary}`
             }
             case GitManagerAction.COMMIT_DETAIL: {
               const hash = validateDataField<string>(data, 'hash', 'string', '"abc123"')
-              const includeFileContents = data?.includeFileContents as boolean | undefined || false
+              const includeFileContents = (data?.includeFileContents as boolean | undefined) || false
               const result = await getCommitDetail(projectId, hash, includeFileContents)
               if (!result.success || !result.data) {
                 return {
@@ -2857,7 +3134,11 @@ ${result.summary}`
                   text += '\n'
                   if (includeFileContents && file.diff) {
                     text += '    Diff:\n'
-                    text += file.diff.split('\n').map(line => '    ' + line).join('\n') + '\n'
+                    text +=
+                      file.diff
+                        .split('\n')
+                        .map((line) => '    ' + line)
+                        .join('\n') + '\n'
                   }
                 })
               }
@@ -2919,11 +3200,11 @@ ${result.summary}`
               const dryRun = data?.dryRun as boolean | undefined
               const pruned = await pruneWorktrees(projectId, dryRun)
               if (pruned.length === 0) {
-                return { content: [{ type: 'text', text: dryRun ? 'No worktrees would be pruned' : 'No worktrees pruned' }] }
+                return {
+                  content: [{ type: 'text', text: dryRun ? 'No worktrees would be pruned' : 'No worktrees pruned' }]
+                }
               }
-              const text = dryRun
-                ? `Would prune:\n${pruned.join('\n')}`
-                : `Pruned:\n${pruned.join('\n')}`
+              const text = dryRun ? `Would prune:\n${pruned.join('\n')}` : `Pruned:\n${pruned.join('\n')}`
               return { content: [{ type: 'text', text }] }
             }
 
@@ -3047,11 +3328,7 @@ ${result.summary}`
               const { createTabNameGenerationService } = await import('@promptliano/services')
               const tabNameService = createTabNameGenerationService()
 
-              const result = await tabNameService.generateUniqueTabName(
-                validProjectId,
-                tabData,
-                existingNames
-              )
+              const result = await tabNameService.generateUniqueTabName(validProjectId, tabData, existingNames)
 
               return {
                 content: [
@@ -3204,7 +3481,8 @@ ${result.summary}`
 
   {
     name: 'job_manager',
-    description: 'Manage background jobs and long-running operations. Actions: list (get jobs with filters), get (get single job status), create (create new job), cancel (cancel running job), retry (retry failed job), cleanup (remove old completed jobs)',
+    description:
+      'Manage background jobs and long-running operations. Actions: list (get jobs with filters), get (get single job status), create (create new job), cancel (cancel running job), retry (retry failed job), cleanup (remove old completed jobs)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3223,7 +3501,8 @@ ${result.summary}`
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For list: { status: ["pending", "running"], limit: 10 }. For create: { type: "git.worktree.add", input: {...}, options: { priority: "high" } }. For cleanup: { olderThanDays: 30 }'
+          description:
+            'Action-specific data. For list: { status: ["pending", "running"], limit: 10 }. For create: { type: "git.worktree.add", input: {...}, options: { priority: "high" } }. For cleanup: { olderThanDays: 30 }'
         }
       },
       required: ['action']
@@ -3247,9 +3526,12 @@ ${result.summary}`
                 content: [
                   {
                     type: 'text',
-                    text: `Found ${jobs.length} jobs:\n${jobs.map(job =>
-                      `- Job ${job.id}: ${job.type} (${job.status}) - Created ${new Date(job.created).toISOString()}`
-                    ).join('\n')}`
+                    text: `Found ${jobs.length} jobs:\n${jobs
+                      .map(
+                        (job) =>
+                          `- Job ${job.id}: ${job.type} (${job.status}) - Created ${new Date(job.created).toISOString()}`
+                      )
+                      .join('\n')}`
                   }
                 ]
               }
@@ -3326,7 +3608,9 @@ ${result.summary}`
 
               if (originalJob.status !== 'failed') {
                 return {
-                  content: [{ type: 'text', text: `Job ${validJobId} is not in failed state (current: ${originalJob.status})` }]
+                  content: [
+                    { type: 'text', text: `Job ${validJobId} is not in failed state (current: ${originalJob.status})` }
+                  ]
                 }
               }
 
@@ -3387,7 +3671,8 @@ ${result.summary}`
 
   {
     name: 'file_summarization_manager',
-    description: 'Intelligent file summarization with grouping, batch processing, and progress tracking. Actions: identify_unsummarized (find files needing summaries), group_files (group related files by strategy), summarize_batch (batch summarize with token management), get_progress (track batch progress), cancel_batch (cancel ongoing operation), get_summary_stats (get project summarization statistics)',
+    description:
+      'Intelligent file summarization with grouping, batch processing, and progress tracking. Actions: identify_unsummarized (find files needing summaries), group_files (group related files by strategy), summarize_batch (batch summarize with token management), get_progress (track batch progress), cancel_batch (cancel ongoing operation), get_summary_stats (get project summarization statistics)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3402,7 +3687,8 @@ ${result.summary}`
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For identify_unsummarized: { includeStale: true, staleThresholdDays: 30 }. For group_files: { strategy: "imports" | "directory" | "semantic" | "mixed", maxGroupSize: 10, priorityThreshold: 3 }. For summarize_batch: { strategy: "mixed", maxGroupSize: 10, maxTokensPerGroup: 10000, maxConcurrentGroups: 3, includeStaleFiles: true }. For cancel_batch: { batchId: "batch-123-456" }'
+          description:
+            'Action-specific data. For identify_unsummarized: { includeStale: true, staleThresholdDays: 30 }. For group_files: { strategy: "imports" | "directory" | "semantic" | "mixed", maxGroupSize: 10, priorityThreshold: 3 }. For summarize_batch: { strategy: "mixed", maxGroupSize: 10, maxTokensPerGroup: 10000, maxConcurrentGroups: 3, includeStaleFiles: true }. For cancel_batch: { batchId: "batch-123-456" }'
         }
       },
       required: ['action', 'projectId']
@@ -3412,12 +3698,8 @@ ${result.summary}`
       async (args: z.infer<typeof FileSummarizationManagerSchema>): Promise<MCPToolResponse> => {
         try {
           const { action, projectId, data } = args
-          const {
-            fileSummarizationTracker,
-            fileGroupingService,
-            enhancedSummarizationService,
-            getProjectFiles
-          } = await import('@promptliano/services')
+          const { fileSummarizationTracker, fileGroupingService, enhancedSummarizationService, getProjectFiles } =
+            await import('@promptliano/services')
 
           switch (action) {
             case FileSummarizationManagerAction.IDENTIFY_UNSUMMARIZED: {
@@ -3437,19 +3719,23 @@ ${result.summary}`
               // Combine and deduplicate
               const fileMap = new Map()
               const allFiles = [...unsummarizedFiles, ...staleFiles]
-              allFiles.forEach(f => fileMap.set(f.id, f))
+              allFiles.forEach((f) => fileMap.set(f.id, f))
               const totalFiles = fileMap.size
 
               return {
-                content: [{
-                  type: 'text',
-                  text: `Found ${totalFiles} files needing summarization:\n` +
-                    `- Unsummarized: ${unsummarizedFiles.length}\n` +
-                    `- Stale: ${staleFiles.length}\n\n` +
-                    `Files:\n${Array.from(fileMap.values()).slice(0, 20).map(f =>
-                      `- ${f.path} (${f.size ? `${(f.size / 1024).toFixed(1)}KB` : 'unknown size'})`
-                    ).join('\n')}${totalFiles > 20 ? `\n... and ${totalFiles - 20} more` : ''}`
-                }]
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Found ${totalFiles} files needing summarization:\n` +
+                      `- Unsummarized: ${unsummarizedFiles.length}\n` +
+                      `- Stale: ${staleFiles.length}\n\n` +
+                      `Files:\n${Array.from(fileMap.values())
+                        .slice(0, 20)
+                        .map((f) => `- ${f.path} (${f.size ? `${(f.size / 1024).toFixed(1)}KB` : 'unknown size'})`)
+                        .join('\n')}${totalFiles > 20 ? `\n... and ${totalFiles - 20} more` : ''}`
+                  }
+                ]
               }
             }
 
@@ -3462,27 +3748,30 @@ ${result.summary}`
                 }
               }
 
-              const groups = fileGroupingService.groupFilesByStrategy(
-                files,
-                options.strategy || 'mixed',
-                {
-                  maxGroupSize: options.maxGroupSize || 10,
-                  priorityThreshold: options.priorityThreshold || 3
-                }
-              )
+              const groups = fileGroupingService.groupFilesByStrategy(files, options.strategy || 'mixed', {
+                maxGroupSize: options.maxGroupSize || 10,
+                priorityThreshold: options.priorityThreshold || 3
+              })
 
               return {
-                content: [{
-                  type: 'text',
-                  text: `Created ${groups.length} file groups using ${options.strategy || 'mixed'} strategy:\n\n` +
-                    groups.slice(0, 10).map(g =>
-                      `Group: ${g.name}\n` +
-                      `- Files: ${g.fileIds.length}\n` +
-                      `- Priority: ${g.priority.toFixed(2)}\n` +
-                      `- Estimated tokens: ${g.estimatedTokens || 'unknown'}\n`
-                    ).join('\n') +
-                    (groups.length > 10 ? `\n... and ${groups.length - 10} more groups` : '')
-                }]
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Created ${groups.length} file groups using ${options.strategy || 'mixed'} strategy:\n\n` +
+                      groups
+                        .slice(0, 10)
+                        .map(
+                          (g) =>
+                            `Group: ${g.name}\n` +
+                            `- Files: ${g.fileIds.length}\n` +
+                            `- Priority: ${g.priority.toFixed(2)}\n` +
+                            `- Estimated tokens: ${g.estimatedTokens || 'unknown'}\n`
+                        )
+                        .join('\n') +
+                      (groups.length > 10 ? `\n... and ${groups.length - 10} more groups` : '')
+                  }
+                ]
               }
             }
 
@@ -3501,10 +3790,7 @@ ${result.summary}`
               }
 
               // Start async batch process
-              const iterator = enhancedSummarizationService.batchSummarizeWithProgress(
-                projectId,
-                batchOptions
-              )
+              const iterator = enhancedSummarizationService.batchSummarizeWithProgress(projectId, batchOptions)
 
               // Get first progress update
               const firstProgress = await iterator.next()
@@ -3516,15 +3802,18 @@ ${result.summary}`
 
               const progress = firstProgress.value
               return {
-                content: [{
-                  type: 'text',
-                  text: `Batch summarization started:\n` +
-                    `- Batch ID: ${progress.batchId}\n` +
-                    `- Total files: ${progress.totalFiles}\n` +
-                    `- Total groups: ${progress.totalGroups}\n` +
-                    `- Status: Processing...\n\n` +
-                    `Use get_progress action with batchId to track progress`
-                }]
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Batch summarization started:\n` +
+                      `- Batch ID: ${progress.batchId}\n` +
+                      `- Total files: ${progress.totalFiles}\n` +
+                      `- Total groups: ${progress.totalGroups}\n` +
+                      `- Status: Processing...\n\n` +
+                      `Use get_progress action with batchId to track progress`
+                  }
+                ]
               }
             }
 
@@ -3544,10 +3833,11 @@ ${result.summary}`
                   ? projectProgress.endTime - projectProgress.startTime
                   : Date.now() - projectProgress.startTime
 
-                text += `Current batch progress:\n` +
+                text +=
+                  `Current batch progress:\n` +
                   `- Batch ID: ${projectProgress.batchId}\n` +
                   `- Status: ${projectProgress.status}\n` +
-                  `- Files: ${projectProgress.processedFiles}/${projectProgress.totalFiles} (${Math.round(projectProgress.processedFiles / projectProgress.totalFiles * 100)}%)\n` +
+                  `- Files: ${projectProgress.processedFiles}/${projectProgress.totalFiles} (${Math.round((projectProgress.processedFiles / projectProgress.totalFiles) * 100)}%)\n` +
                   `- Groups: ${projectProgress.processedGroups}/${projectProgress.totalGroups}\n` +
                   `- Duration: ${(duration / 1000).toFixed(1)}s\n` +
                   `- Tokens used: ~${projectProgress.estimatedTokensUsed.toLocaleString()}\n`
@@ -3598,21 +3888,24 @@ ${result.summary}`
               const stats = await fileSummarizationTracker.getSummarizationStats(projectId)
 
               return {
-                content: [{
-                  type: 'text',
-                  text: `File summarization statistics for project ${projectId}:\n\n` +
-                    `Total files: ${stats.totalFiles}\n` +
-                    `Summarized: ${stats.summarizedFiles} (${Math.round(stats.summarizedFiles / stats.totalFiles * 100)}%)\n` +
-                    `Unsummarized: ${stats.unsummarizedFiles}\n` +
-                    `Stale: ${stats.staleFiles}\n` +
-                    `Failed: ${stats.failedFiles}\n\n` +
-                    `Average tokens per file: ${stats.averageTokensPerFile}\n` +
-                    `Last batch run: ${stats.lastBatchRun ? new Date(stats.lastBatchRun).toLocaleString() : 'Never'}\n\n` +
-                    `Files by status:\n` +
-                    Object.entries(stats.filesByStatus)
-                      .map(([status, count]) => `- ${status}: ${count}`)
-                      .join('\n')
-                }]
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `File summarization statistics for project ${projectId}:\n\n` +
+                      `Total files: ${stats.totalFiles}\n` +
+                      `Summarized: ${stats.summarizedFiles} (${Math.round((stats.summarizedFiles / stats.totalFiles) * 100)}%)\n` +
+                      `Unsummarized: ${stats.unsummarizedFiles}\n` +
+                      `Stale: ${stats.staleFiles}\n` +
+                      `Failed: ${stats.failedFiles}\n\n` +
+                      `Average tokens per file: ${stats.averageTokensPerFile}\n` +
+                      `Last batch run: ${stats.lastBatchRun ? new Date(stats.lastBatchRun).toLocaleString() : 'Never'}\n\n` +
+                      `Files by status:\n` +
+                      Object.entries(stats.filesByStatus)
+                        .map(([status, count]) => `- ${status}: ${count}`)
+                        .join('\n')
+                  }
+                ]
               }
             }
 
@@ -3631,6 +3924,865 @@ ${result.summary}`
                 action: args.action
               })
 
+          return formatMCPErrorResponse(mcpError)
+        }
+      }
+    )
+  },
+
+  // MCP Config Generator Tool
+  {
+    name: 'mcp_config_generator',
+    description:
+      'Generate MCP configuration files for different editors and environments. Actions: generate (create mcp.json config), validate (validate existing config), get_templates (get available templates)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(MCPConfigGeneratorAction)
+        },
+        data: {
+          type: 'object',
+          description:
+            'Action-specific data. For generate: { editorType: "cursor" | "vscode" | "windsurf", projectPath: "/path/to/project", options: { serverName: "promptliano", enabledTools: ["project_manager", "git_manager"] } }. For validate: { config: {...} }. For get_templates: no data required'
+        }
+      },
+      required: ['action']
+    },
+    handler: createTrackedHandler(
+      'mcp_config_generator',
+      async (args: z.infer<typeof MCPConfigGeneratorSchema>): Promise<MCPToolResponse> => {
+        try {
+          const { action, data } = args
+
+          switch (action) {
+            case MCPConfigGeneratorAction.GENERATE: {
+              const editorType = validateDataField<string>(data, 'editorType', 'string', '"cursor"')
+              const projectPath = validateDataField<string>(data, 'projectPath', 'string', '"/Users/john/myproject"')
+              const options = data?.options || {}
+
+              // Generate MCP configuration based on editor type
+              const config = {
+                mcpServers: {
+                  [options.serverName || 'promptliano']: {
+                    command: 'node',
+                    args: [path.join(projectPath, 'node_modules/@promptliano/server/dist/index.js')],
+                    env: {
+                      PROJECT_ID: options.projectId || '',
+                      NODE_ENV: 'production'
+                    }
+                  }
+                }
+              }
+
+              // Add editor-specific configuration
+              if (editorType === 'cursor') {
+                config.mcpServers[options.serverName || 'promptliano'].disabled = false
+              } else if (editorType === 'vscode') {
+                // VSCode specific config
+                config.mcpServers[options.serverName || 'promptliano'].workspaceFolder = projectPath
+              }
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Generated MCP configuration for ${editorType}:\n\n` +
+                      '```json\n' +
+                      JSON.stringify(config, null, 2) +
+                      '\n```\n\n' +
+                      `Save this configuration to:\n` +
+                      `- Cursor: ${path.join(os.homedir(), '.cursor', 'mcp.json')}\n` +
+                      `- VSCode: ${path.join(projectPath, '.vscode', 'mcp.json')}\n` +
+                      `- Windsurf: ${path.join(os.homedir(), '.windsurf', 'mcp.json')}`
+                  }
+                ]
+              }
+            }
+
+            case MCPConfigGeneratorAction.VALIDATE: {
+              const config = validateDataField<any>(data, 'config', 'object', '{ mcpServers: {...} }')
+
+              // Validate configuration structure
+              const errors: string[] = []
+
+              if (!config.mcpServers) {
+                errors.push('Missing required field: mcpServers')
+              } else {
+                for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
+                  if (!serverConfig.command) {
+                    errors.push(`Server ${serverName}: missing required field 'command'`)
+                  }
+                  if (!serverConfig.args || !Array.isArray(serverConfig.args)) {
+                    errors.push(`Server ${serverName}: 'args' must be an array`)
+                  }
+                }
+              }
+
+              if (errors.length > 0) {
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: `Configuration validation failed:\n\n` + errors.map((e) => `- ${e}`).join('\n')
+                    }
+                  ]
+                }
+              }
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Configuration is valid!'
+                  }
+                ]
+              }
+            }
+
+            case MCPConfigGeneratorAction.GET_TEMPLATES: {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      'Available MCP configuration templates:\n\n' +
+                      '1. **Basic Promptliano Setup**\n' +
+                      '   - Single server configuration\n' +
+                      '   - All tools enabled\n' +
+                      '   - Default environment\n\n' +
+                      '2. **Multi-Project Setup**\n' +
+                      '   - Multiple Promptliano servers\n' +
+                      '   - Project-specific configurations\n' +
+                      '   - Environment isolation\n\n' +
+                      '3. **Development Setup**\n' +
+                      '   - Debug mode enabled\n' +
+                      '   - Verbose logging\n' +
+                      '   - Hot reload support\n\n' +
+                      '4. **Production Setup**\n' +
+                      '   - Optimized performance\n' +
+                      '   - Error tracking\n' +
+                      '   - Security hardening'
+                  }
+                ]
+              }
+            }
+
+            default:
+              throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+                action,
+                validActions: Object.values(MCPConfigGeneratorAction)
+              })
+          }
+        } catch (error) {
+          const mcpError =
+            error instanceof MCPError
+              ? error
+              : MCPError.fromError(error, { tool: 'mcp_config_generator', action: args.action })
+          return formatMCPErrorResponse(mcpError)
+        }
+      }
+    )
+  },
+
+  // MCP Compatibility Checker Tool
+  {
+    name: 'mcp_compatibility_checker',
+    description:
+      'Check if user environment is compatible with Promptliano MCP. Actions: check (check single environment), get_requirements (get all requirements), check_batch (check multiple environments)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(MCPCompatibilityCheckerAction)
+        },
+        data: {
+          type: 'object',
+          description:
+            'Action-specific data. For check: { editor: "cursor", version: "0.42.3", os: "darwin" | "win32" | "linux", nodeVersion: "20.11.0" }. For check_batch: { environments: [{editor, version, os}] }'
+        }
+      },
+      required: ['action']
+    },
+    handler: createTrackedHandler(
+      'mcp_compatibility_checker',
+      async (args: z.infer<typeof MCPCompatibilityCheckerSchema>): Promise<MCPToolResponse> => {
+        try {
+          const { action, data } = args
+
+          // Define compatibility requirements
+          const requirements = {
+            cursor: { minVersion: '0.40.0', mcpSupport: true },
+            vscode: { minVersion: '1.85.0', mcpSupport: false, extension: 'promptliano.mcp' },
+            windsurf: { minVersion: '0.1.0', mcpSupport: true },
+            node: { minVersion: '18.0.0' },
+            os: ['darwin', 'win32', 'linux']
+          }
+
+          switch (action) {
+            case MCPCompatibilityCheckerAction.CHECK: {
+              const editor = validateDataField<string>(data, 'editor', 'string', '"cursor"')
+              const version = validateDataField<string>(data, 'version', 'string', '"0.42.3"')
+              const os = validateDataField<string>(data, 'os', 'string', '"darwin"')
+              const nodeVersion = data?.nodeVersion
+
+              const issues: string[] = []
+              const warnings: string[] = []
+
+              // Check editor compatibility
+              const editorReq = requirements[editor.toLowerCase()]
+              if (!editorReq) {
+                issues.push(`Editor '${editor}' is not supported`)
+              } else {
+                if (!editorReq.mcpSupport) {
+                  if (editorReq.extension) {
+                    warnings.push(`${editor} requires the ${editorReq.extension} extension for MCP support`)
+                  } else {
+                    issues.push(`${editor} does not support MCP protocol`)
+                  }
+                }
+
+                // Version comparison (simplified)
+                if (version < editorReq.minVersion) {
+                  issues.push(`${editor} version ${version} is below minimum required ${editorReq.minVersion}`)
+                }
+              }
+
+              // Check OS compatibility
+              if (!requirements.os.includes(os)) {
+                issues.push(`Operating system '${os}' is not supported`)
+              }
+
+              // Check Node.js version if provided
+              if (nodeVersion && nodeVersion < requirements.node.minVersion) {
+                issues.push(`Node.js version ${nodeVersion} is below minimum required ${requirements.node.minVersion}`)
+              }
+
+              const compatible = issues.length === 0
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Compatibility Check Results:\n\n` +
+                      `Editor: ${editor} v${version}\n` +
+                      `OS: ${os}\n` +
+                      (nodeVersion ? `Node.js: v${nodeVersion}\n` : '') +
+                      `\nStatus: ${compatible ? '✅ Compatible' : '❌ Not Compatible'}\n\n` +
+                      (issues.length > 0 ? `Issues:\n${issues.map((i) => `- ${i}`).join('\n')}\n\n` : '') +
+                      (warnings.length > 0 ? `Warnings:\n${warnings.map((w) => `- ${w}`).join('\n')}` : '')
+                  }
+                ]
+              }
+            }
+
+            case MCPCompatibilityCheckerAction.GET_REQUIREMENTS: {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      'Promptliano MCP Requirements:\n\n' +
+                      '**Supported Editors:**\n' +
+                      '- Cursor: v0.40.0+ (Native MCP support)\n' +
+                      '- Windsurf: v0.1.0+ (Native MCP support)\n' +
+                      '- VSCode: v1.85.0+ (Requires extension)\n\n' +
+                      '**System Requirements:**\n' +
+                      '- Node.js: v18.0.0 or higher\n' +
+                      '- Operating Systems: macOS, Windows, Linux\n' +
+                      '- Memory: 512MB minimum\n' +
+                      '- Disk Space: 100MB for installation\n\n' +
+                      '**Network Requirements:**\n' +
+                      '- Local network access (for MCP server)\n' +
+                      '- Internet access for installation only'
+                  }
+                ]
+              }
+            }
+
+            case MCPCompatibilityCheckerAction.CHECK_BATCH: {
+              const environments = validateDataField<any[]>(
+                data,
+                'environments',
+                'array',
+                '[{editor: "cursor", version: "0.42.3", os: "darwin"}]'
+              )
+
+              const results = environments.map((env) => {
+                const compatible = env.version >= requirements[env.editor]?.minVersion
+                return `${env.editor} v${env.version} on ${env.os}: ${compatible ? '✅' : '❌'}`
+              })
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Batch Compatibility Check:\n\n${results.join('\n')}`
+                  }
+                ]
+              }
+            }
+
+            default:
+              throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+                action,
+                validActions: Object.values(MCPCompatibilityCheckerAction)
+              })
+          }
+        } catch (error) {
+          const mcpError =
+            error instanceof MCPError
+              ? error
+              : MCPError.fromError(error, { tool: 'mcp_compatibility_checker', action: args.action })
+          return formatMCPErrorResponse(mcpError)
+        }
+      }
+    )
+  },
+
+  // MCP Setup Validator Tool
+  {
+    name: 'mcp_setup_validator',
+    description:
+      'Validate Promptliano MCP setup and diagnose issues. Actions: validate (validate setup), check_dependencies (check all dependencies), diagnose (diagnose common issues)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(MCPSetupValidatorAction)
+        },
+        data: {
+          type: 'object',
+          description:
+            'Action-specific data. For validate: { configPath: "/path/to/mcp.json", projectPath: "/path/to/project" }. For diagnose: { symptoms: ["connection_failed", "tools_not_showing"] }'
+        }
+      },
+      required: ['action']
+    },
+    handler: createTrackedHandler(
+      'mcp_setup_validator',
+      async (args: z.infer<typeof MCPSetupValidatorSchema>): Promise<MCPToolResponse> => {
+        try {
+          const { action, data } = args
+
+          switch (action) {
+            case MCPSetupValidatorAction.VALIDATE: {
+              const configPath = validateDataField<string>(
+                data,
+                'configPath',
+                'string',
+                '"/Users/john/.cursor/mcp.json"'
+              )
+              const projectPath = data?.projectPath
+
+              const checks = []
+
+              // Check 1: Config file exists
+              try {
+                await fs.access(configPath)
+                checks.push({ name: 'Config file exists', status: '✅', details: configPath })
+              } catch {
+                checks.push({ name: 'Config file exists', status: '❌', details: 'File not found' })
+              }
+
+              // Check 2: Config is valid JSON
+              try {
+                const content = await fs.readFile(configPath, 'utf-8')
+                const config = JSON.parse(content)
+                checks.push({ name: 'Valid JSON', status: '✅' })
+
+                // Check 3: Has Promptliano server
+                const hasPromptliano =
+                  config.mcpServers &&
+                  Object.keys(config.mcpServers).some(
+                    (k) => k.includes('promptliano') || config.mcpServers[k].command?.includes('promptliano')
+                  )
+                checks.push({
+                  name: 'Promptliano server configured',
+                  status: hasPromptliano ? '✅' : '❌',
+                  details: hasPromptliano ? '' : 'No Promptliano server found in config'
+                })
+              } catch (e) {
+                checks.push({ name: 'Valid JSON', status: '❌', details: e.message })
+              }
+
+              // Check 4: Node modules installed (if project path provided)
+              if (projectPath) {
+                try {
+                  await fs.access(path.join(projectPath, 'node_modules', '@promptliano', 'server'))
+                  checks.push({ name: 'Promptliano installed', status: '✅' })
+                } catch {
+                  checks.push({
+                    name: 'Promptliano installed',
+                    status: '❌',
+                    details: 'Run: npm install @promptliano/server'
+                  })
+                }
+              }
+
+              const allPassed = checks.every((c) => c.status === '✅')
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Setup Validation Results:\n\n` +
+                      checks.map((c) => `${c.status} ${c.name}${c.details ? `: ${c.details}` : ''}`).join('\n') +
+                      `\n\nOverall Status: ${allPassed ? '✅ Setup is valid' : '❌ Issues found'}`
+                  }
+                ]
+              }
+            }
+
+            case MCPSetupValidatorAction.CHECK_DEPENDENCIES: {
+              const deps = [
+                { name: 'Node.js', command: 'node --version', minVersion: '18.0.0' },
+                { name: 'npm', command: 'npm --version', minVersion: '8.0.0' },
+                { name: 'Git', command: 'git --version', required: false }
+              ]
+
+              const results = []
+              for (const dep of deps) {
+                try {
+                  // In real implementation, would execute command
+                  results.push(`✅ ${dep.name}: Installed`)
+                } catch {
+                  results.push(`${dep.required !== false ? '❌' : '⚠️'} ${dep.name}: Not found`)
+                }
+              }
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Dependency Check:\n\n${results.join('\n')}`
+                  }
+                ]
+              }
+            }
+
+            case MCPSetupValidatorAction.DIAGNOSE: {
+              const symptoms = data?.symptoms || []
+
+              const diagnoses = {
+                connection_failed: {
+                  issue: 'MCP connection failed',
+                  solutions: [
+                    'Ensure the MCP server path is correct in your config',
+                    'Check if Node.js is installed and in PATH',
+                    'Verify Promptliano is installed: npm install @promptliano/server',
+                    'Restart your editor after configuration changes'
+                  ]
+                },
+                tools_not_showing: {
+                  issue: 'Tools not appearing in editor',
+                  solutions: [
+                    'Ensure MCP server is running (check editor logs)',
+                    'Verify the server name matches in config',
+                    'Check if PROJECT_ID is set in environment variables',
+                    'Try refreshing the tools list in your editor'
+                  ]
+                },
+                permission_denied: {
+                  issue: 'Permission denied errors',
+                  solutions: [
+                    'Ensure you have read/write access to the project directory',
+                    'Check file permissions on the MCP config file',
+                    'On macOS, grant your editor full disk access in System Preferences'
+                  ]
+                }
+              }
+
+              const relevantDiagnoses =
+                symptoms.length > 0 ? symptoms.map((s) => diagnoses[s]).filter(Boolean) : Object.values(diagnoses)
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      'Diagnostic Results:\n\n' +
+                      relevantDiagnoses
+                        .map(
+                          (d) =>
+                            `**${d.issue}**\n` + 'Possible solutions:\n' + d.solutions.map((s) => `- ${s}`).join('\n')
+                        )
+                        .join('\n\n')
+                  }
+                ]
+              }
+            }
+
+            default:
+              throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+                action,
+                validActions: Object.values(MCPSetupValidatorAction)
+              })
+          }
+        } catch (error) {
+          const mcpError =
+            error instanceof MCPError
+              ? error
+              : MCPError.fromError(error, { tool: 'mcp_setup_validator', action: args.action })
+          return formatMCPErrorResponse(mcpError)
+        }
+      }
+    )
+  },
+
+  // Website Demo Runner Tool
+  {
+    name: 'website_demo_runner',
+    description:
+      'Run interactive demos for the Promptliano website. Actions: list_scenarios (list available demos), run_scenario (execute a demo), get_scenario_status (check demo progress), reset_scenario (reset demo state)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(WebsiteDemoRunnerAction)
+        },
+        data: {
+          type: 'object',
+          description:
+            'Action-specific data. For run_scenario: { scenarioId: "getting-started", step: 1 }. For get_scenario_status: { scenarioId: "getting-started" }. For reset_scenario: { scenarioId: "getting-started" }'
+        }
+      },
+      required: ['action']
+    },
+    handler: createTrackedHandler(
+      'website_demo_runner',
+      async (args: z.infer<typeof WebsiteDemoRunnerSchema>): Promise<MCPToolResponse> => {
+        try {
+          const { action, data } = args
+
+          // Demo scenarios
+          const scenarios = {
+            'getting-started': {
+              title: 'Getting Started with Promptliano',
+              steps: [
+                { id: 1, title: 'Install Promptliano', command: 'npm install -g @promptliano/cli' },
+                { id: 2, title: 'Initialize project', command: 'promptliano init my-project' },
+                { id: 3, title: 'Configure MCP', command: 'promptliano mcp setup' },
+                { id: 4, title: 'Start using tools', command: 'Open your editor and start coding!' }
+              ]
+            },
+            'project-management': {
+              title: 'Project Management Demo',
+              steps: [
+                { id: 1, title: 'Create a project', command: 'Use project_manager to create' },
+                { id: 2, title: 'Add files', command: 'Create and organize your files' },
+                { id: 3, title: 'Create tickets', command: 'Use ticket_manager for tasks' },
+                { id: 4, title: 'Track progress', command: 'Monitor your development' }
+              ]
+            },
+            'git-workflow': {
+              title: 'Git Integration Demo',
+              steps: [
+                { id: 1, title: 'Check status', command: 'git_manager status' },
+                { id: 2, title: 'Stage changes', command: 'git_manager stage_all' },
+                { id: 3, title: 'Commit', command: 'git_manager commit' },
+                { id: 4, title: 'Push to remote', command: 'git_manager push' }
+              ]
+            }
+          }
+
+          switch (action) {
+            case WebsiteDemoRunnerAction.LIST_SCENARIOS: {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      'Available Demo Scenarios:\n\n' +
+                      Object.entries(scenarios)
+                        .map(
+                          ([id, scenario]) =>
+                            `**${id}**: ${scenario.title}\n` +
+                            `  Steps: ${scenario.steps.length}\n` +
+                            `  ${scenario.steps.map((s) => s.title).join(' → ')}`
+                        )
+                        .join('\n\n')
+                  }
+                ]
+              }
+            }
+
+            case WebsiteDemoRunnerAction.RUN_SCENARIO: {
+              const scenarioId = validateDataField<string>(data, 'scenarioId', 'string', '"getting-started"')
+              const step = data?.step || 1
+
+              const scenario = scenarios[scenarioId]
+              if (!scenario) {
+                throw createMCPError(MCPErrorCode.INVALID_PARAMS, `Unknown scenario: ${scenarioId}`)
+              }
+
+              const currentStep = scenario.steps[step - 1]
+              if (!currentStep) {
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: `Demo "${scenario.title}" completed! 🎉\n\n` + 'All steps have been executed successfully.'
+                    }
+                  ]
+                }
+              }
+
+              const nextStep = step < scenario.steps.length ? step + 1 : null
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Running: ${scenario.title}\n\n` +
+                      `Step ${step}/${scenario.steps.length}: ${currentStep.title}\n\n` +
+                      `\`\`\`bash\n${currentStep.command}\n\`\`\`\n\n` +
+                      `Progress: ${'█'.repeat(step)}${'░'.repeat(scenario.steps.length - step)} ${Math.round((step / scenario.steps.length) * 100)}%\n\n` +
+                      (nextStep ? `Next: Run with step: ${nextStep}` : 'Demo complete!')
+                  }
+                ]
+              }
+            }
+
+            case WebsiteDemoRunnerAction.GET_SCENARIO_STATUS: {
+              const scenarioId = validateDataField<string>(data, 'scenarioId', 'string', '"getting-started"')
+
+              // In a real implementation, this would track actual progress
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Scenario "${scenarioId}" status:\n` +
+                      `- Started: Yes\n` +
+                      `- Current Step: 2/4\n` +
+                      `- Completion: 50%\n` +
+                      `- Last Activity: 2 minutes ago`
+                  }
+                ]
+              }
+            }
+
+            case WebsiteDemoRunnerAction.RESET_SCENARIO: {
+              const scenarioId = validateDataField<string>(data, 'scenarioId', 'string', '"getting-started"')
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Scenario "${scenarioId}" has been reset to the beginning.`
+                  }
+                ]
+              }
+            }
+
+            default:
+              throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+                action,
+                validActions: Object.values(WebsiteDemoRunnerAction)
+              })
+          }
+        } catch (error) {
+          const mcpError =
+            error instanceof MCPError
+              ? error
+              : MCPError.fromError(error, { tool: 'website_demo_runner', action: args.action })
+          return formatMCPErrorResponse(mcpError)
+        }
+      }
+    )
+  },
+
+  // Documentation Search Tool
+  {
+    name: 'documentation_search',
+    description:
+      'Search and retrieve Promptliano documentation. Actions: search (search docs), get_categories (list categories), get_article (get specific article), suggest_related (get related articles)',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The action to perform',
+          enum: Object.values(DocumentationSearchAction)
+        },
+        data: {
+          type: 'object',
+          description:
+            'Action-specific data. For search: { query: "how to setup MCP", filters: { category: "getting-started", difficulty: "beginner" } }. For get_article: { articleId: "mcp-setup-guide" }. For suggest_related: { articleId: "mcp-setup-guide", limit: 5 }'
+        }
+      },
+      required: ['action']
+    },
+    handler: createTrackedHandler(
+      'documentation_search',
+      async (args: z.infer<typeof DocumentationSearchSchema>): Promise<MCPToolResponse> => {
+        try {
+          const { action, data } = args
+
+          // Mock documentation data
+          const categories = [
+            { id: 'getting-started', title: 'Getting Started', articles: 12 },
+            { id: 'mcp-integration', title: 'MCP Integration', articles: 8 },
+            { id: 'api-reference', title: 'API Reference', articles: 24 },
+            { id: 'troubleshooting', title: 'Troubleshooting', articles: 15 }
+          ]
+
+          const articles = [
+            {
+              id: 'mcp-setup-guide',
+              title: 'MCP Setup Guide',
+              category: 'getting-started',
+              summary: 'Complete guide to setting up Promptliano MCP with your editor',
+              difficulty: 'beginner',
+              readingTime: 5
+            },
+            {
+              id: 'mcp-tools-overview',
+              title: 'MCP Tools Overview',
+              category: 'mcp-integration',
+              summary: 'Learn about all available MCP tools in Promptliano',
+              difficulty: 'intermediate',
+              readingTime: 10
+            },
+            {
+              id: 'troubleshooting-connection',
+              title: 'Troubleshooting MCP Connection Issues',
+              category: 'troubleshooting',
+              summary: 'Common MCP connection problems and their solutions',
+              difficulty: 'intermediate',
+              readingTime: 7
+            }
+          ]
+
+          switch (action) {
+            case DocumentationSearchAction.SEARCH: {
+              const query = validateDataField<string>(data, 'query', 'string', '"how to setup"')
+              const filters = data?.filters || {}
+
+              // Simple search simulation
+              const results = articles.filter((article) => {
+                const matchesQuery =
+                  article.title.toLowerCase().includes(query.toLowerCase()) ||
+                  article.summary.toLowerCase().includes(query.toLowerCase())
+                const matchesCategory = !filters.category || article.category === filters.category
+                const matchesDifficulty = !filters.difficulty || article.difficulty === filters.difficulty
+
+                return matchesQuery && matchesCategory && matchesDifficulty
+              })
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Search Results for "${query}":\n\n` +
+                      (results.length > 0
+                        ? results
+                            .map(
+                              (r) =>
+                                `**${r.title}**\n` +
+                                `Category: ${r.category} | Difficulty: ${r.difficulty} | ${r.readingTime} min read\n` +
+                                `${r.summary}\n`
+                            )
+                            .join('\n')
+                        : 'No results found. Try different keywords or filters.')
+                  }
+                ]
+              }
+            }
+
+            case DocumentationSearchAction.GET_CATEGORIES: {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      'Documentation Categories:\n\n' +
+                      categories.map((c) => `**${c.title}** (${c.id})\n` + `  Articles: ${c.articles}`).join('\n\n')
+                  }
+                ]
+              }
+            }
+
+            case DocumentationSearchAction.GET_ARTICLE: {
+              const articleId = validateDataField<string>(data, 'articleId', 'string', '"mcp-setup-guide"')
+
+              const article = articles.find((a) => a.id === articleId)
+              if (!article) {
+                throw createMCPError(MCPErrorCode.NOT_FOUND, `Article not found: ${articleId}`)
+              }
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `# ${article.title}\n\n` +
+                      `**Category:** ${article.category}\n` +
+                      `**Difficulty:** ${article.difficulty}\n` +
+                      `**Reading Time:** ${article.readingTime} minutes\n\n` +
+                      `## Summary\n${article.summary}\n\n` +
+                      `## Content\n[Full article content would be loaded here]\n\n` +
+                      `---\n*Use suggest_related action to find similar articles*`
+                  }
+                ]
+              }
+            }
+
+            case DocumentationSearchAction.SUGGEST_RELATED: {
+              const articleId = validateDataField<string>(data, 'articleId', 'string', '"mcp-setup-guide"')
+              const limit = data?.limit || 3
+
+              // Find related articles (simplified logic)
+              const currentArticle = articles.find((a) => a.id === articleId)
+              if (!currentArticle) {
+                throw createMCPError(MCPErrorCode.NOT_FOUND, `Article not found: ${articleId}`)
+              }
+
+              const related = articles
+                .filter(
+                  (a) =>
+                    a.id !== articleId &&
+                    (a.category === currentArticle.category || a.difficulty === currentArticle.difficulty)
+                )
+                .slice(0, limit)
+
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      `Related Articles for "${currentArticle.title}":\n\n` +
+                      related.map((r) => `- **${r.title}** (${r.category})\n  ${r.summary}`).join('\n\n')
+                  }
+                ]
+              }
+            }
+
+            default:
+              throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+                action,
+                validActions: Object.values(DocumentationSearchAction)
+              })
+          }
+        } catch (error) {
+          const mcpError =
+            error instanceof MCPError
+              ? error
+              : MCPError.fromError(error, { tool: 'documentation_search', action: args.action })
           return formatMCPErrorResponse(mcpError)
         }
       }

@@ -17,11 +17,7 @@ import type {
 import { getProjectFiles } from '../project-service'
 import { generateSingleText } from '../gen-ai-services'
 import { LOW_MODEL_CONFIG } from '@promptliano/config'
-import {
-  sortFilesByImportance,
-  getTopImportantFiles,
-  filterByImportance
-} from './file-importance-scorer'
+import { sortFilesByImportance, getTopImportantFiles, filterByImportance } from './file-importance-scorer'
 
 // Cache for project summaries with TTL
 interface CachedSummary {
@@ -38,7 +34,7 @@ const SUMMARY_CACHE_TTL = 5 * 60 * 1000 // 5 minutes in milliseconds
 export const SUMMARY_MODEL_CONFIG = {
   ...LOW_MODEL_CONFIG,
   temperature: 0.3, // Lower for consistent summaries
-  maxTokens: 1000  // Reduced from 20000
+  maxTokens: 1000 // Reduced from 20000
 }
 
 // Helper function to get cache key
@@ -172,19 +168,14 @@ export async function getProjectSummaryWithOptions(
 /**
  * Filter files based on summary options
  */
-async function filterFilesForSummary(
-  files: ProjectFile[],
-  options: SummaryOptions
-): Promise<ProjectFile[]> {
+async function filterFilesForSummary(files: ProjectFile[], options: SummaryOptions): Promise<ProjectFile[]> {
   let filtered = [...files]
 
   // Apply focus areas if specified
   if (options.focus && options.focus.length > 0) {
-    filtered = filtered.filter(file => {
+    filtered = filtered.filter((file) => {
       const path = file.path.toLowerCase()
-      return options.focus!.some(focus =>
-        path.includes(focus.toLowerCase())
-      )
+      return options.focus!.some((focus) => path.includes(focus.toLowerCase()))
     })
   }
 
@@ -227,8 +218,8 @@ async function generateAISummary(
   if (truncationResult.wasTruncated) {
     console.log(
       `[ProjectSummary] Content truncated for AI processing:\n` +
-      `  Original: ${truncationResult.originalLength.toLocaleString()} chars\n` +
-      `  Truncated to: ${truncationResult.content.length.toLocaleString()} chars`
+        `  Original: ${truncationResult.originalLength.toLocaleString()} chars\n` +
+        `  Truncated to: ${truncationResult.content.length.toLocaleString()} chars`
     )
   }
 
@@ -266,14 +257,20 @@ async function generateAISummary(
 function getSystemPromptForDepth(depth: string): string {
   switch (depth) {
     case 'minimal':
-      return promptsMap.minimalProjectSummary || `Ultra-concise overview (max 100 words).
+      return (
+        promptsMap.minimalProjectSummary ||
+        `Ultra-concise overview (max 100 words).
 Include: stack, purpose, entry points.
 Use heavy abbreviations.`
+      )
 
     case 'detailed':
-      return promptsMap.detailedProjectSummary || `Comprehensive project analysis (max 400 words).
+      return (
+        promptsMap.detailedProjectSummary ||
+        `Comprehensive project analysis (max 400 words).
 Include: architecture decisions, all components, dependencies, patterns.
 Provide full context for complex development tasks.`
+      )
 
     default: // standard
       return promptsMap.compactProjectSummary

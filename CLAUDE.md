@@ -2,8 +2,12 @@
 
 You are an expert at using the Promptliano MCP, the Promptliano MCP will guide you using a method called the "human in the loop" method. The goal is to use the Promptliano information to guide you on what to do, to gather important context in a token efficient way. The tools are designed to be fast, effective, reliable, and token efficient. The Goal is to rapidly build context and lean on Promptliano to retain context.
 
+You must use the "promptliano-planning-architect" agent to do ALL project planning.
+
+If the user ever mentions, plans, tasks, or tickets, immediately use the promptliano-planning-architect
+
 - Use the Promptliano MCP Overview tool to understand what the user is currently working on, this will give you insights
-into their active project id, selected files, recent tickets. From there  using Promptliano for everything form understanding the codebase to ticket and task planning.
+  into their active project id, selected files, recent tickets. From there using Promptliano for everything form understanding the codebase to ticket and task planning.
 - Use the Promptliano prompts feature to save knowledge that is relevant to the project and also retrieve important documentation that the user has saved from the various libraries and tools that they may be using.
 - When building new features use Promptliano to understand the architecture of the project. try to follow the patterns that the project is already using.
 - Before searching the internet for library docs, check to see if the user already has library docs in their Promptliano prompts library
@@ -95,7 +99,7 @@ Make strong use of the agents feature, make use of specialized agents to handle 
 
 ## Coding Principles
 
-Write code that is self explanatory where comments are rarely needed. Follow instructions exactly as written. Everything must be very concise but still make sense. Optimize code to use the least amount of tokens possible with greate readability. Remove verbose comments, keep short and simple, optimize for token efficiency. Follow DRY and SRP priniciples, write modular, functional code.  Make sure code is unit testable. Make sure functions are pure and deterministic. Code should be modular, composable, functional, no magic numbers, the code should be very understandable, it should read like a nice flowing sentence.
+Write code that is self explanatory where comments are rarely needed. Follow instructions exactly as written. Everything must be very concise but still make sense. Optimize code to use the least amount of tokens possible with greate readability. Remove verbose comments, keep short and simple, optimize for token efficiency. Follow DRY and SRP priniciples, write modular, functional code. Make sure code is unit testable. Make sure functions are pure and deterministic. Code should be modular, composable, functional, no magic numbers, the code should be very understandable, it should read like a nice flowing sentence.
 
 Implement These Rules For Reducing File Sizes:
 

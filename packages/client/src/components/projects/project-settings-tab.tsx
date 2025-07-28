@@ -21,6 +21,7 @@ export function ProjectSettingsTab() {
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
   const { data: projectId } = useProjectTabField('selectedProjectId')
   const { data: enableChatAutoNaming } = useProjectTabField('enableChatAutoNaming')
+  const { data: claudeCodeEnabled } = useProjectTabField('claudeCodeEnabled')
 
   const { data: projectResponse } = useGetProject(projectId!)
   const projectData = projectResponse?.data
@@ -64,6 +65,13 @@ export function ProjectSettingsTab() {
     updateActiveProjectTab((prev) => ({
       ...prev,
       enableChatAutoNaming: value
+    }))
+  }
+
+  const setClaudeCodeEnabled = (value: boolean) => {
+    updateActiveProjectTab((prev) => ({
+      ...prev,
+      claudeCodeEnabled: value
     }))
   }
 
@@ -216,6 +224,24 @@ export function ProjectSettingsTab() {
                 </p>
               </div>
               <Switch checked={!!enableChatAutoNaming} onCheckedChange={setEnableChatAutoNaming} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Claude Code Integration</CardTitle>
+            <CardDescription>Enable advanced Claude Code features for this project</CardDescription>
+          </CardHeader>
+          <CardContent className='space-y-6'>
+            <div className='flex items-center justify-between'>
+              <div className='space-y-0.5'>
+                <label className='text-base font-medium'>Enable Claude Code</label>
+                <p className='text-sm text-muted-foreground'>
+                  Activate Claude Code tab with agent management, sessions, and chat features
+                </p>
+              </div>
+              <Switch checked={!!claudeCodeEnabled} onCheckedChange={setClaudeCodeEnabled} />
             </div>
           </CardContent>
         </Card>

@@ -157,7 +157,7 @@ export const DOCUMENTATION_PROMPTS = {
 ### B. Version History
 ### C. License Information`
     },
-    
+
     readme: {
       name: 'README.md Template',
       category: 'project',
@@ -1392,7 +1392,7 @@ Ready to dive deeper? Check out these resources:
 
     featureGuide: {
       name: 'Feature Deep Dive',
-      category: 'user', 
+      category: 'user',
       prompt: `Create a detailed feature guide for a specific feature in {projectName}:
 
 # [Feature Name] - Complete Guide
@@ -1767,11 +1767,11 @@ export function getDocumentationPrompt(
 ): string {
   const categoryTemplates = DOCUMENTATION_PROMPTS[category] as any
   const promptTemplate = categoryTemplates[template]
-  
+
   if (!promptTemplate || !promptTemplate.prompt) {
     throw new Error(`Template ${template} not found in category ${category}`)
   }
-  
+
   // Replace {projectName} placeholder
   return promptTemplate.prompt.replace(/{projectName}/g, projectName)
 }

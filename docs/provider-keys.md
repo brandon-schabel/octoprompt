@@ -95,7 +95,6 @@ The Provider Keys page is designed to be straightforward for managing your conne
 ### Saved Keys List
 
 - **Display Area:** If you've already added keys, they will be listed in this section. Each entry typically shows:
-
   - The Provider Name (e.g., OpenAI, OpenRouter).
   - A partially masked version of the API key (e.g., "••••••••key1234") for security and identification.
   - Action buttons for each key (e.g., Copy, Delete).

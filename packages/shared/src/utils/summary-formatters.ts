@@ -31,7 +31,7 @@ function buildJsonSummary(files: ProjectFile[], options?: Partial<SummaryOptions
     version: '2.0',
     generated: Date.now(),
     fileCount: files.length,
-    files: files.map(file => {
+    files: files.map((file) => {
       const fileSummary: any = {
         id: file.id,
         name: file.name,
@@ -41,14 +41,14 @@ function buildJsonSummary(files: ProjectFile[], options?: Partial<SummaryOptions
 
       // Conditionally include imports/exports
       if (options?.includeImports !== false && file.imports?.length) {
-        fileSummary.imports = file.imports.map(imp => ({
+        fileSummary.imports = file.imports.map((imp) => ({
           source: imp.source,
           specifiers: imp.specifiers
         }))
       }
 
       if (options?.includeExports !== false && file.exports?.length) {
-        fileSummary.exports = file.exports.map(exp => ({
+        fileSummary.exports = file.exports.map((exp) => ({
           type: exp.type,
           source: exp.source,
           specifiers: exp.specifiers
@@ -94,7 +94,8 @@ function buildMarkdownSummary(files: ProjectFile[], options?: Partial<SummaryOpt
       // Include imports if requested
       if (options?.includeImports !== false && file.imports?.length) {
         lines.push('- **Imports**:')
-        for (const imp of file.imports.slice(0, 5)) { // Limit to first 5
+        for (const imp of file.imports.slice(0, 5)) {
+          // Limit to first 5
           lines.push(`  - ${imp.source}`)
         }
         if (file.imports.length > 5) {
@@ -106,7 +107,7 @@ function buildMarkdownSummary(files: ProjectFile[], options?: Partial<SummaryOpt
       if (options?.includeExports !== false && file.exports?.length) {
         lines.push('- **Exports**:')
         const exportNames = file.exports
-          .flatMap(exp => exp.specifiers?.map(s => s.exported) || [])
+          .flatMap((exp) => exp.specifiers?.map((s) => s.exported) || [])
           .filter(Boolean)
           .slice(0, 5)
 
@@ -164,9 +165,7 @@ function getDefaultSummary(file: ProjectFile): string {
  * Get human-readable file type description
  */
 function getFileTypeDescription(fileOrExt: string): string {
-  const ext = fileOrExt.includes('.')
-    ? fileOrExt.split('.').pop()?.toLowerCase() || 'unknown'
-    : fileOrExt.toLowerCase()
+  const ext = fileOrExt.includes('.') ? fileOrExt.split('.').pop()?.toLowerCase() || 'unknown' : fileOrExt.toLowerCase()
 
   const fileTypeMap: Record<string, string> = {
     ts: 'TypeScript',
@@ -229,19 +228,19 @@ export function compressSummary(summary: string, options?: Partial<SummaryOption
 function applyAbbreviations(text: string): string {
   const abbreviations: Record<string, string> = {
     'TypeScript React': 'TSX',
-    'TypeScript': 'TS',
+    TypeScript: 'TS',
     'JavaScript React': 'JSX',
-    'JavaScript': 'JS',
+    JavaScript: 'JS',
     'packages/': 'p/',
     'src/': 's/',
     'components/': 'c/',
     'services/': 'svc/',
     'utilities/': 'u/',
-    'configuration': 'config',
-    'authentication': 'auth',
-    'authorization': 'authz',
-    'database': 'db',
-    'application': 'app'
+    configuration: 'config',
+    authentication: 'auth',
+    authorization: 'authz',
+    database: 'db',
+    application: 'app'
   }
 
   let result = text

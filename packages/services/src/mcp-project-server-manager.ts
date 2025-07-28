@@ -66,8 +66,7 @@ class MCPProjectServerManager {
             enabled: true,
             created: Date.now(),
             updated: Date.now(),
-            autoStart: true,
-
+            autoStart: true
           }
 
           // Store the mapping
@@ -167,7 +166,8 @@ export async function ensureProjectServersInitialized(projectId: number): Promis
   const serverInfo = mcpProjectServerManager.getProjectServerInfo(projectId)
 
   // If servers are already initialized and recent, skip
-  if (serverInfo && Date.now() - serverInfo.lastUpdated < 5 * 60 * 1000) { // 5 minutes
+  if (serverInfo && Date.now() - serverInfo.lastUpdated < 5 * 60 * 1000) {
+    // 5 minutes
     return
   }
 

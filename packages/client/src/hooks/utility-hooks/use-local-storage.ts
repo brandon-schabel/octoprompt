@@ -68,7 +68,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, SetValueFu
               })
             )
           }
-          
+
           return newValue
         } catch (error) {
           console.error(`Error setting localStorage key "${key}":`, error)

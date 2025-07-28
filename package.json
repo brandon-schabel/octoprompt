@@ -25,7 +25,10 @@
     "migrate:sqlite": "bun run scripts/migrate-to-sqlite.ts",
     "migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run",
     "generate-encryption-key": "bun run packages/shared/src/utils/generate-key.ts",
-    "migrate:encrypt-keys": "bun run packages/storage/src/migrations/encrypt-provider-keys.ts"
+    "migrate:encrypt-keys": "bun run packages/storage/src/migrations/encrypt-provider-keys.ts",
+    "dev:website": "bun run scripts/start-website-dev.ts",
+    "build:website": "cd packages/website && bun run build",
+    "preview:website": "cd packages/website && bun run preview"
   },
   "workspaces": [
     "packages/*"

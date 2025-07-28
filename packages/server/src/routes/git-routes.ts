@@ -852,7 +852,10 @@ const deleteBranchRoute = createRoute({
       branchName: z.string()
     }),
     query: z.object({
-      force: z.string().optional().transform((val) => val === 'true')
+      force: z
+        .string()
+        .optional()
+        .transform((val) => val === 'true')
     })
   },
   responses: {
@@ -1030,14 +1033,26 @@ const getCommitLogEnhancedRoute = createRoute({
     }),
     query: z.object({
       branch: z.string().optional(),
-      page: z.string().optional().transform((val) => val ? parseInt(val, 10) : 1),
-      perPage: z.string().optional().transform((val) => val ? parseInt(val, 10) : 20),
+      page: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : 1)),
+      perPage: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : 20)),
       search: z.string().optional(),
       author: z.string().optional(),
       since: z.string().optional(),
       until: z.string().optional(),
-      includeStats: z.string().optional().transform((val) => val === 'true'),
-      includeFileDetails: z.string().optional().transform((val) => val === 'true')
+      includeStats: z
+        .string()
+        .optional()
+        .transform((val) => val === 'true'),
+      includeFileDetails: z
+        .string()
+        .optional()
+        .transform((val) => val === 'true')
     })
   },
   responses: {
@@ -1708,11 +1723,14 @@ gitRoutes.openapi(addWorktreeRoute, async (c) => {
         }
       })
 
-      return c.json({
-        success: true,
-        jobId: job.id,
-        message: `Worktree creation job started (ID: ${job.id})`
-      }, 202)
+      return c.json(
+        {
+          success: true,
+          jobId: job.id,
+          message: `Worktree creation job started (ID: ${job.id})`
+        },
+        202
+      )
     } else {
       // Synchronous processing
       await gitService.addWorktree(projectId, options)
@@ -1808,11 +1826,14 @@ gitRoutes.openapi(removeWorktreeRoute, async (c) => {
         }
       })
 
-      return c.json({
-        success: true,
-        jobId: job.id,
-        message: `Worktree removal job started (ID: ${job.id})`
-      }, 202)
+      return c.json(
+        {
+          success: true,
+          jobId: job.id,
+          message: `Worktree removal job started (ID: ${job.id})`
+        },
+        202
+      )
     } else {
       // Synchronous processing
       await gitService.removeWorktree(projectId, path, force)
@@ -1823,9 +1844,13 @@ gitRoutes.openapi(removeWorktreeRoute, async (c) => {
     }
   } catch (error) {
     console.error('[RemoveWorktree] Error:', error)
-    const statusCode = error instanceof Error &&
-      (error.message.includes('Cannot remove the main worktree') ? 400 :
-        error.message.includes('not found') ? 404 : 500)
+    const statusCode =
+      error instanceof Error &&
+      (error.message.includes('Cannot remove the main worktree')
+        ? 400
+        : error.message.includes('not found')
+          ? 404
+          : 500)
     return c.json(
       {
         success: false,
@@ -2038,20 +2063,21 @@ gitRoutes.openapi(pruneWorktreesRoute, async (c) => {
         }
       })
 
-      return c.json({
-        success: true,
-        jobId: job.id,
-        message: `Worktree prune job started (ID: ${job.id})`
-      }, 202)
+      return c.json(
+        {
+          success: true,
+          jobId: job.id,
+          message: `Worktree prune job started (ID: ${job.id})`
+        },
+        202
+      )
     } else {
       // Synchronous processing (or dry run)
       const prunedPaths = await gitService.pruneWorktrees(projectId, dryRun)
       return c.json({
         success: true,
         data: prunedPaths,
-        message: dryRun
-          ? `Would prune ${prunedPaths.length} worktree(s)`
-          : `Pruned ${prunedPaths.length} worktree(s)`
+        message: dryRun ? `Would prune ${prunedPaths.length} worktree(s)` : `Pruned ${prunedPaths.length} worktree(s)`
       })
     }
   } catch (error) {

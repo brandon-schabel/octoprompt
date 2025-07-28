@@ -11,6 +11,8 @@ export const TicketSchema = z
     status: z.enum(['open', 'in_progress', 'closed']).default('open'),
     priority: z.enum(['low', 'normal', 'high']).default('normal'),
     suggestedFileIds: z.array(z.string()).default([]),
+    suggestedAgentIds: z.array(unixTSSchemaSpec).default([]),
+    suggestedPromptIds: z.array(unixTSSchemaSpec).default([]),
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })
@@ -29,6 +31,8 @@ export const TicketTaskSchema = z
     estimatedHours: z.number().optional(), // NEW: Time estimation
     dependencies: z.array(unixTSSchemaSpec).default([]), // NEW: Task dependencies
     tags: z.array(z.string()).default([]), // NEW: Tags for categorization
+    agentId: unixTSOptionalSchemaSpec, // NEW: Assigned agent for this task
+    suggestedPromptIds: z.array(unixTSSchemaSpec).default([]), // NEW: Suggested prompts
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })
@@ -42,7 +46,9 @@ export const CreateTicketBodySchema = z
     overview: z.string().default(''),
     status: z.enum(['open', 'in_progress', 'closed']).default('open'),
     priority: z.enum(['low', 'normal', 'high']).default('normal'),
-    suggestedFileIds: z.array(z.string()).optional()
+    suggestedFileIds: z.array(z.string()).optional(),
+    suggestedAgentIds: z.array(unixTSSchemaSpec).optional(),
+    suggestedPromptIds: z.array(unixTSSchemaSpec).optional()
   })
   .openapi('CreateTicketBody')
 
@@ -52,7 +58,9 @@ export const UpdateTicketBodySchema = z
     overview: z.string().optional(),
     status: z.enum(['open', 'in_progress', 'closed']).optional(),
     priority: z.enum(['low', 'normal', 'high']).optional(),
-    suggestedFileIds: z.array(z.string()).optional()
+    suggestedFileIds: z.array(z.string()).optional(),
+    suggestedAgentIds: z.array(unixTSSchemaSpec).optional(),
+    suggestedPromptIds: z.array(unixTSSchemaSpec).optional()
   })
   .openapi('UpdateTicketBody')
 
@@ -63,7 +71,9 @@ export const CreateTaskBodySchema = z
     suggestedFileIds: z.array(z.string()).optional(),
     estimatedHours: z.number().optional(),
     dependencies: z.array(unixTSSchemaSpec).optional(),
-    tags: z.array(z.string()).optional()
+    tags: z.array(z.string()).optional(),
+    agentId: unixTSOptionalSchemaSpec,
+    suggestedPromptIds: z.array(unixTSSchemaSpec).optional()
   })
   .openapi('CreateTaskBody')
 
@@ -75,7 +85,9 @@ export const UpdateTaskBodySchema = z
     done: z.boolean().optional(),
     estimatedHours: z.number().optional(),
     dependencies: z.array(unixTSSchemaSpec).optional(),
-    tags: z.array(z.string()).optional()
+    tags: z.array(z.string()).optional(),
+    agentId: unixTSOptionalSchemaSpec,
+    suggestedPromptIds: z.array(unixTSSchemaSpec).optional()
   })
   .openapi('UpdateTaskBody')
 

@@ -246,55 +246,49 @@ export function DiagramsView({ projectId, projectName = 'Project' }: DiagramsVie
   }
 
   return (
-    <div className="h-full flex flex-col p-6 space-y-6">
+    <div className='h-full flex flex-col p-6 space-y-6'>
       <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <GitBranch className="h-6 w-6" />
+        <h2 className='text-2xl font-bold flex items-center gap-2'>
+          <GitBranch className='h-6 w-6' />
           Diagrams & Visualizations
         </h2>
-        <p className="text-muted-foreground mt-1">
-          Create various diagrams to visualize {projectName}
-        </p>
+        <p className='text-muted-foreground mt-1'>Create various diagrams to visualize {projectName}</p>
       </div>
 
-      <Tabs defaultValue="templates" className="flex-1">
+      <Tabs defaultValue='templates' className='flex-1'>
         <TabsList>
-          <TabsTrigger value="templates">Diagram Types</TabsTrigger>
-          <TabsTrigger value="custom">Custom Diagram</TabsTrigger>
-          <TabsTrigger value="mermaid-help">Mermaid Guide</TabsTrigger>
+          <TabsTrigger value='templates'>Diagram Types</TabsTrigger>
+          <TabsTrigger value='custom'>Custom Diagram</TabsTrigger>
+          <TabsTrigger value='mermaid-help'>Mermaid Guide</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <TabsContent value='templates' className='space-y-4'>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
             {Object.entries(diagramTemplates).map(([key, template]) => {
               const Icon = template.icon
               return (
-                <Card 
+                <Card
                   key={key}
-                  className={`cursor-pointer transition-all ${
-                    selectedTemplate === key ? 'ring-2 ring-primary' : ''
-                  }`}
+                  className={`cursor-pointer transition-all ${selectedTemplate === key ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => setSelectedTemplate(key as keyof typeof diagramTemplates)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <Icon className="h-5 w-5 text-primary" />
+                  <CardHeader className='pb-3'>
+                    <div className='flex items-start justify-between'>
+                      <div className='flex items-center gap-3'>
+                        <Icon className='h-5 w-5 text-primary' />
                         <div>
-                          <CardTitle className="text-base">{template.name}</CardTitle>
-                          <CardDescription className="text-sm">{template.description}</CardDescription>
+                          <CardTitle className='text-base'>{template.name}</CardTitle>
+                          <CardDescription className='text-sm'>{template.description}</CardDescription>
                         </div>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-xs font-mono">
+                    <div className='flex items-center justify-between'>
+                      <Badge variant='secondary' className='text-xs font-mono'>
                         {template.syntax}
                       </Badge>
-                      {selectedTemplate === key && (
-                        <Badge>Selected</Badge>
-                      )}
+                      {selectedTemplate === key && <Badge>Selected</Badge>}
                     </div>
                   </CardContent>
                 </Card>
@@ -306,34 +300,34 @@ export function DiagramsView({ projectId, projectName = 'Project' }: DiagramsVie
             <CardHeader>
               <CardTitle>Diagram Options</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+            <CardContent className='space-y-4'>
+              <div className='grid gap-4 md:grid-cols-2'>
+                <div className='space-y-2'>
                   <Label>Theme</Label>
                   <Select value={diagramTheme} onValueChange={setDiagramTheme}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="default">Default</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="forest">Forest</SelectItem>
-                      <SelectItem value="neutral">Neutral</SelectItem>
+                      <SelectItem value='default'>Default</SelectItem>
+                      <SelectItem value='dark'>Dark</SelectItem>
+                      <SelectItem value='forest'>Forest</SelectItem>
+                      <SelectItem value='neutral'>Neutral</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className='space-y-2'>
                   <Label>Direction (Flowcharts)</Label>
                   <Select value={diagramDirection} onValueChange={setDiagramDirection}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TD">Top Down</SelectItem>
-                      <SelectItem value="LR">Left to Right</SelectItem>
-                      <SelectItem value="BT">Bottom Up</SelectItem>
-                      <SelectItem value="RL">Right to Left</SelectItem>
+                      <SelectItem value='TD'>Top Down</SelectItem>
+                      <SelectItem value='LR'>Left to Right</SelectItem>
+                      <SelectItem value='BT'>Bottom Up</SelectItem>
+                      <SelectItem value='RL'>Right to Left</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -341,77 +335,73 @@ export function DiagramsView({ projectId, projectName = 'Project' }: DiagramsVie
             </CardContent>
           </Card>
 
-          <div className="flex gap-2">
-            <Button onClick={handleGenerateDiagram} className="flex-1">
-              <Sparkles className="h-4 w-4 mr-2" />
+          <div className='flex gap-2'>
+            <Button onClick={handleGenerateDiagram} className='flex-1'>
+              <Sparkles className='h-4 w-4 mr-2' />
               Generate Diagram
             </Button>
-            <Button variant="outline" onClick={handleCopyPrompt}>
-              <Copy className="h-4 w-4" />
+            <Button variant='outline' onClick={handleCopyPrompt}>
+              <Copy className='h-4 w-4' />
             </Button>
           </div>
         </TabsContent>
 
-        <TabsContent value="custom" className="space-y-4">
+        <TabsContent value='custom' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>Custom Diagram</CardTitle>
-              <CardDescription>
-                Describe any diagram you need
-              </CardDescription>
+              <CardDescription>Describe any diagram you need</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className='space-y-4'>
+              <div className='space-y-2'>
                 <Label>Diagram Description</Label>
                 <Textarea
-                  placeholder="Describe the diagram you want to create. Be specific about nodes, relationships, and any special requirements..."
+                  placeholder='Describe the diagram you want to create. Be specific about nodes, relationships, and any special requirements...'
                   value={customDescription}
                   onChange={(e) => setCustomDescription(e.target.value)}
-                  className="min-h-[200px]"
+                  className='min-h-[200px]'
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Diagram Type</Label>
-                <Select defaultValue="auto">
+                <Select defaultValue='auto'>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Auto-detect</SelectItem>
-                    <SelectItem value="flowchart">Flowchart</SelectItem>
-                    <SelectItem value="sequence">Sequence</SelectItem>
-                    <SelectItem value="state">State</SelectItem>
-                    <SelectItem value="er">Entity Relationship</SelectItem>
-                    <SelectItem value="gantt">Gantt Chart</SelectItem>
-                    <SelectItem value="pie">Pie Chart</SelectItem>
-                    <SelectItem value="mindmap">Mind Map</SelectItem>
+                    <SelectItem value='auto'>Auto-detect</SelectItem>
+                    <SelectItem value='flowchart'>Flowchart</SelectItem>
+                    <SelectItem value='sequence'>Sequence</SelectItem>
+                    <SelectItem value='state'>State</SelectItem>
+                    <SelectItem value='er'>Entity Relationship</SelectItem>
+                    <SelectItem value='gantt'>Gantt Chart</SelectItem>
+                    <SelectItem value='pie'>Pie Chart</SelectItem>
+                    <SelectItem value='mindmap'>Mind Map</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <Button onClick={handleGenerateDiagram} className="w-full">
-                <Sparkles className="h-4 w-4 mr-2" />
+              <Button onClick={handleGenerateDiagram} className='w-full'>
+                <Sparkles className='h-4 w-4 mr-2' />
                 Generate Custom Diagram
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="mermaid-help" className="space-y-4">
+        <TabsContent value='mermaid-help' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>Mermaid Diagram Syntax Guide</CardTitle>
-              <CardDescription>
-                Quick reference for creating Mermaid diagrams
-              </CardDescription>
+              <CardDescription>Quick reference for creating Mermaid diagrams</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Flowchart Basics</h4>
-                  <pre className="text-xs bg-muted p-2 rounded">
-{`graph TD
+              <div className='space-y-4'>
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Flowchart Basics</h4>
+                  <pre className='text-xs bg-muted p-2 rounded'>
+                    {`graph TD
     A[Rectangle] --> B(Rounded)
     B --> C{Diamond}
     C -->|Yes| D[Result 1]
@@ -419,24 +409,26 @@ export function DiagramsView({ projectId, projectName = 'Project' }: DiagramsVie
                   </pre>
                 </div>
 
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Sequence Diagram</h4>
-                  <pre className="text-xs bg-muted p-2 rounded">
-{`sequenceDiagram
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Sequence Diagram</h4>
+                  <pre className='text-xs bg-muted p-2 rounded'>
+                    {`sequenceDiagram
     Alice->>Bob: Hello
     Bob-->>Alice: Hi!
     Note over Alice,Bob: Conversation`}
                   </pre>
                 </div>
 
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Node Shapes</h4>
-                  <p className="text-sm text-muted-foreground">
-                    • [Text] - Rectangle<br/>
-                    • (Text) - Rounded<br/>
-                    • {`{Text}`} - Diamond<br/>
-                    • ((Text)) - Circle<br/>
-                    • [/Text/] - Parallelogram
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Node Shapes</h4>
+                  <p className='text-sm text-muted-foreground'>
+                    • [Text] - Rectangle
+                    <br />
+                    • (Text) - Rounded
+                    <br />• {`{Text}`} - Diamond
+                    <br />
+                    • ((Text)) - Circle
+                    <br />• [/Text/] - Parallelogram
                   </p>
                 </div>
               </div>
@@ -448,7 +440,7 @@ export function DiagramsView({ projectId, projectName = 'Project' }: DiagramsVie
       <DocumentationGeneratorDialog
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        documentationType="mermaid-diagram"
+        documentationType='mermaid-diagram'
         projectContext={{
           name: projectName,
           description: diagramPrompt || template.prompt.replace('{projectName}', projectName || 'Project')

@@ -585,13 +585,13 @@ function SortableTab(props: {
                   variant='outline'
                   className={cn(
                     'px-1.5 text-xs font-mono',
-                    isActive ? 'border-primary/50 text-primary' : 'text-muted-foreground'
+                    isActive ? 'border-primary-foreground/50 text-foreground' : 'text-muted-foreground'
                   )}
                 >
                   {`${hotkeyPrefix}${shortcutNumber}`}
                 </Badge>
               )}
-              <span className='truncate max-w-[120px]'>{displayName}</span>
+              <span className='truncate max-w-[120px] text-foreground'>{displayName}</span>
               {isAIGenerated && <Sparkles className='h-3 w-3 text-muted-foreground flex-shrink-0' />}
               {hasLink && <LinkIcon className='h-3.5 w-3.5 text-muted-foreground flex-shrink-0' />}
             </>

@@ -76,7 +76,7 @@ export function AssetsSidebarNav({ activeView, onViewChange, className }: Assets
           <item.icon className='h-4 w-4 shrink-0' />
           <div className='flex flex-col items-start text-left'>
             <span className='text-sm font-medium whitespace-nowrap'>{item.label}</span>
-            <span className='text-xs text-muted-foreground whitespace-nowrap'>{item.description}</span>
+            <span className='text-xs text-muted-foreground/90 whitespace-nowrap'>{item.description}</span>
           </div>
         </Button>
       ))}

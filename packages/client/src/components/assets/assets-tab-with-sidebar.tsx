@@ -17,26 +17,22 @@ interface AssetsTabWithSidebarProps {
   className?: string
 }
 
-export function AssetsTabWithSidebar({ 
-  projectId, 
+export function AssetsTabWithSidebar({
+  projectId,
   projectName,
-  assetView = 'project-docs', 
-  onAssetViewChange, 
-  className 
+  assetView = 'project-docs',
+  onAssetViewChange,
+  className
 }: AssetsTabWithSidebarProps) {
   return (
     <div className={cn('flex h-full', className)}>
       {/* Left Sidebar */}
-      <div className="w-56 border-r bg-muted/30 flex-shrink-0">
-        <AssetsSidebarNav
-          activeView={assetView}
-          onViewChange={onAssetViewChange}
-          className="h-full"
-        />
+      <div className='w-56 border-r bg-muted/30 flex-shrink-0'>
+        <AssetsSidebarNav activeView={assetView} onViewChange={onAssetViewChange} className='h-full' />
       </div>
-      
+
       {/* Content Area */}
-      <div className="flex-1 overflow-hidden">
+      <div className='flex-1 overflow-hidden'>
         {assetView === 'project-docs' && <ProjectDocsView projectId={projectId} projectName={projectName} />}
         {assetView === 'architecture' && <ArchitectureView projectId={projectId} projectName={projectName} />}
         {assetView === 'api-docs' && <ApiDocsView projectId={projectId} projectName={projectName} />}

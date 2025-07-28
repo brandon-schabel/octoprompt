@@ -9,10 +9,7 @@ export interface TabNameGenerationResult {
 }
 
 export class TabNameGenerationService {
-  static async generateTabName(
-    projectId: number,
-    tabData: Partial<ProjectTabState>
-  ): Promise<TabNameGenerationResult> {
+  static async generateTabName(projectId: number, tabData: Partial<ProjectTabState>): Promise<TabNameGenerationResult> {
     try {
       const project = await getProjectById(projectId)
       if (!project) {
@@ -26,8 +23,8 @@ export class TabNameGenerationService {
       if (selectedFiles.length > 0) {
         const projectFiles = await getProjectFiles(projectId)
         fileNames = selectedFiles
-          .map(fileId => {
-            const file = projectFiles?.find(f => f.id === fileId)
+          .map((fileId) => {
+            const file = projectFiles?.find((f) => f.id === fileId)
             return file?.path || ''
           })
           .filter(Boolean)
@@ -56,10 +53,12 @@ export class TabNameGenerationService {
   private static extractContextFromFiles(filePaths: string[]): string {
     if (filePaths.length === 0) return 'General project work'
 
-    const directories = filePaths.map(path => {
-      const parts = path.split('/')
-      return parts.length > 1 ? parts[parts.length - 2] : ''
-    }).filter(Boolean)
+    const directories = filePaths
+      .map((path) => {
+        const parts = path.split('/')
+        return parts.length > 1 ? parts[parts.length - 2] : ''
+      })
+      .filter(Boolean)
 
     const uniqueDirs = [...new Set(directories)]
     if (uniqueDirs.length > 0) {

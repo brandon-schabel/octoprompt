@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
-import { projectsSearchSchema, type ProjectsSearch } from '@/lib/search-schemas'
+import { projectsSearchSchema, type ProjectsSearch, type ProjectView } from '@/lib/search-schemas'
 import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
@@ -34,6 +34,7 @@ import { TicketsTabWithSidebar } from '@/components/tickets/tickets-tab-with-sid
 import { GitTabWithSidebar } from '@/components/projects/git-tab-with-sidebar'
 import { MCPAnalyticsTabView } from '@/components/projects/mcp-analytics-tab-view'
 import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
+import { ClaudeCodeTabWithSidebar } from '@/components/claude-code'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -206,9 +207,11 @@ export function ProjectsPage() {
         <Tabs
           value={search.activeView || 'context'}
           onValueChange={(value) => {
+            // Ensure the value is valid before navigating
+            const validValue = value as ProjectView
             navigate({
               to: '/projects',
-              search: (prev) => ({ ...prev, activeView: value as any }),
+              search: (prev) => ({ ...prev, activeView: validValue }),
               replace: true
             })
           }}
@@ -239,6 +242,11 @@ export function ProjectsPage() {
                   <BarChart2 className='h-3.5 w-3.5' />
                   MCP Analytics
                 </TabsTrigger>
+                {activeProjectTabState?.claudeCodeEnabled && (
+                  <TabsTrigger value='claude-code' className='flex items-center gap-1'>
+                    Claude Code
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value='settings' className='flex items-center gap-1'>
                   <Settings className='h-3.5 w-3.5' />
                   Settings
@@ -340,6 +348,31 @@ export function ProjectsPage() {
               <MCPAnalyticsTabView projectId={selectedProjectId} />
             ) : (
               <p className='p-4 md:p-6'>No project selected for MCP Analytics.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='claude-code' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {activeProjectTabState?.claudeCodeEnabled ? (
+              selectedProjectId && projectData ? (
+                <ClaudeCodeTabWithSidebar
+                  projectId={selectedProjectId}
+                  projectName={projectData.name}
+                  claudeCodeView={search.claudeCodeView}
+                  onClaudeCodeViewChange={(view) => {
+                    navigate({
+                      to: '/projects',
+                      search: (prev) => ({ ...prev, claudeCodeView: view }),
+                      replace: true
+                    })
+                  }}
+                />
+              ) : (
+                <p className='p-4 md:p-6'>No project selected for Claude Code.</p>
+              )
+            ) : (
+              <div className='p-6 text-center text-muted-foreground'>
+                <p>Claude Code is not enabled for this project.</p>
+                <p className='mt-2'>Enable it in the Settings tab to access Claude Code features.</p>
+              </div>
             )}
           </TabsContent>
           <TabsContent value='settings' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>

@@ -260,110 +260,102 @@ export function ApiDocsView({ projectId, projectName = 'Project' }: ApiDocsViewP
   }
 
   return (
-    <div className="h-full flex flex-col p-6 space-y-6">
+    <div className='h-full flex flex-col p-6 space-y-6'>
       <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Code2 className="h-6 w-6" />
+        <h2 className='text-2xl font-bold flex items-center gap-2'>
+          <Code2 className='h-6 w-6' />
           API Documentation
         </h2>
-        <p className="text-muted-foreground mt-1">
-          Generate API reference documentation for {projectName}
-        </p>
+        <p className='text-muted-foreground mt-1'>Generate API reference documentation for {projectName}</p>
       </div>
 
-      <Tabs defaultValue="templates" className="flex-1">
+      <Tabs defaultValue='templates' className='flex-1'>
         <TabsList>
-          <TabsTrigger value="templates">API Templates</TabsTrigger>
-          <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value='templates'>API Templates</TabsTrigger>
+          <TabsTrigger value='endpoints'>Endpoints</TabsTrigger>
+          <TabsTrigger value='settings'>Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid gap-4">
+        <TabsContent value='templates' className='space-y-4'>
+          <div className='grid gap-4'>
             {Object.entries(apiDocTemplates).map(([key, template]) => {
               const Icon = template.icon
               return (
-                <Card 
+                <Card
                   key={key}
-                  className={`cursor-pointer transition-all ${
-                    selectedTemplate === key ? 'ring-2 ring-primary' : ''
-                  }`}
+                  className={`cursor-pointer transition-all ${selectedTemplate === key ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => setSelectedTemplate(key as keyof typeof apiDocTemplates)}
                 >
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <Icon className="h-5 w-5 text-primary" />
+                    <div className='flex items-start justify-between'>
+                      <div className='flex items-center gap-3'>
+                        <Icon className='h-5 w-5 text-primary' />
                         <div>
-                          <CardTitle className="text-lg">{template.name}</CardTitle>
+                          <CardTitle className='text-lg'>{template.name}</CardTitle>
                           <CardDescription>{template.description}</CardDescription>
                         </div>
                       </div>
-                      {selectedTemplate === key && (
-                        <Badge>Selected</Badge>
-                      )}
+                      {selectedTemplate === key && <Badge>Selected</Badge>}
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Badge variant="secondary">{template.format}</Badge>
+                    <Badge variant='secondary'>{template.format}</Badge>
                   </CardContent>
                 </Card>
               )
             })}
           </div>
 
-          <div className="flex gap-2">
-            <Button onClick={handleGenerateApiDocs} className="flex-1">
-              <Sparkles className="h-4 w-4 mr-2" />
+          <div className='flex gap-2'>
+            <Button onClick={handleGenerateApiDocs} className='flex-1'>
+              <Sparkles className='h-4 w-4 mr-2' />
               Generate API Documentation
             </Button>
-            <Button variant="outline" onClick={handleCopyPrompt}>
-              <Copy className="h-4 w-4" />
+            <Button variant='outline' onClick={handleCopyPrompt}>
+              <Copy className='h-4 w-4' />
             </Button>
           </div>
         </TabsContent>
 
-        <TabsContent value="endpoints" className="space-y-4">
+        <TabsContent value='endpoints' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>API Configuration</CardTitle>
-              <CardDescription>
-                Configure your API details for accurate documentation
-              </CardDescription>
+              <CardDescription>Configure your API details for accurate documentation</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className='space-y-4'>
+              <div className='space-y-2'>
                 <Label>Base URL</Label>
                 <Input
                   value={apiBaseUrl}
                   onChange={(e) => setApiBaseUrl(e.target.value)}
-                  placeholder="https://api.example.com/v1"
+                  placeholder='https://api.example.com/v1'
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Authentication Type</Label>
                 <Select value={authType} onValueChange={setAuthType}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bearer">Bearer Token</SelectItem>
-                    <SelectItem value="apikey">API Key</SelectItem>
-                    <SelectItem value="oauth2">OAuth 2.0</SelectItem>
-                    <SelectItem value="basic">Basic Auth</SelectItem>
-                    <SelectItem value="none">No Auth</SelectItem>
+                    <SelectItem value='bearer'>Bearer Token</SelectItem>
+                    <SelectItem value='apikey'>API Key</SelectItem>
+                    <SelectItem value='oauth2'>OAuth 2.0</SelectItem>
+                    <SelectItem value='basic'>Basic Auth</SelectItem>
+                    <SelectItem value='none'>No Auth</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Custom Endpoints (Optional)</Label>
                 <Textarea
                   value={customEndpoints}
                   onChange={(e) => setCustomEndpoints(e.target.value)}
-                  placeholder="List specific endpoints to document..."
-                  className="min-h-[100px]"
+                  placeholder='List specific endpoints to document...'
+                  className='min-h-[100px]'
                 />
               </div>
             </CardContent>
@@ -373,39 +365,39 @@ export function ApiDocsView({ projectId, projectName = 'Project' }: ApiDocsViewP
             <CardHeader>
               <CardTitle>Documentation Options</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="examples"
+            <CardContent className='space-y-3'>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='examples'
                   checked={includeExamples}
                   onCheckedChange={(checked) => setIncludeExamples(!!checked)}
                 />
-                <Label htmlFor="examples" className="cursor-pointer">
+                <Label htmlFor='examples' className='cursor-pointer'>
                   Include code examples in multiple languages
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="schemas"
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='schemas'
                   checked={includeSchemas}
                   onCheckedChange={(checked) => setIncludeSchemas(!!checked)}
                 />
-                <Label htmlFor="schemas" className="cursor-pointer">
+                <Label htmlFor='schemas' className='cursor-pointer'>
                   Include detailed schema definitions
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox id="postman" defaultChecked />
-                <Label htmlFor="postman" className="cursor-pointer">
+              <div className='flex items-center space-x-2'>
+                <Checkbox id='postman' defaultChecked />
+                <Label htmlFor='postman' className='cursor-pointer'>
                   Generate Postman collection
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox id="openapi" defaultChecked />
-                <Label htmlFor="openapi" className="cursor-pointer">
+              <div className='flex items-center space-x-2'>
+                <Checkbox id='openapi' defaultChecked />
+                <Label htmlFor='openapi' className='cursor-pointer'>
                   Generate OpenAPI specification
                 </Label>
               </div>
@@ -413,45 +405,45 @@ export function ApiDocsView({ projectId, projectName = 'Project' }: ApiDocsViewP
           </Card>
         </TabsContent>
 
-        <TabsContent value="settings" className="space-y-4">
+        <TabsContent value='settings' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>API Documentation Settings</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className='space-y-4'>
+              <div className='space-y-2'>
                 <Label>Documentation Format</Label>
-                <Select defaultValue="markdown">
+                <Select defaultValue='markdown'>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="markdown">Markdown</SelectItem>
-                    <SelectItem value="openapi">OpenAPI 3.0</SelectItem>
-                    <SelectItem value="postman">Postman Collection</SelectItem>
-                    <SelectItem value="insomnia">Insomnia</SelectItem>
+                    <SelectItem value='markdown'>Markdown</SelectItem>
+                    <SelectItem value='openapi'>OpenAPI 3.0</SelectItem>
+                    <SelectItem value='postman'>Postman Collection</SelectItem>
+                    <SelectItem value='insomnia'>Insomnia</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Code Examples Languages</Label>
-                <Select defaultValue="multiple">
+                <Select defaultValue='multiple'>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="multiple">Multiple Languages</SelectItem>
-                    <SelectItem value="javascript">JavaScript Only</SelectItem>
-                    <SelectItem value="python">Python Only</SelectItem>
-                    <SelectItem value="curl">cURL Only</SelectItem>
+                    <SelectItem value='multiple'>Multiple Languages</SelectItem>
+                    <SelectItem value='javascript'>JavaScript Only</SelectItem>
+                    <SelectItem value='python'>Python Only</SelectItem>
+                    <SelectItem value='curl'>cURL Only</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Version</Label>
-                <Input defaultValue="v1" placeholder="API version" />
+                <Input defaultValue='v1' placeholder='API version' />
               </div>
             </CardContent>
           </Card>
@@ -461,7 +453,7 @@ export function ApiDocsView({ projectId, projectName = 'Project' }: ApiDocsViewP
       <AssetGeneratorWrapper
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        assetType="api-doc"
+        assetType='api-doc'
         projectContext={{
           name: projectName,
           description: `API documentation for ${projectName}`

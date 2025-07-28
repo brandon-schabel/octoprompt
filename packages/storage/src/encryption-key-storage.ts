@@ -108,10 +108,7 @@ export class EncryptionKeyStorage {
    * Checks if an encryption key exists
    */
   hasKey(): boolean {
-    return !!(
-      process.env.PROMPTLIANO_ENCRYPTION_KEY ||
-      fs.existsSync(this.getKeyPath())
-    )
+    return !!(process.env.PROMPTLIANO_ENCRYPTION_KEY || fs.existsSync(this.getKeyPath()))
   }
 
   /**

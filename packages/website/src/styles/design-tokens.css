@@ -1,0 +1,140 @@
+@layer base {
+  :root {
+    /* Color Palette - Dark Mode First */
+    --color-black: 0 0% 0%;
+    --color-white: 0 0% 100%;
+
+    /* Brand Colors - From Promptliano Brand Kit */
+    --color-brand-primary: 266 100% 64%; /* Purple #9333ea */
+    --color-brand-secondary: 217 91% 60%; /* Blue #3b82f6 */
+    --color-brand-accent: 161 94% 30%; /* Teal #14b8a6 */
+
+    /* Gray Scale */
+    --color-gray-50: 210 40% 98%;
+    --color-gray-100: 210 40% 96.1%;
+    --color-gray-200: 214.3 31.8% 91.4%;
+    --color-gray-300: 213.4 30.8% 84.3%;
+    --color-gray-400: 215 20.2% 65.1%;
+    --color-gray-500: 215.4 16.3% 46.9%;
+    --color-gray-600: 215.3 19.3% 34.5%;
+    --color-gray-700: 215.3 25% 26.7%;
+    --color-gray-800: 217.2 32.6% 17.5%;
+    --color-gray-900: 222.2 47.4% 11.2%;
+    --color-gray-950: 222.2 84% 4.9%;
+
+    /* Semantic Colors - From Promptliano Brand Kit */
+    --color-success: 142 71% 45%; /* #22c55e */
+    --color-warning: 45 93% 47%; /* #f59e0b */
+    --color-error: 0 84.2% 60.2%; /* #ef4444 */
+    --color-info: 199 89% 48%; /* #0ea5e9 */
+
+    /* Extended Palette - Feature-specific colors from Brand Kit */
+    --color-green-500: 158 84% 39%; /* #10b981 - Online/success badges */
+    --color-yellow-500: 45 93% 47%; /* #eab308 - Beta/in-progress */
+    --color-red-500: 0 84% 60%; /* #ef4444 - Advanced/errors */
+    --color-orange-500: 25 95% 53%; /* #f97316 - Summaries/highlights */
+    --color-pink-500: 330 81% 60%; /* #ec4899 - Git features */
+    --color-blue-500: 217 91% 60%; /* #3b82f6 - File types/links */
+    --color-purple-500: 271 91% 65%; /* #a855f7 - AI/prompt features */
+    --color-indigo-400: 234 89% 74%; /* #818cf8 - Community/Discord */
+
+    /* Dark Mode Tokens */
+    --background: var(--color-gray-950);
+    --foreground: var(--color-gray-50);
+
+    --card: 222.2 84% 7%;
+    --card-foreground: var(--color-gray-50);
+
+    --popover: var(--color-gray-900);
+    --popover-foreground: var(--color-gray-50);
+
+    --primary: var(--color-brand-primary);
+    --primary-foreground: var(--color-white);
+
+    --secondary: var(--color-brand-secondary);
+    --secondary-foreground: var(--color-white);
+
+    --accent: var(--color-brand-accent);
+    --accent-foreground: var(--color-white);
+
+    --muted: var(--color-gray-800);
+    --muted-foreground: var(--color-gray-400);
+
+    --destructive: var(--color-error);
+    --destructive-foreground: var(--color-gray-50);
+
+    --border: var(--color-gray-800);
+    --input: var(--color-gray-800);
+    --ring: var(--color-brand-primary);
+
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    --spacing-3xl: 4rem;
+
+    /* Border Radius */
+    --radius: 0.5rem;
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+
+    /* Animation Durations */
+    --duration-fast: 150ms;
+    --duration-normal: 300ms;
+    --duration-slow: 500ms;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Glassmorphism */
+    --glass-bg: rgb(0 0 0 / 0.5);
+    --glass-border: rgb(255 255 255 / 0.1);
+    --glass-blur: 12px;
+  }
+
+  /* Light Mode */
+  .light {
+    --background: var(--color-white);
+    --foreground: var(--color-gray-900);
+
+    --card: var(--color-white);
+    --card-foreground: var(--color-gray-900);
+
+    --popover: var(--color-white);
+    --popover-foreground: var(--color-gray-900);
+
+    --primary: var(--color-brand-primary);
+    --primary-foreground: var(--color-white);
+
+    --secondary: var(--color-brand-secondary);
+    --secondary-foreground: var(--color-white);
+
+    --accent: var(--color-brand-accent);
+    --accent-foreground: var(--color-white);
+
+    --muted: var(--color-gray-100);
+    --muted-foreground: var(--color-gray-600);
+
+    --destructive: var(--color-error);
+    --destructive-foreground: var(--color-white);
+
+    --border: var(--color-gray-200);
+    --input: var(--color-gray-200);
+    --ring: var(--color-brand-primary);
+
+    /* Light mode glassmorphism */
+    --glass-bg: rgb(255 255 255 / 0.5);
+    --glass-border: rgb(0 0 0 / 0.1);
+  }
+}

@@ -116,7 +116,7 @@ export class MCPGlobalConfigService extends EventEmitter {
     const state = await this.loadState()
 
     // Remove existing installation for the same tool if any
-    state.installations = state.installations.filter(i => i.tool !== installation.tool)
+    state.installations = state.installations.filter((i) => i.tool !== installation.tool)
 
     // Add new installation
     state.installations.push({
@@ -136,8 +136,8 @@ export class MCPGlobalConfigService extends EventEmitter {
   async removeGlobalInstallation(tool: string): Promise<void> {
     const state = await this.loadState()
 
-    const removed = state.installations.find(i => i.tool === tool)
-    state.installations = state.installations.filter(i => i.tool !== tool)
+    const removed = state.installations.find((i) => i.tool === tool)
+    state.installations = state.installations.filter((i) => i.tool !== tool)
 
     state.lastModified = Date.now()
     await this.saveState(state)
@@ -152,7 +152,7 @@ export class MCPGlobalConfigService extends EventEmitter {
    */
   async hasGlobalInstallation(tool: string): Promise<boolean> {
     const state = await this.loadState()
-    return state.installations.some(i => i.tool === tool)
+    return state.installations.some((i) => i.tool === tool)
   }
 
   /**
@@ -167,16 +167,15 @@ export class MCPGlobalConfigService extends EventEmitter {
       promptlianoPath = path.resolve(promptlianoPath, '../..')
     }
 
-    const scriptPath = process.platform === 'win32'
-      ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
-      : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+    const scriptPath =
+      process.platform === 'win32'
+        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
     return {
       type: 'stdio',
       command: process.platform === 'win32' ? 'cmd.exe' : 'sh',
-      args: process.platform === 'win32'
-        ? ['/c', scriptPath]
-        : [scriptPath],
+      args: process.platform === 'win32' ? ['/c', scriptPath] : [scriptPath],
       env: {
         // No project ID for global installation
         PROMPTLIANO_API_URL: config.defaultServerUrl,
@@ -194,7 +193,7 @@ export class MCPGlobalConfigService extends EventEmitter {
   getDefaultConfig(): GlobalMCPConfig {
     return {
       servers: {
-        'promptliano': {
+        promptliano: {
           type: 'stdio',
           command: process.platform === 'win32' ? 'cmd.exe' : 'sh',
           args: [],

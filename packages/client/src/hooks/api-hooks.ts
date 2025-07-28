@@ -8,10 +8,13 @@ import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest 
 // packages/client/src/hooks/api/use-keys-api-v2.ts
 import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@promptliano/schemas'
 
+import type { CreateClaudeAgentBody, UpdateClaudeAgentBody, ClaudeAgent } from '@promptliano/schemas'
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { promptlianoClient } from './promptliano-client'
+import { AGENT_KEYS } from './api/use-agents-api'
 
 // Query Keys - simplified
 const CHAT_KEYS = {
@@ -803,6 +806,7 @@ export function useInvalidateProjects() {
       queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summary(projectId) })
       queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
       queryClient.invalidateQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
+      queryClient.invalidateQueries({ queryKey: AGENT_KEYS.projectAgents(projectId) })
     }
   }
 }
@@ -901,6 +905,7 @@ export function useBatchProjectOperations() {
       queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summary(projectId) })
       queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
       queryClient.invalidateQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
+      queryClient.invalidateQueries({ queryKey: AGENT_KEYS.projectAgents(projectId) })
     }
   }
 }
@@ -957,3 +962,6 @@ export function useSmartCaching() {
     }
   }
 }
+
+// Export agent hooks
+export * from './api/use-agents-api'

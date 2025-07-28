@@ -8,7 +8,10 @@ import { promptlianoClient } from '@/hooks/promptliano-client'
 export async function projectLoader({
   context,
   params
-}: { context: { queryClient: QueryClient }; params: Record<string, any> }) {
+}: {
+  context: { queryClient: QueryClient }
+  params: Record<string, any>
+}) {
   const projectId = params.projectId as number
 
   if (!projectId) return null

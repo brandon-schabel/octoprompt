@@ -12,13 +12,15 @@ import { ApiError } from '@promptliano/shared'
 
 // Schemas for API
 const GlobalMCPConfigSchema = z.object({
-  servers: z.record(z.object({
-    type: z.enum(['stdio', 'http']).default('stdio'),
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional(),
-    timeout: z.number().optional()
-  })),
+  servers: z.record(
+    z.object({
+      type: z.enum(['stdio', 'http']).default('stdio'),
+      command: z.string(),
+      args: z.array(z.string()).optional(),
+      env: z.record(z.string()).optional(),
+      timeout: z.number().optional()
+    })
+  ),
   defaultServerUrl: z.string().default('http://localhost:3147/api/mcp'),
   debugMode: z.boolean().default(false),
   defaultTimeout: z.number().optional(),
@@ -61,7 +63,10 @@ const handleApiError = (error: unknown, c: any) => {
   }
   const errorMessage = error instanceof Error ? error.message : 'Unknown error'
   console.error('[MCPGlobalConfig] Internal error:', errorMessage)
-  return c.json({ success: false, error: { message: 'Internal server error', code: 'INTERNAL_ERROR', details: errorMessage } }, 500)
+  return c.json(
+    { success: false, error: { message: 'Internal server error', code: 'INTERNAL_ERROR', details: errorMessage } },
+    500
+  )
 }
 
 // Routes
@@ -126,13 +131,15 @@ const getGlobalInstallationsRoute = createRoute({
             success: z.boolean(),
             data: z.object({
               installations: z.array(GlobalInstallationRecordSchema),
-              toolStatuses: z.array(z.object({
-                tool: z.string(),
-                name: z.string(),
-                installed: z.boolean(),
-                hasGlobalPromptliano: z.boolean(),
-                configPath: z.string().optional()
-              }))
+              toolStatuses: z.array(
+                z.object({
+                  tool: z.string(),
+                  name: z.string(),
+                  installed: z.boolean(),
+                  hasGlobalPromptliano: z.boolean(),
+                  configPath: z.string().optional()
+                })
+              )
             })
           })
         }
@@ -283,7 +290,7 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
         success: true,
         data: {
           installations,
-          toolStatuses: toolStatuses.map(tool => ({
+          toolStatuses: toolStatuses.map((tool) => ({
             tool: tool.tool,
             name: tool.name,
             installed: tool.installed,
@@ -357,9 +364,10 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
         promptlianoPath = path.resolve(promptlianoPath, '../..')
       }
 
-      const scriptPath = process.platform === 'win32'
-        ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
-        : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+      const scriptPath =
+        process.platform === 'win32'
+          ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
+          : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
 
       let scriptExists = false
       try {
@@ -373,10 +381,13 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
         success: true,
         data: {
           configExists: true,
-          configPath: path.join(process.env.HOME || process.env.USERPROFILE || '', '.promptliano/global-mcp-config.json'),
+          configPath: path.join(
+            process.env.HOME || process.env.USERPROFILE || '',
+            '.promptliano/global-mcp-config.json'
+          ),
           lastModified: Date.now(),
           totalInstallations: installations.length,
-          installedTools: installations.map(i => i.tool),
+          installedTools: installations.map((i) => i.tool),
           installation: {
             supported: true,
             scriptPath,

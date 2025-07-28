@@ -349,48 +349,42 @@ export function UserGuidesView({ projectId, projectName = 'Project' }: UserGuide
   }
 
   return (
-    <div className="h-full flex flex-col p-6 space-y-6">
+    <div className='h-full flex flex-col p-6 space-y-6'>
       <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <BookOpen className="h-6 w-6" />
+        <h2 className='text-2xl font-bold flex items-center gap-2'>
+          <BookOpen className='h-6 w-6' />
           User Guides
         </h2>
-        <p className="text-muted-foreground mt-1">
-          Create user-facing documentation for {projectName}
-        </p>
+        <p className='text-muted-foreground mt-1'>Create user-facing documentation for {projectName}</p>
       </div>
 
-      <Tabs defaultValue="templates" className="flex-1">
+      <Tabs defaultValue='templates' className='flex-1'>
         <TabsList>
-          <TabsTrigger value="templates">Guide Templates</TabsTrigger>
-          <TabsTrigger value="customize">Customize</TabsTrigger>
-          <TabsTrigger value="style">Style Guide</TabsTrigger>
+          <TabsTrigger value='templates'>Guide Templates</TabsTrigger>
+          <TabsTrigger value='customize'>Customize</TabsTrigger>
+          <TabsTrigger value='style'>Style Guide</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value='templates' className='space-y-4'>
+          <div className='grid gap-4 md:grid-cols-2'>
             {Object.entries(userGuideTemplates).map(([key, template]) => {
               const Icon = template.icon
               return (
-                <Card 
+                <Card
                   key={key}
-                  className={`cursor-pointer transition-all ${
-                    selectedTemplate === key ? 'ring-2 ring-primary' : ''
-                  }`}
+                  className={`cursor-pointer transition-all ${selectedTemplate === key ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => setSelectedTemplate(key as keyof typeof userGuideTemplates)}
                 >
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <Icon className="h-5 w-5 text-primary" />
+                    <div className='flex items-start justify-between'>
+                      <div className='flex items-center gap-3'>
+                        <Icon className='h-5 w-5 text-primary' />
                         <div>
-                          <CardTitle className="text-base">{template.name}</CardTitle>
-                          <CardDescription className="text-sm">{template.description}</CardDescription>
+                          <CardTitle className='text-base'>{template.name}</CardTitle>
+                          <CardDescription className='text-sm'>{template.description}</CardDescription>
                         </div>
                       </div>
-                      {selectedTemplate === key && (
-                        <Badge>Selected</Badge>
-                      )}
+                      {selectedTemplate === key && <Badge>Selected</Badge>}
                     </div>
                   </CardHeader>
                 </Card>
@@ -398,105 +392,103 @@ export function UserGuidesView({ projectId, projectName = 'Project' }: UserGuide
             })}
           </div>
 
-          <div className="flex gap-2">
-            <Button onClick={handleGenerateGuide} className="flex-1">
-              <Sparkles className="h-4 w-4 mr-2" />
+          <div className='flex gap-2'>
+            <Button onClick={handleGenerateGuide} className='flex-1'>
+              <Sparkles className='h-4 w-4 mr-2' />
               Generate User Guide
             </Button>
-            <Button variant="outline" onClick={handleCopyPrompt}>
-              <Copy className="h-4 w-4" />
+            <Button variant='outline' onClick={handleCopyPrompt}>
+              <Copy className='h-4 w-4' />
             </Button>
           </div>
         </TabsContent>
 
-        <TabsContent value="customize" className="space-y-4">
+        <TabsContent value='customize' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>Guide Configuration</CardTitle>
-              <CardDescription>
-                Customize the user guide for your audience
-              </CardDescription>
+              <CardDescription>Customize the user guide for your audience</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className='space-y-4'>
+              <div className='space-y-2'>
                 <Label>Target Audience</Label>
                 <Select value={targetAudience} onValueChange={setTargetAudience}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="end-users">End Users</SelectItem>
-                    <SelectItem value="power-users">Power Users</SelectItem>
-                    <SelectItem value="administrators">Administrators</SelectItem>
-                    <SelectItem value="developers">Developers</SelectItem>
+                    <SelectItem value='end-users'>End Users</SelectItem>
+                    <SelectItem value='power-users'>Power Users</SelectItem>
+                    <SelectItem value='administrators'>Administrators</SelectItem>
+                    <SelectItem value='developers'>Developers</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Guide Length</Label>
                 <Select value={guideLength} onValueChange={setGuideLength}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="concise">Concise (Quick Reference)</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                    <SelectItem value='concise'>Concise (Quick Reference)</SelectItem>
+                    <SelectItem value='standard'>Standard</SelectItem>
+                    <SelectItem value='comprehensive'>Comprehensive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Language Style</Label>
-                <Select defaultValue="friendly">
+                <Select defaultValue='friendly'>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="friendly">Friendly & Casual</SelectItem>
-                    <SelectItem value="professional">Professional</SelectItem>
-                    <SelectItem value="technical">Technical</SelectItem>
-                    <SelectItem value="simple">Simple & Clear</SelectItem>
+                    <SelectItem value='friendly'>Friendly & Casual</SelectItem>
+                    <SelectItem value='professional'>Professional</SelectItem>
+                    <SelectItem value='technical'>Technical</SelectItem>
+                    <SelectItem value='simple'>Simple & Clear</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-3">
+              <div className='space-y-3'>
                 <Label>Include Elements</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="screenshots"
+                <div className='space-y-2'>
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox
+                      id='screenshots'
                       checked={includeScreenshots}
                       onCheckedChange={(checked) => setIncludeScreenshots(!!checked)}
                     />
-                    <Label htmlFor="screenshots" className="cursor-pointer">
+                    <Label htmlFor='screenshots' className='cursor-pointer'>
                       Screenshot placeholders
                     </Label>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="videos"
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox
+                      id='videos'
                       checked={includeVideos}
                       onCheckedChange={(checked) => setIncludeVideos(!!checked)}
                     />
-                    <Label htmlFor="videos" className="cursor-pointer">
+                    <Label htmlFor='videos' className='cursor-pointer'>
                       Video tutorial links
                     </Label>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="tips" defaultChecked />
-                    <Label htmlFor="tips" className="cursor-pointer">
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox id='tips' defaultChecked />
+                    <Label htmlFor='tips' className='cursor-pointer'>
                       Tips and best practices
                     </Label>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="warnings" defaultChecked />
-                    <Label htmlFor="warnings" className="cursor-pointer">
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox id='warnings' defaultChecked />
+                    <Label htmlFor='warnings' className='cursor-pointer'>
                       Warning and caution notes
                     </Label>
                   </div>
@@ -506,37 +498,35 @@ export function UserGuidesView({ projectId, projectName = 'Project' }: UserGuide
           </Card>
         </TabsContent>
 
-        <TabsContent value="style" className="space-y-4">
+        <TabsContent value='style' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>Documentation Style Guide</CardTitle>
-              <CardDescription>
-                Guidelines for consistent user documentation
-              </CardDescription>
+              <CardDescription>Guidelines for consistent user documentation</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Voice & Tone</h4>
-                  <p className="text-sm text-muted-foreground">
+              <div className='space-y-4'>
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Voice & Tone</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Use active voice, be concise, and maintain a helpful tone
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Formatting</h4>
-                  <p className="text-sm text-muted-foreground">
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Formatting</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Use headings, bullet points, and numbered lists for clarity
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Visual Elements</h4>
-                  <p className="text-sm text-muted-foreground">
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Visual Elements</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Include screenshots, diagrams, and callouts where helpful
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Accessibility</h4>
-                  <p className="text-sm text-muted-foreground">
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Accessibility</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Use alt text, proper heading structure, and clear language
                   </p>
                 </div>
@@ -549,7 +539,7 @@ export function UserGuidesView({ projectId, projectName = 'Project' }: UserGuide
       <AssetGeneratorWrapper
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        assetType="user-guide"
+        assetType='user-guide'
         projectContext={{
           name: projectName,
           description: `User guides and documentation for ${projectName}`

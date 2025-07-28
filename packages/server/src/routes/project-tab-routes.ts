@@ -1,9 +1,6 @@
 import { createRoute, z } from '@hono/zod-openapi'
 import { OpenAPIHono } from '@hono/zod-openapi'
-import {
-  OperationSuccessResponseSchema,
-  ApiErrorResponseSchema
-} from '@promptliano/schemas'
+import { OperationSuccessResponseSchema, ApiErrorResponseSchema } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 import { generateTabName, getProjectById } from '@promptliano/services'
 
@@ -19,10 +16,12 @@ const projectTabNameGenerateRoute = createRoute({
         'application/json': {
           schema: z.object({
             projectId: z.number(),
-            tabData: z.object({
-              selectedFiles: z.array(z.number()).optional(),
-              userPrompt: z.string().optional()
-            }).optional(),
+            tabData: z
+              .object({
+                selectedFiles: z.array(z.number()).optional(),
+                userPrompt: z.string().optional()
+              })
+              .optional(),
             existingNames: z.array(z.string()).optional()
           })
         }
@@ -52,66 +51,61 @@ const projectTabNameGenerateRoute = createRoute({
   summary: 'Generate an AI-powered name for a project tab'
 })
 
-export const projectTabRoutes = new OpenAPIHono()
-  .openapi(projectTabNameGenerateRoute, async (c) => {
-    try {
-      const { projectId, tabData, existingNames } = await c.req.json()
+export const projectTabRoutes = new OpenAPIHono().openapi(projectTabNameGenerateRoute, async (c) => {
+  try {
+    const { projectId, tabData, existingNames } = await c.req.json()
 
-      // Get project information
-      const project = await getProjectById(projectId)
+    // Get project information
+    const project = await getProjectById(projectId)
 
-      if (!project) {
-        throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
-      }
+    if (!project) {
+      throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
+    }
 
-      // Generate tab name using the AI service
-      const selectedFiles = tabData?.selectedFiles || []
-      const context = tabData?.userPrompt || undefined
+    // Generate tab name using the AI service
+    const selectedFiles = tabData?.selectedFiles || []
+    const context = tabData?.userPrompt || undefined
 
-      const generatedName = await generateTabName(
-        project.name,
-        selectedFiles,
-        context
-      )
+    const generatedName = await generateTabName(project.name, selectedFiles, context)
 
-      return c.json(
-        {
-          success: true,
-          data: {
-            name: generatedName,
-            status: 'success',
-            generatedAt: new Date().toISOString()
-          }
-        } satisfies z.infer<typeof OperationSuccessResponseSchema>,
-        200
-      )
-    } catch (error) {
-      console.error('Failed to generate tab name:', error)
+    return c.json(
+      {
+        success: true,
+        data: {
+          name: generatedName,
+          status: 'success',
+          generatedAt: new Date().toISOString()
+        }
+      } satisfies z.infer<typeof OperationSuccessResponseSchema>,
+      200
+    )
+  } catch (error) {
+    console.error('Failed to generate tab name:', error)
 
-      if (error instanceof ApiError) {
-        return c.json(
-          {
-            success: false,
-            error: {
-              message: error.message,
-              code: error.code
-            }
-          },
-          error.status as any
-        )
-      }
-
+    if (error instanceof ApiError) {
       return c.json(
         {
           success: false,
           error: {
-            message: 'Failed to generate tab name',
-            code: 'TAB_NAME_GENERATION_ERROR'
+            message: error.message,
+            code: error.code
           }
         },
-        500
+        error.status as any
       )
     }
-  })
+
+    return c.json(
+      {
+        success: false,
+        error: {
+          message: 'Failed to generate tab name',
+          code: 'TAB_NAME_GENERATION_ERROR'
+        }
+      },
+      500
+    )
+  }
+})
 
 export type ProjectTabRoutes = typeof projectTabRoutes

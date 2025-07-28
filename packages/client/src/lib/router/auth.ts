@@ -29,10 +29,10 @@ export function getAuthState(): AuthState {
     isAuthenticated,
     user: isAuthenticated
       ? {
-        id: 'user-1',
-        name: 'Promptliano User',
-        email: 'user@promptliano.com'
-      }
+          id: 'user-1',
+          name: 'Promptliano User',
+          email: 'user@promptliano.com'
+        }
       : null,
     apiKey: apiKey || undefined
   }

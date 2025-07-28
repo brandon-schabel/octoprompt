@@ -5,6 +5,7 @@ This directory contains components for displaying and interacting with git commi
 ## Components
 
 ### CommitList
+
 The main component that displays a paginated list of commits with search and filtering capabilities.
 
 ```tsx
@@ -12,18 +13,13 @@ import { CommitList } from './git-commit-history'
 
 function MyComponent() {
   const [selectedBranch, setSelectedBranch] = useState<string>()
-  
-  return (
-    <CommitList
-      projectId={projectId}
-      selectedBranch={selectedBranch}
-      onBranchChange={setSelectedBranch}
-    />
-  )
+
+  return <CommitList projectId={projectId} selectedBranch={selectedBranch} onBranchChange={setSelectedBranch} />
 }
 ```
 
 ### BranchSelector
+
 A dropdown component for selecting git branches, showing the current branch and latest commit info.
 
 ```tsx
@@ -41,9 +37,11 @@ function MyComponent() {
 ```
 
 ### CommitCard
+
 Individual commit display component with collapsible details.
 
 ### CommitDetailModal
+
 Modal dialog showing full commit details including file changes.
 
 ## Usage Example
@@ -56,19 +54,11 @@ export function GitHistoryView({ projectId }: { projectId: number }) {
   const [selectedBranch, setSelectedBranch] = useState<string>()
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <BranchSelector
-          projectId={projectId}
-          selectedBranch={selectedBranch}
-          onBranchChange={setSelectedBranch}
-        />
+    <div className='flex flex-col h-full'>
+      <div className='p-4 border-b'>
+        <BranchSelector projectId={projectId} selectedBranch={selectedBranch} onBranchChange={setSelectedBranch} />
       </div>
-      <CommitList
-        projectId={projectId}
-        selectedBranch={selectedBranch}
-        onBranchChange={setSelectedBranch}
-      />
+      <CommitList projectId={projectId} selectedBranch={selectedBranch} onBranchChange={setSelectedBranch} />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { DocumentationGeneratorDialog } from '@/components/assets/documentation-
 import { toast } from 'sonner'
 import { FileText, Sparkles, Settings, Copy, Download } from 'lucide-react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
+import { ResponsiveContainer } from '@/components/ui/responsive-container'
 
 interface ProjectDocsViewProps {
   projectId: number
@@ -118,14 +119,15 @@ export function ProjectDocsView({ projectId, projectName = 'Project' }: ProjectD
   }
 
   return (
-    <div className='h-full flex flex-col p-6 space-y-6'>
-      <div>
-        <h2 className='text-2xl font-bold flex items-center gap-2'>
-          <FileText className='h-6 w-6' />
-          Project Documentation
-        </h2>
-        <p className='text-muted-foreground mt-1'>Generate comprehensive documentation for {projectName}</p>
-      </div>
+    <div className='h-full flex flex-col'>
+      <ResponsiveContainer className='py-6 space-y-6 h-full flex flex-col'>
+        <div>
+          <h2 className='text-2xl font-bold flex items-center gap-2'>
+            <FileText className='h-6 w-6' />
+            Project Documentation
+          </h2>
+          <p className='text-muted-foreground mt-1'>Generate comprehensive documentation for {projectName}</p>
+        </div>
 
       <Tabs defaultValue='templates' className='flex-1'>
         <TabsList>
@@ -134,8 +136,8 @@ export function ProjectDocsView({ projectId, projectName = 'Project' }: ProjectD
           <TabsTrigger value='settings'>Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value='templates' className='space-y-4'>
-          <div className='grid gap-4'>
+        <TabsContent value='templates' className='space-y-6'>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
             {Object.entries(projectDocTemplates).map(([key, template]) => (
               <Card
                 key={key}
@@ -164,14 +166,16 @@ export function ProjectDocsView({ projectId, projectName = 'Project' }: ProjectD
             ))}
           </div>
 
-          <div className='flex gap-2'>
-            <Button onClick={handleGenerateWithTemplate} className='flex-1'>
-              <Sparkles className='h-4 w-4 mr-2' />
-              Generate Documentation
-            </Button>
-            <Button variant='outline' onClick={handleCopyPrompt}>
-              <Copy className='h-4 w-4' />
-            </Button>
+          <div className='flex justify-center pt-4'>
+            <div className='flex gap-2'>
+              <Button onClick={handleGenerateWithTemplate} size='lg'>
+                <Sparkles className='h-4 w-4 mr-2' />
+                Generate Documentation
+              </Button>
+              <Button variant='outline' size='lg' onClick={handleCopyPrompt}>
+                <Copy className='h-4 w-4' />
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
@@ -210,10 +214,12 @@ export function ProjectDocsView({ projectId, projectName = 'Project' }: ProjectD
                 </div>
               </div>
 
-              <Button onClick={handleGenerateWithTemplate} className='w-full'>
-                <Sparkles className='h-4 w-4 mr-2' />
-                Generate Custom Documentation
-              </Button>
+              <div className='flex justify-center pt-2'>
+                <Button onClick={handleGenerateWithTemplate} size='lg'>
+                  <Sparkles className='h-4 w-4 mr-2' />
+                  Generate Custom Documentation
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -273,6 +279,7 @@ export function ProjectDocsView({ projectId, projectName = 'Project' }: ProjectD
           </Card>
         </TabsContent>
       </Tabs>
+      </ResponsiveContainer>
 
       <DocumentationGeneratorDialog
         open={generatorOpen}

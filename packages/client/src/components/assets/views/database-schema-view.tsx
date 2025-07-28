@@ -213,48 +213,42 @@ export function DatabaseSchemaView({ projectId, projectName = 'Project' }: Datab
   }
 
   return (
-    <div className="h-full flex flex-col p-6 space-y-6">
+    <div className='h-full flex flex-col p-6 space-y-6'>
       <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Database className="h-6 w-6" />
+        <h2 className='text-2xl font-bold flex items-center gap-2'>
+          <Database className='h-6 w-6' />
           Database Schema
         </h2>
-        <p className="text-muted-foreground mt-1">
-          Generate database documentation for {projectName}
-        </p>
+        <p className='text-muted-foreground mt-1'>Generate database documentation for {projectName}</p>
       </div>
 
-      <Tabs defaultValue="templates" className="flex-1">
+      <Tabs defaultValue='templates' className='flex-1'>
         <TabsList>
-          <TabsTrigger value="templates">Schema Templates</TabsTrigger>
-          <TabsTrigger value="config">Configuration</TabsTrigger>
-          <TabsTrigger value="best-practices">Best Practices</TabsTrigger>
+          <TabsTrigger value='templates'>Schema Templates</TabsTrigger>
+          <TabsTrigger value='config'>Configuration</TabsTrigger>
+          <TabsTrigger value='best-practices'>Best Practices</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid gap-4">
+        <TabsContent value='templates' className='space-y-4'>
+          <div className='grid gap-4'>
             {Object.entries(databaseTemplates).map(([key, template]) => {
               const Icon = template.icon
               return (
-                <Card 
+                <Card
                   key={key}
-                  className={`cursor-pointer transition-all ${
-                    selectedTemplate === key ? 'ring-2 ring-primary' : ''
-                  }`}
+                  className={`cursor-pointer transition-all ${selectedTemplate === key ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => setSelectedTemplate(key as keyof typeof databaseTemplates)}
                 >
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <Icon className="h-5 w-5 text-primary" />
+                    <div className='flex items-start justify-between'>
+                      <div className='flex items-center gap-3'>
+                        <Icon className='h-5 w-5 text-primary' />
                         <div>
-                          <CardTitle className="text-lg">{template.name}</CardTitle>
+                          <CardTitle className='text-lg'>{template.name}</CardTitle>
                           <CardDescription>{template.description}</CardDescription>
                         </div>
                       </div>
-                      {selectedTemplate === key && (
-                        <Badge>Selected</Badge>
-                      )}
+                      {selectedTemplate === key && <Badge>Selected</Badge>}
                     </div>
                   </CardHeader>
                 </Card>
@@ -266,102 +260,100 @@ export function DatabaseSchemaView({ projectId, projectName = 'Project' }: Datab
             <CardHeader>
               <CardTitle>Documentation Options</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="indexes"
+            <CardContent className='space-y-3'>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='indexes'
                   checked={includeIndexes}
                   onCheckedChange={(checked) => setIncludeIndexes(!!checked)}
                 />
-                <Label htmlFor="indexes" className="cursor-pointer">
+                <Label htmlFor='indexes' className='cursor-pointer'>
                   Include index definitions
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="constraints"
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='constraints'
                   checked={includeConstraints}
                   onCheckedChange={(checked) => setIncludeConstraints(!!checked)}
                 />
-                <Label htmlFor="constraints" className="cursor-pointer">
+                <Label htmlFor='constraints' className='cursor-pointer'>
                   Include constraints and validations
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="sample"
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='sample'
                   checked={includeSampleData}
                   onCheckedChange={(checked) => setIncludeSampleData(!!checked)}
                 />
-                <Label htmlFor="sample" className="cursor-pointer">
+                <Label htmlFor='sample' className='cursor-pointer'>
                   Include sample data
                 </Label>
               </div>
             </CardContent>
           </Card>
 
-          <div className="flex gap-2">
-            <Button onClick={handleGenerateSchema} className="flex-1">
-              <Sparkles className="h-4 w-4 mr-2" />
+          <div className='flex gap-2'>
+            <Button onClick={handleGenerateSchema} className='flex-1'>
+              <Sparkles className='h-4 w-4 mr-2' />
               Generate Database Documentation
             </Button>
-            <Button variant="outline" onClick={handleCopyPrompt}>
-              <Copy className="h-4 w-4" />
+            <Button variant='outline' onClick={handleCopyPrompt}>
+              <Copy className='h-4 w-4' />
             </Button>
           </div>
         </TabsContent>
 
-        <TabsContent value="config" className="space-y-4">
+        <TabsContent value='config' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>Database Configuration</CardTitle>
-              <CardDescription>
-                Specify your database details for accurate documentation
-              </CardDescription>
+              <CardDescription>Specify your database details for accurate documentation</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className='space-y-4'>
+              <div className='space-y-2'>
                 <Label>Database Type</Label>
                 <Select value={dbType} onValueChange={setDbType}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                    <SelectItem value="mysql">MySQL</SelectItem>
-                    <SelectItem value="sqlite">SQLite</SelectItem>
-                    <SelectItem value="mongodb">MongoDB</SelectItem>
-                    <SelectItem value="redis">Redis</SelectItem>
+                    <SelectItem value='postgresql'>PostgreSQL</SelectItem>
+                    <SelectItem value='mysql'>MySQL</SelectItem>
+                    <SelectItem value='sqlite'>SQLite</SelectItem>
+                    <SelectItem value='mongodb'>MongoDB</SelectItem>
+                    <SelectItem value='redis'>Redis</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Naming Convention</Label>
-                <Select defaultValue="snake_case">
+                <Select defaultValue='snake_case'>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="snake_case">snake_case</SelectItem>
-                    <SelectItem value="camelCase">camelCase</SelectItem>
-                    <SelectItem value="PascalCase">PascalCase</SelectItem>
+                    <SelectItem value='snake_case'>snake_case</SelectItem>
+                    <SelectItem value='camelCase'>camelCase</SelectItem>
+                    <SelectItem value='PascalCase'>PascalCase</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 <Label>Documentation Style</Label>
-                <Select defaultValue="detailed">
+                <Select defaultValue='detailed'>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="minimal">Minimal</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="detailed">Detailed</SelectItem>
+                    <SelectItem value='minimal'>Minimal</SelectItem>
+                    <SelectItem value='standard'>Standard</SelectItem>
+                    <SelectItem value='detailed'>Detailed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -369,37 +361,35 @@ export function DatabaseSchemaView({ projectId, projectName = 'Project' }: Datab
           </Card>
         </TabsContent>
 
-        <TabsContent value="best-practices" className="space-y-4">
+        <TabsContent value='best-practices' className='space-y-4'>
           <Card>
             <CardHeader>
               <CardTitle>Database Best Practices</CardTitle>
-              <CardDescription>
-                Guidelines for optimal database design
-              </CardDescription>
+              <CardDescription>Guidelines for optimal database design</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Normalization</h4>
-                  <p className="text-sm text-muted-foreground">
+              <div className='space-y-4'>
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Normalization</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Follow 3NF for transactional data, denormalize for read-heavy workloads
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Indexing Strategy</h4>
-                  <p className="text-sm text-muted-foreground">
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Indexing Strategy</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Index foreign keys, frequently queried columns, and sort fields
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Data Types</h4>
-                  <p className="text-sm text-muted-foreground">
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Data Types</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Use appropriate data types to optimize storage and query performance
                   </p>
                 </div>
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-2">Constraints</h4>
-                  <p className="text-sm text-muted-foreground">
+                <div className='p-4 border rounded-lg'>
+                  <h4 className='font-medium mb-2'>Constraints</h4>
+                  <p className='text-sm text-muted-foreground'>
                     Implement constraints at database level for data integrity
                   </p>
                 </div>
@@ -412,7 +402,7 @@ export function DatabaseSchemaView({ projectId, projectName = 'Project' }: Datab
       <AssetGeneratorWrapper
         open={generatorOpen}
         onOpenChange={setGeneratorOpen}
-        assetType="database-doc"
+        assetType='database-doc'
         projectContext={{
           name: projectName,
           description: `Database schema documentation for ${projectName}`

@@ -95,42 +95,42 @@ export async function instantiateServer({ port = serverConfig.serverPort }: Serv
     }
   })
 
-    // Start watchers for existing projects
-    ; (async () => {
-      logger.info('Starting project watchers...')
-      try {
-        const allProjects = await listProjects()
-        logger.info(`Found ${allProjects.length} projects to watch`)
-        for (const project of allProjects) {
-          // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
-          watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
-        }
-        logger.info('Project watchers started')
-      } catch (error) {
-        logger.error('Error starting project watchers', error)
+  // Start watchers for existing projects
+  ;(async () => {
+    logger.info('Starting project watchers...')
+    try {
+      const allProjects = await listProjects()
+      logger.info(`Found ${allProjects.length} projects to watch`)
+      for (const project of allProjects) {
+        // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
+        watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
       }
+      logger.info('Project watchers started')
+    } catch (error) {
+      logger.error('Error starting project watchers', error)
+    }
 
-      cleanupService.start()
+    cleanupService.start()
 
-      // Initialize job queue
-      logger.info('Initializing job queue...')
-      const jobQueue = getJobQueue()
+    // Initialize job queue
+    logger.info('Initializing job queue...')
+    const jobQueue = getJobQueue()
 
-      // Register git worktree handlers
-      for (const handler of gitWorktreeHandlers) {
-        jobQueue.registerHandler(handler)
-      }
+    // Register git worktree handlers
+    for (const handler of gitWorktreeHandlers) {
+      jobQueue.registerHandler(handler)
+    }
 
-      // Connect job events to WebSocket
-      const wsManager = getWebSocketManager()
-      jobQueue.on('job-event', (event) => {
-        wsManager.sendJobEvent(event)
-      })
+    // Connect job events to WebSocket
+    const wsManager = getWebSocketManager()
+    jobQueue.on('job-event', (event) => {
+      wsManager.sendJobEvent(event)
+    })
 
-      // Start job processing
-      jobQueue.startProcessing()
-      logger.info('Job queue started')
-    })()
+    // Start job processing
+    jobQueue.startProcessing()
+    logger.info('Job queue started')
+  })()
 
   logger.info(`Server running at http://localhost:${server.port}`)
   logger.info(`Server swagger at http://localhost:${server.port}/swagger`)
@@ -158,19 +158,19 @@ function serveStatic(path: string): Response {
 }
 
 if (import.meta.main) {
-  ; (async () => {
+  ;(async () => {
     // Parse command line arguments
     const args = process.argv.slice(2)
 
     // Check if we should start in MCP stdio mode
     if (args.includes('--mcp-stdio')) {
       // Import and start MCP stdio server directly
-      logger.info('Starting Promptliano MCP server in stdio mode...');
+      logger.info('Starting Promptliano MCP server in stdio mode...')
       if (process.platform === 'win32') {
-        logger.info('Running on Windows - ensuring compatible stdio handling');
+        logger.info('Running on Windows - ensuring compatible stdio handling')
       }
-      await import('./src/mcp-stdio-server.js');
-      return;
+      await import('./src/mcp-stdio-server.js')
+      return
     }
 
     let port = serverConfig.serverPort

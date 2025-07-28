@@ -14,9 +14,9 @@ export const FILE_SUMMARIZATION_LIMITS = {
    * Dynamic limits based on summary depth
    */
   MAX_CHARACTERS_BY_DEPTH: {
-    minimal: 25_000,   // ~6.25k tokens
+    minimal: 25_000, // ~6.25k tokens
     standard: 100_000, // ~25k tokens
-    detailed: 200_000  // ~50k tokens
+    detailed: 200_000 // ~50k tokens
   },
 
   /**
@@ -43,7 +43,7 @@ export function getMaxCharactersForDepth(depth: 'minimal' | 'standard' | 'detail
  * Helper function to truncate content if it exceeds the character limit
  */
 export function truncateForSummarization(
-  content: string, 
+  content: string,
   depth: 'minimal' | 'standard' | 'detailed' = 'standard'
 ): {
   content: string
@@ -61,8 +61,7 @@ export function truncateForSummarization(
     }
   }
 
-  const truncatedContent =
-    content.substring(0, maxChars) + FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX
+  const truncatedContent = content.substring(0, maxChars) + FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX
 
   return {
     content: truncatedContent,

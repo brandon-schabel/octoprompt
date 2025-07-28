@@ -302,11 +302,7 @@ export function useGitLog(
 }
 
 // Enhanced commit log with pagination and advanced filters
-export function useCommitLogEnhanced(
-  projectId: number | undefined,
-  params?: GitLogEnhancedRequest,
-  enabled = true
-) {
+export function useCommitLogEnhanced(projectId: number | undefined, params?: GitLogEnhancedRequest, enabled = true) {
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'log', 'enhanced', params],
     queryFn: async () => {
@@ -637,7 +633,13 @@ export function useAddGitWorktree(projectId: number | undefined) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (params: { path: string; branch?: string; newBranch?: string; commitish?: string; detach?: boolean }) => {
+    mutationFn: async (params: {
+      path: string
+      branch?: string
+      newBranch?: string
+      commitish?: string
+      detach?: boolean
+    }) => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }

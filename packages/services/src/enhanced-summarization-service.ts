@@ -65,16 +65,10 @@ export class EnhancedSummarizationService {
   /**
    * Summarize a group of related files together
    */
-  async summarizeFileGroup(
-    group: FileGroup,
-    files: ProjectFile[],
-    options: SummaryOptions
-  ): Promise<GroupSummary> {
+  async summarizeFileGroup(group: FileGroup, files: ProjectFile[], options: SummaryOptions): Promise<GroupSummary> {
     const startTime = Date.now()
-    const fileMap = new Map(files.map(f => [f.id, f]))
-    const groupFiles = group.fileIds
-      .map(id => fileMap.get(id))
-      .filter(f => f !== undefined) as ProjectFile[]
+    const fileMap = new Map(files.map((f) => [f.id, f]))
+    const groupFiles = group.fileIds.map((id) => fileMap.get(id)).filter((f) => f !== undefined) as ProjectFile[]
 
     if (groupFiles.length === 0) {
       throw new ApiError(400, 'No valid files in group', 'EMPTY_FILE_GROUP')
@@ -128,10 +122,7 @@ export class EnhancedSummarizationService {
   /**
    * Batch summarize files with progress tracking
    */
-  async *batchSummarizeWithProgress(
-    projectId: number,
-    options: BatchSummaryOptions
-  ): AsyncIterator<BatchProgress> {
+  async *batchSummarizeWithProgress(projectId: number, options: BatchSummaryOptions): AsyncIterator<BatchProgress> {
     const batchId = `batch-${projectId}-${Date.now()}`
     const abortController = new AbortController()
     this.activeOperations.set(batchId, abortController)
@@ -144,16 +135,13 @@ export class EnhancedSummarizationService {
       })
 
       const staleFiles = options.includeStaleFiles
-        ? await fileSummarizationTracker.getStaleFiles(
-          projectId,
-          options.staleThresholdDays * 24 * 60 * 60 * 1000
-        )
+        ? await fileSummarizationTracker.getStaleFiles(projectId, options.staleThresholdDays * 24 * 60 * 60 * 1000)
         : []
 
       // Combine and deduplicate
       const fileMap = new Map<number, ProjectFile>()
       const allFiles = [...unsummarizedFiles, ...staleFiles]
-      allFiles.forEach(f => fileMap.set(f.id, f))
+      allFiles.forEach((f) => fileMap.set(f.id, f))
       const filesToProcess = Array.from(fileMap.values())
 
       if (filesToProcess.length === 0) {
@@ -171,14 +159,10 @@ export class EnhancedSummarizationService {
       }
 
       // Group files
-      const groups = fileGroupingService.groupFilesByStrategy(
-        filesToProcess,
-        options.strategy,
-        {
-          maxGroupSize: options.maxGroupSize,
-          priorityThreshold: options.priorityThreshold
-        }
-      )
+      const groups = fileGroupingService.groupFilesByStrategy(filesToProcess, options.strategy, {
+        maxGroupSize: options.maxGroupSize,
+        priorityThreshold: options.priorityThreshold
+      })
 
       // Optimize groups for token limits
       const optimizedGroups = fileGroupingService.optimizeGroupsForTokenLimit(
@@ -231,12 +215,7 @@ export class EnhancedSummarizationService {
 
         try {
           // Process group with concurrency limit
-          const summary = await this.processGroupWithConcurrency(
-            group,
-            filesToProcess,
-            options,
-            abortController.signal
-          )
+          const summary = await this.processGroupWithConcurrency(group, filesToProcess, options, abortController.signal)
 
           filesProcessed += group.fileIds.length
           totalTokensUsed += summary.tokensUsed
@@ -244,7 +223,7 @@ export class EnhancedSummarizationService {
           // Update file statuses
           fileSummarizationTracker.updateSummarizationStatus(
             projectId,
-            group.fileIds.map(id => ({ fileId: id, status: 'completed' }))
+            group.fileIds.map((id) => ({ fileId: id, status: 'completed' }))
           )
         } catch (error) {
           const errorMsg = `Failed to process group ${group.name}: ${error instanceof Error ? error.message : String(error)}`
@@ -254,7 +233,7 @@ export class EnhancedSummarizationService {
           // Mark files as failed
           fileSummarizationTracker.updateSummarizationStatus(
             projectId,
-            group.fileIds.map(id => ({
+            group.fileIds.map((id) => ({
               fileId: id,
               status: 'failed',
               error: errorMsg
@@ -272,12 +251,9 @@ export class EnhancedSummarizationService {
       }
 
       // Complete tracking
-      const finalStatus = abortController.signal.aborted ? 'cancelled' :
-        errors.length > 0 ? 'partial' : 'completed'
+      const finalStatus = abortController.signal.aborted ? 'cancelled' : errors.length > 0 ? 'partial' : 'completed'
 
-      fileSummarizationTracker.completeBatchTracking(batchId,
-        finalStatus === 'partial' ? 'completed' : finalStatus
-      )
+      fileSummarizationTracker.completeBatchTracking(batchId, finalStatus === 'partial' ? 'completed' : finalStatus)
 
       // Final yield
       yield {
@@ -316,9 +292,7 @@ export class EnhancedSummarizationService {
       const modelConfig = MODEL_CONFIGS[options.depth || 'standard']
 
       // Build context-aware prompt
-      const systemPrompt = options.groupAware
-        ? this.buildGroupAwareSystemPrompt(options)
-        : promptsMap.summarizeCode
+      const systemPrompt = options.groupAware ? this.buildGroupAwareSystemPrompt(options) : promptsMap.summarizeCode
 
       const userPrompt = this.buildEnhancedUserPrompt(file, context, options)
 
@@ -355,13 +329,13 @@ export class EnhancedSummarizationService {
     groupFiles: ProjectFile[],
     allFilesMap: Map<number, ProjectFile>
   ): GroupContext {
-    const relatedFiles = groupFiles.map(f => ({
+    const relatedFiles = groupFiles.map((f) => ({
       id: f.id,
       name: f.name,
       summary: f.summary
     }))
 
-    const relationships = (group.relationships || []).map(rel => {
+    const relationships = (group.relationships || []).map((rel) => {
       const sourceFile = allFilesMap.get(rel.sourceFileId)
       const targetFile = allFilesMap.get(rel.targetFileId)
 
@@ -400,12 +374,16 @@ Strategy: ${group.strategy}
 Number of files: ${fileSummaries.length}
 
 File summaries:
-${fileSummaries.map(s => `- ${s.summary}`).join('\n')}
+${fileSummaries.map((s) => `- ${s.summary}`).join('\n')}
 
-${context.relationships.length > 0 ? `
+${
+  context.relationships.length > 0
+    ? `
 Relationships:
-${context.relationships.map(r => `- ${r.source} ${r.type} ${r.target}`).join('\n')}
-` : ''}
+${context.relationships.map((r) => `- ${r.source} ${r.type} ${r.target}`).join('\n')}
+`
+    : ''
+}
 
 Provide a concise overview that captures:
 1. The overall purpose and functionality of this file group
@@ -451,14 +429,14 @@ Provide a concise overview that captures:
       for (const pattern of techPatterns) {
         const matches = summary.summary.match(pattern)
         if (matches) {
-          matches.forEach(match => techStack.add(match))
+          matches.forEach((match) => techStack.add(match))
         }
       }
 
       // Extract common architectural terms
       const archTerms = summary.summary.match(/\b(service|component|hook|utility|helper|controller|model|schema)\b/gi)
       if (archTerms) {
-        archTerms.forEach(term => {
+        archTerms.forEach((term) => {
           const lower = term.toLowerCase()
           commonTerms.set(lower, (commonTerms.get(lower) || 0) + 1)
         })
@@ -481,8 +459,8 @@ Provide a concise overview that captures:
 
     // Add relationship insights
     const relationshipTypes = new Set<string>()
-    summaries.forEach(s => {
-      s.relationships?.forEach(r => relationshipTypes.add(r.relationshipType))
+    summaries.forEach((s) => {
+      s.relationships?.forEach((r) => relationshipTypes.add(r.relationshipType))
     })
 
     if (relationshipTypes.size > 0) {
@@ -518,7 +496,7 @@ Provide a concise overview that captures:
     const waitForSlot = async () => {
       while (running >= maxConcurrent) {
         if (signal.aborted) throw new Error('Operation cancelled')
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100))
       }
     }
 
@@ -545,9 +523,13 @@ When summarizing code files, consider:
 4. The file's public API (exports) and dependencies (imports)
 
 Provide summaries that are:
-- ${options.depth === 'minimal' ? 'Very concise (1-2 sentences)' :
-        options.depth === 'detailed' ? 'Comprehensive with implementation details' :
-          'Clear and informative (3-5 sentences)'}
+- ${
+      options.depth === 'minimal'
+        ? 'Very concise (1-2 sentences)'
+        : options.depth === 'detailed'
+          ? 'Comprehensive with implementation details'
+          : 'Clear and informative (3-5 sentences)'
+    }
 - Focused on purpose and functionality over implementation details
 - Aware of the broader context when group information is provided
 - Technical but accessible to developers unfamiliar with the codebase`
@@ -556,11 +538,7 @@ Provide summaries that are:
   /**
    * Build enhanced user prompt for summarization
    */
-  private buildEnhancedUserPrompt(
-    file: ProjectFile,
-    context: GroupContext,
-    options: SummaryOptions
-  ): string {
+  private buildEnhancedUserPrompt(file: ProjectFile, context: GroupContext, options: SummaryOptions): string {
     let prompt = `Summarize this ${file.extension || 'code'} file:\n\n`
     prompt += `File: ${file.path}\n`
 
@@ -568,23 +546,23 @@ Provide summaries that are:
       prompt += `\nThis file is part of a group: ${context.groupName}\n`
       prompt += `Related files in group:\n`
       context.relatedFiles
-        .filter(f => f.id !== file.id)
+        .filter((f) => f.id !== file.id)
         .slice(0, options.contextWindow || 3)
-        .forEach(f => {
+        .forEach((f) => {
           prompt += `- ${f.name}${f.summary ? `: ${f.summary.slice(0, 100)}...` : ''}\n`
         })
     }
 
     if (options.includeImports && file.imports && file.imports.length > 0) {
       prompt += `\nImports:\n`
-      file.imports.slice(0, 10).forEach(imp => {
+      file.imports.slice(0, 10).forEach((imp) => {
         prompt += `- ${imp.source}: ${imp.specifiers.join(', ')}\n`
       })
     }
 
     if (options.includeExports && file.exports && file.exports.length > 0) {
       prompt += `\nExports:\n`
-      file.exports.slice(0, 10).forEach(exp => {
+      file.exports.slice(0, 10).forEach((exp) => {
         prompt += `- ${exp.name} (${exp.type})\n`
       })
     }
@@ -610,12 +588,11 @@ Provide summaries that are:
 
     // Add import relationships
     if (file.imports) {
-      context.relatedFiles.forEach(related => {
+      context.relatedFiles.forEach((related) => {
         if (related.id === file.id) return
 
-        const hasImport = file.imports!.some(imp =>
-          related.name.includes(imp.source) ||
-          imp.source.includes(related.name.replace(/\.[^.]+$/, ''))
+        const hasImport = file.imports!.some(
+          (imp) => related.name.includes(imp.source) || imp.source.includes(related.name.replace(/\.[^.]+$/, ''))
         )
 
         if (hasImport) {
@@ -630,7 +607,7 @@ Provide summaries that are:
 
     // Add semantic relationships based on summary
     const summaryLower = summary.toLowerCase()
-    context.relatedFiles.forEach(related => {
+    context.relatedFiles.forEach((related) => {
       if (related.id === file.id) return
 
       if (summaryLower.includes(related.name.toLowerCase())) {

@@ -5,6 +5,7 @@ export * from './src/provider-key-storage'
 export * from './src/ticket-storage'
 export * from './src/mcp-storage'
 export * from './src/active-tab-storage'
+export * from './src/claude-agent-storage'
 
 // Export everything from storage-v2 except MigrationConfig
 export { StorageV2, FileAdapter, MemoryAdapter } from './src/storage-v2'

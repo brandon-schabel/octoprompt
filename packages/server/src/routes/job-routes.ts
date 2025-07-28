@@ -1,36 +1,24 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import {
-  createJobSchema,
-  jobFilterSchema,
-  type Job,
-  type JobEvent
-} from '@promptliano/schemas'
+import { createJobSchema, jobFilterSchema, type Job, type JobEvent } from '@promptliano/schemas'
 import { getJobQueue } from '@promptliano/services'
 import type { Variables } from '../types'
 
 const jobApp = new Hono<{ Variables: Variables }>()
 
 // Create a new job
-jobApp.post(
-  '/',
-  zValidator('json', createJobSchema),
-  async (c) => {
-    const jobData = c.req.valid('json')
-    const jobQueue = getJobQueue()
+jobApp.post('/', zValidator('json', createJobSchema), async (c) => {
+  const jobData = c.req.valid('json')
+  const jobQueue = getJobQueue()
 
-    try {
-      const job = await jobQueue.createJob(jobData)
-      return c.json(job, 201)
-    } catch (error) {
-      return c.json(
-        { error: error instanceof Error ? error.message : 'Failed to create job' },
-        400
-      )
-    }
+  try {
+    const job = await jobQueue.createJob(jobData)
+    return c.json(job, 201)
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : 'Failed to create job' }, 400)
   }
-)
+})
 
 // Get job by ID
 jobApp.get('/:jobId', async (c) => {
@@ -51,17 +39,13 @@ jobApp.get('/:jobId', async (c) => {
 })
 
 // Get jobs with filters
-jobApp.get(
-  '/',
-  zValidator('query', jobFilterSchema),
-  async (c) => {
-    const filter = c.req.valid('query')
-    const jobQueue = getJobQueue()
+jobApp.get('/', zValidator('query', jobFilterSchema), async (c) => {
+  const filter = c.req.valid('query')
+  const jobQueue = getJobQueue()
 
-    const jobs = await jobQueue.getJobs(filter)
-    return c.json({ jobs })
-  }
-)
+  const jobs = await jobQueue.getJobs(filter)
+  return c.json({ jobs })
+})
 
 // Get jobs for a specific project
 jobApp.get('/project/:projectId', async (c) => {
@@ -128,19 +112,19 @@ jobApp.post('/:jobId/retry', async (c) => {
 
     return c.json(newJob, 201)
   } catch (error) {
-    return c.json(
-      { error: error instanceof Error ? error.message : 'Failed to retry job' },
-      400
-    )
+    return c.json({ error: error instanceof Error ? error.message : 'Failed to retry job' }, 400)
   }
 })
 
 // Cleanup old jobs
 jobApp.post(
   '/cleanup',
-  zValidator('json', z.object({
-    olderThanDays: z.number().min(1).optional()
-  })),
+  zValidator(
+    'json',
+    z.object({
+      olderThanDays: z.number().min(1).optional()
+    })
+  ),
   async (c) => {
     const { olderThanDays = 30 } = c.req.valid('json')
     const jobQueue = getJobQueue()

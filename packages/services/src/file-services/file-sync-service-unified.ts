@@ -447,7 +447,8 @@ export async function syncFileSet(
         filesToCreate.push(fileData)
       }
     } catch (fileError: any) {
-      const isTruncationRelated = fileError?.message?.includes('truncated') || fileError?.message?.includes("Expected ']'")
+      const isTruncationRelated =
+        fileError?.message?.includes('truncated') || fileError?.message?.includes("Expected ']'")
       if (!isTruncationRelated) {
         logger.error(`Error processing ${normalizedRelativePath}`, fileError)
       }
@@ -489,7 +490,9 @@ export async function syncFileSet(
       const deleteResult = await bulkDeleteProjectFiles(project.id, fileIdsToDelete)
       deletedCount = deleteResult.deletedCount
     }
-    logger.info(`SyncFileSet results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped: ${skippedCount}`)
+    logger.info(
+      `SyncFileSet results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped: ${skippedCount}`
+    )
 
     // Index new and updated files in the background
     if (createdCount > 0 || updatedCount > 0) {
@@ -750,7 +753,7 @@ export function createWatchersManager() {
   function stopAllWatchers(): void {
     logger.debug(`Stopping all project watchers...`)
     if (activePlugins.size === 0) {
-      logger.debug("No active watchers to stop.")
+      logger.debug('No active watchers to stop.')
       return
     }
     for (const [projectId, plugin] of activePlugins.entries()) {
@@ -758,7 +761,7 @@ export function createWatchersManager() {
       plugin.stop()
     }
     activePlugins.clear()
-    logger.debug("All project watchers have been stopped.")
+    logger.debug('All project watchers have been stopped.')
   }
 
   return {
@@ -844,13 +847,13 @@ export function createCleanupService(options: CleanupOptions) {
 
   function stop(): void {
     if (!intervalId) {
-      cleanupLogger.warn("Cleanup service is not running, cannot stop.")
+      cleanupLogger.warn('Cleanup service is not running, cannot stop.')
       return
     }
     cleanupLogger.debug(`Stopping periodic cleanup (interval ID: ${intervalId}).`)
     clearInterval(intervalId)
     intervalId = null
-    cleanupLogger.debug("Periodic cleanup stopped.")
+    cleanupLogger.debug('Periodic cleanup stopped.')
   }
 
   return {

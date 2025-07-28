@@ -17,38 +17,71 @@ const DEFAULT_CONFIG: RelevanceConfig = {
 
 export class FileRelevanceService {
   private stopWords = new Set([
-    'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are',
-    'was', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does',
-    'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must',
-    'shall', 'to', 'of', 'in', 'for', 'with', 'by', 'from', 'up',
-    'about', 'into', 'through', 'during', 'before', 'after', 'above',
-    'below', 'between', 'under', 'again', 'further', 'then', 'once'
+    'the',
+    'is',
+    'at',
+    'which',
+    'on',
+    'and',
+    'a',
+    'an',
+    'as',
+    'are',
+    'was',
+    'were',
+    'been',
+    'be',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'could',
+    'should',
+    'may',
+    'might',
+    'must',
+    'shall',
+    'to',
+    'of',
+    'in',
+    'for',
+    'with',
+    'by',
+    'from',
+    'up',
+    'about',
+    'into',
+    'through',
+    'during',
+    'before',
+    'after',
+    'above',
+    'below',
+    'between',
+    'under',
+    'again',
+    'further',
+    'then',
+    'once'
   ])
 
   constructor(private config: RelevanceConfig = DEFAULT_CONFIG) { }
 
-  async scoreFilesForTicket(
-    ticket: Ticket,
-    projectId: number,
-    userContext?: string
-  ): Promise<RelevanceScore[]> {
+  async scoreFilesForTicket(ticket: Ticket, projectId: number, userContext?: string): Promise<RelevanceScore[]> {
     const text = `${ticket.title} ${ticket.overview} ${userContext || ''}`
     return this.scoreFilesForText(text, projectId)
   }
 
-  async scoreFilesForTask(
-    task: TicketTask,
-    ticket: Ticket,
-    projectId: number
-  ): Promise<RelevanceScore[]> {
+  async scoreFilesForTask(task: TicketTask, ticket: Ticket, projectId: number): Promise<RelevanceScore[]> {
     const text = `${task.content} ${task.description} ${ticket.title}`
     return this.scoreFilesForText(text, projectId)
   }
 
-  async scoreFilesForText(
-    text: string,
-    projectId: number
-  ): Promise<RelevanceScore[]> {
+  async scoreFilesForText(text: string, projectId: number): Promise<RelevanceScore[]> {
     const files = await getProjectFiles(projectId)
     if (!files || files.length === 0) return []
 
@@ -66,16 +99,10 @@ export class FileRelevanceService {
     }
 
     // Sort by total score descending and limit results
-    return scores
-      .sort((a, b) => b.totalScore - a.totalScore)
-      .slice(0, this.config.maxFiles)
+    return scores.sort((a, b) => b.totalScore - a.totalScore).slice(0, this.config.maxFiles)
   }
 
-  private calculateFileRelevance(
-    file: ProjectFile,
-    keywords: string[],
-    allFiles: ProjectFile[]
-  ): RelevanceScore {
+  private calculateFileRelevance(file: ProjectFile, keywords: string[], allFiles: ProjectFile[]): RelevanceScore {
     const keywordScore = this.calculateKeywordScore(file, keywords)
     const pathScore = this.calculatePathScore(file, keywords)
     const typeScore = this.calculateTypeScore(file, keywords)
@@ -164,7 +191,7 @@ export class FileRelevanceService {
     let score = 0
     for (const keyword of keywords) {
       const associations = typeAssociations[keyword.toLowerCase()]
-      if (associations && associations.some(a => file.path.endsWith(a))) {
+      if (associations && associations.some((a) => file.path.endsWith(a))) {
         score += 1
       }
     }
@@ -194,7 +221,7 @@ export class FileRelevanceService {
     let importCount = 0
     for (const otherFile of allFiles) {
       if (otherFile.id === file.id) continue
-      if (otherFile.imports?.some(imp => imp.source.includes(file.name))) {
+      if (otherFile.imports?.some((imp) => imp.source.includes(file.name))) {
         importCount++
       }
     }
@@ -224,28 +251,49 @@ export class FileRelevanceService {
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, ' ')
       .split(/\s+/)
-      .filter(word => word.length > 0)
+      .filter((word) => word.length > 0)
   }
 
   private shouldSkipFile(file: ProjectFile): boolean {
     // Skip binary files
     const binaryExtensions = [
-      'jpg', 'jpeg', 'png', 'gif', 'bmp', 'ico', 'svg', 'webp',
-      'mp4', 'avi', 'mov', 'mp3', 'wav', 'pdf', 'doc', 'docx',
-      'zip', 'tar', 'gz', 'exe', 'dll', 'so', 'dylib'
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'ico',
+      'svg',
+      'webp',
+      'mp4',
+      'avi',
+      'mov',
+      'mp3',
+      'wav',
+      'pdf',
+      'doc',
+      'docx',
+      'zip',
+      'tar',
+      'gz',
+      'exe',
+      'dll',
+      'so',
+      'dylib'
     ]
     if (file.extension && binaryExtensions.includes(file.extension.toLowerCase())) {
       return true
     }
 
     // Skip very large files
-    if (file.size && file.size > 1024 * 1024) { // 1MB
+    if (file.size && file.size > 1024 * 1024) {
+      // 1MB
       return true
     }
 
     // Skip node_modules, vendor, dist directories
     const skipPaths = ['node_modules', 'vendor', 'dist', 'build', '.git']
-    if (skipPaths.some(skip => file.path.includes(skip))) {
+    if (skipPaths.some((skip) => file.path.includes(skip))) {
       return true
     }
 

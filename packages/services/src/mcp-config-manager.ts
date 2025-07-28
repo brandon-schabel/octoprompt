@@ -26,12 +26,16 @@ export const MCPProjectConfigSchema = z.object({
   projectId: z.number(),
   projectName: z.string(),
   mcpEnabled: z.boolean(),
-  installedTools: z.array(z.object({
-    tool: z.string(),
-    installedAt: z.number(),
-    configPath: z.string().optional(),
-    serverName: z.string()
-  })).default([]),
+  installedTools: z
+    .array(
+      z.object({
+        tool: z.string(),
+        installedAt: z.number(),
+        configPath: z.string().optional(),
+        serverName: z.string()
+      })
+    )
+    .default([]),
   customInstructions: z.string().optional()
 })
 
@@ -68,23 +72,22 @@ export class MCPConfigManager {
     await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
   }
 
-  async updateProjectConfig(
-    projectId: number,
-    updates: Partial<MCPProjectConfig>
-  ): Promise<MCPProjectConfig> {
+  async updateProjectConfig(projectId: number, updates: Partial<MCPProjectConfig>): Promise<MCPProjectConfig> {
     const existing = await this.getProjectConfig(projectId)
 
-    const updated: MCPProjectConfig = existing ? {
-      ...existing,
-      ...updates,
-      installedTools: updates.installedTools || existing.installedTools
-    } : {
-      projectId,
-      projectName: updates.projectName || 'Unknown Project',
-      mcpEnabled: updates.mcpEnabled ?? true,
-      installedTools: updates.installedTools || [],
-      customInstructions: updates.customInstructions
-    }
+    const updated: MCPProjectConfig = existing
+      ? {
+          ...existing,
+          ...updates,
+          installedTools: updates.installedTools || existing.installedTools
+        }
+      : {
+          projectId,
+          projectName: updates.projectName || 'Unknown Project',
+          mcpEnabled: updates.mcpEnabled ?? true,
+          installedTools: updates.installedTools || [],
+          customInstructions: updates.customInstructions
+        }
 
     await this.saveProjectConfig(updated)
     return updated
@@ -100,7 +103,7 @@ export class MCPConfigManager {
 
     if (config) {
       // Remove existing entry for this tool if any
-      config.installedTools = config.installedTools.filter(t => t.tool !== tool)
+      config.installedTools = config.installedTools.filter((t) => t.tool !== tool)
 
       // Add new entry
       config.installedTools.push({
@@ -117,12 +120,14 @@ export class MCPConfigManager {
         projectId,
         projectName: 'Unknown Project',
         mcpEnabled: true,
-        installedTools: [{
-          tool,
-          installedAt: Date.now(),
-          configPath,
-          serverName
-        }]
+        installedTools: [
+          {
+            tool,
+            installedAt: Date.now(),
+            configPath,
+            serverName
+          }
+        ]
       })
     }
   }
@@ -131,7 +136,7 @@ export class MCPConfigManager {
     const config = await this.getProjectConfig(projectId)
 
     if (config) {
-      config.installedTools = config.installedTools.filter(t => t.tool !== tool)
+      config.installedTools = config.installedTools.filter((t) => t.tool !== tool)
       await this.saveProjectConfig(config)
     }
   }
@@ -141,9 +146,7 @@ export class MCPConfigManager {
     const activeSessions = getActiveSessions()
 
     // Find sessions for this project
-    const projectSessions = activeSessions.filter(
-      session => session.projectId === projectId
-    )
+    const projectSessions = activeSessions.filter((session) => session.projectId === projectId)
 
     if (projectSessions.length > 0) {
       // Get the most recent session
@@ -190,7 +193,7 @@ export class MCPConfigManager {
 
   async getGlobalStatus(): Promise<{ totalSessions: number; projectSessions: number }> {
     const activeSessions = getActiveSessions()
-    const projectSessions = activeSessions.filter(s => s.projectId !== undefined).length
+    const projectSessions = activeSessions.filter((s) => s.projectId !== undefined).length
 
     return {
       totalSessions: activeSessions.length,
