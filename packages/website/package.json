@@ -14,7 +14,7 @@
     "analyze:bundle": "npm run build && tsx scripts/analyze-bundle.ts"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.10.0",
+    "@hookform/resolvers": "^5.2.0",
     "@promptliano/brand-kit": "file:../brand-kit",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-dialog": "^1.1.14",
