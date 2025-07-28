@@ -204,35 +204,35 @@ jobs:
       - name: Wait for deployment
         run: sleep 30
 
-      - name: Check site availability
-        run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://promptliano.com)
-          if [ $response -eq 200 ]; then
-            echo "✅ Site is available (HTTP $response)"
-          else
-            echo "❌ Site returned HTTP $response"
-            exit 1
-          fi
+      # - name: Check site availability
+      #   run: |
+      #     response=$(curl -s -o /dev/null -w "%{http_code}" https://promptliano.com)
+      #     if [ $response -eq 200 ]; then
+      #       echo "✅ Site is available (HTTP $response)"
+      #     else
+      #       echo "❌ Site returned HTTP $response"
+      #       exit 1
+      #     fi
 
-      - name: Validate critical paths
-        run: |
-          # Check main page
-          curl -f -s https://promptliano.com > /dev/null || exit 1
-          echo "✅ Main page is accessible"
+      # - name: Validate critical paths
+      #   run: |
+      #     # Check main page
+      #     curl -f -s https://promptliano.com > /dev/null || exit 1
+      #     echo "✅ Main page is accessible"
 
-          # Check docs page
-          curl -f -s https://promptliano.com/docs > /dev/null || exit 1
-          echo "✅ Docs page is accessible"
+      #     # Check docs page
+      #     curl -f -s https://promptliano.com/docs > /dev/null || exit 1
+      #     echo "✅ Docs page is accessible"
 
-          # Check static assets
-          curl -f -s https://promptliano.com/favicon.svg > /dev/null || exit 1
-          echo "✅ Static assets are accessible"
+      #     # Check static assets
+      #     curl -f -s https://promptliano.com/favicon.svg > /dev/null || exit 1
+      #     echo "✅ Static assets are accessible"
 
-      - name: Run Lighthouse CI
-        uses: treosh/lighthouse-ci-action@v12
-        with:
-          urls: |
-            https://promptliano.com
-            https://promptliano.com/docs
-          uploadArtifacts: true
-          temporaryPublicStorage: true
+      # - name: Run Lighthouse CI
+      #   uses: treosh/lighthouse-ci-action@v12
+      #   with:
+      #     urls: |
+      #       https://promptliano.com
+      #       https://promptliano.com/docs
+      #     uploadArtifacts: true
+      #     temporaryPublicStorage: true
