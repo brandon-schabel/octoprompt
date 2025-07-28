@@ -117,17 +117,16 @@ const features: ExtendedFeature[] = [
 export function FeatureShowcase() {
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null)
   
-  const showcaseData: FeatureShowcase = {
+  const showcaseData = {
     sectionTitle: 'Everything You Need for AI-Enhanced Development',
     sectionSubtitle:
       'Promptliano provides a comprehensive toolkit to supercharge your development workflow with AI assistance.',
-    layout: 'grid',
+    layout: 'grid' as const,
     columns: {
       mobile: 1,
       tablet: 2,
       desktop: 3
-    },
-    features
+    }
   }
 
   const iconMap: Record<string, any> = {
@@ -164,7 +163,7 @@ export function FeatureShowcase() {
         </AnimateOnScroll>
 
         <FeatureGrid columns={showcaseData.columns}>
-          {showcaseData.features.map((feature, index) => {
+          {features.map((feature, index) => {
             const Icon = iconMap[feature.icon.value] || Code2
             return (
               <AnimateOnScroll key={feature.id} delay={index * 0.1}>
