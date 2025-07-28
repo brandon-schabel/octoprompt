@@ -107,6 +107,13 @@ promptliano.exe  # Windows`}
               description='Click "Create New Project" and point it to your codebase folder'
               layout='centered'
             />
+            <FeatureScreenshot
+              src='/assets/screenshots/project-selector-dialog.webp'
+              alt='Project Selector Dialog'
+              title='Select Your Project'
+              description='Choose or create a project to start working with Promptliano'
+              layout='centered'
+            />
           </div>
 
           <div className='space-y-3'>
@@ -133,6 +140,13 @@ promptliano.exe  # Windows`}
               alt='Selected Files'
               title='Building Context'
               description='Selected files appear on the right with token counts'
+              layout='centered'
+            />
+            <FeatureScreenshot
+              src='/assets/screenshots/tickets-overview-with-tasks.webp'
+              alt='Tickets Overview'
+              title='Manage Your Work'
+              description='Track features and bugs with AI-generated task suggestions'
               layout='centered'
             />
           </div>
