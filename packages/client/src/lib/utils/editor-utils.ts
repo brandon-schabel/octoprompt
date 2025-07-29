@@ -1,4 +1,4 @@
-import { FileCode2, Zap, Code2, Package } from 'lucide-react'
+import { FileCode2, Zap, Code2, Package, Terminal } from 'lucide-react'
 
 export interface EditorInfo {
   type: string
@@ -29,6 +29,13 @@ export const EDITOR_CONFIGS: Record<string, EditorInfo> = {
     icon: Code2,
     color: 'text-green-500',
     description: 'Universal MCP configuration (works with all editors)'
+  },
+  'claude-code': {
+    type: 'claude-code',
+    name: 'Claude Code',
+    icon: Terminal,
+    color: 'text-orange-500',
+    description: 'Add Promptliano MCP server to Claude Code CLI'
   }
   // promptliano: {
   //   type: 'promptliano',
@@ -44,6 +51,8 @@ export function getEditorInfoFromPath(path: string): EditorInfo {
     return EDITOR_CONFIGS.vscode
   } else if (path.includes('.cursor/mcp.json')) {
     return EDITOR_CONFIGS.cursor
+  } else if (path.includes('claude-code')) {
+    return EDITOR_CONFIGS['claude-code']
   }
   // else if (path.includes('.promptliano/mcp.json')) {
   //   return EDITOR_CONFIGS.promptliano

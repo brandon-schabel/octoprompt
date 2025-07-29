@@ -15,7 +15,7 @@ export class FileIndexingService {
   private insertTrigramStmt: Statement
   private updateFTSStmt: Statement
 
-  // Common programming language keywords to filter out
+  // Common stop words to filter out (excluding programming keywords)
   private readonly STOP_WORDS = new Set([
     'the',
     'is',
@@ -49,23 +49,8 @@ export class FileIndexingService {
     'of',
     'in',
     'for',
-    'with',
-    'function',
-    'const',
-    'let',
-    'var',
-    'if',
-    'else',
-    'return',
-    'import',
-    'export',
-    'class',
-    'interface',
-    'type',
-    'public',
-    'private',
-    'protected',
-    'static'
+    'with'
+    // Removed programming keywords like 'function', 'class', etc. as they're important for code search
   ])
 
   constructor() {
@@ -220,34 +205,35 @@ export class FileIndexingService {
     try {
       // Check if already indexed and up to date
       if (!forceReindex) {
-        const metadata = this.getFileMetadata(file.id)
+        const metadata = this.getFileMetadata(String(file.id))
         if (metadata && metadata.last_indexed >= file.updated) {
           return // Already indexed and current
         }
       }
 
       const content = file.content || ''
+      const processedContent = this.preprocessContent(content)
       const tokens = this.tokenize(content)
       const keywords = this.extractKeywords(tokens)
       const tfIdfVector = this.calculateTfIdf(tokens, keywords)
-      const trigrams = this.generateTrigrams(file.path + ' ' + content)
+      const trigrams = this.generateTrigrams(file.path + ' ' + processedContent)
       // Begin transaction for atomic updates
       this.db.transaction(() => {
         // Check if file exists in FTS
-        const exists = this.db.prepare('SELECT 1 FROM file_search_fts WHERE file_id = ?').get(file.id)
+        const exists = this.db.prepare('SELECT 1 FROM file_search_fts WHERE file_id = ?').get(String(file.id))
 
         if (exists) {
-          // Update existing entry
-          this.updateFTSStmt.run(content, file.summary || '', keywords.map((k) => k.keyword).join(' '), file.id)
+          // Update existing entry with preprocessed content
+          this.updateFTSStmt.run(processedContent, file.summary || '', keywords.map((k) => k.keyword).join(' '), String(file.id))
         } else {
-          // Insert new entry
+          // Insert new entry with preprocessed content
           this.insertFTSStmt.run(
-            file.id,
+            String(file.id),
             file.projectId,
             file.path,
             file.name,
             file.extension || '',
-            content,
+            processedContent,
             file.summary || '',
             keywords.map((k) => k.keyword).join(' ')
           )
@@ -255,7 +241,7 @@ export class FileIndexingService {
 
         // Update metadata
         this.insertMetadataStmt.run(
-          file.id,
+          String(file.id),
           file.projectId,
           Buffer.from(JSON.stringify(tfIdfVector)),
           JSON.stringify(keywords.slice(0, 20)), // Top 20 keywords
@@ -268,17 +254,17 @@ export class FileIndexingService {
         )
 
         // Clear existing keywords and trigrams
-        this.db.prepare('DELETE FROM file_keywords WHERE file_id = ?').run(file.id)
-        this.db.prepare('DELETE FROM file_trigrams WHERE file_id = ?').run(file.id)
+        this.db.prepare('DELETE FROM file_keywords WHERE file_id = ?').run(String(file.id))
+        this.db.prepare('DELETE FROM file_trigrams WHERE file_id = ?').run(String(file.id))
 
         // Insert keywords
         for (const kw of keywords) {
-          this.insertKeywordStmt.run(file.id, kw.keyword, kw.frequency, kw.tfScore, kw.idfScore || 0)
+          this.insertKeywordStmt.run(String(file.id), kw.keyword, kw.frequency, kw.tfScore, kw.idfScore || 0)
         }
 
         // Insert trigrams
         for (const [trigram, position] of trigrams) {
-          this.insertTrigramStmt.run(trigram, file.id, position)
+          this.insertTrigramStmt.run(trigram, String(file.id), position)
         }
       })()
     } catch (error) {
@@ -312,7 +298,7 @@ export class FileIndexingService {
       const batch = files.slice(i, i + batchSize)
       for (const file of batch) {
         try {
-          const metadata = this.getFileMetadata(file.id)
+          const metadata = this.getFileMetadata(String(file.id))
           if (!forceReindex && metadata && metadata.last_indexed >= file.updated) {
             skipped++
             continue
@@ -335,42 +321,55 @@ export class FileIndexingService {
    */
   async removeFileFromIndex(fileId: string | number): Promise<void> {
     this.db.transaction(() => {
-      this.db.prepare('DELETE FROM file_search_fts WHERE file_id = ?').run(fileId)
-      this.db.prepare('DELETE FROM file_search_metadata WHERE file_id = ?').run(fileId)
-      this.db.prepare('DELETE FROM file_keywords WHERE file_id = ?').run(fileId)
-      this.db.prepare('DELETE FROM file_trigrams WHERE file_id = ?').run(fileId)
+      this.db.prepare('DELETE FROM file_search_fts WHERE file_id = ?').run(String(fileId))
+      this.db.prepare('DELETE FROM file_search_metadata WHERE file_id = ?').run(String(fileId))
+      this.db.prepare('DELETE FROM file_keywords WHERE file_id = ?').run(String(fileId))
+      this.db.prepare('DELETE FROM file_trigrams WHERE file_id = ?').run(String(fileId))
     })()
+  }
+
+  /**
+   * Pre-process content for better FTS5 indexing
+   */
+  private preprocessContent(content: string): string {
+    // Return original content - let FTS5 handle tokenization
+    // This avoids duplication and maintains search relevance
+    return content
   }
 
   /**
    * Tokenize content for indexing
    */
   private tokenize(content: string): string[] {
+    // Pre-process to handle code patterns
+    let processed = content
+    // Split camelCase and PascalCase
+    processed = processed.replace(/([a-z])([A-Z])/g, '$1 $2')
+    // Split numbers from letters
+    processed = processed.replace(/([a-zA-Z])(\d)/g, '$1 $2')
+    processed = processed.replace(/(\d)([a-zA-Z])/g, '$1 $2')
+    // Split snake_case
+    processed = processed.replace(/_/g, ' ')
+    // Split kebab-case
+    processed = processed.replace(/-/g, ' ')
+    
     // Split on word boundaries, keeping alphanumeric and some special chars
-    const tokens = content
+    const tokens = processed
       .toLowerCase()
       .split(/[\s\n\r\t.,;:!?\(\)\[\]{}"'`<>\/\\|@#$%^&*+=~-]+/)
       .filter((token) => token.length > 2 && token.length < 50)
       .filter((token) => !this.STOP_WORDS.has(token))
 
-    // Also split camelCase and snake_case
-    const expandedTokens: string[] = []
-    for (const token of tokens) {
-      expandedTokens.push(token)
+    // Also split camelCase and snake_case from original content
+    const originalTokens = content
+      .toLowerCase()
+      .split(/[\s\n\r\t.,;:!?\(\)\[\]{}"'`<>\/\\|@#$%^&*+=~-]+/)
+      .filter((token) => token.length > 2 && token.length < 50)
+      .filter((token) => !this.STOP_WORDS.has(token))
 
-      // Split camelCase
-      const camelParts = token.split(/(?=[A-Z])/).map((s) => s.toLowerCase())
-      if (camelParts.length > 1) {
-        expandedTokens.push(...camelParts.filter((p) => p.length > 2))
-      }
-
-      // Split snake_case
-      const snakeParts = token.split('_').filter((p) => p.length > 2)
-      if (snakeParts.length > 1) {
-        expandedTokens.push(...snakeParts)
-      }
-    }
-    return expandedTokens
+    // Combine and deduplicate
+    const allTokens = [...new Set([...tokens, ...originalTokens])]
+    return allTokens
   }
 
   /**

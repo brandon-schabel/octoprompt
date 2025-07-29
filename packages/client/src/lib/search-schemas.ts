@@ -65,6 +65,13 @@ export const assetsSearchSchema = z.object({
   projectId: z.coerce.number().optional().catch(undefined)
 })
 
+// Settings page search schema
+export const settingsTabSchema = z.enum(['general', 'api-keys', 'global-mcp']).catch('general').optional()
+
+export const settingsSearchSchema = z.object({
+  tab: settingsTabSchema
+})
+
 // Type exports for easier usage
 export type ProjectsSearch = z.infer<typeof projectsSearchSchema>
 export type ProjectView = z.infer<typeof projectViewSchema>
@@ -75,6 +82,8 @@ export type ClaudeCodeView = z.infer<typeof claudeCodeViewSchema>
 export type ChatSearch = z.infer<typeof chatSearchSchema>
 export type TicketsSearch = z.infer<typeof ticketsSearchSchema>
 export type AssetsSearch = z.infer<typeof assetsSearchSchema>
+export type SettingsSearch = z.infer<typeof settingsSearchSchema>
+export type SettingsTab = z.infer<typeof settingsTabSchema>
 
 // Utility function to merge search schemas
 export function mergeSearchSchemas<T extends z.ZodObject<any>, U extends z.ZodObject<any>>(

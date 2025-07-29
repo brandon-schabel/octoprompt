@@ -373,6 +373,10 @@ export class MCPProjectConfigService extends EventEmitter {
     if (editorType === 'vscode' || editorType === 'cursor') {
       // VS Code and Cursor use the same format
       return baseConfig
+    } else if (editorType === 'claude-code') {
+      // Claude Code doesn't use JSON config files, but we return the base config
+      // for reference purposes (though it won't be saved to a file)
+      return baseConfig
     }
 
     return baseConfig
