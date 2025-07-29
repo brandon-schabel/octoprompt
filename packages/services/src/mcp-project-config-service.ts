@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { createLogger } from './utils/logger'
 import { EventEmitter } from 'events'
 import { getProjectById } from './project-service'
+import { toPosixPath, toOSPath, joinPosix } from './utils/path-utils'
 
 const logger = createLogger('MCPProjectConfigService')
 
@@ -219,10 +220,10 @@ export class MCPProjectConfigService extends EventEmitter {
     const project = await getProjectById(projectId)
 
     const variables: Record<string, string> = {
-      workspaceFolder: project.path,
+      workspaceFolder: toPosixPath(project.path),
       projectId: String(projectId),
       projectName: project.name,
-      userHome: os.homedir(),
+      userHome: toPosixPath(os.homedir()),
       ...process.env
     }
 
@@ -314,15 +315,18 @@ export class MCPProjectConfigService extends EventEmitter {
    * Get editor type from config location path
    */
   getEditorType(locationPath: string): string {
-    if (locationPath.includes('.vscode/mcp.json')) {
+    // Normalize path to use forward slashes for consistent comparison
+    const normalizedPath = toPosixPath(locationPath)
+    
+    if (normalizedPath.includes('.vscode/mcp.json')) {
       return 'vscode'
-    } else if (locationPath.includes('.cursor/mcp.json')) {
+    } else if (normalizedPath.includes('.cursor/mcp.json')) {
       return 'cursor'
     }
-    // else if (locationPath.includes('.promptliano/mcp.json')) {
+    // else if (normalizedPath.includes('.promptliano/mcp.json')) {
     //   return 'promptliano'
     // }
-    else if (locationPath.includes('.mcp.json')) {
+    else if (normalizedPath.includes('.mcp.json')) {
       return 'universal'
     }
     return 'unknown'
@@ -354,10 +358,10 @@ export class MCPProjectConfigService extends EventEmitter {
         promptliano: {
           type: 'stdio',
           command: process.platform === 'win32' ? 'cmd.exe' : 'sh',
-          args: process.platform === 'win32' ? ['/c', scriptPath] : [scriptPath],
+          args: process.platform === 'win32' ? ['/c', toOSPath(scriptPath)] : [toOSPath(scriptPath)],
           env: {
             PROMPTLIANO_PROJECT_ID: projectId.toString(),
-            PROMPTLIANO_PROJECT_PATH: project.path,
+            PROMPTLIANO_PROJECT_PATH: toPosixPath(project.path),
             PROMPTLIANO_API_URL: 'http://localhost:3147/api/mcp',
             NODE_ENV: 'production'
           }

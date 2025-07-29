@@ -8,6 +8,7 @@ import {
   type ClaudeAgentProject
 } from '@promptliano/schemas'
 import { DatabaseManager, getDb } from './database-manager'
+import { toPosixPath, joinPosix } from '@promptliano/services'
 
 // Storage schemas
 export const ClaudeAgentsStorageSchema = z.record(z.string(), ClaudeAgentSchema)
@@ -16,8 +17,8 @@ export type ClaudeAgentsStorage = z.infer<typeof ClaudeAgentsStorageSchema>
 export const ClaudeAgentProjectsStorageSchema = z.array(ClaudeAgentProjectSchema)
 export type ClaudeAgentProjectsStorage = z.infer<typeof ClaudeAgentProjectsStorageSchema>
 
-// Frontmatter parsing regex
-const FRONTMATTER_REGEX = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/
+// Frontmatter parsing regex - handles both Unix (\n) and Windows (\r\n) line endings
+const FRONTMATTER_REGEX = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/
 
 interface AgentFrontmatter {
   name: string
@@ -120,7 +121,7 @@ export const claudeAgentStorage = {
             name: frontmatter.name,
             description: frontmatter.description,
             color: (frontmatter.color as any) || 'blue',
-            filePath,
+            filePath: toPosixPath(filePath),
             content: body,
             created: stats.birthtime.getTime(),
             updated: stats.mtime.getTime()
@@ -150,7 +151,7 @@ export const claudeAgentStorage = {
     await fs.writeFile(filePath, content, 'utf-8')
 
     // Update the agent with the correct file path
-    agent.filePath = filePath
+    agent.filePath = toPosixPath(filePath)
     agent.updated = Date.now()
 
     return agent
