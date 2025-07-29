@@ -48,31 +48,40 @@ function GettingStartedPage() {
             </p>
             <DownloadButton variant='dropdown' size='lg' />
             <p className='text-sm text-muted-foreground mt-2'>
-              Need help? See our <a href='/docs/download-installation' className='text-primary hover:underline'>detailed installation guide</a>.
+              Need help? See our{' '}
+              <a href='/docs/download-installation' className='text-primary hover:underline'>
+                detailed installation guide
+              </a>
+              .
             </p>
           </div>
 
           <div className='space-y-3'>
             <h3 className='text-xl font-medium'>2. Run Promptliano</h3>
             <p className='text-muted-foreground'>Extract the download and start Promptliano:</p>
-            <CodeBlock 
+            <CodeBlock
               code={`# For Bun bundle (recommended)
-cd promptliano-0.8.0-bun-bundle
+cd promptliano-0.8.1-bun-bundle
 bun run start
 
 # For native binaries
 ./promptliano  # macOS/Linux
-promptliano.exe  # Windows`} 
-              language='bash' 
+promptliano.exe  # Windows`}
+              language='bash'
             />
             <p className='text-sm text-muted-foreground'>
-              Promptliano will start on <a href='http://localhost:3579' className='text-primary hover:underline'>http://localhost:3579</a>
+              Promptliano will start on{' '}
+              <a href='http://localhost:3579' className='text-primary hover:underline'>
+                http://localhost:3579
+              </a>
             </p>
           </div>
 
           <div className='space-y-3'>
             <h3 className='text-xl font-medium'>3. Configure Your AI Editor (Optional)</h3>
-            <p className='text-muted-foreground'>Connect Promptliano to your AI-powered editor for seamless integration:</p>
+            <p className='text-muted-foreground'>
+              Connect Promptliano to your AI-powered editor for seamless integration:
+            </p>
             <div className='grid md:grid-cols-2 gap-4'>
               <a
                 href='/integrations/cursor'
@@ -99,7 +108,9 @@ promptliano.exe  # Windows`}
         <div className='space-y-6'>
           <div className='space-y-3'>
             <h3 className='text-lg font-medium'>1. Open Promptliano and Create a Project</h3>
-            <p className='text-muted-foreground'>When you first open Promptliano, you'll see the project creation dialog:</p>
+            <p className='text-muted-foreground'>
+              When you first open Promptliano, you'll see the project creation dialog:
+            </p>
             <FeatureScreenshot
               src='/assets/screenshots/project-selector-dialog.webp'
               alt='Project Selector Dialog'
@@ -133,7 +144,8 @@ promptliano.exe  # Windows`}
           <div className='space-y-3'>
             <h3 className='text-lg font-medium'>3. Start Building Context</h3>
             <p className='text-muted-foreground'>
-              Select files from the file browser to add them to your context. Watch the token counter to manage context size:
+              Select files from the file browser to add them to your context. Watch the token counter to manage context
+              size:
             </p>
             <FeatureScreenshot
               src='/assets/screenshots/project-context-selected-files.webp'
@@ -160,7 +172,8 @@ promptliano.exe  # Windows`}
           <GlassCard className='p-6'>
             <h3 className='text-lg font-medium mb-3'>🎯 Smart File Suggestions</h3>
             <p className='text-sm text-muted-foreground mb-3'>
-              Let AI suggest relevant files based on what you're working on. Saves 60-70% tokens compared to manual search.
+              Let AI suggest relevant files based on what you're working on. Saves 60-70% tokens compared to manual
+              search.
             </p>
             <FeatureScreenshot
               src='/assets/screenshots/recommended-files-dialog.webp'
@@ -201,7 +214,9 @@ promptliano.exe  # Windows`}
             <p className='text-sm text-muted-foreground mb-3'>
               Connect to AI editors via Model Context Protocol for seamless codebase access.
             </p>
-            <a href='/integrations' className='text-primary text-sm hover:underline'>View integration guides →</a>
+            <a href='/integrations' className='text-primary text-sm hover:underline'>
+              View integration guides →
+            </a>
           </GlassCard>
         </div>
       </section>

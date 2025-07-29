@@ -1,6 +1,6 @@
 {
   "name": "@promptliano/api-client",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "module": "index.ts",
   "type": "module",
   "scripts": {

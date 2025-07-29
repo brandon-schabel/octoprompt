@@ -270,7 +270,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       capabilities: serverCapabilities,
       serverInfo: {
         name: 'promptliano-mcp',
-        version: '0.8.0'
+        version: '0.8.1'
       },
       _meta: { sessionId } // Include session ID for client reference
     }
@@ -408,11 +408,11 @@ async function handleToolsCall(
         const content = Array.isArray(result)
           ? result
           : [
-              {
-                type: 'text',
-                text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
-              }
-            ]
+            {
+              type: 'text',
+              text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+            }
+          ]
 
         // Complete tracking with success
         const outputSize = JSON.stringify(content).length
@@ -684,12 +684,12 @@ async function handleResourcesRead(
           contents: Array.isArray(content)
             ? content
             : [
-                {
-                  uri,
-                  mimeType: resource.mimeType || 'text/plain',
-                  text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
-                }
-              ]
+              {
+                uri,
+                mimeType: resource.mimeType || 'text/plain',
+                text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+              }
+            ]
         }
       }
     }

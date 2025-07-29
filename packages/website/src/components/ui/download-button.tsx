@@ -22,7 +22,7 @@ const platforms: Platform[] = [
     icon: <Package className="h-5 w-5" />,
     label: 'Bun Bundle',
     description: 'Server and UI Bundle - Requires Bun',
-    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-bun-bundle.zip',
+    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-bun-bundle.zip',
     available: true,
     recommended: true
   },
@@ -31,7 +31,7 @@ const platforms: Platform[] = [
     icon: <Apple className="h-5 w-5" />,
     label: 'macOS (M1+)',
     description: 'Native macOS Binary for Apple Silicon',
-    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-macos-arm64.zip',
+    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-macos-arm64.zip',
     available: true
   },
   {
@@ -39,7 +39,7 @@ const platforms: Platform[] = [
     icon: <MonitorSmartphone className="h-5 w-5" />,
     label: 'Windows x64',
     description: 'Native Windows Binary',
-    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-windows-x64.zip',
+    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-windows-x64.zip',
     available: true
   },
   {
@@ -47,7 +47,7 @@ const platforms: Platform[] = [
     icon: <Terminal className="h-5 w-5" />,
     label: 'Linux x64',
     description: 'Native Linux Binary',
-    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-linux-x64.zip',
+    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-linux-x64.zip',
     available: true
   }
 ]
@@ -145,7 +145,7 @@ export function DownloadButton({
               View Installation Guide
             </CTAButtonOutline>
             <p className="text-xs text-center text-muted-foreground">
-              All downloads are for v0.8.0 • <a href="https://github.com/brandon-schabel/promptliano/releases" className="underline">View all releases</a>
+              All downloads are for v0.8.1 • <a href="https://github.com/brandon-schabel/promptliano/releases" className="underline">View all releases</a>
             </p>
           </div>
         </div>

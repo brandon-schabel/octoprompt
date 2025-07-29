@@ -13,7 +13,7 @@ const program = new Command();
 program
   .name('promptliano')
   .description('Setup and manage Promptliano - Your AI toolkit for context engineering')
-  .version('0.8.0');
+  .version('0.8.1');
 
 // Register commands
 devCommand(program);

@@ -1,6 +1,6 @@
 {
   "name": "promptliano",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Setup and manage Promptliano - Your AI toolkit for context engineering",
   "bin": {
     "promptliano": "./dist/index.js"
@@ -16,7 +16,14 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["promptliano", "mcp", "ai", "claude", "context", "cli"],
+  "keywords": [
+    "promptliano",
+    "mcp",
+    "ai",
+    "claude",
+    "context",
+    "cli"
+  ],
   "author": "Brandon Schabel",
   "license": "MIT",
   "repository": {

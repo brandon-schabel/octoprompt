@@ -202,7 +202,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2 text-xs text-muted-foreground'>
-                <span className='px-3'>v0.8.0</span>
+                <span className='px-3'>v0.8.1</span>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

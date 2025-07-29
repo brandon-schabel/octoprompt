@@ -73,7 +73,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   const { data: projectData } = useQuery({
     queryKey: ['project', projectId],
     queryFn: async () => {
-      const result = await promptlianoClient.project.get(projectId)
+      const result = await promptlianoClient.projects.getProject(projectId)
       return result.data
     }
   })
