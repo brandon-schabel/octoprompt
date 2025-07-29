@@ -339,18 +339,70 @@ export class MCPProjectConfigService extends EventEmitter {
     const project = await getProjectById(projectId)
     const editorType = this.getEditorType(locationPath)
 
-    // Get the Promptliano installation path - find the root where package.json exists
+    // Get the Promptliano installation path - need to find the monorepo root
     let promptlianoPath = process.cwd()
-
-    // If we're running from within packages/server, go up to the root
-    if (promptlianoPath.includes('packages/server')) {
-      promptlianoPath = path.resolve(promptlianoPath, '../..')
+    
+    // Try to find the root by looking for package.json with workspaces
+    let currentPath = promptlianoPath
+    let foundRoot = false
+    
+    // Go up directories until we find the root package.json with workspaces
+    for (let i = 0; i < 5; i++) {
+      try {
+        const packageJsonPath = path.join(currentPath, 'package.json')
+        await fs.access(packageJsonPath)
+        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
+        
+        // Check if this is the root package.json (has workspaces)
+        if (packageJson.workspaces) {
+          promptlianoPath = currentPath
+          foundRoot = true
+          logger.debug('Found Promptliano root via package.json:', promptlianoPath)
+          break
+        }
+      } catch {
+        // Continue searching
+      }
+      
+      const parentPath = path.dirname(currentPath)
+      if (parentPath === currentPath) break // Reached filesystem root
+      currentPath = parentPath
+    }
+    
+    if (!foundRoot) {
+      // Fallback: if we're in packages/server, go up two levels
+      const normalizedCwd = toPosixPath(promptlianoPath)
+      if (normalizedCwd.includes('packages/server')) {
+        promptlianoPath = path.resolve(promptlianoPath, '../..')
+        logger.debug('Using fallback method - adjusted from packages/server')
+      }
     }
 
     const scriptPath =
       process.platform === 'win32'
         ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
         : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+    
+    logger.info('MCP Config Generation:', {
+      initialCwd: process.cwd(),
+      detectedRoot: promptlianoPath,
+      foundRoot,
+      scriptPath,
+      scriptPathNormalized: toPosixPath(scriptPath)
+    })
+    
+    // Validate that the script actually exists
+    try {
+      await fs.access(scriptPath)
+      logger.debug('Script path validated successfully')
+    } catch (error) {
+      logger.warn(`MCP start script not found at: ${scriptPath}`, {
+        promptlianoPath,
+        normalizedCwd,
+        scriptPath
+      })
+      // Don't throw here - let's see what's actually happening
+    }
 
     // Base config that works for all editors (using new format)
     const baseConfig: ProjectMCPConfig = {
