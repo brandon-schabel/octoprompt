@@ -105,7 +105,8 @@ export function isAbsolutePath(path: string): boolean {
  * @returns URL-safe path
  */
 export function toUrlPath(path: string): string {
-  const posixPath = toPosixPath(path)
+  // First convert to POSIX format to handle backslashes
+  const posixPath = path.replace(/\\/g, '/')
   // Handle Windows drive letters for file:// URLs
   if (/^[a-zA-Z]:\//.test(posixPath)) {
     return `file:///${posixPath}`
