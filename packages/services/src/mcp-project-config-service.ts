@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { createLogger } from './utils/logger'
 import { EventEmitter } from 'events'
 import { getProjectById } from './project-service'
+import { toPosixPath, toOSPath, joinPosix } from './utils/path-utils'
 
 const logger = createLogger('MCPProjectConfigService')
 
@@ -219,10 +220,10 @@ export class MCPProjectConfigService extends EventEmitter {
     const project = await getProjectById(projectId)
 
     const variables: Record<string, string> = {
-      workspaceFolder: project.path,
+      workspaceFolder: toPosixPath(project.path),
       projectId: String(projectId),
       projectName: project.name,
-      userHome: os.homedir(),
+      userHome: toPosixPath(os.homedir()),
       ...process.env
     }
 
@@ -314,15 +315,18 @@ export class MCPProjectConfigService extends EventEmitter {
    * Get editor type from config location path
    */
   getEditorType(locationPath: string): string {
-    if (locationPath.includes('.vscode/mcp.json')) {
+    // Normalize path to use forward slashes for consistent comparison
+    const normalizedPath = toPosixPath(locationPath)
+    
+    if (normalizedPath.includes('.vscode/mcp.json')) {
       return 'vscode'
-    } else if (locationPath.includes('.cursor/mcp.json')) {
+    } else if (normalizedPath.includes('.cursor/mcp.json')) {
       return 'cursor'
     }
-    // else if (locationPath.includes('.promptliano/mcp.json')) {
+    // else if (normalizedPath.includes('.promptliano/mcp.json')) {
     //   return 'promptliano'
     // }
-    else if (locationPath.includes('.mcp.json')) {
+    else if (normalizedPath.includes('.mcp.json')) {
       return 'universal'
     }
     return 'unknown'
@@ -335,18 +339,70 @@ export class MCPProjectConfigService extends EventEmitter {
     const project = await getProjectById(projectId)
     const editorType = this.getEditorType(locationPath)
 
-    // Get the Promptliano installation path - find the root where package.json exists
+    // Get the Promptliano installation path - need to find the monorepo root
     let promptlianoPath = process.cwd()
-
-    // If we're running from within packages/server, go up to the root
-    if (promptlianoPath.includes('packages/server')) {
-      promptlianoPath = path.resolve(promptlianoPath, '../..')
+    
+    // Try to find the root by looking for package.json with workspaces
+    let currentPath = promptlianoPath
+    let foundRoot = false
+    
+    // Go up directories until we find the root package.json with workspaces
+    for (let i = 0; i < 5; i++) {
+      try {
+        const packageJsonPath = path.join(currentPath, 'package.json')
+        await fs.access(packageJsonPath)
+        const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
+        
+        // Check if this is the root package.json (has workspaces)
+        if (packageJson.workspaces) {
+          promptlianoPath = currentPath
+          foundRoot = true
+          logger.debug('Found Promptliano root via package.json:', promptlianoPath)
+          break
+        }
+      } catch {
+        // Continue searching
+      }
+      
+      const parentPath = path.dirname(currentPath)
+      if (parentPath === currentPath) break // Reached filesystem root
+      currentPath = parentPath
+    }
+    
+    if (!foundRoot) {
+      // Fallback: if we're in packages/server, go up two levels
+      const normalizedCwd = toPosixPath(promptlianoPath)
+      if (normalizedCwd.includes('packages/server')) {
+        promptlianoPath = path.resolve(promptlianoPath, '../..')
+        logger.debug('Using fallback method - adjusted from packages/server')
+      }
     }
 
     const scriptPath =
       process.platform === 'win32'
         ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
         : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
+    
+    logger.info('MCP Config Generation:', {
+      initialCwd: process.cwd(),
+      detectedRoot: promptlianoPath,
+      foundRoot,
+      scriptPath,
+      scriptPathNormalized: toPosixPath(scriptPath)
+    })
+    
+    // Validate that the script actually exists
+    try {
+      await fs.access(scriptPath)
+      logger.debug('Script path validated successfully')
+    } catch (error) {
+      logger.warn(`MCP start script not found at: ${scriptPath}`, {
+        promptlianoPath,
+        normalizedCwd,
+        scriptPath
+      })
+      // Don't throw here - let's see what's actually happening
+    }
 
     // Base config that works for all editors (using new format)
     const baseConfig: ProjectMCPConfig = {
@@ -354,10 +410,10 @@ export class MCPProjectConfigService extends EventEmitter {
         promptliano: {
           type: 'stdio',
           command: process.platform === 'win32' ? 'cmd.exe' : 'sh',
-          args: process.platform === 'win32' ? ['/c', scriptPath] : [scriptPath],
+          args: process.platform === 'win32' ? ['/c', toOSPath(scriptPath)] : [toOSPath(scriptPath)],
           env: {
             PROMPTLIANO_PROJECT_ID: projectId.toString(),
-            PROMPTLIANO_PROJECT_PATH: project.path,
+            PROMPTLIANO_PROJECT_PATH: toPosixPath(project.path),
             PROMPTLIANO_API_URL: 'http://localhost:3147/api/mcp',
             NODE_ENV: 'production'
           }
@@ -368,6 +424,10 @@ export class MCPProjectConfigService extends EventEmitter {
     // Editor-specific adjustments if needed
     if (editorType === 'vscode' || editorType === 'cursor') {
       // VS Code and Cursor use the same format
+      return baseConfig
+    } else if (editorType === 'claude-code') {
+      // Claude Code doesn't use JSON config files, but we return the base config
+      // for reference purposes (though it won't be saved to a file)
       return baseConfig
     }
 

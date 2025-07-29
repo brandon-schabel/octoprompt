@@ -16,6 +16,7 @@ import { generateStructuredData } from './gen-ai-services'
 import { getCompactProjectSummary } from './utils/project-summary-service'
 import * as path from 'path'
 import * as fs from 'fs/promises'
+import { relativePosix, toPosixPath, toOSPath } from './utils/path-utils'
 
 // Utility function to populate projectId on agents from associations
 async function populateAgentProjectId(projectPath: string, agent: ClaudeAgent): Promise<ClaudeAgent> {
@@ -54,7 +55,7 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
       name: data.name,
       description: data.description,
       color: data.color,
-      filePath: path.relative(projectPath, fullFilePath),
+      filePath: relativePosix(projectPath, fullFilePath),
       content: data.content,
       projectId: data.projectId,
       created: now,
@@ -162,14 +163,14 @@ export async function updateAgent(
   // Handle file path change if specified
   if (data.filePath && data.filePath !== existingAgent.filePath) {
     // Delete old file
-    const oldFullPath = path.join(projectPath, existingAgent.filePath)
+    const oldFullPath = path.join(projectPath, toOSPath(existingAgent.filePath))
     try {
       await fs.unlink(oldFullPath)
     } catch (error) {
       console.warn(`Could not delete old agent file: ${oldFullPath}`, error)
     }
 
-    updatedAgentData.filePath = data.filePath
+    updatedAgentData.filePath = toPosixPath(data.filePath)
   }
 
   try {

@@ -2685,8 +2685,7 @@ export class MCPGlobalConfigService extends BaseApiClient {
           message: z.string(),
           configPath: z.string(),
           backedUp: z.boolean(),
-          backupPath: z.string().optional(),
-          serverName: z.string()
+          backupPath: z.string().optional()
         })
       })
     })
@@ -2695,7 +2694,6 @@ export class MCPGlobalConfigService extends BaseApiClient {
       configPath: string
       backedUp: boolean
       backupPath?: string
-      serverName: string
     }>
   }
 

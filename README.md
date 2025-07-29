@@ -13,13 +13,13 @@ If you've worked with LLMs and code you know how much quality drops off with mor
 
 If you have [Bun](https://bun.sh/) installed then I'd recommend downloading the prebuilt Server/UI Bundle.
 
-[Download Promptliano's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-bun-bundle.zip)
+[Download Promptliano's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-bun-bundle.zip)
 
-[Download Promptliano For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-macos-arm64.zip)
+[Download Promptliano For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-macos-arm64.zip)
 
-[Download Promptliano For Windows x64 Binary](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-windows-x64.zip)
+[Download Promptliano For Windows x64 Binary](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-windows-x64.zip)
 
-[Download Promptliano For Linux x64 Binary](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-linux-x64.zip)
+[Download Promptliano For Linux x64 Binary](https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-linux-x64.zip)
 
 > Once you have downloaded Promptliano for your platform please read "Running Binaries", especially for MacOS
 
@@ -32,7 +32,7 @@ Don't have NPM or Bun? Install Bun with curl on Mac/Linux `curl -fsSL https://bu
 Extract the zip file and cd into the extracted zip file and run the Promptliano server.
 
 ```bash
-cd promptliano-0.8.0-bun-bundle && bun run start
+cd promptliano-0.8.1-bun-bundle && bun run start
 ```
 
 [View Your Local Promptliano UI](http://localhost:3579/)
@@ -128,7 +128,7 @@ View the [Dev UI here](http://localhost:1420)
 On Linux you should be able to just navigate to the promptliano binary file in the terminal and run it for example:
 
 ```bash
-cd ~/Downloads/promptliano-v0.8.0
+cd ~/Downloads/promptliano-v0.8.1
 ```
 
 Run the linux binary file:
@@ -142,7 +142,7 @@ Run the linux binary file:
 Currently I don't have MacOS code signing, so it just says the binary is damaged, but really it is quarntined. In order to run the binary on Mac you would have to do the following
 
 ```bash
-cd ~/Downloads/promptliano-v0.8.0
+cd ~/Downloads/promptliano-v0.8.1
 ```
 
 Then run to remove the quarantine:
@@ -159,18 +159,18 @@ Finally you can run the Promptliano app by running the binary file as you normal
 
 ### Running on Windows
 
-After downloading and extracting the appropriate zip file (e.g., `promptliano-v0.8.0-windows-x64.zip`), open Command Prompt or PowerShell.
+After downloading and extracting the appropriate zip file (e.g., `promptliano-v0.8.1-windows-x64.zip`), open Command Prompt or PowerShell.
 
 Navigate to the extracted folder. For example, if you extracted it to your Downloads folder:
 
 ```batch
-cd %USERPROFILE%\Downloads\promptliano-v0.8.0-windows-x64
+cd %USERPROFILE%\Downloads\promptliano-v0.8.1-windows-x64
 ```
 
 Or using PowerShell:
 
 ```powershell
-cd $env:USERPROFILE\Downloads\promptliano-v0.8.0-windows-x64
+cd $env:USERPROFILE\Downloads\promptliano-v0.8.1-windows-x64
 ```
 
 Then, run the executable:
@@ -526,7 +526,7 @@ bun run build-binaries
 then navigate to the built binaries in `/dist` - in this case for MacOS arm64
 
 ```bash
-cd dist/promptliano-0.8.0-macos
+cd dist/promptliano-0.8.1-macos
 ```
 
 then run the binary file for your platforms directory:

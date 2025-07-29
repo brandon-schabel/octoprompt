@@ -3,11 +3,11 @@ import { SeoMetadata } from '@/schemas/seo.schemas'
 import { GlassCard } from '@/components/ui/glass-card'
 import { AnimateOnScroll } from '@/components/ui/animation-utils'
 import { CodeBlock } from '@/components/ui/code-terminal'
-import { 
-  Download, 
-  Package, 
-  Apple, 
-  MonitorSmartphone, 
+import {
+  Download,
+  Package,
+  Apple,
+  MonitorSmartphone,
   Terminal,
   ExternalLink,
   CheckCircle,
@@ -19,7 +19,8 @@ export const Route = createFileRoute('/downloads')({
     return {
       meta: {
         title: 'Downloads - Promptliano',
-        description: 'Download Promptliano for your platform. Available for macOS, Windows, Linux, and as a Bun bundle.',
+        description:
+          'Download Promptliano for your platform. Available for macOS, Windows, Linux, and as a Bun bundle.',
         keywords: ['download', 'install', 'promptliano', 'macos', 'windows', 'linux', 'bun']
       } as SeoMetadata
     }
@@ -47,14 +48,15 @@ const downloadOptions: DownloadOption[] = [
     name: 'Bun Bundle',
     icon: <Package className='h-8 w-8' />,
     description: 'Server and UI bundle - Recommended for developers',
-    version: 'v0.8.0',
-    filename: 'promptliano-0.8.0-bun-bundle.zip',
-    downloadUrl: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-bun-bundle.zip',
+    version: 'v0.8.1',
+    filename: 'promptliano-0.8.1-bun-bundle.zip',
+    downloadUrl:
+      'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-bun-bundle.zip',
     requirements: ['Bun runtime installed', 'Node.js compatible system'],
     installSteps: [
       'Install Bun: curl -fsSL https://bun.sh/install | bash',
       'Extract the downloaded zip file',
-      'cd promptliano-0.8.0-bun-bundle',
+      'cd promptliano-0.8.1-bun-bundle',
       'bun run start'
     ],
     recommended: true
@@ -64,13 +66,14 @@ const downloadOptions: DownloadOption[] = [
     name: 'macOS (Apple Silicon)',
     icon: <Apple className='h-8 w-8' />,
     description: 'Native binary for M1, M2, M3 and newer Macs',
-    version: 'v0.8.0',
-    filename: 'promptliano-0.8.0-macos-arm64.zip',
-    downloadUrl: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-macos-arm64.zip',
+    version: 'v0.8.1',
+    filename: 'promptliano-0.8.1-macos-arm64.zip',
+    downloadUrl:
+      'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-macos-arm64.zip',
     requirements: ['macOS 11.0 or later', 'Apple Silicon processor'],
     installSteps: [
       'Extract the downloaded zip file',
-      'cd ~/Downloads/promptliano-v0.8.0',
+      'cd ~/Downloads/promptliano-v0.8.1',
       'Remove quarantine: sudo xattr -r -d com.apple.quarantine ./promptliano',
       'Run: ./promptliano'
     ]
@@ -80,14 +83,15 @@ const downloadOptions: DownloadOption[] = [
     name: 'Windows x64',
     icon: <MonitorSmartphone className='h-8 w-8' />,
     description: 'Native binary for Windows 10/11',
-    version: 'v0.8.0',
-    filename: 'promptliano-0.8.0-windows-x64.zip',
-    downloadUrl: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-windows-x64.zip',
+    version: 'v0.8.1',
+    filename: 'promptliano-0.8.1-windows-x64.zip',
+    downloadUrl:
+      'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-windows-x64.zip',
     requirements: ['Windows 10 or later', '64-bit processor'],
     installSteps: [
       'Extract the downloaded zip file',
       'Open Command Prompt or PowerShell',
-      'cd %USERPROFILE%\\Downloads\\promptliano-v0.8.0-windows-x64',
+      'cd %USERPROFILE%\\Downloads\\promptliano-v0.8.1-windows-x64',
       'Run: .\\promptliano.exe'
     ]
   },
@@ -96,13 +100,14 @@ const downloadOptions: DownloadOption[] = [
     name: 'Linux x64',
     icon: <Terminal className='h-8 w-8' />,
     description: 'Native binary for Linux distributions',
-    version: 'v0.8.0',
-    filename: 'promptliano-0.8.0-linux-x64.zip',
-    downloadUrl: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.0/promptliano-0.8.0-linux-x64.zip',
+    version: 'v0.8.1',
+    filename: 'promptliano-0.8.1-linux-x64.zip',
+    downloadUrl:
+      'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.1/promptliano-0.8.1-linux-x64.zip',
     requirements: ['Linux kernel 3.10 or later', '64-bit processor'],
     installSteps: [
       'Extract the downloaded zip file',
-      'cd ~/Downloads/promptliano-v0.8.0',
+      'cd ~/Downloads/promptliano-v0.8.1',
       'Make executable: chmod +x ./promptliano',
       'Run: ./promptliano'
     ]
@@ -133,9 +138,9 @@ function DownloadsPage() {
               <div>
                 <h3 className='font-semibold mb-1'>Native Desktop Apps Coming Soon!</h3>
                 <p className='text-sm text-muted-foreground'>
-                  We're working on native Tauri desktop applications for a more integrated experience. 
-                  These will include auto-updates, system tray integration, and better OS integration. 
-                  For now, the binaries below provide full functionality.
+                  We're working on native Tauri desktop applications for a more integrated experience. These will
+                  include auto-updates, system tray integration, and better OS integration. For now, the binaries below
+                  provide full functionality.
                 </p>
               </div>
             </div>
@@ -152,13 +157,11 @@ function DownloadsPage() {
               <div>
                 <h3 className='font-semibold mb-2 flex items-center gap-2'>
                   Recommended: Run from Source
-                  <span className='text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded'>
-                    Best Experience
-                  </span>
+                  <span className='text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded'>Best Experience</span>
                 </h3>
                 <p className='text-sm text-muted-foreground mb-3'>
-                  While the downloads below are prepackaged binaries that work out of the box, we recommend 
-                  running Promptliano from source code in development mode for the best experience. You'll be able to:
+                  While the downloads below are prepackaged binaries that work out of the box, we recommend running
+                  Promptliano from source code in development mode for the best experience. You'll be able to:
                 </p>
                 <ul className='text-sm text-muted-foreground space-y-1 mb-3'>
                   <li className='flex items-center gap-2'>
@@ -189,7 +192,10 @@ bun run dev`}
                   />
                 </div>
                 <p className='text-xs text-muted-foreground mt-3'>
-                  View full setup instructions in our <a href='https://github.com/brandon-schabel/promptliano' className='text-primary hover:underline'>GitHub README</a>
+                  View full setup instructions in our{' '}
+                  <a href='https://github.com/brandon-schabel/promptliano' className='text-primary hover:underline'>
+                    GitHub README
+                  </a>
                 </p>
               </div>
             </div>
@@ -204,9 +210,9 @@ bun run dev`}
               <div>
                 <h3 className='font-semibold mb-2'>Important: Server Ports</h3>
                 <p className='text-sm text-muted-foreground'>
-                  Promptliano runs on port <code className='text-primary'>3147</code> in development mode 
-                  and port <code className='text-primary'>3579</code> in production mode. 
-                  The UI is accessible at <code className='text-primary'>http://localhost:3579</code> when running the production bundle.
+                  Promptliano runs on port <code className='text-primary'>3147</code> in development mode and port{' '}
+                  <code className='text-primary'>3579</code> in production mode. The UI is accessible at{' '}
+                  <code className='text-primary'>http://localhost:3579</code> when running the production bundle.
                 </p>
               </div>
             </div>
@@ -219,16 +225,12 @@ bun run dev`}
             <AnimateOnScroll key={option.id}>
               <GlassCard className='p-6 h-full flex flex-col'>
                 <div className='flex items-start gap-4 mb-4'>
-                  <div className='p-3 rounded-lg bg-primary/10 text-primary'>
-                    {option.icon}
-                  </div>
+                  <div className='p-3 rounded-lg bg-primary/10 text-primary'>{option.icon}</div>
                   <div className='flex-1'>
                     <div className='flex items-center gap-2 mb-1'>
                       <h3 className='text-xl font-semibold'>{option.name}</h3>
                       {option.recommended && (
-                        <span className='text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded'>
-                          Recommended
-                        </span>
+                        <span className='text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded'>Recommended</span>
                       )}
                     </div>
                     <p className='text-sm text-muted-foreground'>{option.description}</p>
@@ -271,28 +273,21 @@ bun run dev`}
         <AnimateOnScroll>
           <GlassCard className='p-8 max-w-4xl mx-auto'>
             <h2 className='text-2xl font-bold mb-6'>Installation Instructions</h2>
-            
+
             <div className='space-y-8'>
               {downloadOptions.map((option) => (
                 <div key={option.id}>
                   <div className='flex items-center gap-3 mb-4'>
-                    <div className='p-2 rounded bg-primary/10 text-primary'>
-                      {option.icon}
-                    </div>
+                    <div className='p-2 rounded bg-primary/10 text-primary'>{option.icon}</div>
                     <h3 className='text-lg font-semibold'>{option.name}</h3>
                   </div>
-                  
+
                   {option.installSteps && (
                     <div className='space-y-2'>
                       {option.installSteps.map((step, idx) => (
                         <div key={idx} className='flex gap-3'>
                           <span className='text-muted-foreground'>{idx + 1}.</span>
-                          <CodeBlock
-                            code={step}
-                            language='bash'
-                            className='flex-1'
-                            showLineNumbers={false}
-                          />
+                          <CodeBlock code={step} language='bash' className='flex-1' showLineNumbers={false} />
                         </div>
                       ))}
                     </div>
@@ -305,10 +300,7 @@ bun run dev`}
             <div className='mt-8 pt-8 border-t border-border'>
               <h3 className='font-semibold mb-4'>Need Help?</h3>
               <div className='space-y-2'>
-                <a
-                  href='/docs/getting-started'
-                  className='text-primary hover:underline flex items-center gap-2'
-                >
+                <a href='/docs/getting-started' className='text-primary hover:underline flex items-center gap-2'>
                   Read the Getting Started Guide
                 </a>
                 <a

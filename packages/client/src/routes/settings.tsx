@@ -1,4 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { zodValidator } from '@tanstack/zod-adapter'
+import { settingsSearchSchema, type SettingsSearch } from '@/lib/search-schemas'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
 import { ScrollArea } from '@ui'
@@ -28,6 +30,8 @@ const themeOptions = Object.entries(themes).map(([key, theme]) => ({
 })) satisfies ThemeOption[]
 
 export function SettingsPage() {
+  const search = Route.useSearch()
+  const navigate = useNavigate()
   const [settings, updateSettings] = useAppSettings()
   const {
     useSpacebarToSelectAutocomplete: spacebarToSelectAutocomplete = true,
@@ -72,7 +76,17 @@ export function SettingsPage() {
         <p className='text-muted-foreground'>Manage your application preferences and configuration</p>
       </div>
 
-      <Tabs defaultValue='general' className='w-full'>
+      <Tabs 
+        value={search.tab || 'general'} 
+        onValueChange={(value) => {
+          navigate({
+            to: '/settings',
+            search: { tab: value as SettingsSearch['tab'] },
+            replace: true
+          })
+        }}
+        className='w-full'
+      >
         <TabsList className='grid w-full grid-cols-3'>
           <TabsTrigger value='general'>General</TabsTrigger>
           <TabsTrigger value='api-keys'>API Keys</TabsTrigger>
@@ -227,5 +241,6 @@ export function SettingsPage() {
 }
 
 export const Route = createFileRoute('/settings')({
+  validateSearch: zodValidator(settingsSearchSchema),
   component: SettingsPage
 })

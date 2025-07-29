@@ -114,7 +114,8 @@ import {
   getActiveTab,
   setActiveTab,
   clearActiveTab,
-  fileSearchService
+  fileSearchService,
+  fileIndexingService
 } from '@promptliano/services'
 import type {
   CreateProjectBody,
@@ -199,7 +200,8 @@ export enum ProjectManagerAction {
   GET_FILE_CONTENT_PARTIAL = 'get_file_content_partial',
   DELETE_FILE = 'delete_file',
   GET_FILE_TREE = 'get_file_tree',
-  OVERVIEW = 'overview'
+  OVERVIEW = 'overview',
+  DEBUG_SEARCH = 'debug_search'
 }
 
 export enum PromptManagerAction {
@@ -624,7 +626,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'project_manager',
     description:
-      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, get_summary_advanced (with options for depth/format/strategy), get_summary_metrics (summary generation metrics), browse_files, get_file_content, update_file_content, suggest_files, get_selection_context (get complete active tab context), search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial, get_file_tree (returns project file structure with file IDs), overview (get essential project context - recommended first tool)',
+      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, get_summary_advanced (with options for depth/format/strategy), get_summary_metrics (summary generation metrics), browse_files, get_file_content, update_file_content, suggest_files, get_selection_context (get complete active tab context), search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial, get_file_tree (returns project file structure with file IDs), overview (get essential project context - recommended first tool), debug_search (debug search indexing issues)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -640,7 +642,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         data: {
           type: 'object',
           description:
-            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For delete_file: { path: "src/file.ts" }. For fast_search_files: { query: "search term", searchType: "semantic" | "exact" | "fuzzy" | "regex" (default: "semantic"), fileTypes: ["ts", "js"], limit: 20, includeContext: false, scoringMethod: "relevance" | "recency" | "frequency" }. For get_summary_advanced: { depth: "minimal" | "standard" | "detailed", format: "xml" | "json" | "markdown", strategy: "fast" | "balanced" | "thorough", focus: ["api", "frontend"], includeMetrics: true }. For overview: no data required'
+            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For delete_file: { path: "src/file.ts" }. For fast_search_files: { query: "search term", searchType: "semantic" | "exact" | "fuzzy" | "regex" (default: "semantic"), fileTypes: ["ts", "js"], limit: 20, includeContext: false, scoringMethod: "relevance" | "recency" | "frequency" }. For get_summary_advanced: { depth: "minimal" | "standard" | "detailed", format: "xml" | "json" | "markdown", strategy: "fast" | "balanced" | "thorough", focus: ["api", "frontend"], includeMetrics: true }. For overview: no data required. For debug_search: { query: "optional test query" }'
         }
       },
       required: ['action']
@@ -1108,6 +1110,14 @@ Version Info:
               const includeContext = (data?.includeContext as boolean) || false
               const scoringMethod = (data?.scoringMethod as 'relevance' | 'recency' | 'frequency') || 'relevance'
 
+              // Force reindex if requested
+              if (data?.forceReindex) {
+                console.log(`[MCP] Force reindexing files for project ${validProjectId}...`)
+                const files = await getProjectFiles(validProjectId)
+                const indexResult = await fileIndexingService.indexFiles(files, true)
+                console.log(`[MCP] Reindexing complete:`, indexResult)
+              }
+
               // Perform fast search
               const searchResults = await fileSearchService.search(validProjectId, {
                 query,
@@ -1415,6 +1425,65 @@ Version Info:
               const overview = await getProjectOverview(validProjectId)
               return {
                 content: [{ type: 'text', text: overview }]
+              }
+            }
+
+            case ProjectManagerAction.DEBUG_SEARCH: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+              const query = data?.query as string | undefined
+              
+              console.log(`[MCP] Running search debug for project ${validProjectId}${query ? ` with query "${query}"` : ''}`)
+              
+              const debugResult = await fileSearchService.debugSearch(validProjectId, query)
+              
+              let resultText = `🔍 Search Debug Report for Project ${validProjectId}\n`
+              resultText += `${'='.repeat(50)}\n\n`
+              
+              // Index Stats
+              resultText += `📊 Index Statistics:\n`
+              resultText += `  - Indexed Files: ${debugResult.indexStats.indexedFiles}\n`
+              resultText += `  - Total Keywords: ${debugResult.indexStats.totalKeywords}\n`
+              resultText += `  - Avg Tokens/File: ${debugResult.indexStats.avgTokensPerFile}\n`
+              resultText += `  - Last Indexed: ${debugResult.indexStats.lastIndexed ? new Date(debugResult.indexStats.lastIndexed).toISOString() : 'Never'}\n\n`
+              
+              // FTS5 Content
+              resultText += `📁 FTS5 Database Content:\n`
+              resultText += `  - Total FTS5 Rows: ${debugResult.ftsContent.ftsCount}\n`
+              resultText += `  - Project FTS5 Rows: ${debugResult.ftsContent.projectFTSCount}\n`
+              resultText += `  - Metadata Rows: ${debugResult.ftsContent.metadataCount}\n\n`
+              
+              // Sample Search Results
+              if (debugResult.sampleSearch) {
+                if (debugResult.sampleSearch.error) {
+                  resultText += `❌ Sample Search Error: ${debugResult.sampleSearch.error}\n\n`
+                } else {
+                  resultText += `🔎 Sample Search Results:\n`
+                  resultText += `  - Total Results: ${debugResult.sampleSearch.stats.totalResults}\n`
+                  resultText += `  - Search Time: ${debugResult.sampleSearch.stats.searchTime}ms\n`
+                  resultText += `  - From Cache: ${debugResult.sampleSearch.stats.cached}\n`
+                  
+                  if (debugResult.sampleSearch.results.length > 0) {
+                    resultText += `  - Top Results:\n`
+                    for (const result of debugResult.sampleSearch.results.slice(0, 3)) {
+                      resultText += `    • ${result.file.path} (score: ${result.score.toFixed(2)})\n`
+                    }
+                  }
+                  resultText += '\n'
+                }
+              }
+              
+              // Recommendations
+              if (debugResult.recommendations.length > 0) {
+                resultText += `💡 Recommendations:\n`
+                for (const rec of debugResult.recommendations) {
+                  resultText += `  - ${rec}\n`
+                }
+              } else {
+                resultText += `✅ No issues detected - search index appears healthy\n`
+              }
+              
+              return {
+                content: [{ type: 'text', text: resultText }]
               }
             }
 

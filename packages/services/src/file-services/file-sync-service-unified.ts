@@ -473,17 +473,19 @@ export async function syncFileSet(
   let createdCount = 0,
     updatedCount = 0,
     deletedCount = 0
+  let createdFiles: ProjectFile[] = []
+  let updatedFiles: ProjectFile[] = []
 
   try {
     if (filesToCreate.length > 0) {
       logger.verbose(`Creating ${filesToCreate.length} new file records`)
-      const createdResult = await bulkCreateProjectFiles(project.id, filesToCreate)
-      createdCount = createdResult.length
+      createdFiles = await bulkCreateProjectFiles(project.id, filesToCreate)
+      createdCount = createdFiles.length
     }
     if (filesToUpdate.length > 0) {
       logger.verbose(`Updating ${filesToUpdate.length} existing file records`)
-      const updatedResult = await bulkUpdateProjectFiles(project.id, filesToUpdate)
-      updatedCount = updatedResult.length
+      updatedFiles = await bulkUpdateProjectFiles(project.id, filesToUpdate)
+      updatedCount = updatedFiles.length
     }
     if (fileIdsToDelete.length > 0) {
       logger.verbose(`Deleting ${fileIdsToDelete.length} file records`)
@@ -494,40 +496,31 @@ export async function syncFileSet(
       `SyncFileSet results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped: ${skippedCount}`
     )
 
-    // Index new and updated files in the background
+    // Index new and updated files immediately
     if (createdCount > 0 || updatedCount > 0) {
-      const filesToIndex = [...filesToCreate, ...filesToUpdate.map((u) => u.data)]
+      const filesToIndex = [...createdFiles, ...updatedFiles]
 
-      // Run indexing asynchronously to not block the sync operation
-      setTimeout(async () => {
-        try {
-          const existingFiles = await getProjectFiles(project.id)
-          const projectFiles = filesToIndex.map((fileData) => {
-            const existing = existingFiles.find((f) => f.path === fileData.path)
-            return existing || ({ ...fileData, id: Date.now(), projectId: project.id } as any)
-          })
-
-          const indexResult = await fileIndexingService.indexFiles(projectFiles)
-          logger.info(
-            `Background indexing completed - Indexed: ${indexResult.indexed}, Skipped: ${indexResult.skipped}, Failed: ${indexResult.failed}`
-          )
-        } catch (error) {
-          logger.error('Background indexing failed', error)
-        }
-      }, 1000) // Delay by 1 second to let the main operation complete
+      try {
+        const indexResult = await fileIndexingService.indexFiles(filesToIndex)
+        logger.info(
+          `File indexing completed - Indexed: ${indexResult.indexed}, Skipped: ${indexResult.skipped}, Failed: ${indexResult.failed}`
+        )
+      } catch (error) {
+        logger.error('File indexing failed', error)
+        // Don't throw - let sync complete even if indexing fails
+      }
     }
     // Remove deleted files from index
     if (deletedCount > 0) {
-      setTimeout(async () => {
-        try {
-          for (const fileId of fileIdsToDelete) {
-            await fileIndexingService.removeFileFromIndex(fileId)
-          }
-          logger.info(`Removed ${fileIdsToDelete.length} files from search index`)
-        } catch (error) {
-          logger.error('Failed to remove files from index', error)
+      try {
+        for (const fileId of fileIdsToDelete) {
+          await fileIndexingService.removeFileFromIndex(fileId)
         }
-      }, 1000)
+        logger.info(`Removed ${fileIdsToDelete.length} files from search index`)
+      } catch (error) {
+        logger.error('Failed to remove files from index', error)
+        // Don't throw - let sync complete even if index cleanup fails
+      }
     }
     return { created: createdCount, updated: updatedCount, deleted: deletedCount, skipped: skippedCount }
   } catch (error) {

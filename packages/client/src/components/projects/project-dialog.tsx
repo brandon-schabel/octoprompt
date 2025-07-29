@@ -97,13 +97,12 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
 
   const handleSelectPath = (path: string) => {
     setFormData((prev) => ({ ...prev, path }))
-    // If the name is empty, try to infer it from the path
-    if (!formData.name) {
-      const pathParts = path.split('/')
-      const folderName = pathParts[pathParts.length - 1]
-      if (folderName) {
-        setFormData((prev) => ({ ...prev, name: folderName }))
-      }
+    // Always extract folder name from path (cross-platform)
+    const pathParts = path.split(/[/\\]/).filter(Boolean)
+    const folderName = pathParts[pathParts.length - 1]
+    
+    if (folderName) {
+      setFormData((prev) => ({ ...prev, name: folderName.trim() }))
     }
   }
 

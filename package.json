@@ -1,7 +1,7 @@
 {
   "name": "promptliano-core",
   "module": "index.ts",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
