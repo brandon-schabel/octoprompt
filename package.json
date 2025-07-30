@@ -1,7 +1,7 @@
 {
   "name": "promptliano-core",
   "module": "index.ts",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
@@ -28,7 +28,9 @@
     "migrate:encrypt-keys": "bun run packages/storage/src/migrations/encrypt-provider-keys.ts",
     "dev:website": "bun run scripts/start-website-dev.ts",
     "build:website": "cd packages/website && bun run build",
-    "preview:website": "cd packages/website && bun run preview"
+    "preview:website": "cd packages/website && bun run preview",
+    "sync-version": "bun run scripts/sync-version.ts",
+    "update-version": "bun run scripts/update-version.ts"
   },
   "workspaces": [
     "packages/*"
