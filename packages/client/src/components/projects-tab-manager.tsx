@@ -8,7 +8,7 @@ import { Input } from '@ui'
 import { Badge } from '@ui'
 import { PromptlianoTooltip } from './promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from './app-shortcut-display'
-import { LinkIcon, Plus, Pencil, Trash2, Settings } from 'lucide-react'
+import { LinkIcon, Plus, Pencil, Trash2, LayoutGrid } from 'lucide-react'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -330,7 +330,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                 onClick={() => setShowSettingsDialog(true)}
                 title='Manage Tabs'
               >
-                <Settings className='h-4 w-4' />
+                <LayoutGrid className='h-4 w-4' />
               </Button>
             </div>
 

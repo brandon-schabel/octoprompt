@@ -32,6 +32,7 @@ import {
 import { MenuIcon } from 'lucide-react' // For a custom trigger example
 import { Button } from '@ui'
 import { useMigrateDefaultTab } from '@/hooks/use-migrate-default-tab'
+import { useMigrateTabViews } from '@/hooks/use-migrate-tab-views'
 
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
@@ -158,6 +159,9 @@ function RootComponent() {
 
   // Migrate legacy defaultTab to numeric ID system
   useMigrateDefaultTab()
+  
+  // Migrate old tab views to new Manage sub-view structure
+  useMigrateTabViews()
 
   // Initialize sidecar server for Tauri builds
   const { isStarting, isReady, error: sidecarError } = useSidecarServer()

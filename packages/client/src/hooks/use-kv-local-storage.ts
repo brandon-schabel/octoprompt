@@ -220,7 +220,6 @@ export const useCreateProjectTab = () => {
       sortOrder: 0,
       displayName: `New Tab`,
       searchByContent: false,
-      contextLimit: 64000,
       ...payload // Apply payload overrides last to ensure they take precedence
     }
 

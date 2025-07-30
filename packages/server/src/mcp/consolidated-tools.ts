@@ -1012,7 +1012,6 @@ Version Info:
               contextText += `\n  File search: ${tabMetadata.fileSearch || 'none'}`
               contextText += `\n  Search by content: ${tabMetadata.searchByContent || false}`
               contextText += `\n  Resolve imports: ${tabMetadata.resolveImports || false}`
-              contextText += `\n  Context limit: ${tabMetadata.contextLimit || 'default'}`
               contextText += `\n  Preferred editor: ${tabMetadata.preferredEditor || 'default'}`
 
               if (tabMetadata.ticketSearch || tabMetadata.ticketSort || tabMetadata.ticketStatusFilter) {
