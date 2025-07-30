@@ -67,19 +67,19 @@ export function HeroSection() {
   }
 
   return (
-    <div className='relative min-h-screen flex items-center'>
+    <div className='relative min-h-screen flex items-center overflow-hidden'>
       {/* Background decorative elements */}
-      <div className='absolute inset-0 -z-10'>
+      <div className='absolute inset-0 -z-10 overflow-hidden'>
         <div className='absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5' />
         <div className='absolute inset-0 bg-grid-white/[0.02] bg-[length:50px_50px]' />
         <div className='absolute right-0 top-0 -mt-20 -mr-20 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[128px]' />
         <div className='absolute left-0 bottom-0 -mb-20 -ml-20 h-[500px] w-[500px] rounded-full bg-secondary/10 blur-[128px]' />
       </div>
 
-      <div className='container mx-auto px-4 py-20'>
+      <div className='container mx-auto px-4 py-16 lg:py-24'>
         <div className='grid gap-12 lg:grid-cols-2 lg:gap-16 items-center'>
           {/* Left column - Content */}
-          <div className='space-y-8'>
+          <div className='space-y-6 max-w-xl'>
             {/* <AnimateOnScroll> */}
             {/* <div className='flex justify-center md:justify-start mb-6'> */}
             {/* <Logo size='lg' showGlow={true} /> */}
@@ -103,19 +103,19 @@ export function HeroSection() {
               </div>
             </HeroGradient>
 
-            {/* Key benefits */}
+            {/* Key benefits - moved higher up for better spacing */}
             <AnimateOnScroll>
-              <div className='grid gap-4 text-sm'>
+              <div className='grid gap-3 text-sm mt-6'>
                 <div className='flex items-center gap-3'>
-                  <div className='h-2 w-2 rounded-full bg-accent' />
+                  <div className='h-2 w-2 rounded-full bg-accent flex-shrink-0' />
                   <span className='text-muted-foreground'>Works with VSCode, Cursor, Claude Desktop & Claude Code</span>
                 </div>
                 <div className='flex items-center gap-3'>
-                  <div className='h-2 w-2 rounded-full bg-accent' />
+                  <div className='h-2 w-2 rounded-full bg-accent flex-shrink-0' />
                   <span className='text-muted-foreground'>60-70% fewer tokens with intelligent context management</span>
                 </div>
                 <div className='flex items-center gap-3'>
-                  <div className='h-2 w-2 rounded-full bg-accent' />
+                  <div className='h-2 w-2 rounded-full bg-accent flex-shrink-0' />
                   <span className='text-muted-foreground'>Human-in-the-loop workflow for better AI collaboration</span>
                 </div>
               </div>

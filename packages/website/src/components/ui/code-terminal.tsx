@@ -230,7 +230,7 @@ export function CodeBlock({
 
       {/* Code */}
       <div className='overflow-x-auto max-w-full'>
-        <pre className='p-4 text-sm break-all sm:break-normal'>
+        <pre className='p-4 text-sm whitespace-pre-wrap break-words'>
           <code>
             {lines.map((line, index) => (
               <div key={index} className='flex'>
@@ -239,7 +239,7 @@ export function CodeBlock({
                     {String(index + 1).padStart(lines.length.toString().length, ' ')}
                   </span>
                 )}
-                <span>{line || ' '}</span>
+                <span className='break-words'>{line || ' '}</span>
               </div>
             ))}
           </code>

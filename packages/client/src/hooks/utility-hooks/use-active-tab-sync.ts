@@ -24,7 +24,6 @@ export function useActiveTabSync(projectId: number | undefined) {
       selectedPrompts: tab.selectedPrompts,
       userPrompt: tab.userPrompt,
       fileSearch: tab.fileSearch,
-      contextLimit: tab.contextLimit,
       preferredEditor: tab.preferredEditor,
       suggestedFileIds: tab.suggestedFileIds,
       ticketSearch: tab.ticketSearch,

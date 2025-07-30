@@ -8,7 +8,7 @@ import { Input } from '@ui'
 import { Badge } from '@ui'
 import { PromptlianoTooltip } from './promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from './app-shortcut-display'
-import { LinkIcon, Plus, Pencil, Trash2, Settings } from 'lucide-react'
+import { LinkIcon, Plus, Pencil, Trash2, LayoutGrid } from 'lucide-react'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -58,6 +58,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const calculateInitialOrder = (): number[] => {
     if (!tabs) return []
     return Object.keys(tabs)
+      .filter(key => !isNaN(Number(key))) // Filter out non-numeric keys like 'defaultTab'
       .map(Number)
       .sort((a, b) => {
         const orderA = tabs[a]?.sortOrder ?? Infinity
@@ -270,7 +271,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     return `Files: ${fileCount} | Prompts: ${promptCount} | User Input: ${userPromptLength}`
   }
 
-  if (!tabs || Object.keys(tabs).length === 0) {
+  // Filter out non-numeric tab IDs for validation
+  const validTabs = tabs ? Object.keys(tabs).filter(key => !isNaN(Number(key))) : []
+  
+  if (!tabs || validTabs.length === 0) {
     return (
       <div className={cn('flex flex-col gap-2 p-2', className)}>
         <Button onClick={handleCreateTab}>
@@ -326,7 +330,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                 onClick={() => setShowSettingsDialog(true)}
                 title='Manage Tabs'
               >
-                <Settings className='h-4 w-4' />
+                <LayoutGrid className='h-4 w-4' />
               </Button>
             </div>
 

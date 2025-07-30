@@ -85,9 +85,10 @@ export function ProjectSwitcher({ currentProject, className, onManageProjects }:
       <DropdownMenuTrigger asChild>
         <Button
           variant='ghost'
+          size='sm'
           className={cn(
-            'h-auto py-1 px-2 font-semibold justify-start gap-2',
-            'hover:bg-accent/50 transition-colors text-lg',
+            'h-auto py-1 px-2 font-medium justify-start gap-1.5',
+            'hover:bg-accent/50 transition-colors',
             isLoading && 'opacity-50 cursor-wait',
             className
           )}
@@ -95,21 +96,20 @@ export function ProjectSwitcher({ currentProject, className, onManageProjects }:
           disabled={isLoading}
         >
           {open ? (
-            <FolderOpen className='h-5 w-5 shrink-0 text-muted-foreground' />
+            <FolderOpen className='h-4 w-4 shrink-0 text-muted-foreground' />
           ) : (
-            <Folder className='h-5 w-5 shrink-0 text-muted-foreground' />
+            <Folder className='h-4 w-4 shrink-0 text-muted-foreground' />
           )}
-          <span className='flex items-center gap-2 max-w-[400px]'>
-            <span className='truncate'>{isLoading ? 'Loading...' : currentProject?.name || 'Select Project'}</span>
+          <div className='flex flex-col items-start max-w-[300px]'>
+            <span className='truncate text-sm'>{isLoading ? 'Loading...' : currentProject?.name || 'Select Project'}</span>
             {currentProject && currentBranch && (
-              <>
-                <span className='text-muted-foreground'>|</span>
-                <GitBranch className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
-                <span className='text-sm text-muted-foreground truncate'>{currentBranch}</span>
-              </>
+              <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+                <GitBranch className='h-3 w-3 shrink-0' />
+                <span className='truncate'>{currentBranch}</span>
+              </div>
             )}
-          </span>
-          <ChevronDown className='h-4 w-4 shrink-0 opacity-50 ml-1' />
+          </div>
+          <ChevronDown className='h-3.5 w-3.5 shrink-0 opacity-50 ml-1' />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' className='w-[320px] p-2' sideOffset={8}>

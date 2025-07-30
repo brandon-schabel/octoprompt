@@ -27,9 +27,16 @@ import { resolvePath } from './utils/path-utils'
 import { fileRelevanceService } from './file-relevance-service'
 import { CompactFileFormatter } from './utils/compact-file-formatter'
 import path from 'node:path'
-import { removeDeletedFileIdsFromTickets } from './ticket-service'
+import { removeDeletedFileIdsFromTickets, listTicketsByProject, listTicketsWithTaskCount } from './ticket-service'
 import { retryOperation } from './utils/retry-operation'
 import { createLogger } from './utils/logger'
+import { cleanupProjectMCPServers } from './mcp-service'
+import { getCompactProjectSummary } from './utils/project-summary-service'
+import { getActiveTab } from './active-tab-service'
+import { listPromptsByProject } from './prompt-service'
+import { getProjectStatistics } from './project-statistics-service'
+import { getProjectGitStatus, getCurrentBranch } from './git-service'
+import { fileSummarizationTracker, getSummarizationStats } from './file-summarization-tracker'
 
 const logger = createLogger('ProjectService')
 
@@ -187,7 +194,6 @@ export async function deleteProject(projectId: number): Promise<boolean> {
     await projectStorage.deleteProjectData(projectId)
 
     // Clean up MCP servers for this project
-    const { cleanupProjectMCPServers } = await import('./mcp-service')
     await cleanupProjectMCPServers(projectId)
 
     return true
@@ -1095,7 +1101,6 @@ export async function getProjectCompactSummary(projectId: number): Promise<strin
   try {
     await getProjectById(projectId) // Validate project exists
 
-    const { getCompactProjectSummary } = await import('./utils/get-full-project-summary')
     return await getCompactProjectSummary(projectId)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1168,13 +1173,6 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     const project = await getProjectById(projectId)
 
     // Import necessary functions
-    const { getActiveTab } = await import('./active-tab-service')
-    const { listPromptsByProject } = await import('./prompt-service')
-    const { listTicketsByProject, listTicketsWithTaskCount } = await import('./ticket-service')
-    const { getProjectStatistics } = await import('./project-statistics-service')
-    const { getProjectGitStatus, getCurrentBranch } = await import('./git-service')
-    const { fileSummarizationTracker } = await import('./file-summarization-tracker')
-
     // Get all data in parallel for performance
     const [activeTab, prompts, ticketsWithTaskCount, statistics, gitStatus, gitBranch, fileTree, unsummarizedFiles] =
       await Promise.all([
@@ -1273,7 +1271,6 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     lines.push('=== FILES NEEDING SUMMARIZATION ===')
     if (unsummarizedFiles && unsummarizedFiles.length > 0) {
       // Get total count of unsummarized files (not just top 20)
-      const { getSummarizationStats } = await import('./file-summarization-tracker')
       const stats = await fileSummarizationTracker.getSummarizationStats(projectId).catch(() => null)
       const totalUnsummarized = stats?.unsummarizedFiles || unsummarizedFiles.length
 

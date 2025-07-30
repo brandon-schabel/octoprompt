@@ -13,7 +13,9 @@ import {
   ProjectResponseMultiStatusSchema,
   ProjectSummaryResponseSchema,
   ProjectFileSchema,
-  ProjectFile
+  ProjectFile,
+  SummaryOptionsSchema,
+  BatchSummaryOptionsSchema
 } from '@promptliano/schemas'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
@@ -29,7 +31,12 @@ import {
   optimizeUserInput,
   syncProject,
   syncProjectFolder,
-  watchersManager
+  watchersManager,
+  getProjectSummaryWithOptions,
+  invalidateProjectSummaryCache,
+  enhancedSummarizationService,
+  fileSummarizationTracker,
+  fileGroupingService
 } from '@promptliano/services'
 import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@promptliano/schemas'
 
@@ -969,9 +976,6 @@ export const projectRoutes = new OpenAPIHono()
     const options = c.req.valid('json')
 
     try {
-      const { getProjectSummaryWithOptions } = await import('@promptliano/services')
-      const { SummaryOptionsSchema } = await import('@promptliano/schemas')
-
       // Validate options
       const validatedOptions = SummaryOptionsSchema.parse(options)
 
@@ -995,8 +999,6 @@ export const projectRoutes = new OpenAPIHono()
     const { projectId } = c.req.valid('param')
 
     try {
-      const { getProjectSummaryWithOptions } = await import('@promptliano/services')
-
       // Get summary with metrics enabled
       const result = await getProjectSummaryWithOptions(projectId, {
         depth: 'standard',
@@ -1043,7 +1045,6 @@ export const projectRoutes = new OpenAPIHono()
         throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
       }
 
-      const { invalidateProjectSummaryCache } = await import('@promptliano/services')
       invalidateProjectSummaryCache(projectId)
 
       const payload: z.infer<typeof OperationSuccessResponseSchema> = {
@@ -1248,9 +1249,6 @@ export const projectRoutes = new OpenAPIHono()
     }
 
     try {
-      const { enhancedSummarizationService } = await import('@promptliano/services')
-      const { BatchSummaryOptionsSchema } = await import('@promptliano/schemas')
-
       // Prepare batch options
       const batchOptions = BatchSummaryOptionsSchema.parse({
         strategy,
@@ -1289,8 +1287,6 @@ export const projectRoutes = new OpenAPIHono()
     const { projectId, batchId } = c.req.valid('param')
 
     try {
-      const { fileSummarizationTracker } = await import('@promptliano/services')
-
       const progress = fileSummarizationTracker.getSummarizationProgress(projectId)
 
       if (!progress || progress.batchId !== batchId) {
@@ -1327,8 +1323,6 @@ export const projectRoutes = new OpenAPIHono()
     const { projectId, batchId } = c.req.valid('param')
 
     try {
-      const { fileSummarizationTracker, enhancedSummarizationService } = await import('@promptliano/services')
-
       // Cancel in tracker
       const cancelledInTracker = fileSummarizationTracker.cancelBatch(batchId)
 
@@ -1365,8 +1359,6 @@ export const projectRoutes = new OpenAPIHono()
     }
 
     try {
-      const { fileSummarizationTracker } = await import('@promptliano/services')
-
       const stats = await fileSummarizationTracker.getSummarizationStats(projectId)
 
       const payload = {
@@ -1396,8 +1388,6 @@ export const projectRoutes = new OpenAPIHono()
     }
 
     try {
-      const { fileSummarizationTracker, fileGroupingService } = await import('@promptliano/services')
-
       // Get files to group
       const unsummarizedFiles = await fileSummarizationTracker.getUnsummarizedFiles(projectId)
       const staleFiles = includeStaleFiles ? await fileSummarizationTracker.getStaleFiles(projectId) : []

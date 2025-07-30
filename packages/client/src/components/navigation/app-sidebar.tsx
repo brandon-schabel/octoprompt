@@ -7,6 +7,7 @@ import { ProjectDialog } from '@/components/projects/project-dialog'
 import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
 import { useRecentProjects } from '@/hooks/use-recent-projects'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { appConfig } from '@promptliano/config'
 import {
   FolderIcon,
   MessageSquareIcon,
@@ -202,7 +203,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2 text-xs text-muted-foreground'>
-                <span className='px-3'>v0.8.1</span>
+                <span className='px-3'>v{appConfig.version}</span>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

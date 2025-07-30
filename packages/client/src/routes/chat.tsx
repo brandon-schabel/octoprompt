@@ -57,7 +57,7 @@ import { APIProviders, AiSdkOptions } from '@promptliano/schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { useActiveChatId, useSelectSetting, useProjectTabField } from '@/hooks/use-kv-local-storage'
+import { useActiveChatId, useSelectSetting, useProjectTabField, useAppSettings } from '@/hooks/use-kv-local-storage'
 import { PromptlianoCombobox } from '@/components/promptliano/promptliano-combobox'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
@@ -963,7 +963,8 @@ function ChatPage() {
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
   const { data: modelsData } = useGetModels(provider as APIProviders)
-  const { data: enableChatAutoNaming } = useProjectTabField('enableChatAutoNaming')
+  const [appSettings] = useAppSettings()
+  const enableChatAutoNaming = appSettings?.enableChatAutoNaming ?? true
   const { copyToClipboard } = useCopyClipboard()
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 

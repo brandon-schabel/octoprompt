@@ -418,7 +418,7 @@ export function ProjectSummarizationSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className='w-full'>
+      <Card className='w-full' id='project-summarization-settings-section'>
         <CardHeader>
           <CardTitle>Project Summarization Settings</CardTitle>
           <CardDescription>View file summaries and manage summarization tasks.</CardDescription>

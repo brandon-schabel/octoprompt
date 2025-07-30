@@ -20,12 +20,14 @@ export default defineConfig({
     tsconfigPaths(),
     // Bundle visualization
     ...(process.env.ANALYZE
-      ? [visualizer({
-        open: true,
-        filename: 'dist/stats.html',
-        gzipSize: true,
-        brotliSize: true
-      })]
+      ? [
+          visualizer({
+            open: true,
+            filename: 'dist/stats.html',
+            gzipSize: true,
+            brotliSize: true
+          })
+        ]
       : []),
     // Compression
     viteCompression({
@@ -92,8 +94,9 @@ export default defineConfig({
       }
     })
   ],
-  base: process.env.VITE_BASE_URL || '/',
+  // base: process.env.VITE_BASE_URL || '/',
   server: {
+    host: '0.0.0.0',
     port: 5173
   },
   build: {

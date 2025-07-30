@@ -238,7 +238,7 @@ export function useGetProject(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.detail(projectId),
     queryFn: () => promptlianoClient.projects.getProject(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && projectId !== -1,
     staleTime: 5 * 60 * 1000
   })
 }
@@ -267,7 +267,7 @@ export function useGetProjectSummary(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.summary(projectId),
     queryFn: () => promptlianoClient.projects.getProjectSummary(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && projectId !== -1,
     staleTime: 10 * 60 * 1000 // 10 minutes for summary
   })
 }
@@ -276,7 +276,7 @@ export function useGetProjectStatistics(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.statistics(projectId),
     queryFn: () => promptlianoClient.projects.getProjectStatistics(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && projectId !== -1,
     staleTime: 5 * 60 * 1000 // 5 minutes cache for statistics
   })
 }
@@ -471,7 +471,7 @@ export function useGetProjectPrompts(projectId: number) {
   return useQuery({
     queryKey: PROMPT_KEYS.projectPrompts(projectId),
     queryFn: () => promptlianoClient.prompts.listProjectPrompts(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && projectId !== -1,
     staleTime: 5 * 60 * 1000
   })
 }

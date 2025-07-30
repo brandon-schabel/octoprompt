@@ -25,7 +25,9 @@ import {
   executeMCPTool,
   listMCPResources,
   readMCPResource,
-  getMCPClientManager
+  getMCPClientManager,
+  listTicketsWithTaskCount,
+  suggestTasksForTicket
 } from '@promptliano/services'
 import { handleHTTPTransport, getActiveSessions, closeSession } from '../mcp/transport'
 import * as projectService from '@promptliano/services'
@@ -1017,7 +1019,6 @@ mcpRoutes.openapi(listTicketsResourceRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { status } = c.req.valid('query')
 
-    const { listTicketsWithTaskCount } = await import('@promptliano/services')
     const tickets = await listTicketsWithTaskCount(projectId, status)
 
     const resourceContent = {
@@ -1085,7 +1086,6 @@ mcpRoutes.openapi(suggestTicketTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { userContext } = c.req.valid('json')
 
-    const { suggestTasksForTicket } = await import('@promptliano/services')
     const suggestions = await suggestTasksForTicket(ticketId, userContext)
 
     return c.json({

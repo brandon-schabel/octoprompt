@@ -54,10 +54,13 @@ export function SortablePanel({
         className
       )}
     >
+      {/* Panel Content with padding */}
+      <div className='h-full w-full pb-6'>{children}</div>
+
       {/* Drag Handle */}
       <div
         className={cn(
-          'absolute top-3 left-1/2 -translate-x-1/2 z-10',
+          'absolute bottom-3 left-1/2 -translate-x-1/2 z-10',
           'cursor-grab active:cursor-grabbing',
           'bg-background/80 backdrop-blur-sm rounded-md',
           'border border-border/50 shadow-sm',
@@ -74,9 +77,6 @@ export function SortablePanel({
           className={cn('h-3 w-5 text-muted-foreground transition-colors', isCurrentlyDragging && 'text-primary')}
         />
       </div>
-
-      {/* Panel Content with padding */}
-      <div className='h-full w-full pt-6'>{children}</div>
     </div>
   )
 }

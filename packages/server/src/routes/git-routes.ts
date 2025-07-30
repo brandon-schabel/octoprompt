@@ -35,6 +35,7 @@ import {
   type GitLogEnhancedRequest
 } from '@promptliano/schemas'
 import * as gitService from '@promptliano/services'
+import { getJobQueue } from '@promptliano/services'
 
 export const gitRoutes = new OpenAPIHono()
 
@@ -1710,7 +1711,6 @@ gitRoutes.openapi(addWorktreeRoute, async (c) => {
 
     if (async) {
       // Create job for async processing
-      const { getJobQueue } = await import('@promptliano/services')
       const jobQueue = getJobQueue()
 
       const job = await jobQueue.createJob({
@@ -1813,7 +1813,6 @@ gitRoutes.openapi(removeWorktreeRoute, async (c) => {
 
     if (async) {
       // Create job for async processing
-      const { getJobQueue } = await import('@promptliano/services')
       const jobQueue = getJobQueue()
 
       const job = await jobQueue.createJob({
@@ -2051,7 +2050,6 @@ gitRoutes.openapi(pruneWorktreesRoute, async (c) => {
 
     if (async && !dryRun) {
       // Only async for actual prune operations, not dry runs
-      const { getJobQueue } = await import('@promptliano/services')
       const jobQueue = getJobQueue()
 
       const job = await jobQueue.createJob({

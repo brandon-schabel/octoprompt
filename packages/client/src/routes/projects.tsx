@@ -22,19 +22,19 @@ import {
 } from '@/hooks/use-kv-local-storage'
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ProjectStatsDisplayEnhanced } from '@/components/projects/project-stats-display-enhanced-v2'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
-import { ProjectSummarizationSettingsPage } from './project-summarization'
-import { ProjectSettingsTab } from '@/components/projects/project-settings-tab'
 import { AssetsTabWithSidebar } from '@/components/assets/assets-tab-with-sidebar'
-import { GitBranch, BarChart2, Settings } from 'lucide-react'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
 import { TicketsTabWithSidebar } from '@/components/tickets/tickets-tab-with-sidebar'
 import { GitTabWithSidebar } from '@/components/projects/git-tab-with-sidebar'
-import { MCPAnalyticsTabView } from '@/components/projects/mcp-analytics-tab-view'
 import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
 import { ClaudeCodeTabWithSidebar } from '@/components/claude-code'
+import { EmptyProjectTabsView } from '@/components/projects/empty-project-tabs-view'
+import { ManageTabWithSidebar } from '@/components/projects/manage-tab-with-sidebar'
+import { ProjectNavigationMenu } from '@/components/projects/project-navigation-menu'
+import { migrateUrlParams, needsUrlMigration, getMigrationMessage } from '@/lib/tab-migration'
+import { toast } from 'sonner'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -42,6 +42,7 @@ export function ProjectsPage() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
+  const [hasMigrationNotified, setHasMigrationNotified] = useState(false)
 
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectResponse } = useGetProject(selectedProjectId!)
@@ -49,9 +50,24 @@ export function ProjectsPage() {
 
   // Sync active tab with backend
   useActiveTabSync(selectedProjectId)
-
-  // Sync active tab with backend
-  useActiveTabSync(selectedProjectId)
+  
+  // Clear section parameter after navigation
+  useEffect(() => {
+    if (search.section) {
+      // Clear section parameter after a delay to allow scrolling
+      const timer = setTimeout(() => {
+        navigate({
+          to: '/projects',
+          search: (prev) => {
+            const { section, ...rest } = prev
+            return rest
+          },
+          replace: true
+        })
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [search.section, navigate])
 
   const { data: allProjectsData, isLoading: projectsLoading } = useGetProjects()
   const [tabs] = useGetProjectTabs()
@@ -66,10 +82,12 @@ export function ProjectsPage() {
   const [hasInitializedFromUrl, setHasInitializedFromUrl] = useState(false)
 
   const projects = allProjectsData?.data || []
-  const tabsLen = Object.keys(tabs || {}).length
-  const noTabsYet = Object.keys(tabs || {}).length === 0
-  const tabsArray = Object.values(tabs || {})
-  const tabsKeys = Object.keys(tabs || {})
+  // Filter out non-numeric tab IDs (like 'defaultTab')
+  const validTabKeys = Object.keys(tabs || {}).filter((key) => !isNaN(Number(key)))
+  const tabsLen = validTabKeys.length
+  const noTabsYet = validTabKeys.length === 0
+  const tabsArray = validTabKeys.map((key) => tabs[key])
+  const tabsKeys = validTabKeys
   const { mutate: updateProjectTabs } = useSetKvValue('projectTabs')
 
   // Sync tab from URL on initial load
@@ -114,13 +132,53 @@ export function ProjectsPage() {
     }
   }, [activeProjectTabId, hasInitializedFromUrl, navigate, search.tab])
 
-  const handleSelectProject = (id: number) => {
-    updateActiveProjectTab((prev) => ({
-      ...(prev || {}),
-      selectedProjectId: id,
-      selectedFiles: [],
-      selectedPrompts: []
-    }))
+  // Handle URL migration for old tab structure
+  useEffect(() => {
+    if (needsUrlMigration(search)) {
+      const migratedParams = migrateUrlParams(search)
+      if (migratedParams) {
+        // Show migration notification once
+        if (!hasMigrationNotified && search.activeView) {
+          const message = getMigrationMessage(search.activeView)
+          if (message) {
+            toast.info(message, {
+              duration: 5000,
+              id: 'tab-migration-notice'
+            })
+            setHasMigrationNotified(true)
+          }
+        }
+        
+        // Redirect to new URL structure
+        navigate({
+          to: '/projects',
+          search: migratedParams,
+          replace: true
+        })
+      }
+    }
+  }, [search, navigate, hasMigrationNotified])
+
+  const handleSelectProject = async (id: number) => {
+    // If no tabs exist, create a new tab first
+    if (noTabsYet) {
+      const project = projects.find((p) => p.id === id)
+      const newTabId = createProjectTabFromHook({
+        displayName: project?.name || `Tab ${Date.now().toString().slice(-4)}`,
+        selectedProjectId: id,
+        selectedFiles: [],
+        selectedPrompts: []
+      })
+      setActiveProjectTabId(newTabId)
+    } else {
+      // Update existing tab
+      updateActiveProjectTab((prev) => ({
+        ...(prev || {}),
+        selectedProjectId: id,
+        selectedFiles: [],
+        selectedPrompts: []
+      }))
+    }
     setProjectModalOpen(false)
   }
 
@@ -143,6 +201,7 @@ export function ProjectsPage() {
       }
     })
   }
+
   let content
   if (projectsLoading) {
     content = (
@@ -171,13 +230,10 @@ export function ProjectsPage() {
     )
   } else if (noTabsYet) {
     content = (
-      <NoTabsYetView
-        projects={projects}
-        selectedProjectId={selectedProjectId}
-        createProjectTab={async ({ name, projectId }) =>
-          Promise.resolve(createProjectTabFromHook({ displayName: name, selectedProjectId: projectId }))
-        }
-        openProjectModal={() => setProjectModalOpen(true)}
+      <EmptyProjectTabsView
+        onOpenProjectInTab={() => {
+          setProjectModalOpen(true)
+        }}
       />
     )
   } else if (!selectedProjectId) {
@@ -204,57 +260,68 @@ export function ProjectsPage() {
         <div className='flex-none'>
           <ProjectsTabManager />
         </div>
-        <Tabs
-          value={search.activeView || 'context'}
-          onValueChange={(value) => {
-            // Ensure the value is valid before navigating
-            const validValue = value as ProjectView
-            navigate({
-              to: '/projects',
-              search: (prev) => ({ ...prev, activeView: validValue }),
-              replace: true
-            })
-          }}
-          className='flex-1 flex flex-col min-h-0'
-        >
-          <div className='flex-none px-4 py-2 border-b dark:border-slate-700 grid grid-cols-3 items-center'>
+        <div className='flex-none px-4 py-1 border-b dark:border-slate-700 grid grid-cols-3 items-center'>
+          <div className='justify-self-start'>
+            <ProjectNavigationMenu 
+              currentSearch={search}
+              activeView={search.activeView || 'context'}
+              onViewChange={(value) => {
+                // Ensure the value is valid before navigating
+                const validValue = value as ProjectView
+                const newSearch: any = { ...search, activeView: validValue }
+                
+                // If navigating to manage tab, ensure we have a default manageView
+                if (validValue === 'manage' && !search.manageView) {
+                  newSearch.manageView = 'statistics'
+                }
+                
+                navigate({
+                  to: '/projects',
+                  search: newSearch,
+                  replace: true
+                })
+              }}
+              claudeCodeEnabled={activeProjectTabState?.claudeCodeEnabled}
+              showTabs={false}
+              showMenus={true}
+            />
+          </div>
+          <div className='justify-self-center'>
+            <ProjectNavigationMenu 
+              currentSearch={search}
+              activeView={search.activeView || 'context'}
+              onViewChange={(value) => {
+                // Ensure the value is valid before navigating
+                const validValue = value as ProjectView
+                const newSearch: any = { ...search, activeView: validValue }
+                
+                // If navigating to manage tab, ensure we have a default manageView
+                if (validValue === 'manage' && !search.manageView) {
+                  newSearch.manageView = 'statistics'
+                }
+                
+                navigate({
+                  to: '/projects',
+                  search: newSearch,
+                  replace: true
+                })
+              }}
+              claudeCodeEnabled={activeProjectTabState?.claudeCodeEnabled}
+              showTabs={true}
+              showMenus={false}
+            />
+          </div>
+          <div className='justify-self-end'>
             <ProjectSwitcher
               currentProject={projectData ?? null}
-              className='justify-self-start'
               onManageProjects={() => setProjectModalOpen(true)}
             />
-            <div className='justify-self-center'>
-              <TabsList>
-                <TabsTrigger value='context'>Context</TabsTrigger>
-                <TabsTrigger value='stats'>Statistics</TabsTrigger>
-                <TabsTrigger value='tickets' className='flex items-center gap-1'>
-                  Tickets
-                </TabsTrigger>
-                <TabsTrigger value='summarization'>Summarization</TabsTrigger>
-                <TabsTrigger value='assets' className='flex items-center gap-1'>
-                  Assets
-                </TabsTrigger>
-                <TabsTrigger value='git' className='flex items-center gap-1'>
-                  <GitBranch className='h-3.5 w-3.5' />
-                  Git
-                </TabsTrigger>
-                <TabsTrigger value='mcp-analytics' className='flex items-center gap-1'>
-                  <BarChart2 className='h-3.5 w-3.5' />
-                  MCP Analytics
-                </TabsTrigger>
-                {activeProjectTabState?.claudeCodeEnabled && (
-                  <TabsTrigger value='claude-code' className='flex items-center gap-1'>
-                    Claude Code
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value='settings' className='flex items-center gap-1'>
-                  <Settings className='h-3.5 w-3.5' />
-                  Settings
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            <div>{/* Right column - empty for balance */}</div>
           </div>
+        </div>
+        <Tabs
+          value={search.activeView || 'context'}
+          className='flex-1 flex flex-col min-h-0'
+        >
 
           <TabsContent value='context' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             <MainProjectsLayout
@@ -263,13 +330,6 @@ export function ProjectsPage() {
             />
           </TabsContent>
 
-          <TabsContent value='stats' className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'>
-            {selectedProjectId ? (
-              <ProjectStatsDisplayEnhanced projectId={selectedProjectId} />
-            ) : (
-              <p>No project selected for stats.</p>
-            )}
-          </TabsContent>
           <TabsContent value='tickets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData && activeProjectTabId ? (
               <TicketsTabWithSidebar
@@ -297,35 +357,7 @@ export function ProjectsPage() {
               <p className='p-4 md:p-6'>No project selected for tickets.</p>
             )}
           </TabsContent>
-          <TabsContent
-            value='summarization'
-            className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'
-          >
-            {selectedProjectId ? (
-              <ProjectSummarizationSettingsPage />
-            ) : (
-              <p>No project selected for summarization settings.</p>
-            )}
-          </TabsContent>
 
-          <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
-            {selectedProjectId && projectData ? (
-              <AssetsTabWithSidebar
-                projectId={selectedProjectId}
-                projectName={projectData.name}
-                assetView={search.assetView}
-                onAssetViewChange={(view) => {
-                  navigate({
-                    to: '/projects',
-                    search: (prev) => ({ ...prev, assetView: view }),
-                    replace: true
-                  })
-                }}
-              />
-            ) : (
-              <p className='p-4 md:p-6'>No project selected for Assets.</p>
-            )}
-          </TabsContent>
           <TabsContent value='git' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId ? (
               <GitTabWithSidebar
@@ -343,11 +375,39 @@ export function ProjectsPage() {
               <p className='p-4 md:p-6'>No project selected for Git.</p>
             )}
           </TabsContent>
-          <TabsContent value='mcp-analytics' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+          <TabsContent value='manage' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId ? (
-              <MCPAnalyticsTabView projectId={selectedProjectId} />
+              <ManageTabWithSidebar
+                projectId={selectedProjectId}
+                manageView={search.manageView}
+                onManageViewChange={(view) => {
+                  navigate({
+                    to: '/projects',
+                    search: (prev) => ({ ...prev, manageView: view }),
+                    replace: true
+                  })
+                }}
+              />
             ) : (
-              <p className='p-4 md:p-6'>No project selected for MCP Analytics.</p>
+              <p className='p-4 md:p-6'>No project selected for Manage.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId && projectData ? (
+              <AssetsTabWithSidebar
+                projectId={selectedProjectId}
+                projectName={projectData.name}
+                assetView={search.assetView}
+                onAssetViewChange={(view) => {
+                  navigate({
+                    to: '/projects',
+                    search: (prev) => ({ ...prev, assetView: view }),
+                    replace: true
+                  })
+                }}
+              />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for Assets.</p>
             )}
           </TabsContent>
           <TabsContent value='claude-code' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
@@ -373,13 +433,6 @@ export function ProjectsPage() {
                 <p>Claude Code is not enabled for this project.</p>
                 <p className='mt-2'>Enable it in the Settings tab to access Claude Code features.</p>
               </div>
-            )}
-          </TabsContent>
-          <TabsContent value='settings' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
-            {selectedProjectId ? (
-              <ProjectSettingsTab />
-            ) : (
-              <p className='p-4 md:p-6'>No project selected for Settings.</p>
             )}
           </TabsContent>
         </Tabs>
@@ -475,60 +528,6 @@ function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayout
           storageKey='projects-draggable-columns'
           className='flex-1 h-full w-full'
         />
-      </div>
-    </ErrorBoundary>
-  )
-}
-
-type NoTabsYetViewProps = {
-  projects: ProjectResponse['data'][]
-  selectedProjectId?: number | null
-  createProjectTab: (args: { projectId?: number; name?: string }) => Promise<any>
-  openProjectModal: () => void
-}
-
-function NoTabsYetView({ projects, selectedProjectId, createProjectTab, openProjectModal }: NoTabsYetViewProps) {
-  let projectForButton = selectedProjectId ? projects.find((p) => p.id === selectedProjectId) : undefined
-  return (
-    <ErrorBoundary>
-      <div className='p-4'>
-        <ProjectsTabManager />
-        <div className='mt-4 flex flex-col items-start gap-3'>
-          <p className='text-sm text-muted-foreground'>Welcome! You need a tab to start working with your projects.</p>
-
-          {projectForButton ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() =>
-                    createProjectTab({
-                      projectId: projectForButton!.id,
-                      name: projectForButton!.name || `Tab for ${projectForButton!.id.toString()}`
-                    })
-                  }
-                >
-                  + Create Tab for "{projectForButton!.name}"
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Create a new tab for the project: {projectForButton!.name}</p>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={openProjectModal}>Select a Project to Create a Tab</Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Open the project selector to choose a project for a new tab.</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {!projectForButton && projects.length > 0 && !selectedProjectId && (
-            <p className='text-sm text-muted-foreground mt-2'>Or, choose an existing project to get started.</p>
-          )}
-        </div>
       </div>
     </ErrorBoundary>
   )
