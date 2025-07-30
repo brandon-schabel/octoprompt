@@ -99,10 +99,50 @@ Make strong use of the agents feature, make use of specialized agents to handle 
 
 ## Coding Principles
 
-Write code that is self explanatory where comments are rarely needed. Follow instructions exactly as written. Everything must be very concise but still make sense. Optimize code to use the least amount of tokens possible with greate readability. Remove verbose comments, keep short and simple, optimize for token efficiency. Follow DRY and SRP priniciples, write modular, functional code. Make sure code is unit testable. Make sure functions are pure and deterministic. Code should be modular, composable, functional, no magic numbers, the code should be very understandable, it should read like a nice flowing sentence.
+- Write code that is self explanatory where comments are rarely needed.
+- Follow instructions exactly as written. Everything must be very concise but still make sense.
+- Optimize code to use the least amount of tokens possible with great readability.
+- Remove verbose comments, keep comments short and simple, optimize for token efficiency.
+- write modular, functional code. Make sure code is unit testable. Make sure functions are pure and deterministic.
+- Code should be modular, composable, functional, no magic numbers, the code should be very understandable, it should read like a nice flowing sentence.
+- never use dynamic imports unless you have to
 
-Implement These Rules For Reducing File Sizes:
+Implement These Practices:
 
 - Follow DRY (Don't repeat yourself)
 - Follow KISS (Keep it simple stupid)
 - Follow SRP (Single Responsibility Principle)
+
+use bun to run all npm scripts in package.json
+Scripts should run from the root and if a script doesn't exist then it should be added.
+Below are available scripts and what they do.
+
+```
+scripts: {
+"dev": "bun run scripts/start-dev.ts",
+    "dev:client": "bun run scripts/start-client-dev.ts",
+    "dev:server": "bun run scripts/start-server-dev.ts",
+    "stop": "bun run scripts/stop.ts",
+    "build-binaries": "bun run scripts/build-binaries.ts",
+    "prepare-tauri-sidecars": "bun run scripts/prepare-tauri-sidecars.ts",
+    "prepare-dev-sidecar": "bun run scripts/prepare-dev-sidecar.ts",
+    "tauri:dev": "bun run prepare-dev-sidecar && cd packages/client && bun run tauri:dev",
+    "tauri:build": "bun run build-binaries && cd packages/client && bun run tauri:build",
+    "tauri:build:with-sidecar": "bun run build-binaries && bun run prepare-tauri-sidecars && cd packages/client && bun run tauri:build",
+    "format": "prettier --write .",
+    "test:shared": "cd packages/shared && bun run test",
+    "test:schemas": "cd packages/schemas && bun run test",
+    "test:services": "cd packages/services && bun run test",
+    "test:storage": "cd packages/storage && bun run test",
+    "test:api-client": "cd packages/api-client && bun run test",
+    "test:config": "cd packages/config && bun run test",
+    "test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client && bun run test:config",
+    "migrate:sqlite": "bun run scripts/migrate-to-sqlite.ts",
+    "migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run",
+    "generate-encryption-key": "bun run packages/shared/src/utils/generate-key.ts",
+    "migrate:encrypt-keys": "bun run packages/storage/src/migrations/encrypt-provider-keys.ts",
+    "dev:website": "bun run scripts/start-website-dev.ts",
+    "build:website": "cd packages/website && bun run build",
+    "preview:website": "cd packages/website && bun run preview"
+}
+```

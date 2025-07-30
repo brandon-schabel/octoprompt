@@ -14,7 +14,6 @@ import { EditorType, EDITOR_OPTIONS } from '@promptliano/schemas'
 
 export function ProjectSettingsDialog() {
   const updateActiveProjectTab = useUpdateActiveProjectTab()
-  const { data: contextLimit } = useProjectTabField('contextLimit')
   const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
   const { data: resolveImports } = useProjectTabField('resolveImports')
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
@@ -37,12 +36,6 @@ export function ProjectSettingsDialog() {
     }
   }, [projectId, syncProject])
 
-  const setContextLimit = (value: number) => {
-    updateActiveProjectTab((prev) => ({
-      ...prev,
-      contextLimit: value
-    }))
-  }
 
   const setPreferredEditor = (value: EditorType) => {
     // @ts-ignore
@@ -173,31 +166,6 @@ export function ProjectSettingsDialog() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-            <div className='space-y-2'>
-              <div>
-                <span className='text-sm font-medium'>Context Size Limit</span>
-                <p className='text-sm text-muted-foreground'>
-                  Maximum number of tokens to include in the context when generating prompts.
-                </p>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Input
-                  type='number'
-                  value={contextLimit || 0}
-                  onChange={(e) => setContextLimit(parseInt(e.target.value, 10) || 0)}
-                  className='w-24'
-                />
-                <div className='flex-1'>
-                  <Slider
-                    value={[contextLimit || 128000]}
-                    onValueChange={(val) => setContextLimit(val[0])}
-                    min={4000}
-                    max={1000000}
-                    step={1000}
-                  />
-                </div>
               </div>
             </div>
           </div>

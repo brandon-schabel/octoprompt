@@ -8,6 +8,8 @@ import {
   type CleanupOptions
 } from '@promptliano/storage'
 import path from 'node:path'
+import * as fs from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 
 interface MaintenanceOptions {
   enableScheduledCleanup?: boolean
@@ -96,9 +98,6 @@ async function performInitialCleanup(options: { verbose?: boolean }): Promise<vo
  * Clean temporary files in a directory
  */
 async function cleanTempFiles(basePath: string, options: CleanupOptions): Promise<void> {
-  const fs = await import('node:fs/promises')
-  const { existsSync } = await import('node:fs')
-
   if (!existsSync(basePath)) return
 
   try {

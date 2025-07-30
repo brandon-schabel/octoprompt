@@ -15,7 +15,7 @@ import { ticketStorage } from '@promptliano/storage'
 import { ApiError } from '@promptliano/shared'
 import { getFullProjectSummary, getCompactProjectSummary } from './utils/project-summary-service'
 import { generateStructuredData } from './gen-ai-services'
-import { fileSuggestionStrategyService } from './file-suggestion-strategy-service'
+import { fileSuggestionStrategyService, FileSuggestionStrategyService } from './file-suggestion-strategy-service'
 import { z } from 'zod'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
@@ -407,7 +407,6 @@ export async function suggestFilesForTicket(
 
   try {
     // Determine strategy based on project size if not specified
-    const { FileSuggestionStrategyService } = await import('./file-suggestion-strategy-service')
     const strategy = options.strategy || (await FileSuggestionStrategyService.recommendStrategy(ticket.projectId))
 
     // Use the new file suggestion strategy service

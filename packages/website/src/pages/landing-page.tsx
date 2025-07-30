@@ -10,7 +10,7 @@ import {
 export function LandingPage() {
   return (
     <PageTransition>
-      <div className='min-h-screen bg-background'>
+      <div className='min-h-screen bg-background overflow-x-hidden'>
         {/* Hero Section */}
         <HeroSection />
 

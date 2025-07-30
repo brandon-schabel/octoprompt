@@ -16,7 +16,9 @@ import {
   suggestFiles,
   startMCPToolExecution,
   completeMCPToolExecution,
-  ensureProjectServersInitialized
+  ensureProjectServersInitialized,
+  listProjects,
+  getProjectCompactSummary
 } from '@promptliano/services'
 import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './tools-registry'
 
@@ -526,7 +528,6 @@ async function handleResourcesList(
 
     // Add global resources (available without projectId)
     try {
-      const { listProjects } = await import('@promptliano/services')
       const projects = await listProjects()
 
       // Add all projects resource
@@ -700,7 +701,6 @@ async function handleResourcesRead(
 
       // Handle global projects list
       if (uri === 'promptliano://projects') {
-        const { listProjects } = await import('@promptliano/services')
         const projects = await listProjects()
         return {
           jsonrpc: '2.0',
@@ -723,7 +723,6 @@ async function handleResourcesRead(
 
         if (urlParts[2] === 'summary') {
           // Project summary resource - use compact summary
-          const { getProjectCompactSummary } = await import('@promptliano/services')
           const summary = await getProjectCompactSummary(parseInt(resourceProjectId))
 
           return {

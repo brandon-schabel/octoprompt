@@ -209,8 +209,7 @@ export const useCreateProjectTab = () => {
     const projectTab: ProjectTabState = {
       // id: newTabId,
       // ...currentProjectTabData,
-      ...payload,
-      selectedProjectId: currentSelectedProjectId ?? null,
+      selectedProjectId: payload.selectedProjectId ?? currentSelectedProjectId ?? null,
       editProjectId: -1,
       promptDialogOpen: false,
       editPromptId: -1,
@@ -221,7 +220,8 @@ export const useCreateProjectTab = () => {
       sortOrder: 0,
       displayName: `New Tab`,
       searchByContent: false,
-      contextLimit: 64000
+      contextLimit: 64000,
+      ...payload // Apply payload overrides last to ensure they take precedence
     }
 
     updateProjectTabs({

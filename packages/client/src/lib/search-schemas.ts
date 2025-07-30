@@ -16,7 +16,7 @@ export const tabSearchSchema = z.object({
 
 // Project view tabs enum
 export const projectViewSchema = z
-  .enum(['context', 'stats', 'tickets', 'summarization', 'assets', 'git', 'mcp-analytics', 'settings', 'claude-code'])
+  .enum(['context', 'tickets', 'git', 'manage', 'assets', 'claude-code'])
   .catch('context')
   .optional()
 
@@ -38,6 +38,12 @@ export const assetViewSchema = z
 // Claude Code view sub-tabs enum
 export const claudeCodeViewSchema = z.enum(['agents', 'sessions', 'chats', 'settings']).catch('agents').optional()
 
+// Manage view sub-tabs enum
+export const manageViewSchema = z
+  .enum(['statistics', 'mcp-analytics', 'summarization', 'project-settings'])
+  .catch('statistics')
+  .optional()
+
 // Route-specific search schemas
 export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema).extend({
   activeView: projectViewSchema,
@@ -45,8 +51,10 @@ export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema)
   ticketView: ticketViewSchema,
   assetView: assetViewSchema,
   claudeCodeView: claudeCodeViewSchema,
+  manageView: manageViewSchema,
   selectedTicketId: z.coerce.number().optional().catch(undefined),
-  gitBranch: z.string().optional().catch(undefined)
+  gitBranch: z.string().optional().catch(undefined),
+  section: z.string().optional().catch(undefined)
 })
 
 export const chatSearchSchema = z.object({
@@ -66,7 +74,7 @@ export const assetsSearchSchema = z.object({
 })
 
 // Settings page search schema
-export const settingsTabSchema = z.enum(['general', 'api-keys', 'global-mcp']).catch('general').optional()
+export const settingsTabSchema = z.enum(['general', 'local-providers', 'global-mcp']).catch('general').optional()
 
 export const settingsSearchSchema = z.object({
   tab: settingsTabSchema
@@ -79,6 +87,7 @@ export type GitView = z.infer<typeof gitViewSchema>
 export type TicketView = z.infer<typeof ticketViewSchema>
 export type AssetView = z.infer<typeof assetViewSchema>
 export type ClaudeCodeView = z.infer<typeof claudeCodeViewSchema>
+export type ManageView = z.infer<typeof manageViewSchema>
 export type ChatSearch = z.infer<typeof chatSearchSchema>
 export type TicketsSearch = z.infer<typeof ticketsSearchSchema>
 export type AssetsSearch = z.infer<typeof assetsSearchSchema>

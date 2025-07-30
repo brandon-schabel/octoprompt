@@ -63,7 +63,7 @@ export const projectTabStateSchema = z
       .optional()
       .default('Default Tab')
       .openapi({ description: 'User-defined display name for this project tab.', example: 'Backend Services' }),
-    contextLimit: z.number().optional().default(128000).openapi({
+    contextLimit: z.number().optional().openapi({
       description:
         'Context limit (in tokens) specifically configured for this project tab, overriding global settings if set.',
       example: 16000
@@ -430,7 +430,6 @@ export const createSafeGlobalState = (): GlobalState => ({
       userPrompt: '',
       searchByContent: false,
       displayName: 'Default Project Tab',
-      contextLimit: 128000,
       resolveImports: false,
       preferredEditor: 'vscode' as const,
       suggestedFileIds: [],

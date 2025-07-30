@@ -6,6 +6,7 @@ import type { MCPToolDefinition, MCPToolResponse } from './tools-registry'
 import { MCPError, MCPErrorCode, createMCPError, formatMCPErrorResponse } from './mcp-errors'
 import { executeTransaction, createTransactionStep } from './mcp-transaction'
 import { trackMCPToolExecution } from '@promptliano/services'
+import { ApiError } from '@promptliano/shared'
 import {
   listProjects,
   getProjectById,
@@ -115,7 +116,19 @@ import {
   setActiveTab,
   clearActiveTab,
   fileSearchService,
-  fileIndexingService
+  fileIndexingService,
+  getProjectSummaryWithOptions,
+  removeDeletedFileIdsFromTickets,
+  getProjectFileTree,
+  getProjectOverview,
+  suggestFilesForTask,
+  getTaskWithContext,
+  analyzeTaskComplexity,
+  createTabNameGenerationService,
+  getJobQueue,
+  enhancedSummarizationService,
+  fileSummarizationTracker,
+  fileGroupingService
 } from '@promptliano/services'
 import type {
   CreateProjectBody,
@@ -126,6 +139,7 @@ import type {
   UpdateTicketBody,
   UpdateTaskBody
 } from '@promptliano/schemas'
+import { SummaryOptionsSchema } from '@promptliano/schemas'
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
 
@@ -735,9 +749,6 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
             case ProjectManagerAction.GET_SUMMARY_ADVANCED: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number')
-              const { getProjectSummaryWithOptions } = await import('@promptliano/services')
-              const { SummaryOptionsSchema } = await import('@promptliano/schemas')
-
               // Parse and validate options
               const options = SummaryOptionsSchema.parse(data || {})
               const result = await getProjectSummaryWithOptions(validProjectId, options)
@@ -768,8 +779,6 @@ ${result.summary}`
 
             case ProjectManagerAction.GET_SUMMARY_METRICS: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number')
-              const { getProjectSummaryWithOptions } = await import('@promptliano/services')
-
               // Get summary with metrics for standard options
               const result = await getProjectSummaryWithOptions(validProjectId, {
                 depth: 'standard',
@@ -886,7 +895,10 @@ Version Info:
                   requestedPath: filePath,
                   availableFiles: availablePaths,
                   totalFiles: files.length,
-                  hint: 'Use browse_files action to explore available files'
+                  hint: 'Use browse_files action to explore available files',
+                  projectId: validProjectId,
+                  tool: 'project_manager',
+                  value: filePath
                 })
               }
 
@@ -938,7 +950,10 @@ Version Info:
                 throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, {
                   requestedPath: filePath,
                   availableFiles: availablePaths,
-                  totalFiles: files.length
+                  totalFiles: files.length,
+                  projectId: validProjectId,
+                  tool: 'project_manager',
+                  value: filePath
                 })
               }
 
@@ -1313,7 +1328,10 @@ Version Info:
                   requestedPath: filePath,
                   availableFiles: availablePaths,
                   totalFiles: files.length,
-                  hint: 'Use browse_files action to explore available files'
+                  hint: 'Use browse_files action to explore available files',
+                  projectId: validProjectId,
+                  tool: 'project_manager',
+                  value: filePath
                 })
               }
 
@@ -1372,7 +1390,10 @@ Version Info:
                   requestedPath: filePath,
                   availableFiles: availablePaths,
                   totalFiles: files.length,
-                  hint: 'Use browse_files action to explore available files'
+                  hint: 'Use browse_files action to explore available files',
+                  projectId: validProjectId,
+                  tool: 'project_manager',
+                  value: filePath
                 })
               }
 
@@ -1387,12 +1408,11 @@ Version Info:
               }
 
               // Clean up file references in tickets
-              const { removeDeletedFileIdsFromTickets } = await import('@promptliano/services')
               await removeDeletedFileIdsFromTickets(validProjectId, [file.id])
 
               // Clean up file references in selected files
-              const { removeDeletedFileIdsFromSelectedFiles } = await import('@promptliano/services')
-              await removeDeletedFileIdsFromSelectedFiles(validProjectId, [file.id])
+              // Note: removeDeletedFileIdsFromSelectedFiles function doesn't exist
+              // await removeDeletedFileIdsFromSelectedFiles(validProjectId, [file.id])
 
               // Delete the file from disk
               const fullPath = path.join(project.path, filePath)
@@ -1412,7 +1432,6 @@ Version Info:
 
             case ProjectManagerAction.GET_FILE_TREE: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              const { getProjectFileTree } = await import('@promptliano/services')
               const fileTree = await getProjectFileTree(validProjectId)
               return {
                 content: [{ type: 'text', text: fileTree }]
@@ -1421,10 +1440,38 @@ Version Info:
 
             case ProjectManagerAction.OVERVIEW: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              const { getProjectOverview } = await import('@promptliano/services')
-              const overview = await getProjectOverview(validProjectId)
-              return {
-                content: [{ type: 'text', text: overview }]
+              
+              try {
+                const overview = await getProjectOverview(validProjectId)
+                return {
+                  content: [{ type: 'text', text: overview }]
+                }
+              } catch (error) {
+                // Check if it's a PROJECT_NOT_FOUND error
+                if (error instanceof ApiError && (error.code === 'PROJECT_NOT_FOUND' || error.status === 404)) {
+                  // Get list of available projects
+                  const projects = await listProjects()
+                  
+                  let errorMessage = `Error: Project not found with ID ${validProjectId}.\n\n`
+                  
+                  if (projects.length > 0) {
+                    errorMessage += `Available projects:\n`
+                    projects.forEach(p => {
+                      errorMessage += `  ${p.id}: ${p.name} (${p.path})\n`
+                    })
+                    errorMessage += `\nPlease use one of the project IDs listed above.`
+                  } else {
+                    errorMessage += `No projects found. Create a project first using the 'create' action.`
+                  }
+                  
+                  return {
+                    content: [{ type: 'text', text: errorMessage }],
+                    isError: true
+                  }
+                }
+                
+                // Re-throw other errors to be handled by the main catch block
+                throw error
               }
             }
 
@@ -1504,7 +1551,7 @@ Version Info:
               })
 
           // Return formatted error response with recovery suggestions
-          return formatMCPErrorResponse(mcpError)
+          return await formatMCPErrorResponse(mcpError)
         }
       }
     )
@@ -1753,7 +1800,7 @@ Version Info:
               })
 
           // Return formatted error response with recovery suggestions
-          return formatMCPErrorResponse(mcpError)
+          return await formatMCPErrorResponse(mcpError)
         }
       }
     )
@@ -1918,10 +1965,11 @@ Version Info:
               ? error
               : MCPError.fromError(error, {
                   tool: 'agent_manager',
-                  action: args.action
+                  action: args.action,
+                  projectId: args.projectId
                 })
           // Return formatted error response with recovery suggestions
-          return formatMCPErrorResponse(mcpError)
+          return await formatMCPErrorResponse(mcpError)
         }
       }
     )
@@ -2287,11 +2335,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               ? error
               : MCPError.fromError(error, {
                 tool: 'ticket_manager',
-                action: args.action
+                action: args.action,
+                projectId: args.projectId
               })
 
           // Return formatted error response with recovery suggestions
-          return formatMCPErrorResponse(mcpError)
+          return await formatMCPErrorResponse(mcpError)
         }
       }
     )
@@ -2395,7 +2444,6 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             }
 
             case TaskManagerAction.SUGGEST_FILES: {
-              const { suggestFilesForTask } = await import('@promptliano/services')
               const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
               const context = data.context as string | undefined
               const suggestedFiles = await suggestFilesForTask(taskId, context)
@@ -2432,7 +2480,6 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             }
 
             case TaskManagerAction.GET_WITH_CONTEXT: {
-              const { getTaskWithContext } = await import('@promptliano/services')
               const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
               const taskWithContext = await getTaskWithContext(taskId)
               const contextInfo = {
@@ -2454,7 +2501,6 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             }
 
             case TaskManagerAction.ANALYZE_COMPLEXITY: {
-              const { analyzeTaskComplexity } = await import('@promptliano/services')
               const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
               const analysis = await analyzeTaskComplexity(taskId)
               return {
@@ -2714,9 +2760,6 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             }
 
             case AIAssistantAction.GET_COMPACT_SUMMARY_WITH_OPTIONS: {
-              const { getProjectSummaryWithOptions } = await import('@promptliano/services')
-              const { SummaryOptionsSchema } = await import('@promptliano/schemas')
-
               // Parse and validate options, setting defaults for compact summary
               const options = SummaryOptionsSchema.parse({
                 ...data,
@@ -3394,7 +3437,6 @@ ${result.summary}`
               const tabData = data?.tabData || {}
               const existingNames = data?.existingNames || []
 
-              const { createTabNameGenerationService } = await import('@promptliano/services')
               const tabNameService = createTabNameGenerationService()
 
               const result = await tabNameService.generateUniqueTabName(validProjectId, tabData, existingNames)
@@ -3426,7 +3468,7 @@ ${result.summary}`
               })
 
           // Return formatted error response with recovery suggestions
-          return formatMCPErrorResponse(mcpError)
+          return await formatMCPErrorResponse(mcpError)
         }
       }
     )
@@ -3581,7 +3623,6 @@ ${result.summary}`
       async (args: z.infer<typeof JobManagerSchema>): Promise<MCPToolResponse> => {
         try {
           const { action, jobId, projectId, data } = args
-          const { getJobQueue } = await import('@promptliano/services')
           const jobQueue = getJobQueue()
 
           switch (action) {
@@ -3767,8 +3808,6 @@ ${result.summary}`
       async (args: z.infer<typeof FileSummarizationManagerSchema>): Promise<MCPToolResponse> => {
         try {
           const { action, projectId, data } = args
-          const { fileSummarizationTracker, fileGroupingService, enhancedSummarizationService, getProjectFiles } =
-            await import('@promptliano/services')
 
           switch (action) {
             case FileSummarizationManagerAction.IDENTIFY_UNSUMMARIZED: {

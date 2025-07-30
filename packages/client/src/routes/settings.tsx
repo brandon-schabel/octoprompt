@@ -41,7 +41,8 @@ export function SettingsPage() {
     lmStudioGlobalUrl,
     codeThemeDark,
     codeThemeLight,
-    theme
+    theme,
+    enableChatAutoNaming = true
   } = settings
   const isDarkMode = theme === 'dark'
 
@@ -76,8 +77,8 @@ export function SettingsPage() {
         <p className='text-muted-foreground'>Manage your application preferences and configuration</p>
       </div>
 
-      <Tabs 
-        value={search.tab || 'general'} 
+      <Tabs
+        value={search.tab || 'general'}
         onValueChange={(value) => {
           navigate({
             to: '/settings',
@@ -89,7 +90,7 @@ export function SettingsPage() {
       >
         <TabsList className='grid w-full grid-cols-3'>
           <TabsTrigger value='general'>General</TabsTrigger>
-          <TabsTrigger value='api-keys'>API Keys</TabsTrigger>
+          <TabsTrigger value='local-providers'>Local Model Providers</TabsTrigger>
           <TabsTrigger value='global-mcp'>Global MCP</TabsTrigger>
         </TabsList>
 
@@ -163,6 +164,29 @@ export function SettingsPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Chat Settings</CardTitle>
+              <CardDescription>Configure chat behavior and automatic features</CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-6'>
+              <div className='flex items-center justify-between'>
+                <Label htmlFor='auto-name-chats' className='text-sm font-medium'>
+                  Auto-name Chats
+                </Label>
+                <Switch
+                  id='auto-name-chats'
+                  checked={enableChatAutoNaming}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      enableChatAutoNaming: checked
+                    })
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Code Editor Themes</CardTitle>
               <CardDescription>Customize syntax highlighting themes for code blocks</CardDescription>
             </CardHeader>
@@ -202,10 +226,10 @@ export function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value='api-keys' className='space-y-6'>
+        <TabsContent value='local-providers' className='space-y-6'>
           <Card>
             <CardHeader>
-              <CardTitle>API Keys & URLs</CardTitle>
+              <CardTitle>Local Model Providers</CardTitle>
               <CardDescription>Configure API endpoints for local model providers</CardDescription>
             </CardHeader>
             <CardContent className='space-y-4'>

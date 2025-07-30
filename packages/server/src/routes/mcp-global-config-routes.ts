@@ -9,6 +9,8 @@ import {
   type GlobalInstallationRecord
 } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
+import * as path from 'path'
+import * as fs from 'fs/promises'
 
 // Schemas for API
 const GlobalMCPConfigSchema = z.object({
@@ -356,9 +358,6 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
       const installations = await mcpGlobalConfigService.getGlobalInstallations()
 
       // Check if global mode scripts exist
-      const path = await import('path')
-      const fs = await import('fs/promises')
-
       let promptlianoPath = process.cwd()
       if (promptlianoPath.includes('packages/server')) {
         promptlianoPath = path.resolve(promptlianoPath, '../..')

@@ -12,15 +12,19 @@ import { AgentFilesManager } from './agent-files-manager'
 import { MCPTroubleshooting } from './mcp-troubleshooting'
 // import { MCPProjectInstaller } from './mcp-project-installer'
 import { MCPProjectConfigEditor } from './mcp-project-config-editor'
+import { useScrollToSection } from '@/hooks/use-scroll-to-section'
+import { Route } from '@/routes/projects'
 
 export function ProjectSettingsTab() {
+  // Get search params and use the scroll to section hook
+  const search = Route.useSearch()
+  useScrollToSection({ search })
+  
   const updateActiveProjectTab = useUpdateActiveProjectTab()
-  const { data: contextLimit } = useProjectTabField('contextLimit')
   const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
   const { data: resolveImports } = useProjectTabField('resolveImports')
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
   const { data: projectId } = useProjectTabField('selectedProjectId')
-  const { data: enableChatAutoNaming } = useProjectTabField('enableChatAutoNaming')
   const { data: claudeCodeEnabled } = useProjectTabField('claudeCodeEnabled')
 
   const { data: projectResponse } = useGetProject(projectId!)
@@ -40,12 +44,6 @@ export function ProjectSettingsTab() {
     }
   }, [projectId, syncProject])
 
-  const setContextLimit = (value: number) => {
-    updateActiveProjectTab((prev) => ({
-      ...prev,
-      contextLimit: value
-    }))
-  }
 
   const setPreferredEditor = (value: EditorType) => {
     updateActiveProjectTab((prev) => ({
@@ -58,13 +56,6 @@ export function ProjectSettingsTab() {
     updateActiveProjectTab((prev) => ({
       ...prev,
       resolveImports: value
-    }))
-  }
-
-  const setEnableChatAutoNaming = (value: boolean) => {
-    updateActiveProjectTab((prev) => ({
-      ...prev,
-      enableChatAutoNaming: value
     }))
   }
 
@@ -181,56 +172,7 @@ export function ProjectSettingsTab() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Context Settings</CardTitle>
-            <CardDescription>Control context size and prompt generation</CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            <div className='space-y-2'>
-              <label className='text-base font-medium'>Context Size Limit</label>
-              <p className='text-sm text-muted-foreground'>
-                Maximum number of tokens to include in the context when generating prompts
-              </p>
-              <div className='flex items-center gap-4 mt-2'>
-                <Input
-                  type='number'
-                  value={contextLimit || 0}
-                  onChange={(e) => setContextLimit(parseInt(e.target.value, 10) || 0)}
-                  className='w-32'
-                />
-                <Slider
-                  value={[contextLimit || 128000]}
-                  onValueChange={(val) => setContextLimit(val[0])}
-                  min={4000}
-                  max={1000000}
-                  step={1000}
-                  className='flex-1'
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Chat Settings</CardTitle>
-            <CardDescription>Configure chat behavior and automatic features</CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-6'>
-            <div className='flex items-center justify-between'>
-              <div className='space-y-0.5'>
-                <label className='text-base font-medium'>Auto-name Chats</label>
-                <p className='text-sm text-muted-foreground'>
-                  Automatically generate meaningful names for new chats based on their initial content
-                </p>
-              </div>
-              <Switch checked={!!enableChatAutoNaming} onCheckedChange={setEnableChatAutoNaming} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Claude Code Integration</CardTitle>
+            <CardTitle>Claude Code Integration (Beta)</CardTitle>
             <CardDescription>Enable advanced Claude Code features for this project</CardDescription>
           </CardHeader>
           <CardContent className='space-y-6'>
@@ -238,7 +180,7 @@ export function ProjectSettingsTab() {
               <div className='space-y-0.5'>
                 <label className='text-base font-medium'>Enable Claude Code</label>
                 <p className='text-sm text-muted-foreground'>
-                  Activate Claude Code tab with agent management, sessions, and chat features
+                  Activate Claude Code tab with agent management, sessions, and chat features. This feature is currently in beta.
                 </p>
               </div>
               <Switch checked={!!claudeCodeEnabled} onCheckedChange={setClaudeCodeEnabled} />
@@ -274,7 +216,11 @@ export function ProjectSettingsTab() {
 
         {showTroubleshooting && <MCPTroubleshooting />}
 
-        {projectId && <MCPProjectConfigEditor projectId={projectId} />}
+        {projectId && (
+          <div id="mcp-config-section">
+            <MCPProjectConfigEditor projectId={projectId} />
+          </div>
+        )}
       </div>
     </TooltipProvider>
   )

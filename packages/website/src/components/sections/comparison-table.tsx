@@ -98,9 +98,9 @@ export function ComparisonTable() {
           </div>
         </AnimateOnScroll>
 
-        <div className='max-w-5xl mx-auto'>
+        <div className='max-w-5xl mx-auto overflow-x-hidden'>
           <AnimateOnScroll>
-            <GlassCard className='overflow-hidden'>
+            <GlassCard className='overflow-x-auto'>
               {/* Desktop Table */}
               <div className='hidden md:block'>
                 <table className='w-full'>

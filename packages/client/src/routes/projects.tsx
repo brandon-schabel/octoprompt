@@ -35,6 +35,7 @@ import { GitTabWithSidebar } from '@/components/projects/git-tab-with-sidebar'
 import { MCPAnalyticsTabView } from '@/components/projects/mcp-analytics-tab-view'
 import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
 import { ClaudeCodeTabWithSidebar } from '@/components/claude-code'
+import { EmptyProjectTabsView } from '@/components/projects/empty-project-tabs-view'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -66,10 +67,12 @@ export function ProjectsPage() {
   const [hasInitializedFromUrl, setHasInitializedFromUrl] = useState(false)
 
   const projects = allProjectsData?.data || []
-  const tabsLen = Object.keys(tabs || {}).length
-  const noTabsYet = Object.keys(tabs || {}).length === 0
-  const tabsArray = Object.values(tabs || {})
-  const tabsKeys = Object.keys(tabs || {})
+  // Filter out non-numeric tab IDs (like 'defaultTab')
+  const validTabKeys = Object.keys(tabs || {}).filter((key) => !isNaN(Number(key)))
+  const tabsLen = validTabKeys.length
+  const noTabsYet = validTabKeys.length === 0
+  const tabsArray = validTabKeys.map((key) => tabs[key])
+  const tabsKeys = validTabKeys
   const { mutate: updateProjectTabs } = useSetKvValue('projectTabs')
 
   // Sync tab from URL on initial load
@@ -114,13 +117,26 @@ export function ProjectsPage() {
     }
   }, [activeProjectTabId, hasInitializedFromUrl, navigate, search.tab])
 
-  const handleSelectProject = (id: number) => {
-    updateActiveProjectTab((prev) => ({
-      ...(prev || {}),
-      selectedProjectId: id,
-      selectedFiles: [],
-      selectedPrompts: []
-    }))
+  const handleSelectProject = async (id: number) => {
+    // If no tabs exist, create a new tab first
+    if (noTabsYet) {
+      const project = projects.find((p) => p.id === id)
+      const newTabId = createProjectTabFromHook({
+        displayName: project?.name || `Tab ${Date.now().toString().slice(-4)}`,
+        selectedProjectId: id,
+        selectedFiles: [],
+        selectedPrompts: []
+      })
+      setActiveProjectTabId(newTabId)
+    } else {
+      // Update existing tab
+      updateActiveProjectTab((prev) => ({
+        ...(prev || {}),
+        selectedProjectId: id,
+        selectedFiles: [],
+        selectedPrompts: []
+      }))
+    }
     setProjectModalOpen(false)
   }
 
@@ -143,6 +159,7 @@ export function ProjectsPage() {
       }
     })
   }
+
   let content
   if (projectsLoading) {
     content = (
@@ -171,13 +188,10 @@ export function ProjectsPage() {
     )
   } else if (noTabsYet) {
     content = (
-      <NoTabsYetView
-        projects={projects}
-        selectedProjectId={selectedProjectId}
-        createProjectTab={async ({ name, projectId }) =>
-          Promise.resolve(createProjectTabFromHook({ displayName: name, selectedProjectId: projectId }))
-        }
-        openProjectModal={() => setProjectModalOpen(true)}
+      <EmptyProjectTabsView
+        onOpenProjectInTab={() => {
+          setProjectModalOpen(true)
+        }}
       />
     )
   } else if (!selectedProjectId) {
@@ -475,60 +489,6 @@ function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayout
           storageKey='projects-draggable-columns'
           className='flex-1 h-full w-full'
         />
-      </div>
-    </ErrorBoundary>
-  )
-}
-
-type NoTabsYetViewProps = {
-  projects: ProjectResponse['data'][]
-  selectedProjectId?: number | null
-  createProjectTab: (args: { projectId?: number; name?: string }) => Promise<any>
-  openProjectModal: () => void
-}
-
-function NoTabsYetView({ projects, selectedProjectId, createProjectTab, openProjectModal }: NoTabsYetViewProps) {
-  let projectForButton = selectedProjectId ? projects.find((p) => p.id === selectedProjectId) : undefined
-  return (
-    <ErrorBoundary>
-      <div className='p-4'>
-        <ProjectsTabManager />
-        <div className='mt-4 flex flex-col items-start gap-3'>
-          <p className='text-sm text-muted-foreground'>Welcome! You need a tab to start working with your projects.</p>
-
-          {projectForButton ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() =>
-                    createProjectTab({
-                      projectId: projectForButton!.id,
-                      name: projectForButton!.name || `Tab for ${projectForButton!.id.toString()}`
-                    })
-                  }
-                >
-                  + Create Tab for "{projectForButton!.name}"
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Create a new tab for the project: {projectForButton!.name}</p>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={openProjectModal}>Select a Project to Create a Tab</Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Open the project selector to choose a project for a new tab.</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {!projectForButton && projects.length > 0 && !selectedProjectId && (
-            <p className='text-sm text-muted-foreground mt-2'>Or, choose an existing project to get started.</p>
-          )}
-        </div>
       </div>
     </ErrorBoundary>
   )

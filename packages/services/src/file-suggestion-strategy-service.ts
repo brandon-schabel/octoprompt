@@ -13,6 +13,7 @@ import { CompactFileFormatter } from './utils/compact-file-formatter'
 import { generateStructuredData } from './gen-ai-services'
 import { HIGH_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from '@promptliano/config'
 import { z } from 'zod'
+import { getProjectFiles } from './project-service'
 
 export interface StrategyConfig {
   maxPreFilterFiles: number
@@ -209,7 +210,6 @@ Select the ${maxResults} most relevant file IDs from the above list.`
   }
 
   private async getTotalFileCount(projectId: number): Promise<number> {
-    const { getProjectFiles } = await import('./project-service')
     const files = await getProjectFiles(projectId)
     return files?.length || 0
   }
@@ -238,7 +238,6 @@ Select the ${maxResults} most relevant file IDs from the above list.`
    * Get suggested strategy based on project size
    */
   static async recommendStrategy(projectId: number): Promise<FileSuggestionStrategy> {
-    const { getProjectFiles } = await import('./project-service')
     const files = await getProjectFiles(projectId)
 
     // Default to balanced strategy if project doesn't exist

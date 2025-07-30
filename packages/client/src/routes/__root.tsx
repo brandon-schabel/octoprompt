@@ -31,6 +31,7 @@ import {
 } from '@/hooks/use-kv-local-storage'
 import { MenuIcon } from 'lucide-react' // For a custom trigger example
 import { Button } from '@ui'
+import { useMigrateDefaultTab } from '@/hooks/use-migrate-default-tab'
 
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
@@ -154,6 +155,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   const [activeProjectTabId] = useGetActiveProjectTabId()
+
+  // Migrate legacy defaultTab to numeric ID system
+  useMigrateDefaultTab()
 
   // Initialize sidecar server for Tauri builds
   const { isStarting, isReady, error: sidecarError } = useSidecarServer()

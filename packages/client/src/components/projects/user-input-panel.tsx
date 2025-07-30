@@ -59,7 +59,6 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
 
   const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId ?? -1)
   const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId ?? -1)
-  const { data: contextLimit = 128000 } = useProjectTabField('contextLimit', activeProjectTabId ?? -1)
   const [suggestedFiles, setSuggestedFiles] = useState<ProjectFile[]>([])
   const [suggestedPrompts, setSuggestedPrompts] = useState<Prompt[]>([])
 
@@ -89,7 +88,6 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
     return calculateTotalTokens(promptData?.data, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap)
   }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap])
 
-  const usagePercentage = contextLimit > 0 ? (totalTokens / contextLimit) * 100 : 0
 
   // Update localUserPrompt if global changes externally
   useEffect(() => {
@@ -282,7 +280,6 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
               </PromptlianoTooltip>
               <div className='ml-auto text-xs text-muted-foreground'>
                 {formatCompactTokenCount(totalTokens)} tokens
-                {contextLimit > 0 && ` (${Math.round(usagePercentage)}%)`}
               </div>
             </div>
 

@@ -154,12 +154,12 @@ export function FeaturesSection() {
   return (
     <section className="relative py-24 lg:py-32 overflow-hidden">
       {/* Background decoration */}
-      <div className="absolute inset-0 -z-10">
+      <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute left-1/2 top-0 -translate-x-1/2 h-[600px] w-[600px] rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute right-0 bottom-0 h-[400px] w-[400px] rounded-full bg-primary/10 blur-3xl" />
       </div>
 
-      <div className="container relative">
+      <div className="container relative mx-auto px-4">
         {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -198,8 +198,8 @@ export function FeaturesSection() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mt-16"
         >
-          <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
-            <TabsList className="mb-8 flex h-auto w-full flex-wrap justify-center gap-2 bg-transparent p-0">
+          <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full overflow-x-hidden">
+            <TabsList className="mb-8 flex h-auto w-full flex-wrap justify-center gap-2 bg-transparent p-0 overflow-x-auto">
               {featuresData.categories.map((category) => (
                 <TabsTrigger
                   key={category.id}
