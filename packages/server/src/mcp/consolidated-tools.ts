@@ -1533,6 +1533,65 @@ Version Info:
               }
             }
 
+            case ProjectManagerAction.DEBUG_SEARCH: {
+              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+              const query = data?.query as string | undefined
+              
+              console.log(`[MCP] Running search debug for project ${validProjectId}${query ? ` with query "${query}"` : ''}`)
+              
+              const debugResult = await fileSearchService.debugSearch(validProjectId, query)
+              
+              let resultText = `🔍 Search Debug Report for Project ${validProjectId}\n`
+              resultText += `${'='.repeat(50)}\n\n`
+              
+              // Index Stats
+              resultText += `📊 Index Statistics:\n`
+              resultText += `  - Indexed Files: ${debugResult.indexStats.indexedFiles}\n`
+              resultText += `  - Total Keywords: ${debugResult.indexStats.totalKeywords}\n`
+              resultText += `  - Avg Tokens/File: ${debugResult.indexStats.avgTokensPerFile}\n`
+              resultText += `  - Last Indexed: ${debugResult.indexStats.lastIndexed ? new Date(debugResult.indexStats.lastIndexed).toISOString() : 'Never'}\n\n`
+              
+              // FTS5 Content
+              resultText += `📁 FTS5 Database Content:\n`
+              resultText += `  - Total FTS5 Rows: ${debugResult.ftsContent.ftsCount}\n`
+              resultText += `  - Project FTS5 Rows: ${debugResult.ftsContent.projectFTSCount}\n`
+              resultText += `  - Metadata Rows: ${debugResult.ftsContent.metadataCount}\n\n`
+              
+              // Sample Search Results
+              if (debugResult.sampleSearch) {
+                if (debugResult.sampleSearch.error) {
+                  resultText += `❌ Sample Search Error: ${debugResult.sampleSearch.error}\n\n`
+                } else {
+                  resultText += `🔎 Sample Search Results:\n`
+                  resultText += `  - Total Results: ${debugResult.sampleSearch.stats.totalResults}\n`
+                  resultText += `  - Search Time: ${debugResult.sampleSearch.stats.searchTime}ms\n`
+                  resultText += `  - From Cache: ${debugResult.sampleSearch.stats.cached}\n`
+                  
+                  if (debugResult.sampleSearch.results.length > 0) {
+                    resultText += `  - Top Results:\n`
+                    for (const result of debugResult.sampleSearch.results.slice(0, 3)) {
+                      resultText += `    • ${result.file.path} (score: ${result.score.toFixed(2)})\n`
+                    }
+                  }
+                  resultText += '\n'
+                }
+              }
+              
+              // Recommendations
+              if (debugResult.recommendations.length > 0) {
+                resultText += `💡 Recommendations:\n`
+                for (const rec of debugResult.recommendations) {
+                  resultText += `  - ${rec}\n`
+                }
+              } else {
+                resultText += `✅ No issues detected - search index appears healthy\n`
+              }
+              
+              return {
+                content: [{ type: 'text', text: resultText }]
+              }
+            }
+
             default:
               throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
                 action,
