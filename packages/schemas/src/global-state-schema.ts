@@ -143,11 +143,6 @@ export const projectTabStateSchema = z
       .optional()
       .default(true)
       .openapi({ description: 'Whether the selected files panel is collapsed to save space.' }),
-    enableChatAutoNaming: z
-      .boolean()
-      .optional()
-      .default(false)
-      .openapi({ description: 'Whether to automatically name new chats based on their initial content.' }),
     nameGenerationStatus: z
       .enum(['pending', 'success', 'failed', 'fallback'])
       .optional()
@@ -304,8 +299,13 @@ export const appSettingsSchema = z
     maxTokens: chatModelSettingsSchema.shape.maxTokens,
     topP: chatModelSettingsSchema.shape.topP,
     frequencyPenalty: chatModelSettingsSchema.shape.frequencyPenalty,
-    presencePenalty: chatModelSettingsSchema.shape.presencePenalty
+    presencePenalty: chatModelSettingsSchema.shape.presencePenalty,
     // stream: chatModelSettingsSchema.shape.stream,
+    enableChatAutoNaming: z
+      .boolean()
+      .optional()
+      .default(true)
+      .openapi({ description: 'Whether to automatically name new chats based on their initial content.' })
   })
   .openapi('AppSettings', {
     description: 'Global application settings, including theme, AI provider configuration, and default chat parameters.'
@@ -416,7 +416,8 @@ export const createSafeGlobalState = (): GlobalState => ({
     maxTokens: defaultModelConfigs.maxTokens ?? 4096,
     topP: defaultModelConfigs.topP ?? 1,
     frequencyPenalty: defaultModelConfigs.frequencyPenalty ?? 0,
-    presencePenalty: defaultModelConfigs.presencePenalty ?? 0
+    presencePenalty: defaultModelConfigs.presencePenalty ?? 0,
+    enableChatAutoNaming: true
   },
   projectTabs: {
     defaultTab: {
@@ -440,7 +441,6 @@ export const createSafeGlobalState = (): GlobalState => ({
       ticketStatusFilter: 'all' as const,
       promptsPanelCollapsed: true,
       selectedFilesCollapsed: false,
-      enableChatAutoNaming: false,
       claudeCodeEnabled: false
     }
   },
@@ -489,7 +489,7 @@ export function getDefaultAppSettings(): AppSettings {
 
 // Helper function to get default project tab state cleanly
 export function getDefaultProjectTabState(displayName: string = 'Default Project Tab'): ProjectTabState {
-  return projectTabStateSchema.parse({ displayName, enableChatAutoNaming: false })
+  return projectTabStateSchema.parse({ displayName })
 }
 
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>
