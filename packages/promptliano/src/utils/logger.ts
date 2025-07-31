@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import ora, { Ora } from 'ora';
+import ora, { type Ora } from 'ora';
 
 export class Logger {
   private verbose: boolean;

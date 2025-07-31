@@ -55,7 +55,7 @@ export class MCPClient {
       this.client = new Client(
         {
           name: `promptliano-${this.config.id}`,
-          version: '0.8.1'
+          version: '0.8.3'
         },
         {
           capabilities: {
@@ -97,7 +97,7 @@ export class MCPClient {
             capabilities: {},
             clientInfo: {
               name: `promptliano-client-${this.config.id}`,
-              version: '0.8.1'
+              version: '0.8.3'
             }
           }
         })

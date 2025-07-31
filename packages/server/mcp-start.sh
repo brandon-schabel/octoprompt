@@ -29,4 +29,4 @@ else
     echo "PATH: $PATH" >&2
     echo "Please install bun or update the PATH in this script" >&2
     exit 1
-fi 
+fi

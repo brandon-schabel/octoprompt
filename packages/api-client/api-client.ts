@@ -282,7 +282,11 @@ class BaseApiClient {
       skipValidation?: boolean
     }
   ): Promise<TResponse> {
-    const url = new URL(`${this.baseUrl}/api${endpoint}`)
+    // Handle both absolute and relative URLs
+    const apiPath = `/api${endpoint}`
+    const url = this.baseUrl 
+      ? new URL(apiPath, this.baseUrl.endsWith('/') ? this.baseUrl : this.baseUrl + '/')
+      : new URL(apiPath, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3579')
 
     // Add query parameters
     if (options?.params) {
@@ -297,6 +301,7 @@ class BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
 
     try {
+      console.log(`[API Client] Making ${method} request to:`, url.toString())
       const response = await this.customFetch(url.toString(), {
         method,
         headers: this.headers,
@@ -305,6 +310,7 @@ class BaseApiClient {
       })
 
       clearTimeout(timeoutId)
+      console.log(`[API Client] Response status:`, response.status)
 
       const responseText = await response.text()
       let responseData: any
@@ -347,6 +353,7 @@ class BaseApiClient {
 
       return responseData as TResponse
     } catch (e) {
+      console.error(`[API Client] Request failed for ${method} ${url.toString()}:`, e)
       if (e instanceof PromptlianoError) throw e
       if (e instanceof Error) {
         if (e.name === 'AbortError') {
@@ -457,7 +464,9 @@ export class ChatService extends BaseApiClient {
   // Streaming endpoint - returns ReadableStream
   async streamChat(data: AiChatStreamRequest): Promise<ReadableStream> {
     const validatedData = this.validateBody(AiChatStreamRequestSchema, data)
-    const url = new URL(`${this.baseUrl}/api/ai/chat`)
+    const url = this.baseUrl 
+      ? new URL('/api/ai/chat', this.baseUrl.endsWith('/') ? this.baseUrl : this.baseUrl + '/')
+      : new URL('/api/ai/chat', typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3579')
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
@@ -1185,7 +1194,9 @@ export class GenAiService extends BaseApiClient {
 
   async streamText(data: AiGenerateTextRequest): Promise<ReadableStream> {
     const validatedData = this.validateBody(AiGenerateTextRequestSchema, data)
-    const url = new URL(`${this.baseUrl}/api/gen-ai/stream`)
+    const url = this.baseUrl 
+      ? new URL('/api/gen-ai/stream', this.baseUrl.endsWith('/') ? this.baseUrl : this.baseUrl + '/')
+      : new URL('/api/gen-ai/stream', typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3579')
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)

@@ -8,7 +8,7 @@ export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
   topP: 0,
   topK: 0,
   provider: 'openrouter',
-  model: 'google/gemini-2.5-flash'
+  model: 'google/gemini-2.5-flash-lite'
 }
 
 export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
@@ -30,7 +30,7 @@ export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
   topP: 0,
   topK: 0,
   provider: 'openrouter',
-  model: 'google/gemini-2.5-flash'
+  model: 'google/gemini-2.5-pro'
 }
 
 export const PLANNING_MODEL_CONFIG: ModelOptionsWithProvider = {

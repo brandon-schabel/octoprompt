@@ -24,7 +24,7 @@ describe('Config Package', () => {
   it('should export app config', () => {
     const app = getAppConfig()
     expect(app.name).toBe('Promptliano')
-    expect(app.version).toBe('0.8.1')
+    expect(app.version).toBe('0.8.3')
   })
 
   it('should export model configs', () => {

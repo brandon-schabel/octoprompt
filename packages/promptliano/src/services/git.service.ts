@@ -1,4 +1,4 @@
-import simpleGit, { SimpleGit } from 'simple-git';
+import simpleGit, { type SimpleGit } from 'simple-git';
 import { Logger } from '../utils/logger.js';
 import { fileExists } from '../utils/paths.js';
 import { join } from 'node:path';

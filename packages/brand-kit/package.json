@@ -1,6 +1,6 @@
 {
   "name": "@promptliano/brand-kit",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Promptliano brand kit with color system, guidelines, and utilities",
   "main": "src/index.ts",
   "scripts": {
