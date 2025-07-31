@@ -311,7 +311,7 @@ async function performRepairs(
               message: 'Permissions fixed'
             });
           } else {
-            spinner.skip('Skipped (--fix-permissions not set)');
+            spinner.info('Skipped (--fix-permissions not set)');
           }
           break;
 
@@ -325,7 +325,7 @@ async function performRepairs(
               message: 'Made file executable'
             });
           } else {
-            spinner.skip('Skipped');
+            spinner.info('Skipped');
           }
           break;
 
@@ -339,7 +339,7 @@ async function performRepairs(
               message: 'Dependencies installed'
             });
           } else {
-            spinner.skip('Skipped (--fix-dependencies not set)');
+            spinner.info('Skipped (--fix-dependencies not set)');
           }
           break;
 
@@ -353,7 +353,7 @@ async function performRepairs(
               message: 'Permissions fixed'
             });
           } else {
-            spinner.skip('Skipped');
+            spinner.info('Skipped');
           }
           break;
 

@@ -10,6 +10,7 @@ import { ServerManager } from './server-manager.js';
 import { SystemChecker } from './system-checker.js';
 import { logger } from './logger.js';
 import { validateInstallPath } from './secure-paths.js';
+import { safeExec } from './safe-exec.js';
 
 export interface SetupOptions {
   installPath?: string;
@@ -62,8 +63,7 @@ export class PromptlianoSetup {
       // Download and install
       const downloadSpinner = ora('Downloading Promptliano...').start();
       const downloadResult = await this.downloader.download({
-        installPath: this.installPath,
-        branch: options.branch || 'main'
+        installPath: this.installPath
       });
 
       if (!downloadResult.success) {
@@ -75,8 +75,13 @@ export class PromptlianoSetup {
 
       // Install dependencies
       const installSpinner = ora('Installing dependencies...').start();
-      await this.installDependencies();
-      installSpinner.succeed('Dependencies installed');
+      try {
+        await safeExec('bun install', { cwd: this.installPath });
+        installSpinner.succeed('Dependencies installed');
+      } catch (error) {
+        installSpinner.fail('Failed to install dependencies');
+        throw error;
+      }
 
       // Start server if requested
       let serverStarted = false;
@@ -108,7 +113,7 @@ export class PromptlianoSetup {
       logger.error('Installation failed:', error);
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }

@@ -1,7 +1,7 @@
 import { existsSync } from 'fs';
 import { mkdir, readdir, cp, writeFile, readFile, rm, stat } from 'fs/promises';
 import { join, basename } from 'path';
-import { homedir } from 'os';
+import { homedir, platform } from 'os';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import { create as createTar } from 'tar';
@@ -122,7 +122,7 @@ export class BackupManager {
       return backupPath;
     } catch (error) {
       logger.error('Backup failed:', error);
-      throw new Error(`Backup failed: ${error.message}`);
+      throw new Error(`Backup failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -192,7 +192,7 @@ export class BackupManager {
       logger.info('Restore completed successfully');
     } catch (error) {
       logger.error('Restore failed:', error);
-      throw new Error(`Restore failed: ${error.message}`);
+      throw new Error(`Restore failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -318,7 +318,7 @@ export class BackupManager {
         },
         [basename(sourcePath)]
       );
-    } catch (error) {
+    } catch (error: any) {
       if (error.code === 'MODULE_NOT_FOUND') {
         throw new Error(
           'tar package is not installed. Please run "npm install" or "bun install" to install dependencies.'
@@ -335,7 +335,7 @@ export class BackupManager {
         file: sourcePath,
         cwd: join(targetPath, '..'),
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error.code === 'MODULE_NOT_FOUND') {
         throw new Error(
           'tar package is not installed. Please run "npm install" or "bun install" to install dependencies.'

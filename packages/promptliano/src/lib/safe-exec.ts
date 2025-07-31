@@ -21,7 +21,7 @@ const ALLOWED_COMMANDS = {
 
 export interface SafeExecOptions {
   cwd?: string;
-  shell?: string | boolean;
+  shell?: string;
   timeout?: number;
   env?: NodeJS.ProcessEnv;
 }

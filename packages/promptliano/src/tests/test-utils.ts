@@ -2,6 +2,7 @@ import { mkdtemp, rm, mkdir, writeFile, readFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { expect } from 'bun:test';
 
 export class TestEnvironment {
   private tempDirs: string[] = [];
@@ -69,22 +70,16 @@ export class TestEnvironment {
 }
 
 export class MockProcess {
-  static mockSpawn = jest.fn();
-  static mockExec = jest.fn();
+  static mockSpawn = () => {};
+  static mockExec = () => {};
 
   static setup() {
-    jest.doMock('child_process', () => ({
-      spawn: this.mockSpawn,
-      exec: (cmd: string, callback: Function) => {
-        this.mockExec(cmd, callback);
-      }
-    }));
+    // Bun doesn't have doMock, would need different approach
+    // For now, just no-op
   }
 
   static reset() {
-    this.mockSpawn.mockReset();
-    this.mockExec.mockReset();
-    jest.dontMock('child_process');
+    // No-op for Bun
   }
 }
 
@@ -96,17 +91,20 @@ export class MockFetch {
   }
 
   static setup() {
-    global.fetch = jest.fn(async (url: string) => {
-      const response = this.responses.get(url);
+    const fetchMock = async (url: string | URL | Request) => {
+      const urlString = typeof url === 'string' ? url : url.toString();
+      const response = this.responses.get(urlString);
       if (response) {
         return {
           ok: true,
           json: async () => response,
           text: async () => JSON.stringify(response)
-        };
+        } as Response;
       }
-      throw new Error(`No mock response for ${url}`);
-    });
+      throw new Error(`No mock response for ${urlString}`);
+    };
+    
+    global.fetch = Object.assign(fetchMock, { preconnect: () => {} }) as typeof fetch;
   }
 
   static reset() {

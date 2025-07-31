@@ -270,7 +270,7 @@ async function removeMCPConfigs(): Promise<void> {
 // Extend ServerManager
 declare module '../lib/server-manager.js' {
   interface ServerManager {
-    stop(): Promise<void>;
+    stop(): Promise<boolean>;
   }
 }
 

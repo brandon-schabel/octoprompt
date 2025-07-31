@@ -65,8 +65,8 @@ describe('Reliability Fixes', () => {
         // Should not reach here
         expect(true).toBe(false);
       } catch (error) {
-        expect(error.message).toContain('No available ports found after checking');
-        expect(error.message).toContain('10 ports'); // Max attempts is 10
+        expect((error as Error).message).toContain('No available ports found after checking');
+        expect((error as Error).message).toContain('10 ports'); // Max attempts is 10
       }
       
       // Restore original method

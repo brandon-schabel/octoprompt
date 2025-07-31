@@ -35,7 +35,7 @@ export class BunService {
       // Download and run the install script
       execSync(`curl -fsSL ${BUN_INSTALL_SCRIPT} | bash`, {
         stdio: 'inherit',
-        shell: true
+        shell: '/bin/bash'
       });
       
       // Add Bun to PATH for current session

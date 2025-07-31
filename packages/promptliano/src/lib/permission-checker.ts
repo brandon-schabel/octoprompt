@@ -140,7 +140,7 @@ export class PermissionChecker {
       await chmod(filePath, newMode);
     } catch (error) {
       logger.error(`Failed to make ${filePath} executable:`, error);
-      throw new Error(`Cannot make file executable: ${error.message}`);
+      throw new Error(`Cannot make file executable: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

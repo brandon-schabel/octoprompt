@@ -101,7 +101,10 @@ describe('SystemChecker', () => {
     test('should detect server not running', async () => {
       // Mock fetch to simulate server not running
       const originalFetch = global.fetch;
-      global.fetch = mock(() => Promise.reject(new Error('Connection refused')));
+      global.fetch = Object.assign(
+        mock(() => Promise.reject(new Error('Connection refused'))),
+        { preconnect: () => {} }
+      ) as typeof fetch;
 
       const result = await checker.checkServer();
 
@@ -114,10 +117,26 @@ describe('SystemChecker', () => {
     test('should detect running server', async () => {
       // Mock fetch to simulate running server
       const originalFetch = global.fetch;
-      global.fetch = mock(() => Promise.resolve({
-        ok: true,
-        json: async () => ({ status: 'healthy' })
-      }));
+      global.fetch = Object.assign(
+        mock(() => Promise.resolve({
+          ok: true,
+          json: async () => ({ status: 'healthy' }),
+          text: async () => '{"status":"healthy"}',
+          headers: new Headers(),
+          redirected: false,
+          status: 200,
+          statusText: 'OK',
+          type: 'basic' as ResponseType,
+          url: 'http://localhost:3579/api/health',
+          clone: () => ({} as Response),
+          body: null,
+          bodyUsed: false,
+          arrayBuffer: async () => new ArrayBuffer(0),
+          blob: async () => new Blob(),
+          formData: async () => new FormData()
+        } as Response)),
+        { preconnect: () => {} }
+      ) as typeof fetch;
 
       const result = await checker.checkServer();
 

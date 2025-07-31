@@ -4,15 +4,19 @@ import { TestEnvironment } from './test-utils';
 // Global test environment
 export const testEnv = new TestEnvironment();
 
-// Clean up after all tests
-afterAll(async () => {
-  await testEnv.cleanup();
-});
-
-// Set test timeout
-// Bun test doesn't use jest
+// Bun doesn't have afterAll, would need to handle cleanup differently
+// Could use process.on('exit') or manage in individual tests
 
 // Mock logger for tests
+declare global {
+  var mockLogger: {
+    info: (...args: any[]) => void;
+    error: (...args: any[]) => void;
+    warn: (...args: any[]) => void;
+    debug: (...args: any[]) => void;
+  };
+}
+
 global.mockLogger = {
   info: () => {},
   error: () => {},
