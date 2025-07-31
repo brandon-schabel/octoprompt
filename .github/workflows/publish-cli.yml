@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/promptliano/**'
+      - '.github/workflows/publish-cli.yml'
   workflow_dispatch:
     inputs:
       tag:
@@ -12,8 +17,8 @@ on:
         type: string
 
 jobs:
-  publish:
-    name: Build and Publish to NPM
+  test-and-publish:
+    name: ${{ github.event_name == 'pull_request' && 'Test CLI Package (Dry Run)' || 'Build and Publish to NPM' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,6 +39,7 @@ jobs:
         run: bun install --frozen-lockfile
       
       - name: Extract version from tag
+        if: github.event_name != 'pull_request'
         id: version
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -46,6 +52,7 @@ jobs:
           echo "TAG=$VERSION" >> $GITHUB_ENV
       
       - name: Validate version matches package.json
+        if: github.event_name != 'pull_request'
         working-directory: packages/promptliano
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
@@ -82,7 +89,32 @@ jobs:
           echo "✅ Build completed successfully"
           ls -la dist/
       
+      - name: Dry run - Pack package
+        if: github.event_name == 'pull_request'
+        working-directory: packages/promptliano
+        run: |
+          echo "📦 Running npm pack (dry run)..."
+          npm pack --dry-run
+          
+          # Also test the actual pack to ensure it creates the tarball
+          npm pack
+          
+          # Check the tarball contents
+          echo ""
+          echo "📋 Package contents:"
+          tar -tzf promptliano-*.tgz | head -20
+          echo "..."
+          
+          # Check package size
+          echo ""
+          echo "📊 Package size:"
+          ls -lh promptliano-*.tgz
+          
+          echo ""
+          echo "✅ Dry run completed successfully!"
+      
       - name: Configure npm authentication
+        if: github.event_name != 'pull_request'
         run: |
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           npm whoami
@@ -90,6 +122,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       
       - name: Publish to npm
+        if: github.event_name != 'pull_request'
         working-directory: packages/promptliano
         run: |
           # Check if version already exists
@@ -105,8 +138,24 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       
+      - name: Create PR summary
+        if: github.event_name == 'pull_request' && success()
+        run: |
+          echo "## ✅ CLI Package Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The CLI package build and tests passed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What was tested:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependencies installation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Test suite execution" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Package build (JavaScript + TypeScript types)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ NPM package creation (dry run)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Package contents verification" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This package will be ready to publish when merged." >> $GITHUB_STEP_SUMMARY
+      
       - name: Create release summary
-        if: success()
+        if: github.event_name != 'pull_request' && success()
         run: |
           echo "## 🎉 CLI Package Published!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
