@@ -16,7 +16,7 @@ export interface PortRange {
 
 export class PortManager {
   private defaultPort: number = 3579;
-  private portRange: PortRange = { start: 3579, end: 3230 };
+  private portRange: PortRange = { start: 3579, end: 3588 };
   private maxPortAttempts: number = 10;
 
   async checkPort(port: number): Promise<PortCheckResult> {

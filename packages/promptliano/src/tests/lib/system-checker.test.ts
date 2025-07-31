@@ -1,8 +1,9 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
 import { SystemChecker } from '../../lib/system-checker';
 import { TestEnvironment, MockProcess, MockFetch } from '../test-utils';
 import { join } from 'path';
 import { homedir } from 'os';
+import * as os from 'os';
 
 describe('SystemChecker', () => {
   let testEnv: TestEnvironment;
@@ -48,15 +49,16 @@ describe('SystemChecker', () => {
       const fakePath = join(tempDir, '.promptliano');
 
       // Override homedir for this test
-      const originalHomedir = homedir;
-      jest.spyOn(require('os'), 'homedir').mockReturnValue(tempDir);
+      const originalHomedir = os.homedir;
+      const homedirSpy = spyOn(os, 'homedir');
+      homedirSpy.mockReturnValue(tempDir);
 
       const result = await checker.checkPromptliano();
 
       expect(result.installed).toBe(false);
 
       // Restore
-      jest.spyOn(require('os'), 'homedir').mockReturnValue(originalHomedir());
+      homedirSpy.mockRestore();
     });
 
     test('should detect valid Promptliano installation', async () => {
@@ -67,8 +69,8 @@ describe('SystemChecker', () => {
       await testEnv.createMockInstallation(installPath);
 
       // Override homedir for this test
-      const originalHomedir = homedir;
-      jest.spyOn(require('os'), 'homedir').mockReturnValue(tempDir);
+      const homedirSpy = spyOn(os, 'homedir');
+      homedirSpy.mockReturnValue(tempDir);
 
       const result = await checker.checkPromptliano();
 
@@ -77,7 +79,7 @@ describe('SystemChecker', () => {
       expect(result.version).toBe('0.8.2');
 
       // Restore
-      jest.spyOn(require('os'), 'homedir').mockReturnValue(originalHomedir());
+      homedirSpy.mockRestore();
     });
   });
 
@@ -99,7 +101,7 @@ describe('SystemChecker', () => {
     test('should detect server not running', async () => {
       // Mock fetch to simulate server not running
       const originalFetch = global.fetch;
-      global.fetch = jest.fn().mockRejectedValue(new Error('Connection refused'));
+      global.fetch = mock(() => Promise.reject(new Error('Connection refused')));
 
       const result = await checker.checkServer();
 
@@ -112,10 +114,10 @@ describe('SystemChecker', () => {
     test('should detect running server', async () => {
       // Mock fetch to simulate running server
       const originalFetch = global.fetch;
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = mock(() => Promise.resolve({
         ok: true,
         json: async () => ({ status: 'healthy' })
-      });
+      }));
 
       const result = await checker.checkServer();
 
