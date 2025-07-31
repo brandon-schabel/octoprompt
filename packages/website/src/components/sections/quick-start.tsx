@@ -5,61 +5,52 @@ import { Terminal, Settings, Rocket } from 'lucide-react'
 const steps = [
   {
     number: 1,
-    title: 'Install Promptliano',
-    description: 'Clone the repository and set up Promptliano with Bun',
+    title: 'Install & Start Promptliano',
+    description: 'Get up and running with a single command',
     icon: Terminal,
-    code: `# Clone the repository
-git clone https://github.com/brandon-schabel/promptliano.git
+    code: `# Run the interactive setup
+npx promptliano@latest
 
-# Install Bun globally (if not already installed)
-npm install -g bun
+# This command will:
+# ✓ Download and install Promptliano automatically
+# ✓ Start the Promptliano server
+# ✓ Open the UI at http://localhost:3579
 
-# Navigate to the directory
-cd promptliano
-
-# Install dependencies
-bun install
-
-# Start the application
-bun run start`,
+# No need to install Bun or clone repos - it's all automatic!`,
     language: 'bash'
   },
   {
     number: 2,
-    title: 'Configure Your Editor',
-    description: 'Set up MCP integration with your AI editor',
+    title: 'Create Your First Project',
+    description: 'Start organizing your codebase with Promptliano',
     icon: Settings,
-    code: `# Promptliano includes a quick installer!
+    code: `# In the Promptliano UI:
 
-Once Promptliano is running:
-1. Navigate to http://localhost:3579
-2. Click on "settings" in the project tab navigation
-3. Scrll down to "Project MCP Configuration" and install the MCP server for your editor
-4. Find your editor (VSCode, Cursor, Universal, etc.)
-5. Click "
+1. Click "Create New Project"
+2. Select your project folder
+3. Give it a name
 
-The installer will generate the correct configuration
-based on your system and editor choice.`,
+# You can also configure MCP anytime:
+# - From the UI: Settings → MCP Configuration
+# - From the CLI: npx promptliano config --editor cursor
+
+# Your project is now ready for AI-enhanced development!`,
     language: 'bash'
   },
   {
     number: 3,
     title: 'Start Building',
-    description: 'Access Promptliano and start using AI with full context',
+    description: 'Use AI with full context of your codebase',
     icon: Rocket,
-    code: `# Promptliano is now running!
+    code: `# Promptliano is now running at:
+http://localhost:3579
 
-# Access the web interface:
-http://localhost:1420
-
-# The MCP server runs on port 3147 (default)
-
-# Your AI assistant now has access to:
+# Your AI assistant has access to:
 ✓ Full project context and structure
 ✓ Git history and branch information  
 ✓ Ticket and task management
 ✓ Smart file suggestions
-✓ Optimized token usage
+✓ Optimized token usage (60-70% savings)
 
 # Example prompts to try:
 "Show me the project overview"
@@ -140,11 +131,11 @@ export function QuickStartSection() {
           <div className='mt-16 text-center'>
             <p className='text-muted-foreground mb-4'>Need help? Check out our detailed documentation</p>
             <div className='flex justify-center gap-4'>
-              <a href='/docs/installation' className='text-primary hover:underline inline-flex items-center gap-1'>
-                Installation Guide →
+              <a href='/docs/getting-started' className='text-primary hover:underline inline-flex items-center gap-1'>
+                Getting Started Guide →
               </a>
-              <a href='/docs/configuration' className='text-primary hover:underline inline-flex items-center gap-1'>
-                Configuration Options →
+              <a href='/docs/download-installation' className='text-primary hover:underline inline-flex items-center gap-1'>
+                Manual Installation →
               </a>
             </div>
           </div>

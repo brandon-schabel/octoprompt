@@ -71,9 +71,10 @@ function ApiReferencePage() {
               </ul>
             </GlassCard>
 
-            <div className='space-y-4'>
+            <div className='space-y-6'>
               <div>
                 <h4 className='font-medium mb-2'>Example: Get Project Overview</h4>
+                <p className='text-sm text-muted-foreground mb-3'>AI Request:</p>
                 <CodeTerminal
                   code={`mcp__promptliano__project_manager(
   action: "overview",
@@ -81,10 +82,43 @@ function ApiReferencePage() {
 )`}
                   language='typescript'
                 />
+                <p className='text-sm text-muted-foreground mt-3 mb-3'>Response:</p>
+                <CodeTerminal
+                  code={`{
+  "project": {
+    "id": 1753220774680,
+    "name": "E-Commerce Platform",
+    "path": "/Users/dev/projects/ecommerce",
+    "currentBranch": "feature/checkout"
+  },
+  "tickets": {
+    "open": 5,
+    "inProgress": 3,
+    "closed": 47,
+    "recent": [
+      { "id": 234, "title": "Implement Payment Gateway", "priority": "high", "tasks": 3 },
+      { "id": 235, "title": "Add Product Reviews", "priority": "normal", "tasks": 5 }
+    ]
+  },
+  "structure": {
+    "totalFiles": 342,
+    "sourceFiles": 287,
+    "testFiles": 45,
+    "summarizedFiles": 231,
+    "totalSize": "2.1MB"
+  },
+  "activeContext": {
+    "selectedFiles": 12,
+    "totalTokens": 48532
+  }
+}`}
+                  language='json'
+                />
               </div>
 
               <div>
                 <h4 className='font-medium mb-2'>Example: Suggest Files</h4>
+                <p className='text-sm text-muted-foreground mb-3'>AI Request:</p>
                 <CodeTerminal
                   code={`mcp__promptliano__project_manager(
   action: "suggest_files",
@@ -95,6 +129,43 @@ function ApiReferencePage() {
   }
 )`}
                   language='typescript'
+                />
+                <p className='text-sm text-muted-foreground mt-3 mb-3'>Response:</p>
+                <CodeTerminal
+                  code={`{
+  "suggestedFiles": [
+    {
+      "path": "/src/services/auth.service.ts",
+      "reason": "Core authentication service implementation",
+      "relevanceScore": 0.95,
+      "hasTypeSummary": true
+    },
+    {
+      "path": "/src/components/LoginForm.tsx",
+      "reason": "Login UI component with form validation",
+      "relevanceScore": 0.92,
+      "hasTypeSummary": true
+    },
+    {
+      "path": "/src/middleware/auth.middleware.ts",
+      "reason": "JWT token validation middleware",
+      "relevanceScore": 0.89,
+      "hasTypeSummary": true
+    },
+    {
+      "path": "/src/hooks/useAuth.ts",
+      "reason": "React hook for authentication state",
+      "relevanceScore": 0.87,
+      "hasTypeSummary": true
+    }
+  ],
+  "metrics": {
+    "tokensUsed": 1250,
+    "tokensSaved": 3750,
+    "savingsPercent": "75%"
+  }
+}`}
+                  language='json'
                 />
               </div>
             </div>
@@ -142,11 +213,12 @@ function ApiReferencePage() {
               </ul>
             </GlassCard>
 
-            <div>
-              <h4 className='font-medium mb-2'>Example: Create Ticket with Auto-Generated Tasks</h4>
-              <CodeTerminal
-                code={`// First create the ticket
-const ticket = await mcp__promptliano__ticket_manager(
+            <div className='space-y-6'>
+              <div>
+                <h4 className='font-medium mb-2'>Example: Create Ticket with Auto-Generated Tasks</h4>
+                <p className='text-sm text-muted-foreground mb-3'>AI Request (Create Ticket):</p>
+                <CodeTerminal
+                  code={`mcp__promptliano__ticket_manager(
   action: "create",
   projectId: 1753220774680,
   data: {
@@ -155,15 +227,107 @@ const ticket = await mcp__promptliano__ticket_manager(
     priority: "high",
     status: "open"
   }
-)
-
-// Then auto-generate tasks
-await mcp__promptliano__ticket_manager(
-  action: "auto_generate_tasks",
-  ticketId: ticket.id
 )`}
-                language='typescript'
-              />
+                  language='typescript'
+                />
+                <p className='text-sm text-muted-foreground mt-3 mb-3'>Response:</p>
+                <CodeTerminal
+                  code={`{
+  "id": 456,
+  "projectId": 1753220774680,
+  "title": "Implement user authentication",
+  "overview": "Add login/logout functionality with JWT tokens",
+  "priority": "high",
+  "status": "open",
+  "createdAt": "2025-01-31T10:30:00Z",
+  "updatedAt": "2025-01-31T10:30:00Z"
+}`}
+                  language='json'
+                />
+                
+                <p className='text-sm text-muted-foreground mt-6 mb-3'>AI Request (Auto-Generate Tasks):</p>
+                <CodeTerminal
+                  code={`mcp__promptliano__ticket_manager(
+  action: "auto_generate_tasks",
+  ticketId: 456
+)`}
+                  language='typescript'
+                />
+                <p className='text-sm text-muted-foreground mt-3 mb-3'>Response:</p>
+                <CodeTerminal
+                  code={`{
+  "ticketId": 456,
+  "tasksCreated": 8,
+  "tasks": [
+    {
+      "id": 789,
+      "content": "Create user model and database schema",
+      "description": "Define User model with fields for email, password hash, created/updated timestamps",
+      "suggestedFiles": ["/src/models/user.model.ts", "/src/schemas/user.schema.ts"],
+      "tags": ["backend", "database"],
+      "estimatedHours": 2
+    },
+    {
+      "id": 790,
+      "content": "Implement password hashing service",
+      "description": "Create service for hashing passwords using bcrypt with salt rounds",
+      "suggestedFiles": ["/src/services/crypto.service.ts"],
+      "tags": ["backend", "security"],
+      "estimatedHours": 1
+    },
+    {
+      "id": 791,
+      "content": "Create JWT token service",
+      "description": "Implement JWT token generation and validation with refresh token support",
+      "suggestedFiles": ["/src/services/token.service.ts"],
+      "tags": ["backend", "auth"],
+      "estimatedHours": 3
+    },
+    {
+      "id": 792,
+      "content": "Build login API endpoint",
+      "description": "Create POST /api/auth/login endpoint with email/password validation",
+      "suggestedFiles": ["/src/routes/auth.routes.ts"],
+      "tags": ["backend", "api"],
+      "estimatedHours": 2
+    },
+    {
+      "id": 793,
+      "content": "Build logout API endpoint",
+      "description": "Create POST /api/auth/logout endpoint to invalidate tokens",
+      "suggestedFiles": ["/src/routes/auth.routes.ts"],
+      "tags": ["backend", "api"],
+      "estimatedHours": 1
+    },
+    {
+      "id": 794,
+      "content": "Create auth middleware",
+      "description": "Implement middleware to validate JWT tokens on protected routes",
+      "suggestedFiles": ["/src/middleware/auth.middleware.ts"],
+      "tags": ["backend", "middleware"],
+      "estimatedHours": 2
+    },
+    {
+      "id": 795,
+      "content": "Build login form component",
+      "description": "Create React component with form validation and error handling",
+      "suggestedFiles": ["/src/components/LoginForm.tsx"],
+      "tags": ["frontend", "ui"],
+      "estimatedHours": 3
+    },
+    {
+      "id": 796,
+      "content": "Implement auth context and hooks",
+      "description": "Create AuthContext and useAuth hook for managing auth state",
+      "suggestedFiles": ["/src/contexts/AuthContext.tsx", "/src/hooks/useAuth.ts"],
+      "tags": ["frontend", "state"],
+      "estimatedHours": 2
+    }
+  ]
+}`}
+                  language='json'
+                />
+              </div>
             </div>
           </section>
 
@@ -179,10 +343,12 @@ await mcp__promptliano__ticket_manager(
               </p>
             </GlassCard>
 
-            <div>
-              <h4 className='font-medium mb-2'>Example: Batch Task Creation</h4>
-              <CodeTerminal
-                code={`mcp__promptliano__task_manager(
+            <div className='space-y-6'>
+              <div>
+                <h4 className='font-medium mb-2'>Example: Batch Task Creation</h4>
+                <p className='text-sm text-muted-foreground mb-3'>AI Request:</p>
+                <CodeTerminal
+                  code={`mcp__promptliano__task_manager(
   action: "batch_create",
   ticketId: 456,
   data: {
@@ -193,8 +359,62 @@ await mcp__promptliano__ticket_manager(
     ]
   }
 )`}
-                language='typescript'
-              />
+                  language='typescript'
+                />
+                <p className='text-sm text-muted-foreground mt-3 mb-3'>Response:</p>
+                <CodeTerminal
+                  code={`{
+  "ticketId": 456,
+  "tasksCreated": 3,
+  "tasks": [
+    {
+      "id": 797,
+      "ticketId": 456,
+      "content": "Create login form component",
+      "description": "",
+      "done": false,
+      "order": 9,
+      "tags": ["frontend", "ui"],
+      "suggestedFileIds": ["file_123", "file_124"],
+      "createdAt": "2025-01-31T10:45:00Z",
+      "updatedAt": "2025-01-31T10:45:00Z"
+    },
+    {
+      "id": 798,
+      "ticketId": 456,
+      "content": "Implement JWT token validation",
+      "description": "",
+      "done": false,
+      "order": 10,
+      "tags": ["backend", "auth"],
+      "suggestedFileIds": ["file_125", "file_126"],
+      "createdAt": "2025-01-31T10:45:00Z",
+      "updatedAt": "2025-01-31T10:45:00Z"
+    },
+    {
+      "id": 799,
+      "ticketId": 456,
+      "content": "Add password hashing",
+      "description": "",
+      "done": false,
+      "order": 11,
+      "tags": ["backend", "security"],
+      "suggestedFileIds": ["file_127"],
+      "createdAt": "2025-01-31T10:45:00Z",
+      "updatedAt": "2025-01-31T10:45:00Z"
+    }
+  ],
+  "filesContext": {
+    "file_123": { "path": "/src/components/LoginForm.tsx", "hasTypeSummary": true },
+    "file_124": { "path": "/src/components/ui/Form.tsx", "hasTypeSummary": true },
+    "file_125": { "path": "/src/services/token.service.ts", "hasTypeSummary": true },
+    "file_126": { "path": "/src/middleware/auth.middleware.ts", "hasTypeSummary": true },
+    "file_127": { "path": "/src/services/crypto.service.ts", "hasTypeSummary": true }
+  }
+}`}
+                  language='json'
+                />
+              </div>
             </div>
           </section>
 
@@ -217,26 +437,84 @@ await mcp__promptliano__ticket_manager(
               </div>
             </GlassCard>
 
-            <div>
-              <h4 className='font-medium mb-2'>Example: Create and Manage Worktree</h4>
-              <CodeTerminal
-                code={`// Add a new worktree
-await mcp__promptliano__git_manager(
+            <div className='space-y-6'>
+              <div>
+                <h4 className='font-medium mb-2'>Example: Create and Manage Worktree</h4>
+                <p className='text-sm text-muted-foreground mb-3'>AI Request (Add Worktree):</p>
+                <CodeTerminal
+                  code={`mcp__promptliano__git_manager(
   action: "worktree_add",
   projectId: 1753220774680,
   data: {
     path: "../feature-auth",
     newBranch: "feature/authentication"
   }
-)
-
-// List all worktrees
-const worktrees = await mcp__promptliano__git_manager(
+)`}
+                  language='typescript'
+                />
+                <p className='text-sm text-muted-foreground mt-3 mb-3'>Response:</p>
+                <CodeTerminal
+                  code={`{
+  "success": true,
+  "worktree": {
+    "path": "/Users/dev/projects/feature-auth",
+    "branch": "feature/authentication",
+    "commit": "a1b2c3d4e5f6",
+    "bare": false,
+    "detached": false,
+    "locked": false
+  },
+  "message": "Worktree created successfully at /Users/dev/projects/feature-auth"
+}`}
+                  language='json'
+                />
+                
+                <p className='text-sm text-muted-foreground mt-6 mb-3'>AI Request (List Worktrees):</p>
+                <CodeTerminal
+                  code={`mcp__promptliano__git_manager(
   action: "worktree_list",
   projectId: 1753220774680
 )`}
-                language='typescript'
-              />
+                  language='typescript'
+                />
+                <p className='text-sm text-muted-foreground mt-3 mb-3'>Response:</p>
+                <CodeTerminal
+                  code={`{
+  "worktrees": [
+    {
+      "path": "/Users/dev/projects/ecommerce",
+      "branch": "main",
+      "commit": "f5e4d3c2b1a0",
+      "bare": false,
+      "detached": false,
+      "locked": false,
+      "isMain": true
+    },
+    {
+      "path": "/Users/dev/projects/feature-auth",
+      "branch": "feature/authentication",
+      "commit": "a1b2c3d4e5f6",
+      "bare": false,
+      "detached": false,
+      "locked": false,
+      "isMain": false
+    },
+    {
+      "path": "/Users/dev/projects/hotfix-payment",
+      "branch": "hotfix/payment-bug",
+      "commit": "9f8e7d6c5b4a",
+      "bare": false,
+      "detached": false,
+      "locked": true,
+      "lockReason": "Critical hotfix in progress",
+      "isMain": false
+    }
+  ],
+  "count": 3
+}`}
+                  language='json'
+                />
+              </div>
             </div>
 
             <div className='mt-6'>

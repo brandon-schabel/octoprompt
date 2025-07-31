@@ -3,10 +3,10 @@ import { CTAButton, CTAButtonOutline } from '@/components/ui'
 import { CodeTerminal } from '@/components/ui'
 import { AnimateOnScroll } from '@/components/ui'
 import { ScreenshotCarousel } from '@/components/ui'
-import { DownloadButtonCompact } from '@/components/ui'
 import { Logo } from '@/components/ui'
+import { CodeBlock } from '@/components/ui/code-terminal'
 import type { HeroSection } from '@/schemas'
-import { ArrowRight, Github, Download } from 'lucide-react'
+import { ArrowRight, Github, Terminal } from 'lucide-react'
 
 const heroScreenshots = [
   {
@@ -80,32 +80,47 @@ export function HeroSection() {
         <div className='grid gap-12 lg:grid-cols-2 lg:gap-16 items-center'>
           {/* Left column - Content */}
           <div className='space-y-6 max-w-xl'>
-            {/* <AnimateOnScroll> */}
-            {/* <div className='flex justify-center md:justify-start mb-6'> */}
-            {/* <Logo size='lg' showGlow={true} /> */}
-            {/* </div> */}
-            {/* </AnimateOnScroll> */}
+            {/* Title and Subtitle */}
+            <div>
+              <h1 className='text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent'>
+                {heroData.title}
+              </h1>
+              <p className='mt-6 text-lg sm:text-xl text-muted-foreground'>
+                {heroData.subtitle}
+              </p>
+            </div>
 
-            <HeroGradient title={heroData.title} subtitle={heroData.subtitle} centered={false} className='text-left'>
-              <div className='flex flex-wrap gap-4'>
-                <CTAButton href={heroData.ctas[0].href} size='lg'>
-                  {heroData.ctas[0].text}
-                  <ArrowRight className='ml-2 h-4 w-4' />
-                </CTAButton>
-                <CTAButton href='/downloads' size='lg' variant='secondary'>
-                  <Download className='mr-2 h-4 w-4' />
-                  Downloads
-                </CTAButton>
-                <CTAButtonOutline href={heroData.ctas[1].href} size='lg' target='_blank' className='whitespace-nowrap'>
-                  <Github className='mr-2 h-4 w-4' />
-                  {heroData.ctas[1].text}
-                </CTAButtonOutline>
-              </div>
-            </HeroGradient>
-
-            {/* Key benefits - moved higher up for better spacing */}
+            {/* Quick Install - right after subtitle */}
             <AnimateOnScroll>
-              <div className='grid gap-3 text-sm mt-6'>
+              <div className='p-4 bg-primary/5 border border-primary/20 rounded-lg'>
+                <div className='flex items-center gap-2 mb-2'>
+                  <Terminal className='h-4 w-4 text-primary' />
+                  <span className='text-sm font-medium'>Quick Install</span>
+                </div>
+                <CodeBlock 
+                  code='npx promptliano@latest' 
+                  language='bash' 
+                  showLineNumbers={false}
+                  className='text-sm'
+                />
+              </div>
+            </AnimateOnScroll>
+
+            {/* CTA Buttons */}
+            <div className='flex flex-wrap gap-4'>
+              <CTAButton href={heroData.ctas[0].href} size='lg'>
+                Promptliano Docs
+                <ArrowRight className='ml-2 h-4 w-4' />
+              </CTAButton>
+              <CTAButtonOutline href={heroData.ctas[1].href} size='lg' target='_blank' className='whitespace-nowrap'>
+                <Github className='mr-2 h-4 w-4' />
+                {heroData.ctas[1].text}
+              </CTAButtonOutline>
+            </div>
+
+            {/* Key benefits */}
+            <AnimateOnScroll>
+              <div className='grid gap-3 text-sm'>
                 <div className='flex items-center gap-3'>
                   <div className='h-2 w-2 rounded-full bg-accent flex-shrink-0' />
                   <span className='text-muted-foreground'>Works with VSCode, Cursor, Claude Desktop & Claude Code</span>
@@ -135,12 +150,6 @@ export function HeroSection() {
               />
             </AnimateOnScroll>
 
-            {/* Download button */}
-            <AnimateOnScroll>
-              <div className='flex justify-center'>
-                <DownloadButtonCompact />
-              </div>
-            </AnimateOnScroll>
           </div>
         </div>
       </div>
