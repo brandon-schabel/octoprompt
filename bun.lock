@@ -49,7 +49,7 @@
     },
     "packages/api-client": {
       "name": "@promptliano/api-client",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -59,7 +59,7 @@
     },
     "packages/brand-kit": {
       "name": "@promptliano/brand-kit",
-      "version": "1.0.0",
+      "version": "0.8.3",
       "dependencies": {
         "color": "^4.2.3",
       },
@@ -71,7 +71,7 @@
     },
     "packages/client": {
       "name": "client",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "dependencies": {
         "@ai-sdk/react": "^1.2.9",
         "@dnd-kit/core": "^6.3.1",
@@ -165,7 +165,7 @@
     },
     "packages/config": {
       "name": "@promptliano/config",
-      "version": "1.0.0",
+      "version": "0.8.3",
       "dependencies": {
         "zod": "^3.23.8",
       },
@@ -176,7 +176,7 @@
     },
     "packages/mcp-client": {
       "name": "@promptliano/mcp-client",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^0.5.0",
       },
@@ -189,11 +189,12 @@
     },
     "packages/promptliano": {
       "name": "promptliano",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "bin": {
         "promptliano": "./dist/index.js",
       },
       "dependencies": {
+        "adm-zip": "^0.5.10",
         "chalk": "^5.3.0",
         "commander": "^12.0.0",
         "inquirer": "^9.2.15",
@@ -202,6 +203,7 @@
         "tar": "^7.0.1",
       },
       "devDependencies": {
+        "@types/adm-zip": "^0.5.5",
         "@types/inquirer": "^9.0.7",
         "@types/node": "^20.11.25",
         "@types/tar": "^6.1.11",
@@ -211,7 +213,7 @@
     },
     "packages/schemas": {
       "name": "@promptliano/schemas",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "dependencies": {
         "@promptliano/config": "workspace:*",
       },
@@ -224,7 +226,7 @@
     },
     "packages/server": {
       "name": "@promptliano/server",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^0.5.0",
         "@promptliano/config": "workspace:*",
@@ -232,7 +234,7 @@
     },
     "packages/services": {
       "name": "@promptliano/services",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "dependencies": {
         "@promptliano/config": "workspace:*",
       },
@@ -245,11 +247,11 @@
     },
     "packages/shared": {
       "name": "@promptliano/shared",
-      "version": "0.8.0",
+      "version": "0.8.3",
     },
     "packages/storage": {
       "name": "@promptliano/storage",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -259,7 +261,7 @@
     },
     "packages/website": {
       "name": "@promptliano/website",
-      "version": "0.8.0",
+      "version": "0.8.3",
       "dependencies": {
         "@hookform/resolvers": "^3.10.0",
         "@promptliano/brand-kit": "file:../brand-kit",
@@ -1007,6 +1009,8 @@
 
     "@ts-morph/common": ["@ts-morph/common@0.19.0", "", { "dependencies": { "fast-glob": "^3.2.12", "minimatch": "^7.4.3", "mkdirp": "^2.1.6", "path-browserify": "^1.0.1" } }, "sha512-Unz/WHmd4pGax91rdIKWi51wnVUW11QttMEPpBiBgIewnc9UQIX7UDLxr5vRlqeByXCwhkF6VabSsI0raWcyAQ=="],
 
+    "@types/adm-zip": ["@types/adm-zip@0.5.7", "", { "dependencies": { "@types/node": "*" } }, "sha512-DNEs/QvmyRLurdQPChqq0Md4zGvPwHerAJYWk9l2jCbD1VPpnzRJorOdiq4zsw09NFbYnhfsoEhWtxIzXpn2yw=="],
+
     "@types/archiver": ["@types/archiver@6.0.3", "", { "dependencies": { "@types/readdir-glob": "*" } }, "sha512-a6wUll6k3zX6qs5KlxIggs1P1JcYJaTCx2gnlr+f0S1yd2DoaEwoIK10HmBaLnZwWneBz+JBm0dwcZu0zECBcQ=="],
 
     "@types/babel__core": ["@types/babel__core@7.20.5", "", { "dependencies": { "@babel/parser": "^7.20.7", "@babel/types": "^7.20.7", "@types/babel__generator": "*", "@types/babel__template": "*", "@types/babel__traverse": "*" } }, "sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA=="],
@@ -1108,6 +1112,8 @@
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 
     "acorn": ["acorn@8.15.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg=="],
+
+    "adm-zip": ["adm-zip@0.5.16", "", {}, "sha512-TGw5yVi4saajsSEgz25grObGHEUaDrniwvA2qwSC060KfqGPdglhvPMA2lPIoxs3PQIItj2iag35fONcQqgUaQ=="],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 
