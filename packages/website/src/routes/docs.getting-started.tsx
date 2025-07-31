@@ -61,7 +61,7 @@ function GettingStartedPage() {
             <p className='text-muted-foreground'>Extract the download and start Promptliano:</p>
             <CodeBlock
               code={`# For Bun bundle (recommended)
-cd promptliano-0.8.1-bun-bundle
+cd promptliano-0.8.3-bun-bundle
 bun run start
 
 # For native binaries

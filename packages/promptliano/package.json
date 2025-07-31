@@ -1,6 +1,6 @@
 {
   "name": "promptliano",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Setup and manage Promptliano - Your AI toolkit for context engineering",
   "bin": {
     "promptliano": "./dist/index.js"
@@ -9,7 +9,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --format esm && bun run build:types",
+    "build": "bun build src/index.ts --outdir dist --target node --format esm --external chalk --external commander --external inquirer --external ora --external simple-git --external tar --external adm-zip",
     "build:types": "tsc --emitDeclarationOnly",
     "dev": "bun run src/index.ts",
     "prepublishOnly": "bun run build",
@@ -22,7 +22,9 @@
     "ai",
     "claude",
     "context",
-    "cli"
+    "cli",
+    "setup",
+    "npx"
   ],
   "author": "Brandon Schabel",
   "license": "MIT",
@@ -40,13 +42,19 @@
     "inquirer": "^9.2.15",
     "ora": "^8.0.1",
     "simple-git": "^3.22.0",
-    "tar": "^7.0.1"
+    "tar": "^7.0.1",
+    "adm-zip": "^0.5.10"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",
     "@types/node": "^20.11.25",
     "@types/tar": "^6.1.11",
+    "@types/adm-zip": "^0.5.5",
     "bun-types": "^1.0.0",
     "typescript": "^5.4.2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

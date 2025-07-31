@@ -1,0 +1,36 @@
+# Source files
+src/
+*.ts
+!dist/**/*.d.ts
+
+# Config files
+tsconfig.json
+.eslintrc*
+.prettierrc*
+
+# Test files
+test/
+*.test.*
+*.spec.*
+test-local.sh
+
+# Development files
+.env
+.env.*
+*.log
+node_modules/
+.DS_Store
+
+# Documentation
+IMPLEMENTATION_GUIDE.md
+docs/
+
+# Build artifacts
+*.tgz
+*.tar.gz
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo

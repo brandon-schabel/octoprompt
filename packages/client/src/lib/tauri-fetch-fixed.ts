@@ -41,6 +41,24 @@ const createCustomFetch = () => {
   // This function will be called with proper context
   const fetchWrapper = async (input: RequestInfo | URL, init?: RequestInit) => {
     console.log('[TauriFetch] Fetch called for:', input)
+    
+    // Ensure input is a valid URL
+    let url: string
+    try {
+      if (typeof input === 'string') {
+        // If it's a relative URL, resolve it against the current origin
+        url = input.startsWith('http') ? input : new URL(input, window.location.origin).toString()
+      } else if (input instanceof URL) {
+        url = input.toString()
+      } else {
+        url = input.url
+      }
+    } catch (error) {
+      console.error('[TauriFetch] Failed to resolve URL:', error)
+      throw new Error(`Invalid URL: ${input}`)
+    }
+    
+    console.log('[TauriFetch] Resolved URL:', url)
 
     // In Tauri environment
     if (isTauri) {
@@ -57,8 +75,8 @@ const createCustomFetch = () => {
       if (tauriFetch) {
         console.log('[TauriFetch] Using Tauri HTTP plugin')
         try {
-          // Call Tauri fetch directly - it should handle its own context
-          const response = await tauriFetch(input, init)
+          // Call Tauri fetch with the resolved URL
+          const response = await tauriFetch(url, init)
           console.log('[TauriFetch] Tauri fetch successful, status:', response.status)
           return response
         } catch (error) {
@@ -71,7 +89,7 @@ const createCustomFetch = () => {
     // Use native fetch (already bound to window)
     console.log('[TauriFetch] Using native fetch')
     try {
-      const response = await nativeFetch(input, init)
+      const response = await nativeFetch(url, init)
       console.log('[TauriFetch] Native fetch successful, status:', response.status)
       return response
     } catch (error) {
