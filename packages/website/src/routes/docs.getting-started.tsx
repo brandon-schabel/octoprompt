@@ -38,49 +38,40 @@ function GettingStartedPage() {
       </GlassCard>
 
       <section id='quickstart' className='space-y-6'>
-        <h2 className='text-3xl font-semibold'>Quick Start (3 Steps)</h2>
+        <h2 className='text-3xl font-semibold'>Quick Start (2 Steps)</h2>
 
         <div className='space-y-6'>
           <div className='space-y-3'>
-            <h3 className='text-xl font-medium'>1. Download Promptliano</h3>
+            <h3 className='text-xl font-medium'>1. Install and Run Promptliano</h3>
             <p className='text-muted-foreground mb-4'>
-              Download the right version for your platform. The button below will auto-detect your system.
+              Install and start Promptliano with a single command:
             </p>
-            <DownloadButton variant='dropdown' size='lg' />
+            <CodeBlock
+              code='npx promptliano@latest'
+              language='bash'
+            />
             <p className='text-sm text-muted-foreground mt-2'>
-              Need help? See our{' '}
+              This command will:
+            </p>
+            <ul className='text-sm text-muted-foreground list-disc list-inside space-y-1 ml-2'>
+              <li>Download and install Promptliano automatically</li>
+              <li>Configure MCP for your AI editor</li>
+              <li>Start the Promptliano server</li>
+              <li>Open the UI at <a href='http://localhost:3579' className='text-primary hover:underline'>http://localhost:3579</a></li>
+            </ul>
+            <p className='text-sm text-muted-foreground mt-3'>
+              Prefer manual installation? See our{' '}
               <a href='/docs/download-installation' className='text-primary hover:underline'>
-                detailed installation guide
+                manual installation guide
               </a>
               .
             </p>
           </div>
 
           <div className='space-y-3'>
-            <h3 className='text-xl font-medium'>2. Run Promptliano</h3>
-            <p className='text-muted-foreground'>Extract the download and start Promptliano:</p>
-            <CodeBlock
-              code={`# For Bun bundle (recommended)
-cd promptliano-0.8.3-bun-bundle
-bun run start
-
-# For native binaries
-./promptliano  # macOS/Linux
-promptliano.exe  # Windows`}
-              language='bash'
-            />
-            <p className='text-sm text-muted-foreground'>
-              Promptliano will start on{' '}
-              <a href='http://localhost:3579' className='text-primary hover:underline'>
-                http://localhost:3579
-              </a>
-            </p>
-          </div>
-
-          <div className='space-y-3'>
-            <h3 className='text-xl font-medium'>3. Configure Your AI Editor (Optional)</h3>
+            <h3 className='text-xl font-medium'>2. Configure Your AI Editor (Optional)</h3>
             <p className='text-muted-foreground'>
-              Connect Promptliano to your AI-powered editor for seamless integration:
+              If you skipped MCP configuration during setup, you can connect Promptliano to your AI-powered editor:
             </p>
             <div className='grid md:grid-cols-2 gap-4'>
               <a
@@ -242,9 +233,9 @@ promptliano.exe  # Windows`}
           <li className='flex items-center gap-2'>
             <span>→</span>
             <a href='/docs/download-installation' className='text-primary hover:underline'>
-              Download & Installation
+              Manual Installation
             </a>
-            <span className='text-muted-foreground'>for your platform</span>
+            <span className='text-muted-foreground'>for alternative installation methods</span>
           </li>
           <li className='flex items-center gap-2'>
             <span>→</span>
