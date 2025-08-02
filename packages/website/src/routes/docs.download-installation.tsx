@@ -33,7 +33,6 @@ function DownloadInstallationPage() {
       {/* Quick Install Section */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Quick Install (Recommended)</h2>
-
         <GlassCard className='p-8 bg-green-500/5 border-green-500/20'>
           <div className='flex items-start gap-4'>
             <div className='p-3 rounded-lg bg-green-500/10'>
@@ -65,7 +64,6 @@ function DownloadInstallationPage() {
         <p className='text-muted-foreground'>
           If you prefer to manually download and install Promptliano, you can choose from our prebuilt binaries below.
         </p>
-
         <DownloadButton variant='dropdown' size='lg' />
         <p className='text-sm text-muted-foreground text-center'>
           The download button above will automatically detect your platform and recommend the best option.
@@ -416,7 +414,6 @@ chmod +x ./promptliano
           <TabsContent value='claude' className='space-y-4'>
             <GlassCard className='p-6'>
               <h3 className='text-xl font-semibold mb-4'>Claude Desktop Configuration</h3>
-
               <Tabs defaultValue='macos' className='w-full'>
                 <TabsList className='grid w-full grid-cols-2'>
                   <TabsTrigger value='macos'>macOS</TabsTrigger>
@@ -541,7 +538,6 @@ chmod +x ./promptliano
         {/* Verify MCP Connection */}
         <GlassCard className='p-6'>
           <h3 className='text-lg font-medium mb-4'>Verifying the Connection</h3>
-
           <div className='space-y-4'>
             <div>
               <h4 className='font-medium mb-2'>Test Commands</h4>
@@ -574,7 +570,6 @@ chmod +x ./promptliano
 
         <GlassCard className='p-6'>
           <h3 className='text-lg font-medium mb-4'>Installation Issues</h3>
-
           <div className='space-y-4'>
             <div>
               <h4 className='font-medium mb-2'>Port already in use</h4>
@@ -601,7 +596,6 @@ chmod +x ./promptliano
 
         <GlassCard className='p-6'>
           <h3 className='text-lg font-medium mb-4'>MCP Connection Issues</h3>
-
           <div className='space-y-4'>
             <div>
               <h4 className='font-medium mb-2'>"MCP server not found"</h4>

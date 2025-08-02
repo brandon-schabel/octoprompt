@@ -219,12 +219,10 @@ function DownloadsPage() {
         <AnimateOnScroll>
           <GlassCard className='p-8 max-w-4xl mx-auto'>
             <h2 className='text-2xl font-bold mb-6'>Need More Options?</h2>
-
             <div className='space-y-4'>
               <p className='text-muted-foreground'>
                 Looking for platform-specific binaries or manual installation options?
               </p>
-
               <div className='space-y-2'>
                 <a href='/docs/download-installation' className='text-primary hover:underline flex items-center gap-2'>
                   View Manual Installation Guide

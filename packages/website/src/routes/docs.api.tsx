@@ -244,7 +244,6 @@ function ApiReferencePage() {
 }`}
                   language='json'
                 />
-
                 <p className='text-sm text-muted-foreground mt-6 mb-3'>AI Request (Auto-Generate Tasks):</p>
                 <CodeTerminal
                   code={`mcp__promptliano__ticket_manager(
