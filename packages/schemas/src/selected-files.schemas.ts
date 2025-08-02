@@ -4,7 +4,8 @@ import { idSchemaSpec, idArraySchemaSpec, unixTSSchemaSpec } from './schema-util
 export const selectedFilesDataSchema = z.object({
   projectId: idSchemaSpec,
   tabId: z.number().optional(),
-  fileIds: idArraySchemaSpec.default([]),
+  fileIds: idArraySchemaSpec.default([]), // DEPRECATED: Will be removed in future versions
+  filePaths: z.array(z.string()).default([]), // NEW: Primary selection method using stable file paths
   promptIds: idArraySchemaSpec.default([]),
   userPrompt: z.string().default(''),
   updatedAt: unixTSSchemaSpec

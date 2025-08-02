@@ -19,7 +19,7 @@ interface Platform {
 const platforms: Platform[] = [
   {
     name: 'bun',
-    icon: <Package className="h-5 w-5" />,
+    icon: <Package className='h-5 w-5' />,
     label: 'Bun Bundle',
     description: 'Server and UI Bundle - Requires Bun',
     url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.3/promptliano-0.8.3-bun-bundle.zip',
@@ -28,7 +28,7 @@ const platforms: Platform[] = [
   },
   {
     name: 'macos-arm64',
-    icon: <Apple className="h-5 w-5" />,
+    icon: <Apple className='h-5 w-5' />,
     label: 'macOS (M1+)',
     description: 'Native macOS Binary for Apple Silicon',
     url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.3/promptliano-0.8.3-macos-arm64.zip',
@@ -36,7 +36,7 @@ const platforms: Platform[] = [
   },
   {
     name: 'windows-x64',
-    icon: <MonitorSmartphone className="h-5 w-5" />,
+    icon: <MonitorSmartphone className='h-5 w-5' />,
     label: 'Windows x64',
     description: 'Native Windows Binary',
     url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.3/promptliano-0.8.3-windows-x64.zip',
@@ -44,7 +44,7 @@ const platforms: Platform[] = [
   },
   {
     name: 'linux-x64',
-    icon: <Terminal className="h-5 w-5" />,
+    icon: <Terminal className='h-5 w-5' />,
     label: 'Linux x64',
     description: 'Native Linux Binary',
     url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.3/promptliano-0.8.3-linux-x64.zip',
@@ -59,8 +59,8 @@ interface DownloadButtonProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
-export function DownloadButton({ 
-  className, 
+export function DownloadButton({
+  className,
   showPlatforms = true,
   variant = 'default',
   size = 'md'
@@ -70,7 +70,7 @@ export function DownloadButton({
   useEffect(() => {
     const platform = navigator.platform.toLowerCase()
     const userAgent = navigator.userAgent.toLowerCase()
-    
+
     if (platform.includes('mac') || userAgent.includes('mac')) {
       const isM1 = userAgent.includes('arm') || userAgent.includes('aarch64')
       setDetectedPlatform(isM1 ? 'macos-arm64' : 'bun')
@@ -81,17 +81,13 @@ export function DownloadButton({
     }
   }, [])
 
-  const recommendedPlatform = platforms.find(p => p.name === detectedPlatform) || platforms[0]
+  const recommendedPlatform = platforms.find((p) => p.name === detectedPlatform) || platforms[0]
 
   if (variant === 'dropdown') {
     return (
-      <a
-        href={recommendedPlatform.url}
-        download
-        className={cn('inline-flex items-center gap-2', className)}
-      >
-        <CTAButton size={size} className="gap-2">
-          <Download className="h-4 w-4" />
+      <a href={recommendedPlatform.url} download className={cn('inline-flex items-center gap-2', className)}>
+        <CTAButton size={size} className='gap-2'>
+          <Download className='h-4 w-4' />
           Download {recommendedPlatform.label}
         </CTAButton>
       </a>
@@ -100,20 +96,20 @@ export function DownloadButton({
 
   return (
     <div className={cn('space-y-4', className)}>
-      <GlassCard className="p-6 backdrop-blur-xl bg-background/50">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Download className="h-5 w-5 text-primary" />
+      <GlassCard className='p-6 backdrop-blur-xl bg-background/50'>
+        <div className='space-y-4'>
+          <div className='flex items-center gap-3'>
+            <div className='h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center'>
+              <Download className='h-5 w-5 text-primary' />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Download Promptliano</h3>
-              <p className="text-sm text-muted-foreground">Choose your platform below</p>
+              <h3 className='font-semibold text-lg'>Download Promptliano</h3>
+              <p className='text-sm text-muted-foreground'>Choose your platform below</p>
             </div>
           </div>
-          
+
           {showPlatforms && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
               {platforms.map((platform) => (
                 <motion.a
                   key={platform.name}
@@ -122,16 +118,16 @@ export function DownloadButton({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={cn(
-                    "relative overflow-hidden rounded-lg border p-3 text-center transition-colors",
-                    "border-primary/20 bg-primary/5 cursor-pointer hover:bg-primary/10"
+                    'relative overflow-hidden rounded-lg border p-3 text-center transition-colors',
+                    'border-primary/20 bg-primary/5 cursor-pointer hover:bg-primary/10'
                   )}
                 >
-                  <div className="flex flex-col items-center gap-2">
+                  <div className='flex flex-col items-center gap-2'>
                     {platform.icon}
-                    <span className="text-xs font-medium">{platform.label}</span>
+                    <span className='text-xs font-medium'>{platform.label}</span>
                   </div>
                   {platform.name === detectedPlatform && (
-                    <span className="absolute top-1 right-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                    <span className='absolute top-1 right-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded'>
                       Detected
                     </span>
                   )}
@@ -139,13 +135,16 @@ export function DownloadButton({
               ))}
             </div>
           )}
-          
-          <div className="pt-2 space-y-2">
-            <CTAButtonOutline href="/docs/download-installation" size="md" className="w-full">
+
+          <div className='pt-2 space-y-2'>
+            <CTAButtonOutline href='/docs/download-installation' size='md' className='w-full'>
               View Installation Guide
             </CTAButtonOutline>
-            <p className="text-xs text-center text-muted-foreground">
-              All downloads are for v0.8.3 • <a href="https://github.com/brandon-schabel/promptliano/releases" className="underline">View all releases</a>
+            <p className='text-xs text-center text-muted-foreground'>
+              All downloads are for v0.8.3 •{' '}
+              <a href='https://github.com/brandon-schabel/promptliano/releases' className='underline'>
+                View all releases
+              </a>
             </p>
           </div>
         </div>
@@ -155,12 +154,5 @@ export function DownloadButton({
 }
 
 export function DownloadButtonCompact({ className }: DownloadButtonProps) {
-  return (
-    <DownloadButton 
-      variant="dropdown" 
-      size="sm" 
-      className={className}
-      showPlatforms={false}
-    />
-  )
+  return <DownloadButton variant='dropdown' size='sm' className={className} showPlatforms={false} />
 }

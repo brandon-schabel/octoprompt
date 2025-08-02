@@ -317,7 +317,7 @@ export class MCPProjectConfigService extends EventEmitter {
   getEditorType(locationPath: string): string {
     // Normalize path to use forward slashes for consistent comparison
     const normalizedPath = toPosixPath(locationPath)
-    
+
     if (normalizedPath.includes('.vscode/mcp.json')) {
       return 'vscode'
     } else if (normalizedPath.includes('.cursor/mcp.json')) {
@@ -341,18 +341,18 @@ export class MCPProjectConfigService extends EventEmitter {
 
     // Get the Promptliano installation path - need to find the monorepo root
     let promptlianoPath = process.cwd()
-    
+
     // Try to find the root by looking for package.json with workspaces
     let currentPath = promptlianoPath
     let foundRoot = false
-    
+
     // Go up directories until we find the root package.json with workspaces
     for (let i = 0; i < 5; i++) {
       try {
         const packageJsonPath = path.join(currentPath, 'package.json')
         await fs.access(packageJsonPath)
         const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
-        
+
         // Check if this is the root package.json (has workspaces)
         if (packageJson.workspaces) {
           promptlianoPath = currentPath
@@ -363,12 +363,12 @@ export class MCPProjectConfigService extends EventEmitter {
       } catch {
         // Continue searching
       }
-      
+
       const parentPath = path.dirname(currentPath)
       if (parentPath === currentPath) break // Reached filesystem root
       currentPath = parentPath
     }
-    
+
     if (!foundRoot) {
       // Fallback: if we're in packages/server, go up two levels
       const normalizedCwd = toPosixPath(promptlianoPath)
@@ -382,7 +382,7 @@ export class MCPProjectConfigService extends EventEmitter {
       process.platform === 'win32'
         ? path.join(promptlianoPath, 'packages/server/mcp-start.bat')
         : path.join(promptlianoPath, 'packages/server/mcp-start.sh')
-    
+
     logger.info('MCP Config Generation:', {
       initialCwd: process.cwd(),
       detectedRoot: promptlianoPath,
@@ -390,7 +390,7 @@ export class MCPProjectConfigService extends EventEmitter {
       scriptPath,
       scriptPathNormalized: toPosixPath(scriptPath)
     })
-    
+
     // Validate that the script actually exists
     try {
       await fs.access(scriptPath)

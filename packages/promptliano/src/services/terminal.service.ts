@@ -1,14 +1,14 @@
-import inquirer from 'inquirer';
-import chalk from 'chalk';
-import { Logger } from '../utils/logger.js';
+import inquirer from 'inquirer'
+import chalk from 'chalk'
+import { Logger } from '../utils/logger.js'
 
 export class TerminalService {
-  private logger: Logger;
-  
+  private logger: Logger
+
   constructor(logger: Logger) {
-    this.logger = logger;
+    this.logger = logger
   }
-  
+
   async confirm(message: string, defaultValue = true): Promise<boolean> {
     const { confirmed } = await inquirer.prompt([
       {
@@ -17,11 +17,11 @@ export class TerminalService {
         message,
         default: defaultValue
       }
-    ]);
-    
-    return confirmed;
+    ])
+
+    return confirmed
   }
-  
+
   async select<T extends string>(
     message: string,
     choices: Array<{ name: string; value: T; description?: string }>
@@ -31,23 +31,17 @@ export class TerminalService {
         type: 'list',
         name: 'selected',
         message,
-        choices: choices.map(choice => ({
-          name: choice.description
-            ? `${choice.name} ${chalk.dim(`- ${choice.description}`)}`
-            : choice.name,
+        choices: choices.map((choice) => ({
+          name: choice.description ? `${choice.name} ${chalk.dim(`- ${choice.description}`)}` : choice.name,
           value: choice.value
         }))
       }
-    ]);
-    
-    return selected;
+    ])
+
+    return selected
   }
-  
-  async input(
-    message: string,
-    defaultValue?: string,
-    validate?: (input: string) => boolean | string
-  ): Promise<string> {
+
+  async input(message: string, defaultValue?: string, validate?: (input: string) => boolean | string): Promise<string> {
     const { value } = await inquirer.prompt([
       {
         type: 'input',
@@ -56,11 +50,11 @@ export class TerminalService {
         default: defaultValue,
         validate
       }
-    ]);
-    
-    return value;
+    ])
+
+    return value
   }
-  
+
   async password(message: string): Promise<string> {
     const { value } = await inquirer.prompt([
       {
@@ -69,11 +63,11 @@ export class TerminalService {
         message,
         mask: '*'
       }
-    ]);
-    
-    return value;
+    ])
+
+    return value
   }
-  
+
   async checkbox<T extends string>(
     message: string,
     choices: Array<{ name: string; value: T; checked?: boolean }>
@@ -85,24 +79,24 @@ export class TerminalService {
         message,
         choices
       }
-    ]);
-    
-    return selected;
+    ])
+
+    return selected
   }
-  
+
   displayBanner(): void {
-    console.log(chalk.cyan('\n╔══════════════════════════════════╗'));
-    console.log(chalk.cyan('║     🚀 Promptliano CLI Tool      ║'));
-    console.log(chalk.cyan('║  Your AI toolkit for context     ║'));
-    console.log(chalk.cyan('║        engineering               ║'));
-    console.log(chalk.cyan('╚══════════════════════════════════╝\n'));
+    console.log(chalk.cyan('\n╔══════════════════════════════════╗'))
+    console.log(chalk.cyan('║     🚀 Promptliano CLI Tool      ║'))
+    console.log(chalk.cyan('║  Your AI toolkit for context     ║'))
+    console.log(chalk.cyan('║        engineering               ║'))
+    console.log(chalk.cyan('╚══════════════════════════════════╝\n'))
   }
-  
+
   displaySuccess(title: string, message: string): void {
-    console.log();
-    console.log(chalk.green.bold(`✨ ${title}`));
-    console.log(chalk.dim('─'.repeat(40)));
-    console.log(message);
-    console.log();
+    console.log()
+    console.log(chalk.green.bold(`✨ ${title}`))
+    console.log(chalk.dim('─'.repeat(40)))
+    console.log(message)
+    console.log()
   }
 }

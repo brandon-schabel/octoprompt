@@ -22,11 +22,7 @@ export function Logo({ size = 'lg', className, showGlow = false }: LogoProps) {
       <img
         src='/icon-512.png'
         alt='Promptliano Logo'
-        className={cn(
-          sizeMap[size],
-          'relative z-10',
-          'transition-transform duration-300 hover:scale-105'
-        )}
+        className={cn(sizeMap[size], 'relative z-10', 'transition-transform duration-300 hover:scale-105')}
       />
     </div>
   )

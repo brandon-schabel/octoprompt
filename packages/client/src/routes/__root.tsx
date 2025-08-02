@@ -159,7 +159,7 @@ function RootComponent() {
 
   // Migrate legacy defaultTab to numeric ID system
   useMigrateDefaultTab()
-  
+
   // Migrate old tab views to new Manage sub-view structure
   useMigrateTabViews()
 

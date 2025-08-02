@@ -100,7 +100,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
     // Always extract folder name from path (cross-platform)
     const pathParts = path.split(/[/\\]/).filter(Boolean)
     const folderName = pathParts[pathParts.length - 1]
-    
+
     if (folderName) {
       setFormData((prev) => ({ ...prev, name: folderName.trim() }))
     }

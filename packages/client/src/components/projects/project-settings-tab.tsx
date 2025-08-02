@@ -19,7 +19,7 @@ export function ProjectSettingsTab() {
   // Get search params and use the scroll to section hook
   const search = Route.useSearch()
   useScrollToSection({ search })
-  
+
   const updateActiveProjectTab = useUpdateActiveProjectTab()
   const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
   const { data: resolveImports } = useProjectTabField('resolveImports')
@@ -43,7 +43,6 @@ export function ProjectSettingsTab() {
       return () => clearInterval(interval)
     }
   }, [projectId, syncProject])
-
 
   const setPreferredEditor = (value: EditorType) => {
     updateActiveProjectTab((prev) => ({
@@ -180,7 +179,8 @@ export function ProjectSettingsTab() {
               <div className='space-y-0.5'>
                 <label className='text-base font-medium'>Enable Claude Code</label>
                 <p className='text-sm text-muted-foreground'>
-                  Activate Claude Code tab with agent management, sessions, and chat features. This feature is currently in beta.
+                  Activate Claude Code tab with agent management, sessions, and chat features. This feature is currently
+                  in beta.
                 </p>
               </div>
               <Switch checked={!!claudeCodeEnabled} onCheckedChange={setClaudeCodeEnabled} />
@@ -217,7 +217,7 @@ export function ProjectSettingsTab() {
         {showTroubleshooting && <MCPTroubleshooting />}
 
         {projectId && (
-          <div id="mcp-config-section">
+          <div id='mcp-config-section'>
             <MCPProjectConfigEditor projectId={projectId} />
           </div>
         )}

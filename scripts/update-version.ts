@@ -15,16 +15,13 @@ async function updateVersion(newVersion: string) {
 
     // Read the config file
     const content = await readFile(configPath, 'utf-8')
-    
+
     // Update the version
-    const updatedContent = content.replace(
-      /version:\s*['"`]([^'"`]+)['"`]/,
-      `version: '${newVersion}'`
-    )
+    const updatedContent = content.replace(/version:\s*['"`]([^'"`]+)['"`]/, `version: '${newVersion}'`)
 
     // Write back the file
     await writeFile(configPath, updatedContent)
-    
+
     console.log(`✅ Updated version to ${newVersion} in app.config.ts`)
     console.log(`\n📝 Now run 'bun run sync-version' to update all other files`)
   } catch (error) {

@@ -88,6 +88,35 @@ import {
 import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@promptliano/schemas'
 import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@promptliano/schemas'
 
+// Claude Command imports
+import type {
+  CreateClaudeCommandBody,
+  UpdateClaudeCommandBody,
+  ExecuteClaudeCommandBody,
+  ClaudeCommand,
+  CommandSuggestions,
+  SearchCommandsQuery
+} from '@promptliano/schemas'
+
+// Claude Code imports
+import {
+  ClaudeSessionsResponseSchema,
+  ClaudeMessagesResponseSchema,
+  ClaudeProjectDataResponseSchema,
+  ClaudeSessionQuerySchema,
+  ClaudeMessageQuerySchema
+} from '@promptliano/schemas'
+import {
+  CreateClaudeCommandBodySchema,
+  UpdateClaudeCommandBodySchema,
+  ExecuteClaudeCommandBodySchema,
+  ClaudeCommandResponseSchema as ClaudeCommandResponseSchemaZ,
+  ClaudeCommandListResponseSchema as ClaudeCommandListResponseSchemaZ,
+  CommandSuggestionsResponseSchema as CommandSuggestionsResponseSchemaZ,
+  CommandExecutionResponseSchema as CommandExecutionResponseSchemaZ,
+  SearchCommandsQuerySchema
+} from '@promptliano/schemas'
+
 // MCP imports
 import type {
   CreateMCPServerConfigBody,
@@ -267,7 +296,7 @@ class BaseApiClient {
       this.customFetch =
         typeof window !== 'undefined' && window.fetch
           ? // @ts-ignore
-          window.fetch.bind(window)
+            window.fetch.bind(window)
           : fetch
     }
   }
@@ -284,7 +313,7 @@ class BaseApiClient {
   ): Promise<TResponse> {
     // Handle both absolute and relative URLs
     const apiPath = `/api${endpoint}`
-    const url = this.baseUrl 
+    const url = this.baseUrl
       ? new URL(apiPath, this.baseUrl.endsWith('/') ? this.baseUrl : this.baseUrl + '/')
       : new URL(apiPath, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3579')
 
@@ -464,7 +493,7 @@ export class ChatService extends BaseApiClient {
   // Streaming endpoint - returns ReadableStream
   async streamChat(data: AiChatStreamRequest): Promise<ReadableStream> {
     const validatedData = this.validateBody(AiChatStreamRequestSchema, data)
-    const url = this.baseUrl 
+    const url = this.baseUrl
       ? new URL('/api/ai/chat', this.baseUrl.endsWith('/') ? this.baseUrl : this.baseUrl + '/')
       : new URL('/api/ai/chat', typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3579')
 
@@ -771,24 +800,24 @@ export class ProjectService extends BaseApiClient {
         fileSearch?: string
         contextLimit?: number
         preferredEditor?:
-        | 'vscode'
-        | 'cursor'
-        | 'webstorm'
-        | 'vim'
-        | 'emacs'
-        | 'sublime'
-        | 'atom'
-        | 'idea'
-        | 'phpstorm'
-        | 'pycharm'
-        | 'rubymine'
-        | 'goland'
-        | 'fleet'
-        | 'zed'
-        | 'neovim'
-        | 'xcode'
-        | 'androidstudio'
-        | 'rider'
+          | 'vscode'
+          | 'cursor'
+          | 'webstorm'
+          | 'vim'
+          | 'emacs'
+          | 'sublime'
+          | 'atom'
+          | 'idea'
+          | 'phpstorm'
+          | 'pycharm'
+          | 'rubymine'
+          | 'goland'
+          | 'fleet'
+          | 'zed'
+          | 'neovim'
+          | 'xcode'
+          | 'androidstudio'
+          | 'rider'
         suggestedFileIds?: number[]
         ticketSearch?: string
         ticketSort?: 'created_asc' | 'created_desc' | 'status' | 'priority'
@@ -1121,6 +1150,166 @@ export class ClaudeAgentService extends BaseApiClient {
   }
 }
 
+// Claude Code Service
+export class ClaudeCodeService extends BaseApiClient {
+  async getMCPStatus(projectId: number) {
+    const result = await this.request('GET', `/claude-code/mcp-status/${projectId}`, {
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          claudeDesktop: z.object({
+            installed: z.boolean(),
+            configExists: z.boolean(),
+            hasPromptliano: z.boolean(),
+            configPath: z.string().optional(),
+            error: z.string().optional()
+          }),
+          claudeCode: z.object({
+            globalConfigExists: z.boolean(),
+            globalHasPromptliano: z.boolean(),
+            globalConfigPath: z.string().optional(),
+            projectConfigExists: z.boolean(),
+            projectHasPromptliano: z.boolean(),
+            projectConfigPath: z.string().optional(),
+            localConfigExists: z.boolean(),
+            localHasPromptliano: z.boolean(),
+            localConfigPath: z.string().optional(),
+            error: z.string().optional()
+          }),
+          projectId: z.string(),
+          installCommand: z.string()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      claudeDesktop: {
+        installed: boolean
+        configExists: boolean
+        hasPromptliano: boolean
+        configPath?: string
+        error?: string
+      }
+      claudeCode: {
+        globalConfigExists: boolean
+        globalHasPromptliano: boolean
+        globalConfigPath?: string
+        projectConfigExists: boolean
+        projectHasPromptliano: boolean
+        projectConfigPath?: string
+        localConfigExists: boolean
+        localHasPromptliano: boolean
+        localConfigPath?: string
+        error?: string
+      }
+      projectId: string
+      installCommand: string
+    }>
+  }
+
+  async getSessions(projectId: number, query?: z.infer<typeof ClaudeSessionQuerySchema>) {
+    const result = await this.request('GET', `/claude-code/sessions/${projectId}`, {
+      params: query,
+      responseSchema: ClaudeSessionsResponseSchema
+    })
+    return result as z.infer<typeof ClaudeSessionsResponseSchema>
+  }
+
+  async getSessionMessages(
+    projectId: number, 
+    sessionId: string, 
+    query?: z.infer<typeof ClaudeMessageQuerySchema>
+  ) {
+    const result = await this.request('GET', `/claude-code/sessions/${projectId}/${sessionId}`, {
+      params: query,
+      responseSchema: ClaudeMessagesResponseSchema
+    })
+    return result as z.infer<typeof ClaudeMessagesResponseSchema>
+  }
+
+  async getProjectData(projectId: number) {
+    const result = await this.request('GET', `/claude-code/project-data/${projectId}`, {
+      responseSchema: ClaudeProjectDataResponseSchema
+    })
+    return result as z.infer<typeof ClaudeProjectDataResponseSchema>
+  }
+
+  async importSession(projectId: number, sessionId: string) {
+    const result = await this.request('POST', `/claude-code/import-session/${projectId}/${sessionId}`, {
+      responseSchema: ChatResponseSchema
+    })
+    return result as z.infer<typeof ChatResponseSchema>
+  }
+}
+
+// Claude Command Service
+export class CommandService extends BaseApiClient {
+  async listCommands(projectId: number, query?: SearchCommandsQuery) {
+    const params = query ? SearchCommandsQuerySchema.parse(query) : undefined
+    const result = await this.request('GET', `/projects/${projectId}/commands`, {
+      params,
+      responseSchema: ClaudeCommandListResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeCommand[]>
+  }
+
+  async getCommand(projectId: number, commandName: string, namespace?: string) {
+    const params = namespace ? { namespace } : undefined
+    const result = await this.request('GET', `/projects/${projectId}/commands/${commandName}`, {
+      params,
+      responseSchema: ClaudeCommandResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeCommand>
+  }
+
+  async createCommand(projectId: number, data: CreateClaudeCommandBody) {
+    const validatedData = this.validateBody(CreateClaudeCommandBodySchema, data)
+    const result = await this.request('POST', `/projects/${projectId}/commands`, {
+      body: validatedData,
+      responseSchema: ClaudeCommandResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeCommand>
+  }
+
+  async updateCommand(projectId: number, commandName: string, data: UpdateClaudeCommandBody, namespace?: string) {
+    const validatedData = this.validateBody(UpdateClaudeCommandBodySchema, data)
+    const params = namespace ? { namespace } : undefined
+    const result = await this.request('PUT', `/projects/${projectId}/commands/${commandName}`, {
+      params,
+      body: validatedData,
+      responseSchema: ClaudeCommandResponseSchemaZ
+    })
+    return result as DataResponseSchema<ClaudeCommand>
+  }
+
+  async deleteCommand(projectId: number, commandName: string, namespace?: string) {
+    const params = namespace ? { namespace } : undefined
+    await this.request('DELETE', `/projects/${projectId}/commands/${commandName}`, {
+      params,
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async executeCommand(projectId: number, commandName: string, args?: string, namespace?: string) {
+    const validatedData = args ? this.validateBody(ExecuteClaudeCommandBodySchema, { arguments: args }) : {}
+    const params = namespace ? { namespace } : undefined
+    const result = await this.request('POST', `/projects/${projectId}/commands/${commandName}/execute`, {
+      params,
+      body: validatedData,
+      responseSchema: CommandExecutionResponseSchemaZ
+    })
+    return result
+  }
+
+  async suggestCommands(projectId: number, context?: string, limit?: number) {
+    const result = await this.request('POST', `/projects/${projectId}/commands/suggest`, {
+      body: { context, limit },
+      responseSchema: CommandSuggestionsResponseSchemaZ
+    })
+    return result as DataResponseSchema<CommandSuggestions>
+  }
+}
+
 // Provider Key Service
 export class ProviderKeyService extends BaseApiClient {
   async listKeys() {
@@ -1194,7 +1383,7 @@ export class GenAiService extends BaseApiClient {
 
   async streamText(data: AiGenerateTextRequest): Promise<ReadableStream> {
     const validatedData = this.validateBody(AiGenerateTextRequestSchema, data)
-    const url = this.baseUrl 
+    const url = this.baseUrl
       ? new URL('/api/gen-ai/stream', this.baseUrl.endsWith('/') ? this.baseUrl : this.baseUrl + '/')
       : new URL('/api/gen-ai/stream', typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3579')
 
@@ -2768,6 +2957,8 @@ export class PromptlianoClient {
   public readonly projects: ProjectService
   public readonly prompts: PromptService
   public readonly agents: ClaudeAgentService
+  public readonly commands: CommandService
+  public readonly claudeCode: ClaudeCodeService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
   public readonly system: SystemService
@@ -2786,6 +2977,8 @@ export class PromptlianoClient {
     this.projects = new ProjectService(config)
     this.prompts = new PromptService(config)
     this.agents = new ClaudeAgentService(config)
+    this.commands = new CommandService(config)
+    this.claudeCode = new ClaudeCodeService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
     this.system = new SystemService(config)

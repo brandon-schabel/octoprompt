@@ -20,7 +20,7 @@ async function startWebsiteDev() {
     })
 
     // Keep the script running
-    await new Promise(() => {})
+    await new Promise(() => { })
   } catch (error) {
     console.error('❌ Error starting website:', error)
     process.exit(1)

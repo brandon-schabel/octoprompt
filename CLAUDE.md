@@ -24,6 +24,50 @@ Generally a fullstack feature consists of the follow
 - Explorer if there are current components that meet current uses cases, if not add ShadCN components or compose new components based on the foundations of the primitive componets in the repo
 - Integrate components and data hooks into a page to complete the feature
 
+## Database Schema Migration Guidelines
+
+When creating new entities or modifying existing database schemas, follow the migration patterns established in the project. The codebase is transitioning from JSON blob storage to proper SQLite column-based tables for better performance and type safety.
+
+### Migration Documentation
+
+Refer to these documentation files when working with database schemas:
+
+- **`docs/migration-guide-json-to-columns.md`** - Complete guide for migrating from JSON to columns
+- **`docs/entities-migration-analysis.md`** - Analysis of all entities and their proposed schemas
+- **`docs/migration-templates/`** - Ready-to-use migration templates
+- **`docs/migration-best-practices-and-pitfalls.md`** - Best practices and common issues
+
+### Key Migration Principles
+
+1. **Use proper columns instead of JSON blobs** - Direct queries are 10-100x faster
+2. **Store JSON arrays as TEXT with NOT NULL DEFAULT '[]'** - Prevents parsing errors
+3. **Add comprehensive indexes** - Always index foreign keys and query fields
+4. **Use transactions for migrations** - Ensures atomic operations
+5. **Follow the established patterns from tickets/tasks migration** (migrations 006 and 007)
+
+### When Creating New Entities
+
+1. Design the schema with proper columns (avoid storing everything as JSON)
+2. Use the migration templates in `docs/migration-templates/`
+3. Add NOT NULL constraints with appropriate defaults
+4. Create indexes for all foreign keys and commonly queried fields
+5. Implement safe JSON parsing for array/object fields using the `safeJsonParse` helper
+6. Update the storage layer to use direct SQL queries instead of JSON_EXTRACT
+
+### Selected Files Path-Based Migration
+
+The selected files feature has been migrated from ID-based to path-based tracking to solve the issue where file IDs change when files are updated:
+
+- **Migration Plan**: `docs/selected-files-path-migration-plan.md` - Complete migration strategy
+- **Implementation Guide**: `docs/selected-files-implementation-guide.md` - Ready-to-use code examples
+- **Component Analysis**: `docs/selected-files-components-analysis.md` - All affected components
+
+Key points:
+- File paths are stable identifiers (unique per project)
+- The system now stores both `selectedFiles` (IDs) and `selectedFilePaths` for compatibility
+- UI components should prefer path-based selection when available
+- Migration maintains backward compatibility during transition
+
 ## File Suggestions Feature
 
 The AI file suggestion feature has been optimized to use 60-70% fewer tokens. Three MCP methods are available:
@@ -96,6 +140,114 @@ mcp__Promptliano__task_manager(
 ## Agents Feature
 
 Make strong use of the agents feature, make use of specialized agents to handle task that are relevant to the list of specialized agents. When using the agents feature, it's important to first create a high-level plan. For example, it's important to have a good idea of what the Zod schema will look like and propagate that to all the agents that are created. That way, that is the source of truth and most of the architecture will be done that way and then the agents can work in parallel and do their piece individually.
+
+### Claude Agent Usage Guidelines
+
+You MUST proactively use Claude's built-in agents at appropriate times:
+
+#### After Feature Implementation:
+- **Always use `staff-engineer-code-reviewer`** after implementing any significant feature or functionality
+- This includes: new components, API endpoints, services, database changes, or any substantial code additions
+- The code reviewer will analyze implementation quality, suggest improvements, and catch potential issues
+
+#### When Refactoring or Simplifying:
+- **Use `code-modularization-expert`** when:
+  - User asks to refactor code
+  - User asks to simplify files or reduce complexity
+  - You identify duplicate patterns that could be consolidated
+  - Breaking down large files into smaller, more manageable modules
+  - Improving code organization and separation of concerns
+
+#### Other Key Agent Usage:
+- **Use `frontend-shadcn-expert`** when building React UI components or implementing frontend features
+- **Use `hono-bun-api-architect`** when creating or modifying API endpoints
+- **Use `zod-schema-architect`** when designing data validation schemas
+- **Use `tanstack-router-expert`** when implementing routing logic
+- **Use `vercel-ai-sdk-expert`** when implementing AI features
+- **Use `promptliano-service-architect`** when creating new Promptliano services
+- **Use `promptliano-mcp-tool-creator`** when creating new MCP tools
+- **Use `simple-git-integration-expert`** when implementing Git-related features
+- **Use `markdown-docs-writer`** when creating documentation
+- **Use `sqlite-json-migration-expert` when doing SQLite JSON schema migrations.
+
+
+### Example Workflow:
+```
+1. User requests: "Add a new user profile feature"
+2. You implement: schemas, storage, services, API routes, UI components
+3. Automatically use: staff-engineer-code-reviewer to review the implementation
+4. If reviewer suggests modularization: use code-modularization-expert
+5. Result: High-quality, well-reviewed, modular code
+```
+
+### Important Notes:
+- Don't wait for user to ask for code review - do it proactively
+- Use multiple agents concurrently when appropriate for maximum efficiency
+- Each agent should receive clear context about what was implemented/changed
+
+## Validation Requirements for UI Navigation and Search Parameters
+
+All UI navigation state (tabs, subtabs, views, filters) is persisted in URL search parameters and validated using Zod schemas. When adding any new UI navigation elements, you MUST update the corresponding validation schemas.
+
+### Key Principle:
+Any value that appears in the URL search params must have a corresponding Zod schema validation. This includes:
+- Main navigation tabs
+- Sub-navigation tabs within views
+- Filter states
+- View modes
+- Selected item IDs
+- Any other UI state persisted in the URL
+
+### Common Validation Files:
+- `packages/client/src/lib/search-schemas.ts` - Contains all route search parameter schemas
+- `packages/schemas/` - Contains domain-specific schemas for forms and data
+
+### Required Updates When Adding New UI Navigation:
+1. **Update the enum schema** for the navigation type in `search-schemas.ts`
+2. **Add the new value to the enum** with a `.catch()` default
+3. **Update the parent search schema** if adding a new navigation category
+4. **Update any switch statements** or conditional rendering that handle the navigation
+5. **Export types** if needed for TypeScript support
+6. **Update navigation components** to handle the new value
+
+### Examples:
+
+#### Adding a new subtab to an existing view:
+```typescript
+// In search-schemas.ts
+export const claudeCodeViewSchema = z.enum(['agents', 'commands', 'sessions', 'chats', 'settings']).catch('agents').optional()
+```
+
+#### Adding a new main tab with subtabs:
+```typescript
+// Define the new subtab schema
+export const analyticsViewSchema = z.enum(['overview', 'usage', 'performance']).catch('overview').optional()
+
+// Add to the main search schema
+export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema).extend({
+  activeView: projectViewSchema,
+  gitView: gitViewSchema,
+  ticketView: ticketViewSchema,
+  assetView: assetViewSchema,
+  claudeCodeView: claudeCodeViewSchema,
+  analyticsView: analyticsViewSchema, // Add here
+  // ... other fields
+})
+```
+
+### Common Issues and Solutions:
+- **Tab click redirects to wrong view** → Missing enum value in schema
+- **Navigation state not persisting** → Schema not added to parent search schema
+- **Form validation errors** → Check optional field handling (use `.optional()` and `.catch()`)
+- **TypeScript errors** → Update exported types to match schema changes
+- **Default tab not working** → Ensure `.catch('default-value')` is set correctly
+
+### Testing Checklist:
+- [ ] Direct URL navigation works with new tab value
+- [ ] Tab click updates URL correctly
+- [ ] Refresh maintains selected tab
+- [ ] Invalid URL values fall back to default
+- [ ] TypeScript compilation passes
 
 ## Coding Principles
 

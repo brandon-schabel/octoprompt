@@ -47,7 +47,11 @@ export const projectTabStateSchema = z
       .optional()
       .default('')
       .openapi({ description: 'Current search query for files within this project tab.', example: 'userService' }),
-    selectedFiles: idArraySchemaSpec.default([]),
+    selectedFiles: idArraySchemaSpec.default([]), // DEPRECATED: For backward compatibility only
+    selectedFilePaths: z.array(z.string()).default([]).openapi({ 
+      description: 'Array of file paths for selected files. More stable than IDs which change on file updates.',
+      example: ['src/index.ts', 'src/components/App.tsx']
+    }),
     selectedPrompts: idArraySchemaSpec.default([]),
     userPrompt: z.string().optional().default('').openapi({
       description: 'The current user-entered text in the main prompt input for this tab.',
@@ -112,6 +116,14 @@ export const projectTabStateSchema = z
       .openapi({
         description: 'A record of user-defined file groups (bookmarks), mapping group names to arrays of file IDs.',
         example: { 'Auth Files': [1, 2] }
+      }),
+    bookmarkedFileGroupsPaths: z
+      .record(z.string(), z.array(z.string()))
+      .optional()
+      .default({})
+      .openapi({
+        description: 'Path-based version of bookmarkedFileGroups. Maps group names to arrays of file paths.',
+        example: { 'Auth Files': ['src/auth/login.ts', 'src/auth/logout.ts'] }
       }),
     sortOrder: z
       .number()
@@ -427,6 +439,7 @@ export const createSafeGlobalState = (): GlobalState => ({
       editPromptId: -1,
       fileSearch: '',
       selectedFiles: [],
+      selectedFilePaths: [],
       selectedPrompts: [],
       userPrompt: '',
       searchByContent: false,
@@ -435,6 +448,7 @@ export const createSafeGlobalState = (): GlobalState => ({
       preferredEditor: 'vscode' as const,
       suggestedFileIds: [],
       bookmarkedFileGroups: {},
+      bookmarkedFileGroupsPaths: {},
       sortOrder: 0,
       ticketSearch: '',
       ticketSort: 'created_desc' as const,

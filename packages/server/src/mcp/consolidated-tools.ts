@@ -7,6 +7,7 @@ import { MCPError, MCPErrorCode, createMCPError, formatMCPErrorResponse } from '
 import { executeTransaction, createTransactionStep } from './mcp-transaction'
 import { trackMCPToolExecution } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
+import { commandManagerTool } from './command-manager-tool'
 import {
   listProjects,
   getProjectById,
@@ -57,9 +58,16 @@ import {
   createAgent,
   updateAgent,
   deleteAgent,
-  associateAgentWithProject,
   getAgentsByProjectId,
   suggestAgents,
+  // Claude Command operations
+  listCommands,
+  getCommandByName,
+  createCommand,
+  updateCommand,
+  deleteCommand,
+  executeCommand,
+  suggestCommands,
   // Git operations
   getProjectGitStatus,
   stageFiles,
@@ -1274,11 +1282,11 @@ Version Info:
                 throw firstError instanceof MCPError
                   ? firstError
                   : MCPError.fromError(firstError, {
-                    tool: 'project_manager',
-                    action: ProjectManagerAction.CREATE_FILE,
-                    parameter: 'path',
-                    value: filePath
-                  })
+                      tool: 'project_manager',
+                      action: ProjectManagerAction.CREATE_FILE,
+                      parameter: 'path',
+                      value: filePath
+                    })
               }
 
               const syncResult = transaction.results.get('sync-project') as any
@@ -1439,7 +1447,7 @@ Version Info:
 
             case ProjectManagerAction.OVERVIEW: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              
+
               try {
                 const overview = await getProjectOverview(validProjectId)
                 return {
@@ -1450,25 +1458,25 @@ Version Info:
                 if (error instanceof ApiError && (error.code === 'PROJECT_NOT_FOUND' || error.status === 404)) {
                   // Get list of available projects
                   const projects = await listProjects()
-                  
+
                   let errorMessage = `Error: Project not found with ID ${validProjectId}.\n\n`
-                  
+
                   if (projects.length > 0) {
                     errorMessage += `Available projects:\n`
-                    projects.forEach(p => {
+                    projects.forEach((p) => {
                       errorMessage += `  ${p.id}: ${p.name} (${p.path})\n`
                     })
                     errorMessage += `\nPlease use one of the project IDs listed above.`
                   } else {
                     errorMessage += `No projects found. Create a project first using the 'create' action.`
                   }
-                  
+
                   return {
                     content: [{ type: 'text', text: errorMessage }],
                     isError: true
                   }
                 }
-                
+
                 // Re-throw other errors to be handled by the main catch block
                 throw error
               }
@@ -1477,27 +1485,29 @@ Version Info:
             case ProjectManagerAction.DEBUG_SEARCH: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
               const query = data?.query as string | undefined
-              
-              console.log(`[MCP] Running search debug for project ${validProjectId}${query ? ` with query "${query}"` : ''}`)
-              
+
+              console.log(
+                `[MCP] Running search debug for project ${validProjectId}${query ? ` with query "${query}"` : ''}`
+              )
+
               const debugResult = await fileSearchService.debugSearch(validProjectId, query)
-              
+
               let resultText = `🔍 Search Debug Report for Project ${validProjectId}\n`
               resultText += `${'='.repeat(50)}\n\n`
-              
+
               // Index Stats
               resultText += `📊 Index Statistics:\n`
               resultText += `  - Indexed Files: ${debugResult.indexStats.indexedFiles}\n`
               resultText += `  - Total Keywords: ${debugResult.indexStats.totalKeywords}\n`
               resultText += `  - Avg Tokens/File: ${debugResult.indexStats.avgTokensPerFile}\n`
               resultText += `  - Last Indexed: ${debugResult.indexStats.lastIndexed ? new Date(debugResult.indexStats.lastIndexed).toISOString() : 'Never'}\n\n`
-              
+
               // FTS5 Content
               resultText += `📁 FTS5 Database Content:\n`
               resultText += `  - Total FTS5 Rows: ${debugResult.ftsContent.ftsCount}\n`
               resultText += `  - Project FTS5 Rows: ${debugResult.ftsContent.projectFTSCount}\n`
               resultText += `  - Metadata Rows: ${debugResult.ftsContent.metadataCount}\n\n`
-              
+
               // Sample Search Results
               if (debugResult.sampleSearch) {
                 if (debugResult.sampleSearch.error) {
@@ -1507,7 +1517,7 @@ Version Info:
                   resultText += `  - Total Results: ${debugResult.sampleSearch.stats.totalResults}\n`
                   resultText += `  - Search Time: ${debugResult.sampleSearch.stats.searchTime}ms\n`
                   resultText += `  - From Cache: ${debugResult.sampleSearch.stats.cached}\n`
-                  
+
                   if (debugResult.sampleSearch.results.length > 0) {
                     resultText += `  - Top Results:\n`
                     for (const result of debugResult.sampleSearch.results.slice(0, 3)) {
@@ -1517,7 +1527,7 @@ Version Info:
                   resultText += '\n'
                 }
               }
-              
+
               // Recommendations
               if (debugResult.recommendations.length > 0) {
                 resultText += `💡 Recommendations:\n`
@@ -1527,7 +1537,7 @@ Version Info:
               } else {
                 resultText += `✅ No issues detected - search index appears healthy\n`
               }
-              
+
               return {
                 content: [{ type: 'text', text: resultText }]
               }
@@ -1536,27 +1546,29 @@ Version Info:
             case ProjectManagerAction.DEBUG_SEARCH: {
               const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
               const query = data?.query as string | undefined
-              
-              console.log(`[MCP] Running search debug for project ${validProjectId}${query ? ` with query "${query}"` : ''}`)
-              
+
+              console.log(
+                `[MCP] Running search debug for project ${validProjectId}${query ? ` with query "${query}"` : ''}`
+              )
+
               const debugResult = await fileSearchService.debugSearch(validProjectId, query)
-              
+
               let resultText = `🔍 Search Debug Report for Project ${validProjectId}\n`
               resultText += `${'='.repeat(50)}\n\n`
-              
+
               // Index Stats
               resultText += `📊 Index Statistics:\n`
               resultText += `  - Indexed Files: ${debugResult.indexStats.indexedFiles}\n`
               resultText += `  - Total Keywords: ${debugResult.indexStats.totalKeywords}\n`
               resultText += `  - Avg Tokens/File: ${debugResult.indexStats.avgTokensPerFile}\n`
               resultText += `  - Last Indexed: ${debugResult.indexStats.lastIndexed ? new Date(debugResult.indexStats.lastIndexed).toISOString() : 'Never'}\n\n`
-              
+
               // FTS5 Content
               resultText += `📁 FTS5 Database Content:\n`
               resultText += `  - Total FTS5 Rows: ${debugResult.ftsContent.ftsCount}\n`
               resultText += `  - Project FTS5 Rows: ${debugResult.ftsContent.projectFTSCount}\n`
               resultText += `  - Metadata Rows: ${debugResult.ftsContent.metadataCount}\n\n`
-              
+
               // Sample Search Results
               if (debugResult.sampleSearch) {
                 if (debugResult.sampleSearch.error) {
@@ -1566,7 +1578,7 @@ Version Info:
                   resultText += `  - Total Results: ${debugResult.sampleSearch.stats.totalResults}\n`
                   resultText += `  - Search Time: ${debugResult.sampleSearch.stats.searchTime}ms\n`
                   resultText += `  - From Cache: ${debugResult.sampleSearch.stats.cached}\n`
-                  
+
                   if (debugResult.sampleSearch.results.length > 0) {
                     resultText += `  - Top Results:\n`
                     for (const result of debugResult.sampleSearch.results.slice(0, 3)) {
@@ -1576,7 +1588,7 @@ Version Info:
                   resultText += '\n'
                 }
               }
-              
+
               // Recommendations
               if (debugResult.recommendations.length > 0) {
                 resultText += `💡 Recommendations:\n`
@@ -1586,7 +1598,7 @@ Version Info:
               } else {
                 resultText += `✅ No issues detected - search index appears healthy\n`
               }
-              
+
               return {
                 content: [{ type: 'text', text: resultText }]
               }
@@ -1604,9 +1616,9 @@ Version Info:
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                tool: 'project_manager',
-                action: args.action
-              })
+                  tool: 'project_manager',
+                  action: args.action
+                })
 
           // Return formatted error response with recovery suggestions
           return await formatMCPErrorResponse(mcpError)
@@ -1853,9 +1865,9 @@ Version Info:
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                tool: 'prompt_manager',
-                action: args.action
-              })
+                  tool: 'prompt_manager',
+                  action: args.action
+                })
 
           // Return formatted error response with recovery suggestions
           return await formatMCPErrorResponse(mcpError)
@@ -1867,7 +1879,7 @@ Version Info:
   {
     name: 'agent_manager',
     description:
-      'Manage agents and agent-project associations. Actions: list, get, create, update, delete, list_by_project, associate_with_project, suggest_agents',
+      'Manage agents dynamically loaded from .claude/agents directory. Actions: list, get, create, update, delete, list_by_project, suggest_agents',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1985,13 +1997,13 @@ Version Info:
               }
             }
             case AgentManagerAction.ASSOCIATE_WITH_PROJECT: {
-              const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
-              const validAgentId = validateDataField<number>(data, 'agentId', 'number', '1234567890')
-              // The associateAgentWithProject expects the numeric ID of the agent
-              await associateAgentWithProject(validAgentId, validProjectId)
+              // This action is deprecated as agents are now file-based and don't need project associations
               return {
                 content: [
-                  { type: 'text', text: `Agent ${validAgentId} successfully associated with project ${validProjectId}` }
+                  { 
+                    type: 'text', 
+                    text: 'Agent-project associations are deprecated. Agents are now dynamically loaded from the project\'s .claude/agents directory.' 
+                  }
                 ]
               }
             }
@@ -2032,6 +2044,8 @@ Version Info:
       }
     )
   },
+
+  commandManagerTool,
 
   {
     name: 'ticket_manager',
@@ -2392,10 +2406,10 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                tool: 'ticket_manager',
-                action: args.action,
-                projectId: args.projectId
-              })
+                  tool: 'ticket_manager',
+                  action: args.action,
+                  projectId: args.projectId
+                })
 
           // Return formatted error response with recovery suggestions
           return await formatMCPErrorResponse(mcpError)
@@ -3178,8 +3192,8 @@ ${result.summary}`
                 typeof config === 'string'
                   ? `${key}: ${config}`
                   : Object.entries(config)
-                    .map(([k, v]) => `${k}: ${v}`)
-                    .join('\n')
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join('\n')
               return { content: [{ type: 'text', text }] }
             }
 
@@ -3521,9 +3535,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                tool: 'tab_manager',
-                action: args.action
-              })
+                  tool: 'tab_manager',
+                  action: args.action
+                })
 
           // Return formatted error response with recovery suggestions
           return await formatMCPErrorResponse(mcpError)
@@ -3827,9 +3841,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                tool: 'job_manager',
-                action: args.action
-              })
+                  tool: 'job_manager',
+                  action: args.action
+                })
 
           return formatMCPErrorResponse(mcpError)
         }
@@ -3877,9 +3891,9 @@ ${result.summary}`
 
               const staleFiles = options.includeStale
                 ? await fileSummarizationTracker.getStaleFiles(
-                  projectId,
-                  (options.staleThresholdDays || 30) * 24 * 60 * 60 * 1000
-                )
+                    projectId,
+                    (options.staleThresholdDays || 30) * 24 * 60 * 60 * 1000
+                  )
                 : []
 
               // Combine and deduplicate
@@ -4086,9 +4100,9 @@ ${result.summary}`
             error instanceof MCPError
               ? error
               : MCPError.fromError(error, {
-                tool: 'file_summarization_manager',
-                action: args.action
-              })
+                  tool: 'file_summarization_manager',
+                  action: args.action
+                })
 
           return formatMCPErrorResponse(mcpError)
         }

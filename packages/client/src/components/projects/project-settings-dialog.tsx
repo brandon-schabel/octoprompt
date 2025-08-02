@@ -36,7 +36,6 @@ export function ProjectSettingsDialog() {
     }
   }, [projectId, syncProject])
 
-
   const setPreferredEditor = (value: EditorType) => {
     // @ts-ignore
     updateActiveProjectTab((prev) => ({

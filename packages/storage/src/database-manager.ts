@@ -32,34 +32,13 @@ export class DatabaseManager {
   private lastGeneratedId: number = 0
 
   private readonly tables: TableSchema[] = [
-    {
-      name: 'provider_keys',
-      indexes: ['created_at']
-    },
-    {
-      name: 'chats',
-      indexes: ['created_at', 'updated_at']
-    },
-    {
-      name: 'chat_messages',
-      indexes: ['JSON_EXTRACT(data, "$.chatId")', 'created_at']
-    },
-    {
-      name: 'projects',
-      indexes: ['created_at', 'updated_at']
-    },
-    {
-      name: 'project_files',
-      indexes: ['JSON_EXTRACT(data, "$.projectId")', 'created_at']
-    },
-    {
-      name: 'prompts',
-      indexes: ['created_at', 'updated_at']
-    },
-    {
-      name: 'prompt_projects',
-      indexes: ['JSON_EXTRACT(data, "$.promptId")', 'JSON_EXTRACT(data, "$.projectId")']
-    },
+    // Only include tables that still use JSON storage
+    // The following tables are now managed by migrations:
+    // - provider_keys (migration 009)
+    // - projects (migration 008)
+    // - project_files (migration 012)
+    // - prompts (migration 010)
+    // - prompt_projects (migration 011)
     {
       name: 'mcp_server_configs',
       indexes: ['created_at']
@@ -79,19 +58,6 @@ export class DatabaseManager {
     {
       name: 'mcp_tool_executions',
       indexes: ['JSON_EXTRACT(data, "$.toolId")', 'created_at']
-    },
-    {
-      name: 'tickets',
-      indexes: ['JSON_EXTRACT(data, "$.projectId")', 'created_at', 'JSON_EXTRACT(data, "$.status")', 'updated_at']
-    },
-    {
-      name: 'ticket_tasks',
-      indexes: [
-        'JSON_EXTRACT(data, "$.ticketId")',
-        'JSON_EXTRACT(data, "$.orderIndex")',
-        'created_at',
-        'JSON_EXTRACT(data, "$.done")'
-      ]
     },
     {
       name: 'selected_files',
@@ -252,7 +218,16 @@ export class DatabaseManager {
       'file_search_fts_data',
       'file_search_fts_idx',
       'file_search_fts_docsize',
-      'file_search_fts_config'
+      'file_search_fts_config',
+      'tickets',
+      'ticket_tasks',
+      'projects',
+      'provider_keys',
+      'prompts',
+      'prompt_projects',
+      'project_files',
+      'chats',
+      'chat_messages'
     ]
 
     if (migrationManagedTables.includes(tableName)) {

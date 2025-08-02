@@ -3,12 +3,12 @@ import { ProjectsSearch } from './search-schemas'
 // Old tab structure to new Manage sub-view mapping
 const TAB_MIGRATION_MAP: Record<string, { activeView: string; manageView?: string }> = {
   // Old standalone tabs that are now under Manage
-  'stats': { activeView: 'manage', manageView: 'statistics' },
-  'statistics': { activeView: 'manage', manageView: 'statistics' },
+  stats: { activeView: 'manage', manageView: 'statistics' },
+  statistics: { activeView: 'manage', manageView: 'statistics' },
   'mcp-analytics': { activeView: 'manage', manageView: 'mcp-analytics' },
-  'summarization': { activeView: 'manage', manageView: 'summarization' },
-  'settings': { activeView: 'manage', manageView: 'project-settings' },
-  'project-settings': { activeView: 'manage', manageView: 'project-settings' },
+  summarization: { activeView: 'manage', manageView: 'summarization' },
+  settings: { activeView: 'manage', manageView: 'project-settings' },
+  'project-settings': { activeView: 'manage', manageView: 'project-settings' }
 }
 
 /**
@@ -25,7 +25,7 @@ export function migrateUrlParams(search: ProjectsSearch): ProjectsSearch | null 
   // Create migrated params
   const migratedParams: ProjectsSearch = {
     ...search,
-    activeView: migration.activeView as any,
+    activeView: migration.activeView as any
   }
 
   if (migration.manageView) {
@@ -50,11 +50,11 @@ export function getMigrationMessage(oldView: string): string {
   if (!migration) return ''
 
   const viewNames: Record<string, string> = {
-    'stats': 'Statistics',
-    'statistics': 'Statistics',
+    stats: 'Statistics',
+    statistics: 'Statistics',
     'mcp-analytics': 'MCP Analytics',
-    'summarization': 'Summarization',
-    'settings': 'Project Settings',
+    summarization: 'Summarization',
+    settings: 'Project Settings',
     'project-settings': 'Project Settings'
   }
 

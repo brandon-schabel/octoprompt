@@ -41,7 +41,7 @@ const createCustomFetch = () => {
   // This function will be called with proper context
   const fetchWrapper = async (input: RequestInfo | URL, init?: RequestInit) => {
     console.log('[TauriFetch] Fetch called for:', input)
-    
+
     // Ensure input is a valid URL
     let url: string
     try {
@@ -57,7 +57,7 @@ const createCustomFetch = () => {
       console.error('[TauriFetch] Failed to resolve URL:', error)
       throw new Error(`Invalid URL: ${input}`)
     }
-    
+
     console.log('[TauriFetch] Resolved URL:', url)
 
     // In Tauri environment

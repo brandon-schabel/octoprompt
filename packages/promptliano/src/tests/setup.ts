@@ -1,8 +1,8 @@
 // Test setup file
-import { TestEnvironment } from './test-utils';
+import { TestEnvironment } from './test-utils'
 
 // Global test environment
-export const testEnv = new TestEnvironment();
+export const testEnv = new TestEnvironment()
 
 // Bun doesn't have afterAll, would need to handle cleanup differently
 // Could use process.on('exit') or manage in individual tests
@@ -10,11 +10,11 @@ export const testEnv = new TestEnvironment();
 // Mock logger for tests
 declare global {
   var mockLogger: {
-    info: (...args: any[]) => void;
-    error: (...args: any[]) => void;
-    warn: (...args: any[]) => void;
-    debug: (...args: any[]) => void;
-  };
+    info: (...args: any[]) => void
+    error: (...args: any[]) => void
+    warn: (...args: any[]) => void
+    debug: (...args: any[]) => void
+  }
 }
 
 global.mockLogger = {
@@ -22,4 +22,4 @@ global.mockLogger = {
   error: () => {},
   warn: () => {},
   debug: () => {}
-};
+}

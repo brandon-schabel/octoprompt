@@ -58,7 +58,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const calculateInitialOrder = (): number[] => {
     if (!tabs) return []
     return Object.keys(tabs)
-      .filter(key => !isNaN(Number(key))) // Filter out non-numeric keys like 'defaultTab'
+      .filter((key) => !isNaN(Number(key))) // Filter out non-numeric keys like 'defaultTab'
       .map(Number)
       .sort((a, b) => {
         const orderA = tabs[a]?.sortOrder ?? Infinity
@@ -272,8 +272,8 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   }
 
   // Filter out non-numeric tab IDs for validation
-  const validTabs = tabs ? Object.keys(tabs).filter(key => !isNaN(Number(key))) : []
-  
+  const validTabs = tabs ? Object.keys(tabs).filter((key) => !isNaN(Number(key))) : []
+
   if (!tabs || validTabs.length === 0) {
     return (
       <div className={cn('flex flex-col gap-2 p-2', className)}>

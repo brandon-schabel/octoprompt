@@ -23,21 +23,21 @@ jobs:
     permissions:
       contents: read
       id-token: write # For npm provenance
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      
+
       - name: Extract version from tag
         if: github.event_name != 'pull_request'
         id: version
@@ -50,7 +50,7 @@ jobs:
           VERSION=${VERSION#v}
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "TAG=$VERSION" >> $GITHUB_ENV
-      
+
       - name: Validate version matches package.json
         if: github.event_name != 'pull_request'
         working-directory: packages/promptliano
@@ -62,11 +62,11 @@ jobs:
             exit 1
           fi
           echo "✅ Version validation passed: $PACKAGE_VERSION"
-      
+
       - name: Run tests
         working-directory: packages/promptliano
         run: bun test
-      
+
       - name: Build package
         working-directory: packages/promptliano
         run: |
@@ -74,45 +74,45 @@ jobs:
           bun run build
           echo "Generating TypeScript declarations..."
           bun run build:types
-          
+
           # Verify build output
           if [ ! -d "dist" ]; then
             echo "Error: dist directory not found after build"
             exit 1
           fi
-          
+
           if [ ! -f "dist/index.js" ]; then
             echo "Error: dist/index.js not found after build"
             exit 1
           fi
-          
+
           echo "✅ Build completed successfully"
           ls -la dist/
-      
+
       - name: Dry run - Pack package
         if: github.event_name == 'pull_request'
         working-directory: packages/promptliano
         run: |
           echo "📦 Running npm pack (dry run)..."
           npm pack --dry-run
-          
+
           # Also test the actual pack to ensure it creates the tarball
           npm pack
-          
+
           # Check the tarball contents
           echo ""
           echo "📋 Package contents:"
           tar -tzf promptliano-*.tgz | head -20
           echo "..."
-          
+
           # Check package size
           echo ""
           echo "📊 Package size:"
           ls -lh promptliano-*.tgz
-          
+
           echo ""
           echo "✅ Dry run completed successfully!"
-      
+
       - name: Configure npm authentication
         if: github.event_name != 'pull_request'
         run: |
@@ -120,7 +120,7 @@ jobs:
           npm whoami
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+
       - name: Publish to npm
         if: github.event_name != 'pull_request'
         working-directory: packages/promptliano
@@ -130,14 +130,14 @@ jobs:
             echo "Version ${{ steps.version.outputs.VERSION }} already exists on npm"
             exit 1
           fi
-          
+
           # Publish with provenance
           npm publish --access public --provenance
-          
+
           echo "✅ Successfully published promptliano@${{ steps.version.outputs.VERSION }} to npm"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+
       - name: Create PR summary
         if: github.event_name == 'pull_request' && success()
         run: |
@@ -153,7 +153,7 @@ jobs:
           echo "- ✅ Package contents verification" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "This package will be ready to publish when merged." >> $GITHUB_STEP_SUMMARY
-      
+
       - name: Create release summary
         if: github.event_name != 'pull_request' && success()
         run: |

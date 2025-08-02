@@ -165,22 +165,22 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
           .replace('/.vscode/mcp.json', '')
           .replace('/.cursor/mcp.json', '')
           .replace('/mcp.json', '')
-        
+
         // For Promptliano project itself, the script is in packages/server
         // For other projects, we'd need to know where Promptliano is installed
         let scriptPath = ''
         if (basePath.includes('promptliano')) {
           // This is the Promptliano project itself
-          scriptPath = window.navigator.platform.includes('Win') 
+          scriptPath = window.navigator.platform.includes('Win')
             ? `${basePath}/packages/server/mcp-start.bat`
             : `${basePath}/packages/server/mcp-start.sh`
         } else {
           // For other projects, we'll use a placeholder that users need to update
           scriptPath = window.navigator.platform.includes('Win')
-            ? '/path/to/promptliano/packages/server/mcp-start.bat' 
+            ? '/path/to/promptliano/packages/server/mcp-start.bat'
             : '/path/to/promptliano/packages/server/mcp-start.sh'
         }
-        
+
         const command = `claude mcp add promptliano ${scriptPath}`
         setClaudeCodeCommand(command)
       }
@@ -345,23 +345,23 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
         {/* Claude Code CLI */}
         <div className='space-y-2'>
           <h4 className='text-sm font-medium'>Claude Code CLI</h4>
-          <div className={cn(
-            'flex items-center justify-between p-3 rounded-md text-sm',
-            'bg-background border border-dashed'
-          )}>
+          <div
+            className={cn(
+              'flex items-center justify-between p-3 rounded-md text-sm',
+              'bg-background border border-dashed'
+            )}
+          >
             <div className='flex items-center gap-3 flex-1'>
               <Terminal className={cn('h-4 w-4', 'text-orange-500')} />
               <div className='flex-1'>
                 <div className='flex items-center gap-2'>
                   <span className='font-medium'>Claude Code</span>
                 </div>
-                <p className='text-xs text-muted-foreground mt-0.5'>
-                  Add Promptliano MCP server to Claude Code CLI
-                </p>
+                <p className='text-xs text-muted-foreground mt-0.5'>Add Promptliano MCP server to Claude Code CLI</p>
               </div>
             </div>
           </div>
-          
+
           {/* Command block */}
           <div className='relative'>
             <div className='bg-muted rounded-md p-4 font-mono text-sm'>

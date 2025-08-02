@@ -170,7 +170,7 @@ export type ListModelsOptions = {
 }
 
 export class ModelFetcherService {
-  constructor(private config: ProviderKeysConfig) { }
+  constructor(private config: ProviderKeysConfig) {}
 
   private ensure(key?: string, providerName = 'unknown') {
     if (!key) throw new Error(`${providerName} API key not found in config`)

@@ -36,7 +36,7 @@ export const assetViewSchema = z
   .optional()
 
 // Claude Code view sub-tabs enum
-export const claudeCodeViewSchema = z.enum(['agents', 'sessions', 'chats', 'settings']).catch('agents').optional()
+export const claudeCodeViewSchema = z.enum(['agents', 'commands', 'mcp', 'sessions', 'chats', 'settings']).catch('agents').optional()
 
 // Manage view sub-tabs enum
 export const manageViewSchema = z
@@ -54,7 +54,8 @@ export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema)
   manageView: manageViewSchema,
   selectedTicketId: z.coerce.number().optional().catch(undefined),
   gitBranch: z.string().optional().catch(undefined),
-  section: z.string().optional().catch(undefined)
+  section: z.string().optional().catch(undefined),
+  sessionId: z.string().optional().catch(undefined)
 })
 
 export const chatSearchSchema = z.object({

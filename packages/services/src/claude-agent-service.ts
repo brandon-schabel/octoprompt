@@ -4,8 +4,6 @@ import {
   type UpdateClaudeAgentBody,
   type ClaudeAgent,
   ClaudeAgentSchema,
-  type ClaudeAgentProject,
-  ClaudeAgentProjectSchema,
   type AgentSuggestions,
   AgentSuggestionsSchema
 } from '@promptliano/schemas'
@@ -18,26 +16,6 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { relativePosix, toPosixPath, toOSPath } from './utils/path-utils'
 
-// Utility function to populate projectId on agents from associations
-async function populateAgentProjectId(projectPath: string, agent: ClaudeAgent): Promise<ClaudeAgent> {
-  const agentProjects = await claudeAgentStorage.readAgentProjects()
-  const association = agentProjects.find((link) => link.agentId === agent.id)
-  return {
-    ...agent,
-    projectId: association?.projectId
-  }
-}
-
-// Utility function to populate projectId on multiple agents
-async function populateAgentsProjectIds(projectPath: string, agents: ClaudeAgent[]): Promise<ClaudeAgent[]> {
-  const agentProjects = await claudeAgentStorage.readAgentProjects()
-  const associationMap = new Map(agentProjects.map((link) => [link.agentId, link.projectId]))
-
-  return agents.map((agent) => ({
-    ...agent,
-    projectId: associationMap.get(agent.id)
-  }))
-}
 
 export async function createAgent(projectPath: string, data: CreateClaudeAgentBody): Promise<ClaudeAgent> {
   const now = Date.now()
@@ -67,13 +45,11 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
     // Write agent to filesystem
     const savedAgent = await claudeAgentStorage.writeAgent(projectPath, agentId, newAgentData)
 
-    // Add project association if specified
-    if (data.projectId) {
-      await associateAgentWithProject(savedAgent.id, data.projectId)
+    // Return the agent with projectId if specified
+    return {
+      ...savedAgent,
+      projectId: data.projectId
     }
-
-    // Return the agent with populated projectId
-    return await populateAgentProjectId(projectPath, savedAgent)
   } catch (error) {
     if (error instanceof ZodError) {
       console.error(`Validation failed for new agent data: ${error.message}`, error.flatten().fieldErrors)
@@ -88,42 +64,13 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
   }
 }
 
-export async function associateAgentWithProject(agentId: number, projectId: number): Promise<void> {
-  try {
-    // Check if association already exists
-    const agentProjects = await claudeAgentStorage.readAgentProjects()
-    const existingLink = agentProjects.find((link) => link.agentId === agentId && link.projectId === projectId)
-
-    if (existingLink) {
-      return // Association already exists
-    }
-
-    // Following the prompt service pattern - one agent per project association
-    // Remove existing associations for this agent first
-    const filteredProjects = agentProjects.filter((link) => link.agentId !== agentId)
-
-    // Add new association
-    await claudeAgentStorage.addAgentProjectAssociation(agentId, projectId)
-  } catch (error) {
-    if (error instanceof ZodError) {
-      console.error(`Validation failed for agent-project link: ${error.message}`, error.flatten().fieldErrors)
-      throw new ApiError(
-        500,
-        'Internal validation error linking agent to project.',
-        'AGENT_LINK_VALIDATION_ERROR',
-        error.flatten().fieldErrors
-      )
-    }
-    throw error
-  }
-}
 
 export async function getAgentById(projectPath: string, agentId: string): Promise<ClaudeAgent> {
   const agent = await claudeAgentStorage.getAgentById(projectPath, agentId)
   if (!agent) {
     throw new ApiError(404, `Agent with ID ${agentId} not found.`, 'AGENT_NOT_FOUND')
   }
-  return await populateAgentProjectId(projectPath, agent)
+  return agent
 }
 
 export async function listAgents(projectPath: string): Promise<ClaudeAgent[]> {
@@ -131,13 +78,14 @@ export async function listAgents(projectPath: string): Promise<ClaudeAgent[]> {
   const agentList = Object.values(agentsData)
   // Sort by name
   agentList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-  return await populateAgentsProjectIds(projectPath, agentList)
+  return agentList
 }
 
 export async function getAgentsByProjectId(projectPath: string, projectId: number): Promise<ClaudeAgent[]> {
-  const agents = await claudeAgentStorage.getAgentsByProjectId(projectPath, projectId)
-  // Agents from this method already have projectId populated
-  return agents.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  // Since we no longer have database associations, we return all agents
+  // and let the frontend filter by project if needed
+  const agents = await listAgents(projectPath)
+  return agents
 }
 
 export async function updateAgent(
@@ -189,7 +137,7 @@ export async function updateAgent(
   }
 
   const savedAgent = await claudeAgentStorage.writeAgent(projectPath, agentId, updatedAgentData)
-  return await populateAgentProjectId(projectPath, savedAgent)
+  return savedAgent
 }
 
 export async function deleteAgent(projectPath: string, agentId: string): Promise<boolean> {
@@ -200,17 +148,6 @@ export async function deleteAgent(projectPath: string, agentId: string): Promise
 
   // Delete file
   const deleted = await claudeAgentStorage.deleteAgent(projectPath, agentId)
-
-  if (deleted) {
-    // Remove any project associations
-    const agentProjects = await claudeAgentStorage.readAgentProjects()
-    for (const link of agentProjects) {
-      if (link.agentId === agent.id) {
-        await claudeAgentStorage.removeAgentProjectAssociation(agent.id, link.projectId)
-      }
-    }
-  }
-
   return deleted
 }
 
@@ -289,7 +226,6 @@ class ClaudeAgentService {
   createAgent = createAgent
   updateAgent = updateAgent
   deleteAgent = deleteAgent
-  associateAgentWithProject = associateAgentWithProject
   getAgentsByProjectId = getAgentsByProjectId
   suggestAgents = suggestAgents
 }

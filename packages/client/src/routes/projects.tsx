@@ -50,7 +50,7 @@ export function ProjectsPage() {
 
   // Sync active tab with backend
   useActiveTabSync(selectedProjectId)
-  
+
   // Clear section parameter after navigation
   useEffect(() => {
     if (search.section) {
@@ -148,7 +148,7 @@ export function ProjectsPage() {
             setHasMigrationNotified(true)
           }
         }
-        
+
         // Redirect to new URL structure
         navigate({
           to: '/projects',
@@ -262,19 +262,19 @@ export function ProjectsPage() {
         </div>
         <div className='flex-none px-4 py-1 border-b dark:border-slate-700 grid grid-cols-3 items-center'>
           <div className='justify-self-start'>
-            <ProjectNavigationMenu 
+            <ProjectNavigationMenu
               currentSearch={search}
               activeView={search.activeView || 'context'}
               onViewChange={(value) => {
                 // Ensure the value is valid before navigating
                 const validValue = value as ProjectView
                 const newSearch: any = { ...search, activeView: validValue }
-                
+
                 // If navigating to manage tab, ensure we have a default manageView
                 if (validValue === 'manage' && !search.manageView) {
                   newSearch.manageView = 'statistics'
                 }
-                
+
                 navigate({
                   to: '/projects',
                   search: newSearch,
@@ -287,19 +287,19 @@ export function ProjectsPage() {
             />
           </div>
           <div className='justify-self-center'>
-            <ProjectNavigationMenu 
+            <ProjectNavigationMenu
               currentSearch={search}
               activeView={search.activeView || 'context'}
               onViewChange={(value) => {
                 // Ensure the value is valid before navigating
                 const validValue = value as ProjectView
                 const newSearch: any = { ...search, activeView: validValue }
-                
+
                 // If navigating to manage tab, ensure we have a default manageView
                 if (validValue === 'manage' && !search.manageView) {
                   newSearch.manageView = 'statistics'
                 }
-                
+
                 navigate({
                   to: '/projects',
                   search: newSearch,
@@ -312,17 +312,10 @@ export function ProjectsPage() {
             />
           </div>
           <div className='justify-self-end'>
-            <ProjectSwitcher
-              currentProject={projectData ?? null}
-              onManageProjects={() => setProjectModalOpen(true)}
-            />
+            <ProjectSwitcher currentProject={projectData ?? null} onManageProjects={() => setProjectModalOpen(true)} />
           </div>
         </div>
-        <Tabs
-          value={search.activeView || 'context'}
-          className='flex-1 flex flex-col min-h-0'
-        >
-
+        <Tabs value={search.activeView || 'context'} className='flex-1 flex flex-col min-h-0'>
           <TabsContent value='context' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             <MainProjectsLayout
               filePanelRef={filePanelRef as React.RefObject<FilePanelRef>}
@@ -417,10 +410,18 @@ export function ProjectsPage() {
                   projectId={selectedProjectId}
                   projectName={projectData.name}
                   claudeCodeView={search.claudeCodeView}
+                  sessionId={search.sessionId}
                   onClaudeCodeViewChange={(view) => {
                     navigate({
                       to: '/projects',
                       search: (prev) => ({ ...prev, claudeCodeView: view }),
+                      replace: true
+                    })
+                  }}
+                  onSessionIdChange={(sessionId) => {
+                    navigate({
+                      to: '/projects',
+                      search: (prev) => ({ ...prev, sessionId }),
                       replace: true
                     })
                   }}

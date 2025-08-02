@@ -86,7 +86,7 @@ export function createProviderKeyService() {
 
     allKeys[validatedNewKey.id] = validatedNewKey
     await providerKeyStorage.writeProviderKeys(allKeys)
-    
+
     // Return the key with decrypted value (similar to getKeyById)
     return { ...validatedNewKey, key: data.key }
   }
@@ -244,9 +244,14 @@ export function createProviderKeyService() {
     const validatedUpdatedKey = parseResult.data
     allKeys[id] = validatedUpdatedKey
     await providerKeyStorage.writeProviderKeys(allKeys)
-    
+
     // Return the key with decrypted value (similar to getKeyById)
-    if (validatedUpdatedKey.encrypted && validatedUpdatedKey.iv && validatedUpdatedKey.tag && validatedUpdatedKey.salt) {
+    if (
+      validatedUpdatedKey.encrypted &&
+      validatedUpdatedKey.iv &&
+      validatedUpdatedKey.tag &&
+      validatedUpdatedKey.salt
+    ) {
       try {
         const decryptedKey = await decryptKey({
           encrypted: validatedUpdatedKey.key,
@@ -260,7 +265,7 @@ export function createProviderKeyService() {
         throw new ApiError(500, `Failed to decrypt provider key`, 'PROVIDER_KEY_DECRYPTION_FAILED', { id })
       }
     }
-    
+
     return validatedUpdatedKey
   }
 

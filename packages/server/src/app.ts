@@ -16,6 +16,8 @@ import { jobApp } from './routes/job-routes'
 import { projectTabRoutes } from './routes/project-tab-routes'
 import { agentFilesRoutes } from './routes/agent-files-routes'
 import { claudeAgentRoutes } from './routes/claude-agent-routes'
+import { claudeCommandRoutes } from './routes/claude-command-routes'
+import { claudeCodeRoutes } from './routes/claude-code-routes'
 import { mcpInstallationRoutes } from './routes/mcp-installation-routes'
 import { mcpProjectConfigApp } from './routes/mcp-project-config-routes'
 import { mcpGlobalConfigRoutes } from './routes/mcp-global-config-routes'
@@ -155,6 +157,7 @@ if (RATE_LIMIT_ENABLED) {
   app.use('/api/tickets/*/suggest-files', aiLimiter)
   app.use('/api/tickets/*/auto-generate-tasks', aiLimiter)
   app.use('/api/projects/*/suggest-agents', aiLimiter)
+  app.use('/api/projects/*/commands/suggest', aiLimiter)
 } else {
   console.log('[Server] Rate limiting disabled in development mode')
 }
@@ -190,6 +193,8 @@ app.route('/api/jobs', jobApp)
 app.route('/', projectTabRoutes)
 app.route('/', agentFilesRoutes)
 app.route('/', claudeAgentRoutes)
+app.route('/', claudeCommandRoutes)
+app.route('/', claudeCodeRoutes)
 app.route('/', mcpInstallationRoutes)
 app.route('/', mcpProjectConfigApp)
 app.route('/', mcpGlobalConfigRoutes)
