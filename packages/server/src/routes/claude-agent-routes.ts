@@ -4,7 +4,6 @@ import {
   OperationSuccessResponseSchema,
   ProjectIdParamsSchema,
   AgentIdParamsSchema,
-  ProjectAndAgentIdParamsSchema,
   CreateClaudeAgentBodySchema,
   UpdateClaudeAgentBodySchema,
   ClaudeAgentResponseSchema,
@@ -19,7 +18,6 @@ import {
   updateAgent,
   deleteAgent,
   getAgentsByProjectId,
-  associateAgentWithProject,
   suggestAgents,
   getProjectById
 } from '@promptliano/services'
@@ -230,61 +228,6 @@ const listProjectClaudeAgentsRoute = createRoute({
   }
 })
 
-const associateClaudeAgentWithProjectRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/agents/{agentId}',
-  tags: ['Projects', 'Claude Agents'],
-  summary: 'Associate a Claude agent with a project',
-  request: {
-    params: ProjectAndAgentIdParamsSchema
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Agent successfully associated with project'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project or Agent not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
-})
-
-const removeClaudeAgentFromProjectRoute = createRoute({
-  method: 'delete',
-  path: '/api/projects/{projectId}/agents/{agentId}',
-  tags: ['Projects', 'Claude Agents'],
-  summary: 'Remove Claude agent association from a project',
-  request: {
-    params: ProjectAndAgentIdParamsSchema
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Agent successfully removed from project'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project or Agent not found, or association does not exist'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
-})
 
 const suggestClaudeAgentsRoute = createRoute({
   method: 'post',
@@ -323,12 +266,12 @@ export const claudeAgentRoutes = new OpenAPIHono()
   .openapi(createClaudeAgentRoute, async (c) => {
     const body = c.req.valid('json')
     const { projectId } = c.req.valid('query')
-    
+
     const effectiveProjectId = projectId || body.projectId
     if (!effectiveProjectId) {
       throw new ApiError(400, 'projectId is required either in query or body', 'PROJECT_ID_REQUIRED')
     }
-    
+
     const project = await getProjectById(effectiveProjectId)
     if (!project) {
       throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
@@ -339,32 +282,32 @@ export const claudeAgentRoutes = new OpenAPIHono()
   })
   .openapi(listAllClaudeAgentsRoute, async (c) => {
     const { projectId } = c.req.valid('query')
-    
+
     if (!projectId) {
       throw new ApiError(400, 'projectId query parameter is required', 'PROJECT_ID_REQUIRED')
     }
-    
+
     const project = await getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
     }
-    
+
     const agents = await listAgents(project.path)
     return c.json({ success: true, data: agents } satisfies z.infer<typeof ClaudeAgentListResponseSchema>, 200)
   })
   .openapi(getClaudeAgentByIdRoute, async (c) => {
     const { agentId } = c.req.valid('param')
     const { projectId } = c.req.valid('query')
-    
+
     if (!projectId) {
       throw new ApiError(400, 'projectId query parameter is required', 'PROJECT_ID_REQUIRED')
     }
-    
+
     const project = await getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
     }
-    
+
     const agent = await getAgentById(project.path, agentId.toString())
     return c.json({ success: true, data: agent } satisfies z.infer<typeof ClaudeAgentResponseSchema>, 200)
   })
@@ -372,32 +315,32 @@ export const claudeAgentRoutes = new OpenAPIHono()
     const { agentId } = c.req.valid('param')
     const body = c.req.valid('json')
     const { projectId } = c.req.valid('query')
-    
+
     if (!projectId) {
       throw new ApiError(400, 'projectId query parameter is required', 'PROJECT_ID_REQUIRED')
     }
-    
+
     const project = await getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
     }
-    
+
     const updatedAgent = await updateAgent(project.path, agentId.toString(), body)
     return c.json({ success: true, data: updatedAgent } satisfies z.infer<typeof ClaudeAgentResponseSchema>, 200)
   })
   .openapi(deleteClaudeAgentRoute, async (c) => {
     const { agentId } = c.req.valid('param')
     const { projectId } = c.req.valid('query')
-    
+
     if (!projectId) {
       throw new ApiError(400, 'projectId query parameter is required', 'PROJECT_ID_REQUIRED')
     }
-    
+
     const project = await getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
     }
-    
+
     await deleteAgent(project.path, agentId.toString())
     return c.json(
       { success: true, message: 'Agent deleted successfully.' } satisfies z.infer<
@@ -415,25 +358,6 @@ export const claudeAgentRoutes = new OpenAPIHono()
     // Use listAgents to read all agents from the project's .claude/agents directory
     const agents = await listAgents(project.path)
     return c.json({ success: true, data: agents } satisfies z.infer<typeof ClaudeAgentListResponseSchema>, 200)
-  })
-  .openapi(associateClaudeAgentWithProjectRoute, async (c) => {
-    const { agentId, projectId } = c.req.valid('param')
-    await associateAgentWithProject(agentId, projectId)
-    return c.json(
-      { success: true, message: 'Agent linked to project.' } satisfies z.infer<typeof OperationSuccessResponseSchema>,
-      200
-    )
-  })
-  .openapi(removeClaudeAgentFromProjectRoute, async (c) => {
-    const { agentId, projectId } = c.req.valid('param')
-    // TODO: Implement removeAgentFromProject in claude-agent-service
-    // For now, we'll throw a not implemented error
-    throw new ApiError(501, 'Remove agent from project not yet implemented', 'NOT_IMPLEMENTED')
-    // await removeAgentFromProject(agentId, projectId)
-    // return c.json(
-    //   { success: true, message: 'Agent unlinked from project.' } satisfies z.infer<typeof OperationSuccessResponseSchema>,
-    //   200
-    // )
   })
   .openapi(suggestClaudeAgentsRoute, async (c) => {
     const { projectId } = c.req.valid('param')

@@ -37,6 +37,5 @@ export * from './metrics.schemas'
 // SEO and metadata schemas
 export * from './seo.schemas'
 
-
 // Interactive demo schemas
 export * from './demo.schemas'

@@ -27,12 +27,16 @@ export function CodeTerminal({
   language = 'bash'
 }: CodeTerminalProps) {
   // Convert code string to lines array if needed
-  const lines = propLines || (code ? code.split('\n').map(content => ({
-    type: 'output' as const,
-    content,
-    delay: 100
-  })) : [])
-  
+  const lines =
+    propLines ||
+    (code
+      ? code.split('\n').map((content) => ({
+          type: 'output' as const,
+          content,
+          delay: 100
+        }))
+      : [])
+
   const [visibleLines, setVisibleLines] = useState<number>(animated ? 0 : lines.length)
   const [copied, setCopied] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)

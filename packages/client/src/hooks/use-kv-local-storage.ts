@@ -134,7 +134,7 @@ export const useAppSettingsKvApi = () => {
 
 export const useInvalidateKv = (key: KVKey) => {
   // No-op for local storage, as updates are synchronous
-  return () => { }
+  return () => {}
 }
 
 export const useGetProjectTabById = (
@@ -274,7 +274,7 @@ export function useProjectTabField<K extends keyof ProjectTabState>(
       const newVal =
         typeof valueOrFn === 'function'
           ? // @ts-ignore
-          (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
+            (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
           : valueOrFn
 
       // Call the refactored updateTab hook, which handles the API call

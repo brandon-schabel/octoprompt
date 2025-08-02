@@ -11,7 +11,7 @@ describe('FileSearchService', () => {
   beforeAll(async () => {
     // Initialize database
     db = DatabaseManager.getInstance().getDatabase()
-    
+
     // Ensure test tables exist
     await db.exec(`
       CREATE VIRTUAL TABLE IF NOT EXISTS file_search_fts USING fts5(
@@ -75,9 +75,21 @@ describe('FileSearchService', () => {
   test('should index and search files with semantic search', async () => {
     // Create test files
     const files: ProjectFile[] = [
-      createTestFile('1', 'src/auth/login.ts', 'export function authenticateUser(username: string, password: string) { return validateCredentials(username, password) }'),
-      createTestFile('2', 'src/auth/logout.ts', 'export function logoutUser(sessionId: string) { return destroySession(sessionId) }'),
-      createTestFile('3', 'src/utils/validation.ts', 'export function validateEmail(email: string) { return emailRegex.test(email) }')
+      createTestFile(
+        '1',
+        'src/auth/login.ts',
+        'export function authenticateUser(username: string, password: string) { return validateCredentials(username, password) }'
+      ),
+      createTestFile(
+        '2',
+        'src/auth/logout.ts',
+        'export function logoutUser(sessionId: string) { return destroySession(sessionId) }'
+      ),
+      createTestFile(
+        '3',
+        'src/utils/validation.ts',
+        'export function validateEmail(email: string) { return emailRegex.test(email) }'
+      )
     ]
 
     // Index files
@@ -93,9 +105,9 @@ describe('FileSearchService', () => {
 
     expect(searchResult.results.length).toBeGreaterThan(0)
     expect(searchResult.stats.totalResults).toBeGreaterThan(0)
-    
+
     // Should find auth-related files
-    const paths = searchResult.results.map(r => r.file.path)
+    const paths = searchResult.results.map((r) => r.file.path)
     expect(paths).toContain('src/auth/login.ts')
   })
 
@@ -118,8 +130,16 @@ describe('FileSearchService', () => {
 
   test('should perform fuzzy search', async () => {
     const files: ProjectFile[] = [
-      createTestFile('1', 'src/components/Button.tsx', 'export const Button = ({ onClick, children }) => <button onClick={onClick}>{children}</button>'),
-      createTestFile('2', 'src/components/Buttton.tsx', 'export const Buttton = ({ onClick }) => <div onClick={onClick}>Click me</div>') // Typo intentional
+      createTestFile(
+        '1',
+        'src/components/Button.tsx',
+        'export const Button = ({ onClick, children }) => <button onClick={onClick}>{children}</button>'
+      ),
+      createTestFile(
+        '2',
+        'src/components/Buttton.tsx',
+        'export const Buttton = ({ onClick }) => <div onClick={onClick}>Click me</div>'
+      ) // Typo intentional
     ]
 
     await fileIndexingService.indexFiles(files, true)
@@ -148,7 +168,7 @@ describe('FileSearchService', () => {
     })
 
     expect(result.results.length).toBe(2)
-    const paths = result.results.map(r => r.file.path)
+    const paths = result.results.map((r) => r.file.path)
     expect(paths).toContain('src/api.ts')
     expect(paths).toContain('src/client.ts')
     expect(paths).not.toContain('src/legacy.ts')
@@ -169,7 +189,7 @@ describe('FileSearchService', () => {
     })
 
     expect(result.results.length).toBe(2)
-    const extensions = result.results.map(r => r.file.extension)
+    const extensions = result.results.map((r) => r.file.extension)
     expect(extensions).toContain('ts')
     expect(extensions).toContain('js')
     expect(extensions).not.toContain('css')
@@ -280,7 +300,7 @@ describe('FileSearchService', () => {
       searchType: 'semantic'
     })
     expect(result1.results.length).toBeGreaterThan(0)
-    expect(result1.results.some(r => r.file.path === 'src/auth.ts')).toBe(true)
+    expect(result1.results.some((r) => r.file.path === 'src/auth.ts')).toBe(true)
 
     // Test snake_case query
     const result2 = await fileSearchService.search(testProjectId, {
@@ -288,7 +308,7 @@ describe('FileSearchService', () => {
       searchType: 'semantic'
     })
     expect(result2.results.length).toBeGreaterThan(0)
-    expect(result2.results.some(r => r.file.path === 'src/db.ts')).toBe(true)
+    expect(result2.results.some((r) => r.file.path === 'src/db.ts')).toBe(true)
 
     // Test partial camelCase
     const result3 = await fileSearchService.search(testProjectId, {
@@ -310,17 +330,17 @@ describe('FileSearchService', () => {
   })
 
   test('should validate regex patterns', async () => {
-    const files: ProjectFile[] = [
-      createTestFile('1', 'test.ts', 'some content')
-    ]
+    const files: ProjectFile[] = [createTestFile('1', 'test.ts', 'some content')]
 
     await fileIndexingService.indexFiles(files, true)
 
     // Test invalid regex
-    await expect(fileSearchService.search(testProjectId, {
-      query: '[invalid(regex',
-      searchType: 'regex'
-    })).rejects.toThrow('Invalid regex pattern')
+    await expect(
+      fileSearchService.search(testProjectId, {
+        query: '[invalid(regex',
+        searchType: 'regex'
+      })
+    ).rejects.toThrow('Invalid regex pattern')
   })
 
   test('should handle programming keywords in search', async () => {
@@ -353,19 +373,17 @@ describe('FileSearchService', () => {
   })
 
   test('debug search functionality', async () => {
-    const files: ProjectFile[] = [
-      createTestFile('1', 'test.ts', 'test content')
-    ]
+    const files: ProjectFile[] = [createTestFile('1', 'test.ts', 'test content')]
 
     await fileIndexingService.indexFiles(files, true)
 
     const debugResult = await fileSearchService.debugSearch(testProjectId, 'test')
-    
+
     expect(debugResult.indexStats).toBeDefined()
     expect(debugResult.ftsContent).toBeDefined()
     expect(debugResult.sampleSearch).toBeDefined()
     expect(debugResult.recommendations).toBeDefined()
-    
+
     expect(debugResult.indexStats.indexedFiles).toBe(1)
     expect(debugResult.ftsContent.projectFTSCount).toBe(1)
     expect(debugResult.sampleSearch?.results?.length).toBeGreaterThan(0)

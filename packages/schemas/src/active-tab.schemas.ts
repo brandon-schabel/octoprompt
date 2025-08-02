@@ -13,7 +13,8 @@ export const activeTabDataSchema = z.object({
   tabMetadata: z
     .object({
       displayName: z.string().optional(),
-      selectedFiles: z.array(z.number()).optional(),
+      selectedFiles: z.array(z.number()).optional(), // DEPRECATED: For backward compatibility
+      selectedFilePaths: z.array(z.string()).optional(), // NEW: Stable path-based selection
       selectedPrompts: z.array(z.number()).optional(),
       userPrompt: z.string().optional(),
       fileSearch: z.string().optional(),

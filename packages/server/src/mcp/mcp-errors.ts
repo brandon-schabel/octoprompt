@@ -1,6 +1,13 @@
 import { ApiError } from '@promptliano/shared'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import { listProjects, listTicketsByProject, listAllPrompts, getProjectById, listAgents, getProjectFiles } from '@promptliano/services'
+import {
+  listProjects,
+  listTicketsByProject,
+  listAllPrompts,
+  getProjectById,
+  listAgents,
+  getProjectFiles
+} from '@promptliano/services'
 import * as path from 'path'
 
 /**
@@ -67,8 +74,7 @@ const ERROR_RECOVERY_SUGGESTIONS: Record<MCPErrorCode, string> = {
     'Verify the ticket ID exists. Use ticket_manager list action to see available tickets.',
   [MCPErrorCode.PROMPT_NOT_FOUND]:
     'Check the prompt ID exists. Use prompt_manager list action to see available prompts.',
-  [MCPErrorCode.AGENT_NOT_FOUND]:
-    'Verify the agent ID exists. Use agent_manager list action to see available agents.',
+  [MCPErrorCode.AGENT_NOT_FOUND]: 'Verify the agent ID exists. Use agent_manager list action to see available agents.',
   [MCPErrorCode.RESOURCE_ALREADY_EXISTS]:
     'The resource already exists. Use update action instead of create, or choose a different name.',
 
@@ -235,22 +241,34 @@ export class MCPError extends ApiError {
       }
       return new MCPError(MCPErrorCode.SERVICE_ERROR, error.message, context, error.status)
     }
-    
+
     // Check for error-like objects (might be serialized)
     if (typeof error === 'object' && error !== null && 'code' in error && 'message' in error) {
       const errorObj = error as any
-      
+
       // Check for specific error codes
-      if (errorObj.code === 'TICKET_NOT_FOUND' || (errorObj.status === 404 && errorObj.message?.includes('Ticket with ID'))) {
+      if (
+        errorObj.code === 'TICKET_NOT_FOUND' ||
+        (errorObj.status === 404 && errorObj.message?.includes('Ticket with ID'))
+      ) {
         return new MCPError(MCPErrorCode.TICKET_NOT_FOUND, errorObj.message, context, errorObj.status)
       }
-      if (errorObj.code === 'PROMPT_NOT_FOUND' || (errorObj.status === 404 && errorObj.message?.includes('Prompt with ID'))) {
+      if (
+        errorObj.code === 'PROMPT_NOT_FOUND' ||
+        (errorObj.status === 404 && errorObj.message?.includes('Prompt with ID'))
+      ) {
         return new MCPError(MCPErrorCode.PROMPT_NOT_FOUND, errorObj.message, context, errorObj.status)
       }
-      if (errorObj.code === 'AGENT_NOT_FOUND' || (errorObj.status === 404 && errorObj.message?.includes('Agent with ID'))) {
+      if (
+        errorObj.code === 'AGENT_NOT_FOUND' ||
+        (errorObj.status === 404 && errorObj.message?.includes('Agent with ID'))
+      ) {
         return new MCPError(MCPErrorCode.AGENT_NOT_FOUND, errorObj.message, context, errorObj.status)
       }
-      if (errorObj.code === 'PROJECT_NOT_FOUND' || (errorObj.status === 404 && errorObj.message?.includes('Project not found'))) {
+      if (
+        errorObj.code === 'PROJECT_NOT_FOUND' ||
+        (errorObj.status === 404 && errorObj.message?.includes('Project not found'))
+      ) {
         return new MCPError(MCPErrorCode.PROJECT_NOT_FOUND, errorObj.message, context, errorObj.status)
       }
     }
@@ -307,15 +325,15 @@ export function isMCPError(error: unknown): error is MCPError {
  */
 export async function formatMCPErrorResponse(error: MCPError): Promise<CallToolResult> {
   let errorText = `Error: ${error.message}\n\nSuggestion: ${error.suggestion}`
-  
+
   // Special handling for PROJECT_NOT_FOUND to include available projects
   if (error.mcpCode === MCPErrorCode.PROJECT_NOT_FOUND && error.context?.tool === 'project_manager') {
     try {
       const projects = await listProjects()
-      
+
       if (projects.length > 0) {
         errorText = `Error: ${error.message}\n\nAvailable projects:\n`
-        projects.forEach(p => {
+        projects.forEach((p) => {
           errorText += `  ${p.id}: ${p.name} (${p.path})\n`
         })
         errorText += `\nPlease use one of the project IDs listed above.`
@@ -327,17 +345,17 @@ export async function formatMCPErrorResponse(error: MCPError): Promise<CallToolR
       console.error('Failed to list projects for error message:', listError)
     }
   }
-  
+
   // Special handling for TICKET_NOT_FOUND to include available tickets
   if (error.mcpCode === MCPErrorCode.TICKET_NOT_FOUND && error.context?.tool === 'ticket_manager') {
     try {
       const projectId = error.context?.projectId
       if (projectId) {
         const tickets = await listTicketsByProject(projectId as number)
-        
+
         if (tickets.length > 0) {
           errorText = `Error: ${error.message}\n\nAvailable tickets in project ${projectId}:\n`
-          tickets.slice(0, 10).forEach(t => {
+          tickets.slice(0, 10).forEach((t) => {
             errorText += `  ${t.id}: ${t.title} [${t.status}]\n`
           })
           if (tickets.length > 10) {
@@ -352,15 +370,15 @@ export async function formatMCPErrorResponse(error: MCPError): Promise<CallToolR
       console.error('Failed to list tickets for error message:', listError)
     }
   }
-  
+
   // Special handling for PROMPT_NOT_FOUND to include available prompts
   if (error.mcpCode === MCPErrorCode.PROMPT_NOT_FOUND && error.context?.tool === 'prompt_manager') {
     try {
       const prompts = await listAllPrompts()
-      
+
       if (prompts.length > 0) {
         errorText = `Error: ${error.message}\n\nAvailable prompts:\n`
-        prompts.slice(0, 10).forEach(p => {
+        prompts.slice(0, 10).forEach((p) => {
           errorText += `  ${p.id}: ${p.name}\n`
         })
         if (prompts.length > 10) {
@@ -374,7 +392,7 @@ export async function formatMCPErrorResponse(error: MCPError): Promise<CallToolR
       console.error('Failed to list prompts for error message:', listError)
     }
   }
-  
+
   // Special handling for AGENT_NOT_FOUND to include available agents
   if (error.mcpCode === MCPErrorCode.AGENT_NOT_FOUND && error.context?.tool === 'agent_manager') {
     try {
@@ -382,10 +400,10 @@ export async function formatMCPErrorResponse(error: MCPError): Promise<CallToolR
       if (projectId) {
         const project = await getProjectById(projectId as number)
         const agents = await listAgents(project.path)
-        
+
         if (agents.length > 0) {
           errorText = `Error: ${error.message}\n\nAvailable agents in project ${projectId}:\n`
-          agents.slice(0, 10).forEach(a => {
+          agents.slice(0, 10).forEach((a) => {
             errorText += `  ${a.id}: ${a.name} - ${a.description}\n`
           })
           if (agents.length > 10) {
@@ -393,59 +411,60 @@ export async function formatMCPErrorResponse(error: MCPError): Promise<CallToolR
           }
           errorText += `\nPlease use one of the agent IDs listed above.`
         } else {
-          errorText += '\n\nNo agents found in this project. Create an agent first using the "create" action or associate existing agents using "associate_with_project".'
+          errorText +=
+            '\n\nNo agents found in this project. Create an agent first using the "create" action or associate existing agents using "associate_with_project".'
         }
       }
     } catch (listError) {
       console.error('Failed to list agents for error message:', listError)
     }
   }
-  
+
   // Special handling for FILE_NOT_FOUND to suggest similar files
   if (error.mcpCode === MCPErrorCode.FILE_NOT_FOUND && error.context?.tool === 'project_manager') {
     try {
       const projectId = error.context?.projectId
       const requestedPath = error.context?.value || error.context?.parameter
-      
+
       if (projectId && requestedPath) {
         const files = await getProjectFiles(projectId as number)
-        
+
         if (files && files.length > 0) {
           // Extract directory and filename from requested path
           const requestedDir = path.dirname(requestedPath as string)
           const requestedFile = path.basename(requestedPath as string)
-          
+
           // Find files in the same directory
-          const sameDirectoryFiles = files
-            .filter(f => path.dirname(f.path) === requestedDir)
-            .slice(0, 5)
-          
+          const sameDirectoryFiles = files.filter((f) => path.dirname(f.path) === requestedDir).slice(0, 5)
+
           // Find files with similar names
           const similarFiles = files
-            .filter(f => {
+            .filter((f) => {
               const fileName = path.basename(f.path)
-              return fileName.toLowerCase().includes(requestedFile.toLowerCase()) ||
-                     requestedFile.toLowerCase().includes(fileName.toLowerCase())
+              return (
+                fileName.toLowerCase().includes(requestedFile.toLowerCase()) ||
+                requestedFile.toLowerCase().includes(fileName.toLowerCase())
+              )
             })
             .slice(0, 5)
-          
+
           if (sameDirectoryFiles.length > 0 || similarFiles.length > 0) {
             errorText += '\n\nSuggested files:'
-            
+
             if (sameDirectoryFiles.length > 0) {
               errorText += '\n\nIn the same directory:'
-              sameDirectoryFiles.forEach(f => {
+              sameDirectoryFiles.forEach((f) => {
                 errorText += `\n  ${f.path}`
               })
             }
-            
+
             if (similarFiles.length > 0) {
               errorText += '\n\nSimilar file names:'
-              similarFiles.forEach(f => {
+              similarFiles.forEach((f) => {
                 errorText += `\n  ${f.path}`
               })
             }
-            
+
             errorText += '\n\nUse browse_files action to explore the project structure.'
           }
         }
@@ -454,11 +473,11 @@ export async function formatMCPErrorResponse(error: MCPError): Promise<CallToolR
       console.error('Failed to suggest files for error message:', listError)
     }
   }
-  
+
   if (error.context && Object.keys(error.context).length > 0) {
     errorText += `\n\nDetails: ${JSON.stringify(error.context, null, 2)}`
   }
-  
+
   return {
     content: [
       {

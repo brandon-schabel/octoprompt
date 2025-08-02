@@ -33,9 +33,7 @@
       "icons/AppIcon-83.5@2x~ipad.png",
       "icons/AppIcon~ios-marketing.png"
     ],
-    "externalBin": [
-      "binaries/promptliano-server"
-    ],
+    "externalBin": ["binaries/promptliano-server"],
     "macOS": {
       "signingIdentity": null,
       "providerShortName": null,

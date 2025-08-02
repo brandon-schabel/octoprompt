@@ -88,16 +88,6 @@ export const UpdateClaudeAgentBodySchema = z
   })
   .openapi('UpdateClaudeAgentBody')
 
-// Agent-Project association schema
-export const ClaudeAgentProjectSchema = z
-  .object({
-    id: unixTSSchemaSpec,
-    agentId: unixTSSchemaSpec,
-    projectId: unixTSSchemaSpec,
-    created: unixTSSchemaSpec
-  })
-  .openapi('ClaudeAgentProject')
-
 // Agent suggestions schema for AI-powered recommendations
 export const AgentSuggestionsSchema = z
   .object({
@@ -175,12 +165,6 @@ export const AgentIdParamsSchema = z
   })
   .openapi('AgentIdParams')
 
-export const ProjectAndAgentIdParamsSchema = z
-  .object({
-    projectId: unixTSSchemaSpec.openapi({ param: { name: 'projectId', in: 'path' } }),
-    agentId: unixTSSchemaSpec.openapi({ param: { name: 'agentId', in: 'path' } })
-  })
-  .openapi('ProjectAndAgentIdParams')
 
 // Search/filter schemas
 export const SearchAgentsQuerySchema = z
@@ -248,14 +232,12 @@ export const BatchDeleteAgentsBodySchema = z
 export type ClaudeAgent = z.infer<typeof ClaudeAgentSchema>
 export type CreateClaudeAgentBody = z.infer<typeof CreateClaudeAgentBodySchema>
 export type UpdateClaudeAgentBody = z.infer<typeof UpdateClaudeAgentBodySchema>
-export type ClaudeAgentProject = z.infer<typeof ClaudeAgentProjectSchema>
 export type AgentSuggestions = z.infer<typeof AgentSuggestionsSchema>
 export type SuggestAgentsRequest = z.infer<typeof SuggestAgentsRequestSchema>
 export type ClaudeAgentResponse = z.infer<typeof ClaudeAgentResponseSchema>
 export type ClaudeAgentListResponse = z.infer<typeof ClaudeAgentListResponseSchema>
 export type AgentSuggestionsResponse = z.infer<typeof AgentSuggestionsResponseSchema>
 export type AgentIdParams = z.infer<typeof AgentIdParamsSchema>
-export type ProjectAndAgentIdParams = z.infer<typeof ProjectAndAgentIdParamsSchema>
 export type SearchAgentsQuery = z.infer<typeof SearchAgentsQuerySchema>
 export type BatchCreateAgentsBody = z.infer<typeof BatchCreateAgentsBodySchema>
 export type BatchUpdateAgentsBody = z.infer<typeof BatchUpdateAgentsBodySchema>
@@ -282,12 +264,6 @@ export const agentsApiValidation = {
   },
   suggestAgents: {
     body: SuggestAgentsRequestSchema
-  },
-  addToProject: {
-    params: ProjectAndAgentIdParamsSchema
-  },
-  removeFromProject: {
-    params: ProjectAndAgentIdParamsSchema
   },
   batchCreate: {
     body: BatchCreateAgentsBodySchema

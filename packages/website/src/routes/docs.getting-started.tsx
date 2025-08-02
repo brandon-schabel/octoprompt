@@ -43,21 +43,19 @@ function GettingStartedPage() {
         <div className='space-y-6'>
           <div className='space-y-3'>
             <h3 className='text-xl font-medium'>1. Install and Run Promptliano</h3>
-            <p className='text-muted-foreground mb-4'>
-              Install and start Promptliano with a single command:
-            </p>
-            <CodeBlock
-              code='npx promptliano@latest'
-              language='bash'
-            />
-            <p className='text-sm text-muted-foreground mt-2'>
-              This command will:
-            </p>
+            <p className='text-muted-foreground mb-4'>Install and start Promptliano with a single command:</p>
+            <CodeBlock code='npx promptliano@latest' language='bash' />
+            <p className='text-sm text-muted-foreground mt-2'>This command will:</p>
             <ul className='text-sm text-muted-foreground list-disc list-inside space-y-1 ml-2'>
               <li>Download and install Promptliano automatically</li>
               <li>Configure MCP for your AI editor</li>
               <li>Start the Promptliano server</li>
-              <li>Open the UI at <a href='http://localhost:3579' className='text-primary hover:underline'>http://localhost:3579</a></li>
+              <li>
+                Open the UI at{' '}
+                <a href='http://localhost:3579' className='text-primary hover:underline'>
+                  http://localhost:3579
+                </a>
+              </li>
             </ul>
             <p className='text-sm text-muted-foreground mt-3'>
               Prefer manual installation? See our{' '}

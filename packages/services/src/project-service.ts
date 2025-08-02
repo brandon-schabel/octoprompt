@@ -106,7 +106,7 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
 export async function getProjectById(projectId: number): Promise<Project> {
   try {
     const projects = await projectStorage.readProjects()
-    const project = projects[projectId]
+    const project = projects[String(projectId)]
     if (!project) {
       throw new ApiError(404, `Project not found with ID ${projectId}.`, 'PROJECT_NOT_FOUND')
     }
@@ -159,7 +159,7 @@ export async function updateProject(projectId: number, data: UpdateProjectBody):
 
     const validatedProject = ProjectSchema.parse(updatedProjectData)
 
-    projects[projectId] = validatedProject
+    projects[String(projectId)] = validatedProject
     await projectStorage.writeProjects(projects)
 
     return validatedProject
@@ -184,11 +184,11 @@ export async function updateProject(projectId: number, data: UpdateProjectBody):
 export async function deleteProject(projectId: number): Promise<boolean> {
   try {
     const projects = await projectStorage.readProjects()
-    if (!projects[projectId]) {
+    if (!projects[String(projectId)]) {
       throw new ApiError(404, `Project not found with ID ${projectId} for deletion.`, 'PROJECT_NOT_FOUND')
     }
 
-    delete projects[projectId]
+    delete projects[String(projectId)]
     await projectStorage.writeProjects(projects)
 
     await projectStorage.deleteProjectData(projectId)
@@ -715,6 +715,60 @@ export async function getProjectFilesByIds(projectId: number, fileIds: number[])
   }
 }
 
+/** Retrieves specific files by paths for a project */
+export async function getProjectFilesByPaths(projectId: number, paths: string[]): Promise<ProjectFile[]> {
+  if (!paths || paths.length === 0) {
+    return []
+  }
+  await getProjectById(projectId) // Ensure project exists
+  const uniquePaths = [...new Set(paths)]
+  
+  try {
+    const filesMap = await projectStorage.readProjectFiles(projectId)
+    const resultFiles: ProjectFile[] = []
+    
+    // Iterate through all files to find matches by path
+    for (const file of Object.values(filesMap)) {
+      if (uniquePaths.includes(file.path)) {
+        resultFiles.push(file)
+      }
+    }
+    
+    return resultFiles
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to fetch files by paths for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'PROJECT_FILES_GET_BY_PATHS_FAILED'
+    )
+  }
+}
+
+/** Validates that file paths exist in a project */
+export async function validateFilePaths(
+  projectId: number,
+  paths: string[]
+): Promise<{ valid: string[]; invalid: string[] }> {
+  if (!paths || paths.length === 0) {
+    return { valid: [], invalid: [] }
+  }
+  
+  try {
+    const existingFiles = await getProjectFilesByPaths(projectId, paths)
+    const existingPaths = new Set(existingFiles.map(f => f.path))
+    
+    const valid = paths.filter(p => existingPaths.has(p))
+    const invalid = paths.filter(p => !existingPaths.has(p))
+    
+    return { valid, invalid }
+  } catch (error) {
+    logger.error('Failed to validate file paths', { projectId, paths, error })
+    // Return all as invalid on error
+    return { valid: [], invalid: paths }
+  }
+}
+
 /** Summarizes a single file if it meets conditions and updates the project's file storage. */
 export async function summarizeSingleFile(file: ProjectFile, force: boolean = false): Promise<ProjectFile | null> {
   // Check if file needs summarization based on timestamp
@@ -767,12 +821,12 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   const exportsContext = file.exports?.length
     ? `The file exports: ${file.exports
-      .map((e) => {
-        if (e.type === 'default') return 'default export'
-        if (e.type === 'all') return `all from ${e.source}`
-        return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
-      })
-      .join(', ')}`
+        .map((e) => {
+          if (e.type === 'default') return 'default export'
+          if (e.type === 'all') return `all from ${e.source}`
+          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+        })
+        .join(', ')}`
     : ''
 
   const systemPrompt = `
@@ -941,12 +995,12 @@ export async function summarizeFiles(
 
   logger.info(
     `File summarization batch complete for project ${projectId}. ` +
-    `Total to process: ${totalProcessed}, ` +
-    `Successfully summarized: ${summarizedCount}, ` +
-    `Skipped (empty): ${skippedByEmptyCount}, ` +
-    `Skipped (too large): ${skippedBySizeCount}, ` +
-    `Skipped (errors): ${errorCount}, ` +
-    `Total not summarized: ${finalSkippedCount}`
+      `Total to process: ${totalProcessed}, ` +
+      `Successfully summarized: ${summarizedCount}, ` +
+      `Skipped (empty): ${skippedByEmptyCount}, ` +
+      `Skipped (too large): ${skippedBySizeCount}, ` +
+      `Skipped (errors): ${errorCount}, ` +
+      `Total not summarized: ${finalSkippedCount}`
   )
 
   return {

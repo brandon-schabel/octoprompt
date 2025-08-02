@@ -45,7 +45,16 @@ export type SelectedFilesListRef = {
 
 export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesListProps>(
   ({ onRemoveFile, onNavigateLeft, className = '', projectTabId }, ref) => {
-    const { undo, redo, canUndo, canRedo, clearSelectedFiles, selectedFiles } = useSelectedFiles({
+    const { 
+      undo, 
+      redo, 
+      canUndo, 
+      canRedo, 
+      clearSelectedFiles, 
+      selectedFiles,
+      selectedFilePaths,
+      isFileSelectedByPath 
+    } = useSelectedFiles({
       tabId: projectTabId
     })
     const projectTab = useProjectTabById(projectTabId)
@@ -437,7 +446,25 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
             <div className='pr-3'>
               {filteredFileIds.map((fileId, index) => {
                 const file = projectFileMap.get(fileId)
-                if (!file) return null
+                if (!file) {
+                  // File no longer exists - show placeholder
+                  return (
+                    <div
+                      key={fileId}
+                      className='flex items-center gap-2 px-3 py-1.5 text-sm opacity-50 line-through'
+                    >
+                      <span className='text-muted-foreground'>File removed (ID: {fileId})</span>
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        onClick={() => onRemoveFile(fileId)}
+                        className='h-6 w-6 ml-auto'
+                      >
+                        <X className='h-3 w-3' />
+                      </Button>
+                    </div>
+                  )
+                }
                 const shortcutNumber = index + 1
                 const showShortcut = shortcutNumber <= 9
 

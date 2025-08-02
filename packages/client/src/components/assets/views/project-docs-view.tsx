@@ -129,156 +129,158 @@ export function ProjectDocsView({ projectId, projectName = 'Project' }: ProjectD
           <p className='text-muted-foreground mt-1'>Generate comprehensive documentation for {projectName}</p>
         </div>
 
-      <Tabs defaultValue='templates' className='flex-1'>
-        <TabsList>
-          <TabsTrigger value='templates'>Templates</TabsTrigger>
-          <TabsTrigger value='custom'>Custom</TabsTrigger>
-          <TabsTrigger value='settings'>Settings</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue='templates' className='flex-1'>
+          <TabsList>
+            <TabsTrigger value='templates'>Templates</TabsTrigger>
+            <TabsTrigger value='custom'>Custom</TabsTrigger>
+            <TabsTrigger value='settings'>Settings</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value='templates' className='space-y-6'>
-          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-            {Object.entries(projectDocTemplates).map(([key, template]) => (
-              <Card
-                key={key}
-                className={`cursor-pointer transition-all ${selectedTemplate === key ? 'ring-2 ring-primary' : ''}`}
-                onClick={() => setSelectedTemplate(key as keyof typeof projectDocTemplates)}
-              >
-                <CardHeader>
-                  <div className='flex items-start justify-between'>
-                    <div>
-                      <CardTitle className='text-lg'>{template.name}</CardTitle>
-                      <CardDescription>{template.description}</CardDescription>
+          <TabsContent value='templates' className='space-y-6'>
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+              {Object.entries(projectDocTemplates).map(([key, template]) => (
+                <Card
+                  key={key}
+                  className={`cursor-pointer transition-all ${selectedTemplate === key ? 'ring-2 ring-primary' : ''}`}
+                  onClick={() => setSelectedTemplate(key as keyof typeof projectDocTemplates)}
+                >
+                  <CardHeader>
+                    <div className='flex items-start justify-between'>
+                      <div>
+                        <CardTitle className='text-lg'>{template.name}</CardTitle>
+                        <CardDescription>{template.description}</CardDescription>
+                      </div>
+                      {selectedTemplate === key && <Badge className='ml-2'>Selected</Badge>}
                     </div>
-                    {selectedTemplate === key && <Badge className='ml-2'>Selected</Badge>}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className='flex flex-wrap gap-2'>
-                    {template.sections.map((section) => (
-                      <Badge key={section} variant='secondary'>
-                        {section}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className='flex justify-center pt-4'>
-            <div className='flex gap-2'>
-              <Button onClick={handleGenerateWithTemplate} size='lg'>
-                <Sparkles className='h-4 w-4 mr-2' />
-                Generate Documentation
-              </Button>
-              <Button variant='outline' size='lg' onClick={handleCopyPrompt}>
-                <Copy className='h-4 w-4' />
-              </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className='flex flex-wrap gap-2'>
+                      {template.sections.map((section) => (
+                        <Badge key={section} variant='secondary'>
+                          {section}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </div>
-        </TabsContent>
 
-        <TabsContent value='custom' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Custom Documentation Prompt</CardTitle>
-              <CardDescription>Create your own documentation prompt for specific needs</CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label>Documentation Prompt</Label>
-                <Textarea
-                  placeholder='Describe what documentation you need...'
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  className='min-h-[200px]'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label>Include Sections</Label>
-                <div className='grid grid-cols-2 gap-3'>
-                  {['Overview', 'Setup', 'API', 'Database', 'Testing', 'Deployment'].map((section) => (
-                    <div key={section} className='flex items-center space-x-2'>
-                      <Checkbox
-                        id={section}
-                        checked={includeSections[section] || false}
-                        onCheckedChange={(checked) => setIncludeSections((prev) => ({ ...prev, [section]: !!checked }))}
-                      />
-                      <Label htmlFor={section} className='cursor-pointer'>
-                        {section}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className='flex justify-center pt-2'>
+            <div className='flex justify-center pt-4'>
+              <div className='flex gap-2'>
                 <Button onClick={handleGenerateWithTemplate} size='lg'>
                   <Sparkles className='h-4 w-4 mr-2' />
-                  Generate Custom Documentation
+                  Generate Documentation
+                </Button>
+                <Button variant='outline' size='lg' onClick={handleCopyPrompt}>
+                  <Copy className='h-4 w-4' />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </TabsContent>
 
-        <TabsContent value='settings' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Documentation Settings</CardTitle>
-              <CardDescription>Configure how your documentation is generated</CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label>Documentation Style</Label>
-                <Select defaultValue='professional'>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='professional'>Professional</SelectItem>
-                    <SelectItem value='casual'>Casual</SelectItem>
-                    <SelectItem value='technical'>Technical</SelectItem>
-                    <SelectItem value='educational'>Educational</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <TabsContent value='custom' className='space-y-4'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Custom Documentation Prompt</CardTitle>
+                <CardDescription>Create your own documentation prompt for specific needs</CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-4'>
+                <div className='space-y-2'>
+                  <Label>Documentation Prompt</Label>
+                  <Textarea
+                    placeholder='Describe what documentation you need...'
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    className='min-h-[200px]'
+                  />
+                </div>
 
-              <div className='space-y-2'>
-                <Label>Target Audience</Label>
-                <Select defaultValue='developers'>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='developers'>Developers</SelectItem>
-                    <SelectItem value='users'>End Users</SelectItem>
-                    <SelectItem value='stakeholders'>Stakeholders</SelectItem>
-                    <SelectItem value='contributors'>Contributors</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className='space-y-2'>
+                  <Label>Include Sections</Label>
+                  <div className='grid grid-cols-2 gap-3'>
+                    {['Overview', 'Setup', 'API', 'Database', 'Testing', 'Deployment'].map((section) => (
+                      <div key={section} className='flex items-center space-x-2'>
+                        <Checkbox
+                          id={section}
+                          checked={includeSections[section] || false}
+                          onCheckedChange={(checked) =>
+                            setIncludeSections((prev) => ({ ...prev, [section]: !!checked }))
+                          }
+                        />
+                        <Label htmlFor={section} className='cursor-pointer'>
+                          {section}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-              <div className='space-y-2'>
-                <Label>Output Format</Label>
-                <Select defaultValue='markdown'>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='markdown'>Markdown</SelectItem>
-                    <SelectItem value='html'>HTML</SelectItem>
-                    <SelectItem value='pdf'>PDF</SelectItem>
-                    <SelectItem value='docx'>DOCX</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                <div className='flex justify-center pt-2'>
+                  <Button onClick={handleGenerateWithTemplate} size='lg'>
+                    <Sparkles className='h-4 w-4 mr-2' />
+                    Generate Custom Documentation
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value='settings' className='space-y-4'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Documentation Settings</CardTitle>
+                <CardDescription>Configure how your documentation is generated</CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-4'>
+                <div className='space-y-2'>
+                  <Label>Documentation Style</Label>
+                  <Select defaultValue='professional'>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='professional'>Professional</SelectItem>
+                      <SelectItem value='casual'>Casual</SelectItem>
+                      <SelectItem value='technical'>Technical</SelectItem>
+                      <SelectItem value='educational'>Educational</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className='space-y-2'>
+                  <Label>Target Audience</Label>
+                  <Select defaultValue='developers'>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='developers'>Developers</SelectItem>
+                      <SelectItem value='users'>End Users</SelectItem>
+                      <SelectItem value='stakeholders'>Stakeholders</SelectItem>
+                      <SelectItem value='contributors'>Contributors</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className='space-y-2'>
+                  <Label>Output Format</Label>
+                  <Select defaultValue='markdown'>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='markdown'>Markdown</SelectItem>
+                      <SelectItem value='html'>HTML</SelectItem>
+                      <SelectItem value='pdf'>PDF</SelectItem>
+                      <SelectItem value='docx'>DOCX</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </ResponsiveContainer>
 
       <DocumentationGeneratorDialog

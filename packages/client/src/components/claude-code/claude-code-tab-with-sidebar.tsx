@@ -1,6 +1,6 @@
 import React from 'react'
 import { ClaudeCodeSidebarNav, type ClaudeCodeView } from './claude-code-sidebar-nav'
-import { AgentsView } from './views'
+import { AgentsView, CommandsView, MCPView, SessionsView, ChatsView } from './views'
 import { cn } from '@/lib/utils'
 
 interface ClaudeCodeTabWithSidebarProps {
@@ -8,6 +8,8 @@ interface ClaudeCodeTabWithSidebarProps {
   projectName?: string
   claudeCodeView?: ClaudeCodeView
   onClaudeCodeViewChange: (view: ClaudeCodeView) => void
+  sessionId?: string
+  onSessionIdChange: (sessionId: string | undefined) => void
   className?: string
 }
 
@@ -16,6 +18,8 @@ export function ClaudeCodeTabWithSidebar({
   projectName,
   claudeCodeView = 'agents',
   onClaudeCodeViewChange,
+  sessionId,
+  onSessionIdChange,
   className
 }: ClaudeCodeTabWithSidebarProps) {
   return (
@@ -28,15 +32,28 @@ export function ClaudeCodeTabWithSidebar({
       {/* Content Area */}
       <div className='flex-1 overflow-auto'>
         {claudeCodeView === 'agents' && <AgentsView projectId={projectId} projectName={projectName} />}
+        {claudeCodeView === 'commands' && <CommandsView projectId={projectId} projectName={projectName} />}
+        {claudeCodeView === 'mcp' && <MCPView projectId={projectId} projectName={projectName} />}
         {claudeCodeView === 'sessions' && (
-          <div className='p-6 text-center text-muted-foreground'>
-            <p>Sessions feature coming soon...</p>
-          </div>
+          <SessionsView 
+            projectId={projectId} 
+            projectName={projectName}
+            onSelectSession={(sessionId) => {
+              onSessionIdChange(sessionId)
+              onClaudeCodeViewChange('chats')
+            }}
+          />
         )}
         {claudeCodeView === 'chats' && (
-          <div className='p-6 text-center text-muted-foreground'>
-            <p>Chats feature coming soon...</p>
-          </div>
+          <ChatsView 
+            projectId={projectId} 
+            projectName={projectName}
+            sessionId={sessionId}
+            onBack={() => {
+              onSessionIdChange(undefined)
+              onClaudeCodeViewChange('sessions')
+            }}
+          />
         )}
         {claudeCodeView === 'settings' && (
           <div className='p-6 text-center text-muted-foreground'>

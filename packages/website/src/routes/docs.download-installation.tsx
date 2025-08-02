@@ -33,7 +33,7 @@ function DownloadInstallationPage() {
       {/* Quick Install Section */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Quick Install (Recommended)</h2>
-        
+
         <GlassCard className='p-8 bg-green-500/5 border-green-500/20'>
           <div className='flex items-start gap-4'>
             <div className='p-3 rounded-lg bg-green-500/10'>
@@ -44,10 +44,7 @@ function DownloadInstallationPage() {
               <p className='text-muted-foreground mb-4'>
                 The easiest way to get started with Promptliano. This command will handle everything for you:
               </p>
-              <CodeBlock
-                code='npx promptliano@latest'
-                language='bash'
-              />
+              <CodeBlock code='npx promptliano@latest' language='bash' />
               <div className='mt-4 space-y-2'>
                 <p className='text-sm font-medium'>This command will:</p>
                 <ul className='text-sm text-muted-foreground space-y-1 list-disc list-inside ml-2'>
@@ -60,7 +57,6 @@ function DownloadInstallationPage() {
             </div>
           </div>
         </GlassCard>
-        
       </section>
 
       {/* Manual Installation */}
@@ -69,7 +65,7 @@ function DownloadInstallationPage() {
         <p className='text-muted-foreground'>
           If you prefer to manually download and install Promptliano, you can choose from our prebuilt binaries below.
         </p>
-        
+
         <DownloadButton variant='dropdown' size='lg' />
         <p className='text-sm text-muted-foreground text-center'>
           The download button above will automatically detect your platform and recommend the best option.
@@ -420,7 +416,7 @@ chmod +x ./promptliano
           <TabsContent value='claude' className='space-y-4'>
             <GlassCard className='p-6'>
               <h3 className='text-xl font-semibold mb-4'>Claude Desktop Configuration</h3>
-              
+
               <Tabs defaultValue='macos' className='w-full'>
                 <TabsList className='grid w-full grid-cols-2'>
                   <TabsTrigger value='macos'>macOS</TabsTrigger>
@@ -430,10 +426,7 @@ chmod +x ./promptliano
                 <TabsContent value='macos' className='space-y-4'>
                   <div>
                     <h4 className='font-medium mb-2'>1. Locate the configuration file</h4>
-                    <CodeBlock
-                      code='~/Library/Application Support/Claude/claude_desktop_config.json'
-                      language='bash'
-                    />
+                    <CodeBlock code='~/Library/Application Support/Claude/claude_desktop_config.json' language='bash' />
                   </div>
 
                   <div>
@@ -455,10 +448,7 @@ chmod +x ./promptliano
 
                   <div>
                     <h4 className='font-medium mb-2'>3. Verify permissions</h4>
-                    <CodeBlock
-                      code='chmod +x /path/to/promptliano/packages/server/mcp-start.sh'
-                      language='bash'
-                    />
+                    <CodeBlock code='chmod +x /path/to/promptliano/packages/server/mcp-start.sh' language='bash' />
                   </div>
 
                   <div>
@@ -472,10 +462,7 @@ chmod +x ./promptliano
                 <TabsContent value='windows' className='space-y-4'>
                   <div>
                     <h4 className='font-medium mb-2'>1. Locate the configuration file</h4>
-                    <CodeBlock
-                      code='%APPDATA%\Claude\claude_desktop_config.json'
-                      language='batch'
-                    />
+                    <CodeBlock code='%APPDATA%\Claude\claude_desktop_config.json' language='batch' />
                   </div>
 
                   <div>
@@ -490,16 +477,12 @@ chmod +x ./promptliano
 }'
                       language='json'
                     />
-                    <p className='text-sm text-muted-foreground mt-2'>
-                      Note: Use double backslashes in Windows paths
-                    </p>
+                    <p className='text-sm text-muted-foreground mt-2'>Note: Use double backslashes in Windows paths</p>
                   </div>
 
                   <div>
                     <h4 className='font-medium mb-2'>3. Restart Claude Desktop</h4>
-                    <p className='text-sm text-muted-foreground'>
-                      Completely quit and reopen Claude Desktop
-                    </p>
+                    <p className='text-sm text-muted-foreground'>Completely quit and reopen Claude Desktop</p>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -509,28 +492,28 @@ chmod +x ./promptliano
           <TabsContent value='cursor' className='space-y-4'>
             <GlassCard className='p-6'>
               <h3 className='text-xl font-semibold mb-4'>Cursor Configuration</h3>
-              
+
               <div className='space-y-4'>
                 <div>
                   <h4 className='font-medium mb-2'>1. Open Cursor Settings</h4>
-                  <p className='text-sm text-muted-foreground'>
-                    Go to Settings → Features → Model Context Protocol
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Go to Settings → Features → Model Context Protocol</p>
                 </div>
 
                 <div>
                   <h4 className='font-medium mb-2'>2. Add Promptliano server</h4>
                   <ul className='text-sm text-muted-foreground space-y-1 list-disc list-inside ml-2'>
-                    <li><strong>Name:</strong> promptliano</li>
-                    <li><strong>Command:</strong> /absolute/path/to/promptliano/packages/server/mcp-start.sh</li>
+                    <li>
+                      <strong>Name:</strong> promptliano
+                    </li>
+                    <li>
+                      <strong>Command:</strong> /absolute/path/to/promptliano/packages/server/mcp-start.sh
+                    </li>
                   </ul>
                 </div>
 
                 <div>
                   <h4 className='font-medium mb-2'>3. Save and restart Cursor</h4>
-                  <p className='text-sm text-muted-foreground'>
-                    Restart Cursor for the changes to take effect
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Restart Cursor for the changes to take effect</p>
                 </div>
               </div>
             </GlassCard>
@@ -539,20 +522,16 @@ chmod +x ./promptliano
           <TabsContent value='windsurf' className='space-y-4'>
             <GlassCard className='p-6'>
               <h3 className='text-xl font-semibold mb-4'>Windsurf Configuration</h3>
-              
+
               <div className='space-y-4'>
                 <div>
                   <h4 className='font-medium mb-2'>1. Open Windsurf configuration</h4>
-                  <p className='text-sm text-muted-foreground'>
-                    Follow Windsurf's documentation for MCP setup
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Follow Windsurf's documentation for MCP setup</p>
                 </div>
 
                 <div>
                   <h4 className='font-medium mb-2'>2. Add MCP server</h4>
-                  <p className='text-sm text-muted-foreground'>
-                    Use the same command path as other editors
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Use the same command path as other editors</p>
                 </div>
               </div>
             </GlassCard>
@@ -562,7 +541,7 @@ chmod +x ./promptliano
         {/* Verify MCP Connection */}
         <GlassCard className='p-6'>
           <h3 className='text-lg font-medium mb-4'>Verifying the Connection</h3>
-          
+
           <div className='space-y-4'>
             <div>
               <h4 className='font-medium mb-2'>Test Commands</h4>
@@ -578,9 +557,7 @@ chmod +x ./promptliano
 
             <div>
               <h4 className='font-medium mb-2'>Expected Response</h4>
-              <p className='text-sm text-muted-foreground'>
-                Your AI assistant should respond with:
-              </p>
+              <p className='text-sm text-muted-foreground'>Your AI assistant should respond with:</p>
               <ul className='text-sm text-muted-foreground space-y-1 list-disc list-inside ml-2'>
                 <li>A list of Promptliano MCP tools</li>
                 <li>Information about your project files</li>
@@ -597,7 +574,7 @@ chmod +x ./promptliano
 
         <GlassCard className='p-6'>
           <h3 className='text-lg font-medium mb-4'>Installation Issues</h3>
-          
+
           <div className='space-y-4'>
             <div>
               <h4 className='font-medium mb-2'>Port already in use</h4>
@@ -609,9 +586,7 @@ chmod +x ./promptliano
 
             <div>
               <h4 className='font-medium mb-2'>Permission denied on macOS/Linux</h4>
-              <p className='text-sm text-muted-foreground mb-2'>
-                Make sure the binary has execute permissions:
-              </p>
+              <p className='text-sm text-muted-foreground mb-2'>Make sure the binary has execute permissions:</p>
               <CodeBlock code='chmod +x ./promptliano' language='bash' />
             </div>
 
@@ -626,7 +601,7 @@ chmod +x ./promptliano
 
         <GlassCard className='p-6'>
           <h3 className='text-lg font-medium mb-4'>MCP Connection Issues</h3>
-          
+
           <div className='space-y-4'>
             <div>
               <h4 className='font-medium mb-2'>"MCP server not found"</h4>
@@ -689,8 +664,12 @@ chmod +x ./promptliano
               <div>
                 <h3 className='font-medium mb-2'>Server Ports</h3>
                 <ul className='text-sm text-muted-foreground space-y-1'>
-                  <li><strong>Development:</strong> Port 3147</li>
-                  <li><strong>Production:</strong> Port 3579</li>
+                  <li>
+                    <strong>Development:</strong> Port 3147
+                  </li>
+                  <li>
+                    <strong>Production:</strong> Port 3579
+                  </li>
                   <li className='pt-2'>The quick installer uses production port by default</li>
                 </ul>
               </div>
@@ -702,7 +681,9 @@ chmod +x ./promptliano
       {/* Next Steps */}
       <GlassCard className='p-8 bg-primary/5 border-primary/20'>
         <h3 className='text-xl font-semibold mb-3'>Installation Complete! 🎉</h3>
-        <p className='mb-4 text-muted-foreground'>Now that you have Promptliano installed and configured, here's what to do next:</p>
+        <p className='mb-4 text-muted-foreground'>
+          Now that you have Promptliano installed and configured, here's what to do next:
+        </p>
         <ul className='space-y-2'>
           <li className='flex items-center gap-2'>
             <span>→</span>

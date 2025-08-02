@@ -177,7 +177,7 @@
     @apply container mx-auto px-4;
     max-width: 100vw;
   }
-  
+
   /* Prevent mobile overflow */
   .mobile-safe {
     @apply overflow-x-hidden;

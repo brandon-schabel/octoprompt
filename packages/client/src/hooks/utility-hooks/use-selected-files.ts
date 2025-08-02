@@ -10,9 +10,10 @@ import { useMemo } from 'react'
 import { buildProjectFileMapWithoutContent, buildProjectFileMap } from '@promptliano/shared'
 
 const MAX_HISTORY_SIZE = 50
+const USE_PATH_BASED_SELECTION = true // Feature flag for gradual rollout
 
 type UndoRedoState = {
-  history: number[][]
+  history: { ids: number[]; paths: string[] }[]
   index: number
 }
 
@@ -74,18 +75,40 @@ export function useSelectedFiles({
     ? useProjectTabField('selectedFiles', tabId).data
     : activeProjectTabState?.selectedFiles
 
+  // NEW: Get paths from state
+  const effectivePathState = tabId
+    ? useProjectTabField('selectedFilePaths', tabId).data
+    : activeProjectTabState?.selectedFilePaths
+
   // Get all project files and build the file map
   const projectId = activeProjectTabState?.selectedProjectId ?? -1
   const projectFileMap = useProjectFileMap(projectId)
+
+  // NEW: Build bidirectional path<->ID mapping
+  const { pathToId, idToPath } = useMemo(() => {
+    const pathToId = new Map<string, number>()
+    const idToPath = new Map<number, string>()
+    
+    for (const [id, file] of projectFileMap) {
+      pathToId.set(file.path, id)
+      idToPath.set(id, file.path)
+    }
+    
+    return { pathToId, idToPath }
+  }, [projectFileMap])
 
   // Query for getting the undo/redo state
   const { data: undoRedoState } = useQuery({
     queryKey: undoRedoKeys.tab(effectiveTabId ?? -1),
     queryFn: () => {
-      // Initialize new state if we have selectedFiles
-      if (effectiveTabState !== null) {
+      // Initialize new state if we have selectedFiles or selectedFilePaths
+      if (effectiveTabState !== null || effectivePathState !== null) {
+        // Convert legacy ID-only state to include paths
+        const ids = effectiveTabState || []
+        const paths = effectivePathState || ids.map(id => idToPath.get(id)).filter(Boolean) as string[]
+        
         return {
-          history: [effectiveTabState || []],
+          history: [{ ids, paths }],
           index: 0
         } satisfies UndoRedoState
       }
@@ -107,31 +130,51 @@ export function useSelectedFiles({
     }
   })
 
-  // The actual 'selectedFiles' is whatever is at the current index, or empty array if not initialized
-  const selectedFiles: number[] = undoRedoState?.history[undoRedoState.index] ?? []
+  // Get current selections from history
+  const currentHistory = undoRedoState?.history[undoRedoState.index] || { ids: [], paths: [] }
+  const selectedFiles: number[] = currentHistory.ids
+  const selectedFilePaths: string[] = currentHistory.paths
 
   // Only allow operations once we have initialized the state
   const isInitialized = undoRedoState !== null
 
-  // Commit a new selection to local history, and also update global selection
-  const commitSelectionChange = (newSelected: number[]) => {
+  // Unified commit function that handles both IDs and paths
+  const commitSelectionChange = (newIds?: number[], newPaths?: string[]) => {
     if (!isInitialized || !undoRedoState || !effectiveTabId) return
 
-    // Update global store's selection based on which tab we're working with
-    if (tabId) {
-      updateProjectTabById(tabId, {
-        selectedFiles: newSelected
-      })
+    // Convert between formats as needed
+    if (USE_PATH_BASED_SELECTION) {
+      // Prefer paths, derive IDs
+      if (newPaths && !newIds) {
+        newIds = newPaths.map(path => pathToId.get(path)).filter(Boolean) as number[]
+      }
     } else {
-      updateActiveProjectTab({
-        selectedFiles: newSelected
-      })
+      // Legacy: Prefer IDs, derive paths
+      if (newIds && !newPaths) {
+        newPaths = newIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
+      }
+    }
+
+    // Ensure both are arrays
+    newIds = newIds || []
+    newPaths = newPaths || []
+
+    // Update storage with both formats for compatibility
+    const updateData = {
+      selectedFiles: newIds,
+      selectedFilePaths: newPaths
+    }
+
+    if (tabId) {
+      updateProjectTabById(tabId, updateData)
+    } else {
+      updateActiveProjectTab(updateData)
     }
 
     // Push this new selection onto our history stack
     const { history, index } = undoRedoState
     const truncated = history.slice(0, index + 1)
-    truncated.push(newSelected)
+    truncated.push({ ids: newIds, paths: newPaths })
     if (truncated.length > MAX_HISTORY_SIZE) {
       truncated.shift()
     }
@@ -147,18 +190,18 @@ export function useSelectedFiles({
     if (!isInitialized || !undoRedoState || undoRedoState.index <= 0) return
 
     const newIndex = undoRedoState.index - 1
-    const newSelected = undoRedoState.history[newIndex]
+    const { ids, paths } = undoRedoState.history[newIndex]
 
-    // Update global selection based on which tab we're working with
+    // Update storage with both formats
+    const updateData = {
+      selectedFiles: ids,
+      selectedFilePaths: paths
+    }
+
     if (tabId) {
-      updateProjectTabById(tabId, {
-        selectedFiles: newSelected
-      })
+      updateProjectTabById(tabId, updateData)
     } else {
-      updateActiveProjectTab((prevTab) => ({
-        ...prevTab,
-        selectedFiles: newSelected
-      }))
+      updateActiveProjectTab(updateData)
     }
 
     updateUndoRedoState({
@@ -172,18 +215,18 @@ export function useSelectedFiles({
     if (!isInitialized || !undoRedoState || undoRedoState.index >= undoRedoState.history.length - 1) return
 
     const newIndex = undoRedoState.index + 1
-    const newSelected = undoRedoState.history[newIndex]
+    const { ids, paths } = undoRedoState.history[newIndex]
 
-    // Update global selection based on which tab we're working with
+    // Update storage with both formats
+    const updateData = {
+      selectedFiles: ids,
+      selectedFilePaths: paths
+    }
+
     if (tabId) {
-      updateProjectTabById(tabId, {
-        selectedFiles: newSelected
-      })
+      updateProjectTabById(tabId, updateData)
     } else {
-      updateActiveProjectTab((prevTab) => ({
-        ...prevTab,
-        selectedFiles: newSelected
-      }))
+      updateActiveProjectTab(updateData)
     }
 
     updateUndoRedoState({
@@ -195,36 +238,94 @@ export function useSelectedFiles({
   // Toggle a single file's selection
   const toggleFile = (fileId: number) => {
     if (!isInitialized) return
-    commitSelectionChange(
-      selectedFiles.includes(fileId) ? selectedFiles.filter((id) => id !== fileId) : [...selectedFiles, fileId]
-    )
+    
+    if (USE_PATH_BASED_SELECTION) {
+      // Convert to path-based operation
+      const path = idToPath.get(fileId)
+      if (path) {
+        toggleFilePath(path)
+      }
+    } else {
+      // Legacy behavior
+      const newIds = selectedFiles.includes(fileId) 
+        ? selectedFiles.filter((id) => id !== fileId) 
+        : [...selectedFiles, fileId]
+      commitSelectionChange(newIds)
+    }
+  }
+
+  // NEW: Path-based toggle function
+  const toggleFilePath = (filePath: string) => {
+    if (!isInitialized) return
+    const newPaths = selectedFilePaths.includes(filePath)
+      ? selectedFilePaths.filter(p => p !== filePath)
+      : [...selectedFilePaths, filePath]
+    commitSelectionChange(undefined, newPaths)
   }
 
   // Remove a file from selection
   const removeSelectedFile = (fileId: number) => {
     if (!isInitialized) return
-    commitSelectionChange(selectedFiles.filter((id) => id !== fileId))
+    
+    if (USE_PATH_BASED_SELECTION) {
+      const path = idToPath.get(fileId)
+      if (path) {
+        const newPaths = selectedFilePaths.filter(p => p !== path)
+        commitSelectionChange(undefined, newPaths)
+      }
+    } else {
+      commitSelectionChange(selectedFiles.filter((id) => id !== fileId))
+    }
   }
 
   // Toggle multiple files at once
   const toggleFiles = (fileIds: number[]) => {
     if (!isInitialized) return
-    const toAdd = fileIds.filter((id) => !selectedFiles.includes(id))
-    const toRemove = fileIds.filter((id) => selectedFiles.includes(id))
-    commitSelectionChange(selectedFiles.filter((id) => !toRemove.includes(id)).concat(toAdd))
+    
+    if (USE_PATH_BASED_SELECTION) {
+      // Convert to paths
+      const paths = fileIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
+      const toAdd = paths.filter(p => !selectedFilePaths.includes(p))
+      const toRemove = paths.filter(p => selectedFilePaths.includes(p))
+      const newPaths = selectedFilePaths.filter(p => !toRemove.includes(p)).concat(toAdd)
+      commitSelectionChange(undefined, newPaths)
+    } else {
+      const toAdd = fileIds.filter((id) => !selectedFiles.includes(id))
+      const toRemove = fileIds.filter((id) => selectedFiles.includes(id))
+      commitSelectionChange(selectedFiles.filter((id) => !toRemove.includes(id)).concat(toAdd))
+    }
   }
 
   // Select multiple files (replacing current selection)
   const selectFiles = (fileIdsOrUpdater: number[] | ((prev: number[]) => number[])) => {
     if (!isInitialized) return
-    const newFileIds = typeof fileIdsOrUpdater === 'function' ? fileIdsOrUpdater(selectedFiles) : fileIdsOrUpdater
-    commitSelectionChange(newFileIds)
+    
+    if (USE_PATH_BASED_SELECTION) {
+      // Convert to paths
+      const newIds = typeof fileIdsOrUpdater === 'function' 
+        ? fileIdsOrUpdater(selectedFiles) 
+        : fileIdsOrUpdater
+      const newPaths = newIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
+      commitSelectionChange(newIds, newPaths)
+    } else {
+      // Legacy
+      const newFileIds = typeof fileIdsOrUpdater === 'function' 
+        ? fileIdsOrUpdater(selectedFiles) 
+        : fileIdsOrUpdater
+      commitSelectionChange(newFileIds)
+    }
+  }
+
+  // NEW: Path-based select function
+  const selectFilePaths = (paths: string[]) => {
+    if (!isInitialized) return
+    commitSelectionChange(undefined, paths)
   }
 
   // Clear all selected files
   const clearSelectedFiles = () => {
     if (!isInitialized) return
-    commitSelectionChange([])
+    commitSelectionChange([], [])
   }
 
   // Check if a file is selected
@@ -232,22 +333,38 @@ export function useSelectedFiles({
     return selectedFiles.includes(fileId)
   }
 
+  // NEW: Check if a file is selected by path
+  const isFileSelectedByPath = (path: string) => {
+    return selectedFilePaths.includes(path)
+  }
+
   // Check if we can undo/redo
   const canUndo = undoRedoState !== null && (undoRedoState?.index ?? 0) > 0
   const canRedo = undoRedoState !== null && (undoRedoState?.index ?? 0) < (undoRedoState?.history?.length ?? 0) - 1
 
   return {
+    // Legacy (for backward compatibility)
     selectedFiles: selectedFiles ?? [],
-    projectFileMap,
-    commitSelectionChange,
-    undo,
-    redo,
     toggleFile,
     removeSelectedFile,
     toggleFiles,
     selectFiles,
-    clearSelectedFiles,
     isFileSelected,
+    
+    // Path-based (NEW - preferred)
+    selectedFilePaths: selectedFilePaths ?? [],
+    toggleFilePath,
+    selectFilePaths,
+    isFileSelectedByPath,
+    
+    // Shared
+    projectFileMap,
+    pathToId,
+    idToPath,
+    commitSelectionChange,
+    undo,
+    redo,
+    clearSelectedFiles,
     canUndo,
     canRedo
   }

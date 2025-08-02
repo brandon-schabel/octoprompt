@@ -20,6 +20,9 @@ export * from './src/job.schemas'
 export * from './src/summary-options.schemas'
 export * from './src/file-summarization.schemas'
 export * from './src/claude-agent.schemas'
+export * from './src/claude-command.schemas'
+export * from './src/claude-code.schemas'
+export * from './src/parser-config.schemas'
 
 // export constants
 export * from './src/constants/models-temp-not-allowed'

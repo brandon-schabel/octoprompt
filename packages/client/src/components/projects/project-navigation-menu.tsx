@@ -21,7 +21,8 @@ import {
   GitPullRequest,
   GitCommit,
   Upload,
-  Sliders
+  Sliders,
+  Copy
 } from 'lucide-react'
 import type { ProjectsSearch, ProjectView } from '@/lib/search-schemas'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,7 @@ import { useActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storag
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { promptlianoClient } from '@/hooks/promptliano-client'
 import { toast } from 'sonner'
+import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 interface ProjectNavigationMenuProps {
   currentSearch: ProjectsSearch
@@ -53,6 +55,7 @@ export function ProjectNavigationMenu({
   const [activeProjectTabState] = useActiveProjectTab()
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const isSummarizationEnabled = selectedProjectId ? summarizationEnabledProjectIds.includes(selectedProjectId) : false
+  const { copyToClipboard } = useCopyClipboard()
 
   // Check if project has MCP configuration
   const { data: mcpConfigData } = useQuery({
@@ -247,6 +250,21 @@ export function ProjectNavigationMenu({
             />
           </MenubarItem>
           <MenubarSeparator />
+          <MenubarItem 
+            onClick={() => {
+              if (selectedProjectId) {
+                copyToClipboard(selectedProjectId.toString(), {
+                  successMessage: 'Project ID copied to clipboard',
+                  errorMessage: 'Failed to copy project ID'
+                })
+              }
+            }}
+            disabled={!selectedProjectId}
+            className='flex items-center gap-2'
+          >
+            <Copy className='h-4 w-4' />
+            Copy Project ID
+          </MenubarItem>
           <MenubarItem onClick={() => navigateToManageView('project-settings')} className='flex items-center gap-2'>
             <Settings className='h-4 w-4' />
             Settings

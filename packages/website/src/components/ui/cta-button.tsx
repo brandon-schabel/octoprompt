@@ -85,7 +85,7 @@ export const CTAButton = forwardRef<HTMLButtonElement, CTAButtonProps>(
     // If href is provided, render as a Link
     if (href) {
       const isExternal = href.startsWith('http') || target === '_blank'
-      
+
       if (isExternal) {
         return (
           <motion.a
@@ -99,7 +99,7 @@ export const CTAButton = forwardRef<HTMLButtonElement, CTAButtonProps>(
           </motion.a>
         )
       }
-      
+
       return (
         <Link to={href} className={cn(baseStyles, variants[variant], sizes[size], fullWidth && 'w-full', className)}>
           <motion.span className='inline-flex items-center justify-center w-full h-full' {...motionProps}>
@@ -203,7 +203,7 @@ export const CTAButtonOutline = forwardRef<HTMLButtonElement, CTAButtonProps>(
 
     if (href) {
       const isExternal = href.startsWith('http') || target === '_blank'
-      
+
       if (isExternal) {
         return (
           <motion.a
@@ -217,7 +217,7 @@ export const CTAButtonOutline = forwardRef<HTMLButtonElement, CTAButtonProps>(
           </motion.a>
         )
       }
-      
+
       return (
         <Link to={href} className={classes}>
           <motion.span className='relative w-full h-full inline-flex items-center justify-center' {...motionProps}>
@@ -228,12 +228,7 @@ export const CTAButtonOutline = forwardRef<HTMLButtonElement, CTAButtonProps>(
     }
 
     return (
-      <motion.button
-        ref={ref}
-        className={classes}
-        {...motionProps}
-        {...props}
-      >
+      <motion.button ref={ref} className={classes} {...motionProps} {...props}>
         {content}
       </motion.button>
     )

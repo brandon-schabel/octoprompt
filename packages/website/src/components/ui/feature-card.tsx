@@ -114,11 +114,16 @@ export function FeatureCardAnimated({ title, description, icon: Icon, children, 
 // Grid container for feature cards
 interface FeatureGridProps {
   children: ReactNode
-  columns?: 1 | 2 | 3 | 4 | {
-    mobile?: number
-    tablet?: number
-    desktop?: number
-  }
+  columns?:
+    | 1
+    | 2
+    | 3
+    | 4
+    | {
+        mobile?: number
+        tablet?: number
+        desktop?: number
+      }
   className?: string
 }
 

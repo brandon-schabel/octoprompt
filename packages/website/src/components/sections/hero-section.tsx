@@ -85,9 +85,7 @@ export function HeroSection() {
               <h1 className='text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent'>
                 {heroData.title}
               </h1>
-              <p className='mt-6 text-lg sm:text-xl text-muted-foreground'>
-                {heroData.subtitle}
-              </p>
+              <p className='mt-6 text-lg sm:text-xl text-muted-foreground'>{heroData.subtitle}</p>
             </div>
 
             {/* Quick Install - right after subtitle */}
@@ -97,12 +95,7 @@ export function HeroSection() {
                   <Terminal className='h-4 w-4 text-primary' />
                   <span className='text-sm font-medium'>Quick Install</span>
                 </div>
-                <CodeBlock 
-                  code='npx promptliano@latest' 
-                  language='bash' 
-                  showLineNumbers={false}
-                  className='text-sm'
-                />
+                <CodeBlock code='npx promptliano@latest' language='bash' showLineNumbers={false} className='text-sm' />
               </div>
             </AnimateOnScroll>
 
@@ -149,7 +142,6 @@ export function HeroSection() {
                 className='shadow-2xl'
               />
             </AnimateOnScroll>
-
           </div>
         </div>
       </div>

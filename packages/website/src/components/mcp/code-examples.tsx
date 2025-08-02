@@ -24,7 +24,7 @@ const codeExamples: CodeExample[] = [
     category: 'project',
     request: 'Can you give me an overview of this project?',
     response: `=== PROJECT OVERVIEW ===
-Project: E-Commerce Platform (ID: 1753220774680)
+Project: E-Commerce Platform (ID: 1754111018844)
 Path: /Users/dev/projects/ecommerce
 Branch: feature/checkout | Last Updated: 7/27/2025
 
@@ -74,7 +74,7 @@ Token usage: 70% reduction compared to full file scan`
     request: 'Create a ticket for implementing dark mode',
     response: `Created Ticket #237: Implement Dark Mode Theme
 
-Project ID: 1753220774680
+Project ID: 1754111018844
 Status: open
 Priority: normal
 Overview: Add dark mode support across the application

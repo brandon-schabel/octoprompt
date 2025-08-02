@@ -10,7 +10,8 @@ export const Route = createFileRoute('/docs/how-to/building-context')({
     return {
       meta: {
         title: 'Building Context for AI - Promptliano How-To Guide',
-        description: 'Master the art of building effective context for AI interactions. Learn strategies to maximize quality while minimizing tokens.',
+        description:
+          'Master the art of building effective context for AI interactions. Learn strategies to maximize quality while minimizing tokens.',
         keywords: ['context building', 'AI context', 'file selection', 'token optimization', 'best practices']
       } as SeoMetadata
     }
@@ -24,20 +25,22 @@ function BuildingContextGuide() {
       <div>
         <h1 className='text-4xl font-bold mb-4'>Building Context for AI</h1>
         <p className='text-xl text-muted-foreground'>
-          Learn how to build effective context that helps AI understand your codebase while managing token usage efficiently.
+          Learn how to build effective context that helps AI understand your codebase while managing token usage
+          efficiently.
         </p>
       </div>
 
       {/* Why Context Matters */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Why Context Matters</h2>
-        
+
         <div className='grid md:grid-cols-2 gap-6'>
           <GlassCard className='p-6'>
             <Brain className='h-5 w-5 text-primary mb-3' />
             <h3 className='font-medium mb-2'>AI Understanding</h3>
             <p className='text-sm text-muted-foreground'>
-              The right context helps AI understand your code structure, patterns, and dependencies, leading to better suggestions.
+              The right context helps AI understand your code structure, patterns, and dependencies, leading to better
+              suggestions.
             </p>
           </GlassCard>
 
@@ -79,19 +82,14 @@ function BuildingContextGuide() {
         <div className='space-y-6'>
           <div>
             <h3 className='text-xl font-medium mb-3'>Step 1: Describe Your Task Clearly</h3>
-            <p className='text-muted-foreground mb-3'>
-              Be specific about what you want to accomplish:
-            </p>
-            
+            <p className='text-muted-foreground mb-3'>Be specific about what you want to accomplish:</p>
+
             <div className='grid md:grid-cols-2 gap-4'>
               <GlassCard className='p-4'>
                 <h4 className='font-medium text-red-500 mb-2'>❌ Too Vague</h4>
-                <CodeBlock
-                  code='Fix the login'
-                  language='text'
-                />
+                <CodeBlock code='Fix the login' language='text' />
               </GlassCard>
-              
+
               <GlassCard className='p-4'>
                 <h4 className='font-medium text-green-500 mb-2'>✅ Clear & Specific</h4>
                 <CodeBlock
@@ -111,10 +109,10 @@ function BuildingContextGuide() {
               description='AI analyzes your task and suggests files ranked by relevance'
               layout='centered'
             />
-            
+
             <div className='mt-4 space-y-3'>
               <h4 className='font-medium'>Understanding the Strategies:</h4>
-              
+
               <div className='grid md:grid-cols-3 gap-4'>
                 <GlassCard className='p-4'>
                   <h5 className='font-medium mb-1'>Fast (No AI)</h5>
@@ -122,14 +120,14 @@ function BuildingContextGuide() {
                     Pure keyword matching. Best for large codebases or when you know exact file names.
                   </p>
                 </GlassCard>
-                
+
                 <GlassCard className='p-4'>
                   <h5 className='font-medium mb-1'>Balanced (Default)</h5>
                   <p className='text-xs text-muted-foreground'>
                     Pre-filters 50 files, AI refines. Good balance of speed and accuracy.
                   </p>
                 </GlassCard>
-                
+
                 <GlassCard className='p-4'>
                   <h5 className='font-medium mb-1'>Thorough</h5>
                   <p className='text-xs text-muted-foreground'>
@@ -179,9 +177,7 @@ function BuildingContextGuide() {
         <div className='space-y-6'>
           <div>
             <h3 className='text-xl font-medium mb-3'>The Context Layers Approach</h3>
-            <p className='text-muted-foreground mb-3'>
-              Think of context as layers, starting from the most essential:
-            </p>
+            <p className='text-muted-foreground mb-3'>Think of context as layers, starting from the most essential:</p>
 
             <div className='space-y-4'>
               <GlassCard className='p-6'>
@@ -208,9 +204,7 @@ function BuildingContextGuide() {
                   </span>
                   <h4 className='font-medium'>Supporting Files (Important)</h4>
                 </div>
-                <p className='text-sm text-muted-foreground mb-2'>
-                  Types, schemas, and closely related components.
-                </p>
+                <p className='text-sm text-muted-foreground mb-2'>Types, schemas, and closely related components.</p>
                 <div className='bg-muted/50 rounded p-3 font-mono text-xs'>
                   <div>types/auth.types.ts</div>
                   <div>schemas/user.schema.ts</div>
@@ -239,7 +233,7 @@ function BuildingContextGuide() {
 
           <div>
             <h3 className='text-xl font-medium mb-3'>Quick Selection Tips</h3>
-            
+
             <div className='grid md:grid-cols-2 gap-4'>
               <GlassCard className='p-4'>
                 <h4 className='font-medium mb-2'>Use Search (Cmd/Ctrl + K)</h4>
@@ -367,9 +361,7 @@ function BuildingContextGuide() {
                 <span className='font-mono'>4k - 16k tokens</span>
               </li>
             </ul>
-            <p className='text-xs text-muted-foreground mt-3'>
-              Leave ~20% headroom for AI responses
-            </p>
+            <p className='text-xs text-muted-foreground mt-3'>Leave ~20% headroom for AI responses</p>
           </GlassCard>
 
           <GlassCard className='p-6'>
@@ -389,7 +381,8 @@ function BuildingContextGuide() {
             <div>
               <h3 className='font-medium mb-2'>Pro Tip: Progressive Enhancement</h3>
               <p className='text-sm text-muted-foreground'>
-                Start with minimal context and add more if AI asks for specific files. This iterative approach often uses fewer tokens overall.
+                Start with minimal context and add more if AI asks for specific files. This iterative approach often
+                uses fewer tokens overall.
               </p>
             </div>
           </div>
@@ -420,9 +413,7 @@ Content: "Review this code for:
 
           <GlassCard className='p-6'>
             <h3 className='font-medium mb-3'>Combine Multiple Selection Methods</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              Use all available tools for best results:
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>Use all available tools for best results:</p>
             <ol className='space-y-2 text-sm'>
               <li>1. Start with AI suggestions for the main files</li>
               <li>2. Use search to find specific utilities or configs</li>
@@ -434,7 +425,8 @@ Content: "Review this code for:
           <GlassCard className='p-6'>
             <h3 className='font-medium mb-3'>Learn from Patterns</h3>
             <p className='text-sm text-muted-foreground mb-3'>
-              Pay attention to which files AI finds most useful for different tasks. Over time, you'll develop intuition for building perfect context quickly.
+              Pay attention to which files AI finds most useful for different tasks. Over time, you'll develop intuition
+              for building perfect context quickly.
             </p>
           </GlassCard>
         </div>

@@ -134,7 +134,10 @@ export function QuickStartSection() {
               <a href='/docs/getting-started' className='text-primary hover:underline inline-flex items-center gap-1'>
                 Getting Started Guide →
               </a>
-              <a href='/docs/download-installation' className='text-primary hover:underline inline-flex items-center gap-1'>
+              <a
+                href='/docs/download-installation'
+                className='text-primary hover:underline inline-flex items-center gap-1'
+              >
                 Manual Installation →
               </a>
             </div>

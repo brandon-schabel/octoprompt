@@ -48,7 +48,13 @@ interface LazyComponentProps<T> {
   preload?: boolean
 }
 
-export function LazyComponent<T extends {} = {}>({ loader, props, fallback, className, preload = false }: LazyComponentProps<T>) {
+export function LazyComponent<T extends {} = {}>({
+  loader,
+  props,
+  fallback,
+  className,
+  preload = false
+}: LazyComponentProps<T>) {
   const Component = lazy(loader)
 
   const { ref, inView } = useInView({

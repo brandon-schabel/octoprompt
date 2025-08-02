@@ -965,3 +965,6 @@ export function useSmartCaching() {
 
 // Export agent hooks
 export * from './api/use-agents-api'
+
+// Export command hooks
+export * from './api/use-commands-api'

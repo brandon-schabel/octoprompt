@@ -88,7 +88,6 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
     return calculateTotalTokens(promptData?.data, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap)
   }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap])
 
-
   // Update localUserPrompt if global changes externally
   useEffect(() => {
     if (globalUserPrompt !== localUserPrompt) {
@@ -278,9 +277,7 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
                   </ul>
                 </div>
               </PromptlianoTooltip>
-              <div className='ml-auto text-xs text-muted-foreground'>
-                {formatCompactTokenCount(totalTokens)} tokens
-              </div>
+              <div className='ml-auto text-xs text-muted-foreground'>{formatCompactTokenCount(totalTokens)} tokens</div>
             </div>
 
             <div className='flex-1 min-h-0 flex flex-col'>

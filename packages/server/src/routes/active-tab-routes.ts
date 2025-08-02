@@ -64,11 +64,11 @@ activeTabRoutes.openapi(getActiveTabRoute, async (c) => {
     success: true,
     data: activeTab
       ? {
-        activeTabId: activeTab.data.activeTabId,
-        lastUpdated: activeTab.data.lastUpdated,
-        clientId: activeTab.data.clientId,
-        tabMetadata: activeTab.data.tabMetadata
-      }
+          activeTabId: activeTab.data.activeTabId,
+          lastUpdated: activeTab.data.lastUpdated,
+          clientId: activeTab.data.clientId,
+          tabMetadata: activeTab.data.tabMetadata
+        }
       : null
   })
 })

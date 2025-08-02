@@ -228,7 +228,14 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
-  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+  const { 
+    selectedFiles, 
+    selectedFilePaths,
+    selectFiles, 
+    projectFileMap,
+    toggleFilePath,
+    isFileSelectedByPath 
+  } = useSelectedFiles()
   const resolveImports = projectTabState?.resolveImports ?? false
   const preferredEditor = projectTabState?.preferredEditor ?? 'vscode'
   const { copyToClipboard } = useCopyClipboard()
@@ -251,18 +258,25 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
 
   const handleToggleFile = useCallback(
     (fileId: number) => {
-      selectFiles(
-        toggleFileUtil(
-          fileId,
-          selectedFiles,
-          resolveImports,
-          projectFileMap,
-          getRecursiveImports,
-          buildTsconfigAliasMap
+      // Use path-based selection if available
+      const file = projectFileMap.get(fileId)
+      if (file && toggleFilePath) {
+        toggleFilePath(file.path)
+      } else {
+        // Fallback to legacy ID-based selection
+        selectFiles(
+          toggleFileUtil(
+            fileId,
+            selectedFiles,
+            resolveImports,
+            projectFileMap,
+            getRecursiveImports,
+            buildTsconfigAliasMap
+          )
         )
-      )
+      }
     },
-    [selectFiles, resolveImports, projectFileMap, selectedFiles]
+    [selectFiles, resolveImports, projectFileMap, selectedFiles, toggleFilePath]
   )
 
   const handleToggleFolder = useCallback(
@@ -834,7 +848,14 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
   const rowRefs = useRef<(HTMLDivElement | null)[]>([])
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const [lastFocusedIndex, setLastFocusedIndex] = useState<number>(-1)
-  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+  const { 
+    selectedFiles, 
+    selectedFilePaths,
+    selectFiles, 
+    projectFileMap,
+    toggleFilePath,
+    isFileSelectedByPath 
+  } = useSelectedFiles()
   const [projectTabState] = useActiveProjectTab()
   const projectId = projectTabState?.selectedProjectId
 
