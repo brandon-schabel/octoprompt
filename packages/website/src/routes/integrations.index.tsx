@@ -1,14 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import {
-  GlassCard,
-  CTAButton,
-  CTAButtonOutline,
-  AnimateOnScroll,
-  fadeInUp,
-  staggerContainer,
-  staggerItem
-} from '@/components/ui'
+import { GlassCard, AnimateOnScroll, fadeInUp, staggerContainer, staggerItem } from '@/components/ui'
+import { HeroButton } from '@/components/ui/hero-button'
 import { DownloadButton } from '@/components/ui/download-button'
 import { McpOverview, SetupWizard, CompatibilityMatrix, Troubleshooting } from '@/components/mcp'
 import { motion } from 'framer-motion'
@@ -141,13 +134,13 @@ function IntegrationsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <CTAButton href='#setup' size='lg'>
+              <HeroButton href='#setup' size='lg'>
                 Quick Setup Guide
                 <ArrowRight className='ml-2 w-4 h-4' />
-              </CTAButton>
-              <CTAButtonOutline href='/docs/mcp' size='lg'>
+              </HeroButton>
+              <HeroButton href='/docs/mcp' size='lg' variant='outline'>
                 MCP Documentation
-              </CTAButtonOutline>
+              </HeroButton>
             </motion.div>
           </div>
         </AnimateOnScroll>
@@ -372,10 +365,10 @@ function IntegrationsPage() {
               </div>
 
               <div className='mt-6 text-center'>
-                <CTAButton href='/downloads' size='lg'>
+                <HeroButton href='/downloads' size='lg'>
                   Download Promptliano
                   <Download className='ml-2 w-4 h-4' />
-                </CTAButton>
+                </HeroButton>
               </div>
             </GlassCard>
           </section>
@@ -430,13 +423,13 @@ function IntegrationsPage() {
                 Join thousands of developers using Promptliano to build faster and smarter with AI-powered context
               </p>
               <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-                <CTAButton href='/docs/getting-started' size='lg'>
+                <HeroButton href='/docs/getting-started' size='lg'>
                   Get Started Free
                   <ChevronRight className='ml-2 w-4 h-4' />
-                </CTAButton>
-                <CTAButtonOutline href='/community' size='lg'>
+                </HeroButton>
+                <HeroButton href='/community' size='lg' variant='outline'>
                   Join Community
-                </CTAButtonOutline>
+                </HeroButton>
               </div>
             </GlassCard>
           </section>

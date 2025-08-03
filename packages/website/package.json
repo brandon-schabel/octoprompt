@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@promptliano/brand-kit": "file:../brand-kit",
-    "@promptliano/ui": "file:../ui",
+    "@promptliano/brand-kit": "workspace:*",
+    "@promptliano/ui": "workspace:*",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-dropdown-menu": "^2.1.5",

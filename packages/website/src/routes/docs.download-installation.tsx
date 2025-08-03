@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { CodeBlock } from '@/components/docs'
 import { FeatureScreenshot, DownloadButton } from '@/components/ui'
 import { AlertCircle, CheckCircle, Terminal, Package, Settings, Shield, HelpCircle } from 'lucide-react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 
 export const Route = createFileRoute('/docs/download-installation')({
   loader: () => {

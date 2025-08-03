@@ -1,4 +1,4 @@
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { motion } from 'framer-motion'
 import {
   Database,

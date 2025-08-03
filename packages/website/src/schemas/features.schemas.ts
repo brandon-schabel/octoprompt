@@ -33,7 +33,7 @@ export const FeatureItemSchema = z.object({
   badge: z
     .object({
       text: z.string(),
-      variant: z.enum(['default', 'secondary', 'destructive', 'outline', 'success', 'warning']).default('default')
+      variant: z.enum(['default', 'secondary', 'destructive', 'outline', 'count', 'warning', 'high']).default('default')
     })
     .optional(),
   metrics: z
@@ -211,7 +211,7 @@ export const featuresData: FeaturesSection = {
         'Import relationship analysis',
         'Performance metrics included'
       ],
-      badge: { text: 'Game Changer', variant: 'success' }
+      badge: { text: 'Game Changer', variant: 'high' }
     },
     {
       id: 'file-summarization',

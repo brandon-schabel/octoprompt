@@ -6,6 +6,8 @@ You must use the "promptliano-planning-architect" agent to do ALL project planni
 
 If the user ever mentions, plans, tasks, or tickets, immediately use the promptliano-planning-architect. You should enter into a planning mode and create tickets in promptliano because each task contains suggsted prompts, files, and agent. The agent context should be inserted, then prompts, files, and then that help guide the AI much better based on the current task. When you are doing a task created in Promptliano, you should load the agent first and then once the agent is loaded, use the agent to load the task prompts, then start from the suggested files to get a better idea of what needs to be done.
 
+When you are trying to solve a task, bug, problem. Check the available projects prompts, some will show in the overview, but there are prompt tools to retrieve prompts for the project. Its helpful to load relevant prompts into the context.
+
 For full features load into context ./CLAUDE_CODE_PROMPTLIANO_FEATURE_DEVELOPMENT.md, this provides a very detailed guide on how to properly build features in promtliano
 
 - Use the Promptliano MCP Overview tool to understand what the user is currently working on, this will give you insights

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { CodeBlock } from '@/components/docs'
 import { FeatureScreenshot, DownloadButton } from '@/components/ui'
 

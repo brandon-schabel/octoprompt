@@ -16,7 +16,7 @@ import {
 } from '@promptliano/ui'
 import { ArrowRight, Sparkles, Code2 } from 'lucide-react'
 import { featuresData, type FeatureItem, type FeatureCategory } from '@/schemas/features.schemas'
-import { fadeInUp, staggerContainer } from '@/components/ui/animation-utils'
+import { fadeInUp, staggerContainer } from '@/components/ui'
 
 interface FeatureCardProps {
   feature: FeatureItem

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { CodeBlock } from '@/components/docs'
 import { FeatureScreenshot } from '@/components/ui'
 import { Brain, Zap, Target, Sparkles, Code2, GitBranch, FileSearch, Layers, Bot, AlertCircle } from 'lucide-react'

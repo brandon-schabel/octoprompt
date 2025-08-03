@@ -1,4 +1,4 @@
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { Github, Trophy, Code, FileText, Bug } from 'lucide-react'
 import type { Contributor } from '@/schemas/community.schemas'
 

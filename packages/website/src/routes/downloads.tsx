@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
-import { AnimateOnScroll } from '@/components/ui/animation-utils'
+import { GlassCard } from '@/components/ui'
+import { AnimateOnScroll } from '@/components/ui'
 import { CodeBlock } from '@/components/ui/code-terminal'
 import {
   Download,

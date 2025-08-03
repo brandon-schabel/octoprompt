@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { LazyImage } from '@/components/utils/lazy-image'
-import { GlassCard } from './glass-card'
-import { AnimateOnScroll } from './animation-utils'
+import { GlassCard } from '@/components/ui'
+import { AnimateOnScroll } from '@/components/ui'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Screenshot {

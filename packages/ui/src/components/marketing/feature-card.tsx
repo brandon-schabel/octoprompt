@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
-import { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
-import { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { cn } from '../../utils'
+import type { LucideIcon } from 'lucide-react'
 
 interface FeatureCardProps {
   title: string

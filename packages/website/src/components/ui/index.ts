@@ -1,21 +1,59 @@
-// Hero components
+// Hero components - website specific
 export { Hero, HeroGradient, HeroTyping } from './hero'
 
-// Feature card components
-export { FeatureCard, FeatureCardAnimated, FeatureGrid } from './feature-card'
+// Screenshot components - website specific
+export { FeatureScreenshot } from './feature-screenshot'
+export { ScreenshotGallery } from './screenshot-gallery'
+export { ScreenshotCarousel } from './screenshot-carousel'
 
-// Terminal and code components
+// Terminal and code components - website specific (different API than UI library)
+// These have animation and website-specific features not in the generic UI library
 export { CodeTerminal, CodeBlock } from './code-terminal'
 
-// Glass morphism components
-export { GlassCard, GlassCardGradient, FloatingGlass, GlassPanel } from './glass-card'
-
-// CTA Button components
-export { CTAButton, CTAButtonAnimated, CTAButtonOutline, CTAButtonGroup } from './cta-button'
-
-// Animation utilities
+// Re-export components from @promptliano/ui
 export {
-  // Animation variants
+  // Core components
+  Badge,
+  Button,
+  buttonVariants,
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Input,
+  Label,
+  Logo,
+  Separator,
+  Switch,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+
+  // Surface components
+  GlassCard,
+  GlassCardGradient,
+  FloatingGlass,
+  GlassPanel,
+
+  // Feedback components
+  LoadingDots,
+  LoadingSpinner,
+  LoadingOverlay,
+  LoadingSkeleton,
+
+  // Marketing components
+  CTAButton,
+  CTAButtonAnimated,
+  CTAButtonOutline,
+  CTAButtonGroup,
+  FeatureCard,
+  FeatureCardAnimated,
+  FeatureGrid,
+
+  // Animation utilities
   fadeIn,
   fadeInUp,
   fadeInDown,
@@ -25,42 +63,19 @@ export {
   rotateIn,
   staggerContainer,
   staggerItem,
-
-  // Animation components
   AnimateOnScroll,
   Parallax,
   AnimatedText,
   PageTransition,
-  LoadingDots,
-  LoadingSpinner,
-
-  // Hover animations
   hoverScale,
   hoverRotate,
-  hoverGlow
-} from './animation-utils'
+  hoverGlow,
 
-// Screenshot components
-export { FeatureScreenshot } from './feature-screenshot'
-export { ScreenshotGallery } from './screenshot-gallery'
-export { ScreenshotCarousel } from './screenshot-carousel'
+  // Interaction components
+  DownloadButton,
+  DownloadButtonCompact,
+  DownloadButtonDropdown,
 
-// Download button components
-export { DownloadButton, DownloadButtonCompact } from './download-button'
-
-// Re-export core components from @promptliano/ui
-export {
-  Badge,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-  Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Logo
+  // Types
+  type DownloadPlatform
 } from '@promptliano/ui'

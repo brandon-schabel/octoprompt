@@ -1,5 +1,7 @@
-import { motion, Variants, useInView, useAnimation } from 'framer-motion'
-import { ReactNode, useEffect, useRef } from 'react'
+import { motion, useInView, useAnimation, useScroll, useTransform } from 'framer-motion'
+import type { Variants } from 'framer-motion'
+import { useEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
 
 // Common animation variants
 export const fadeIn: Variants = {
@@ -230,54 +232,3 @@ export function PageTransition({ children, className }: PageTransitionProps) {
     </motion.div>
   )
 }
-
-// Loading animations
-export function LoadingDots() {
-  return (
-    <div className='flex gap-1'>
-      {[0, 1, 2].map((i) => (
-        <motion.div
-          key={i}
-          className='h-2 w-2 rounded-full bg-current'
-          animate={{
-            scale: [1, 1.5, 1],
-            opacity: [0.5, 1, 0.5]
-          }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-            delay: i * 0.2
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
-export function LoadingSpinner({ size = 24 }: { size?: number }) {
-  return (
-    <motion.svg
-      width={size}
-      height={size}
-      viewBox='0 0 24 24'
-      fill='none'
-      xmlns='http://www.w3.org/2000/svg'
-      animate={{ rotate: 360 }}
-      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-    >
-      <circle
-        cx='12'
-        cy='12'
-        r='10'
-        stroke='currentColor'
-        strokeWidth='2'
-        strokeLinecap='round'
-        strokeDasharray='60'
-        strokeDashoffset='20'
-      />
-    </motion.svg>
-  )
-}
-
-// Import necessary hooks
-import { useScroll, useTransform } from 'framer-motion'

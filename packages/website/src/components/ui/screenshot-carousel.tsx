@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { LazyImage } from '@/components/utils/lazy-image'
-import { GlassCard } from './glass-card'
+import { GlassCard } from '@/components/ui'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Screenshot {

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { DiscordWidget, Contributors, Roadmap, Resources, NewsletterSignup } from '@/components/community'
 import { Calendar, Users, BookOpen, Github, Twitter, Youtube, MessageSquare } from 'lucide-react'
 

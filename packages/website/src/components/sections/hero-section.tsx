@@ -1,5 +1,5 @@
 import { HeroGradient } from '@/components/ui'
-import { CTAButton, CTAButtonOutline } from '@/components/ui'
+import { HeroButton } from '@/components/ui/hero-button'
 import { CodeTerminal } from '@/components/ui'
 import { AnimateOnScroll } from '@/components/ui'
 import { ScreenshotCarousel } from '@/components/ui'
@@ -101,14 +101,20 @@ export function HeroSection() {
 
             {/* CTA Buttons */}
             <div className='flex flex-wrap gap-4'>
-              <CTAButton href={heroData.ctas[0].href} size='lg'>
+              <HeroButton href={heroData.ctas[0].href} size='lg'>
                 Promptliano Docs
                 <ArrowRight className='ml-2 h-4 w-4' />
-              </CTAButton>
-              <CTAButtonOutline href={heroData.ctas[1].href} size='lg' target='_blank' className='whitespace-nowrap'>
+              </HeroButton>
+              <HeroButton
+                href={heroData.ctas[1].href}
+                size='lg'
+                variant='outline'
+                target='_blank'
+                className='whitespace-nowrap'
+              >
                 <Github className='mr-2 h-4 w-4' />
                 {heroData.ctas[1].text}
-              </CTAButtonOutline>
+              </HeroButton>
             </div>
 
             {/* Key benefits */}

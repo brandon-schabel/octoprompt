@@ -1,6 +1,6 @@
 import { ScreenshotGallery } from '@/components/ui'
 import { AnimateOnScroll } from '@/components/ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 
 const showcaseCategories = {
   workflow: {
