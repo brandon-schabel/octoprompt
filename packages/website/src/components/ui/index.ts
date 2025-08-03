@@ -48,9 +48,19 @@ export { ScreenshotCarousel } from './screenshot-carousel'
 // Download button components
 export { DownloadButton, DownloadButtonCompact } from './download-button'
 
-// Core UI components
-export { Badge } from './badge'
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card'
-export { Button } from './button'
-export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
-export { Logo } from './logo'
+// Re-export core components from @promptliano/ui
+export {
+  Badge,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  Button,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Logo
+} from '@promptliano/ui'

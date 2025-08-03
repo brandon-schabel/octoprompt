@@ -1,6 +1,12 @@
 import { z } from '@hono/zod-openapi'
 import { ProjectIdParamsSchema } from './project.schemas'
-import { unixTSOptionalSchemaSpec, unixTSSchemaSpec, entityIdSchema, entityIdOptionalSchema } from './schema-utils'
+import {
+  unixTSOptionalSchemaSpec,
+  unixTSSchemaSpec,
+  entityIdSchema,
+  entityIdOptionalSchema,
+  entityIdCoercibleSchema
+} from './schema-utils'
 
 export const PromptSchema = z
   .object({
@@ -38,14 +44,14 @@ export const UpdatePromptBodySchema = z
 // --- Request Parameter Schemas ---
 export const PromptIdParamsSchema = z
   .object({
-    promptId: entityIdSchema.openapi({ param: { name: 'promptId', in: 'path' } })
+    promptId: entityIdCoercibleSchema.openapi({ param: { name: 'promptId', in: 'path' } })
   })
   .openapi('PromptIdParams')
 
 export const ProjectAndPromptIdParamsSchema = z
   .object({
-    projectId: entityIdSchema.openapi({ param: { name: 'projectId', in: 'path' } }),
-    promptId: entityIdSchema.openapi({ param: { name: 'promptId', in: 'path' } })
+    projectId: entityIdCoercibleSchema.openapi({ param: { name: 'projectId', in: 'path' } }),
+    promptId: entityIdCoercibleSchema.openapi({ param: { name: 'promptId', in: 'path' } })
   })
   .openapi('ProjectAndPromptIdParams')
 

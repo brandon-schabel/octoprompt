@@ -1,5 +1,5 @@
 import { describe, test, expect, mock } from 'bun:test'
-import { generateHookFromDescription } from './claude-hook-service'
+import { claudeHookService } from './claude-hook-service'
 
 // Since Bun doesn't support module mocking like vitest, we'll create integration tests
 describe('Claude Hook Service - AI Generation', () => {
@@ -11,7 +11,7 @@ describe('Claude Hook Service - AI Generation', () => {
       // For now, we'll test the error handling path
       try {
         // This will fail because we don't have API keys in test environment
-        await generateHookFromDescription('test hook')
+        await claudeHookService.generateHookFromDescription('test hook')
       } catch (error: any) {
         // We expect it to fail with an API error
         expect(error.message).toContain('Failed to generate hook from description')
@@ -22,7 +22,7 @@ describe('Claude Hook Service - AI Generation', () => {
       // Test that the function signature accepts the expected parameters
       const testFn = async () => {
         try {
-          await generateHookFromDescription('create a test hook', {
+          await claudeHookService.generateHookFromDescription('create a test hook', {
             projectPath: '/test/path',
             suggestedEvent: 'PreToolUse',
             examples: ['echo "test"', 'npm test']

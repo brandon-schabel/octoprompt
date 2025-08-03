@@ -244,8 +244,7 @@ export const claudeAgentStorage = {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
 
-    // Add timestamp for uniqueness
-    return `${baseId}-${Date.now()}`
+    return baseId
   },
 
   /** Clear the agent cache */

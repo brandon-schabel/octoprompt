@@ -31,7 +31,7 @@ type AgentFormData = z.infer<typeof agentFormSchema>
 interface AgentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  agentId?: number | null
+  agentId?: string | null
   projectId?: number
 }
 
@@ -51,7 +51,7 @@ export function AgentDialog({ open, onOpenChange, agentId, projectId }: AgentDia
   const isEditing = !!agentId
 
   // Fetch agent data if editing
-  const { data: agentResponse, isLoading: isLoadingAgent } = useGetAgent(agentId || 0, projectId)
+  const { data: agentResponse, isLoading: isLoadingAgent } = useGetAgent(agentId || '', projectId)
   const agent = agentResponse?.data
 
   // Mutations

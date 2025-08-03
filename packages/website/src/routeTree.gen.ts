@@ -34,6 +34,7 @@ import { Route as DocsGettingStartedRouteImport } from './routes/docs.getting-st
 import { Route as DocsDownloadInstallationRouteImport } from './routes/docs.download-installation'
 import { Route as DocsApiRouteImport } from './routes/docs.api'
 import { Route as DocsHowToTicketsTasksRouteImport } from './routes/docs.how-to.tickets-tasks'
+import { Route as DocsHowToMcpBestPracticesRouteImport } from './routes/docs.how-to.mcp-best-practices'
 import { Route as DocsHowToFirstProjectRouteImport } from './routes/docs.how-to.first-project'
 import { Route as DocsHowToBuildingContextRouteImport } from './routes/docs.how-to.building-context'
 
@@ -162,6 +163,11 @@ const DocsHowToTicketsTasksRoute = DocsHowToTicketsTasksRouteImport.update({
   path: '/how-to/tickets-tasks',
   getParentRoute: () => DocsRoute
 } as any)
+const DocsHowToMcpBestPracticesRoute = DocsHowToMcpBestPracticesRouteImport.update({
+  id: '/how-to/mcp-best-practices',
+  path: '/how-to/mcp-best-practices',
+  getParentRoute: () => DocsRoute
+} as any)
 const DocsHowToFirstProjectRoute = DocsHowToFirstProjectRouteImport.update({
   id: '/how-to/first-project',
   path: '/how-to/first-project',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/integrations/': typeof IntegrationsIndexRoute
   '/docs/how-to/building-context': typeof DocsHowToBuildingContextRoute
   '/docs/how-to/first-project': typeof DocsHowToFirstProjectRoute
+  '/docs/how-to/mcp-best-practices': typeof DocsHowToMcpBestPracticesRoute
   '/docs/how-to/tickets-tasks': typeof DocsHowToTicketsTasksRoute
 }
 export interface FileRoutesByTo {
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/integrations': typeof IntegrationsIndexRoute
   '/docs/how-to/building-context': typeof DocsHowToBuildingContextRoute
   '/docs/how-to/first-project': typeof DocsHowToFirstProjectRoute
+  '/docs/how-to/mcp-best-practices': typeof DocsHowToMcpBestPracticesRoute
   '/docs/how-to/tickets-tasks': typeof DocsHowToTicketsTasksRoute
 }
 export interface FileRoutesById {
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/integrations/': typeof IntegrationsIndexRoute
   '/docs/how-to/building-context': typeof DocsHowToBuildingContextRoute
   '/docs/how-to/first-project': typeof DocsHowToFirstProjectRoute
+  '/docs/how-to/mcp-best-practices': typeof DocsHowToMcpBestPracticesRoute
   '/docs/how-to/tickets-tasks': typeof DocsHowToTicketsTasksRoute
 }
 export interface FileRouteTypes {
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/integrations/'
     | '/docs/how-to/building-context'
     | '/docs/how-to/first-project'
+    | '/docs/how-to/mcp-best-practices'
     | '/docs/how-to/tickets-tasks'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/docs/how-to/building-context'
     | '/docs/how-to/first-project'
+    | '/docs/how-to/mcp-best-practices'
     | '/docs/how-to/tickets-tasks'
   id:
     | '__root__'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/integrations/'
     | '/docs/how-to/building-context'
     | '/docs/how-to/first-project'
+    | '/docs/how-to/mcp-best-practices'
     | '/docs/how-to/tickets-tasks'
   fileRoutesById: FileRoutesById
 }
@@ -534,6 +546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsHowToTicketsTasksRouteImport
       parentRoute: typeof DocsRoute
     }
+    '/docs/how-to/mcp-best-practices': {
+      id: '/docs/how-to/mcp-best-practices'
+      path: '/how-to/mcp-best-practices'
+      fullPath: '/docs/how-to/mcp-best-practices'
+      preLoaderRoute: typeof DocsHowToMcpBestPracticesRouteImport
+      parentRoute: typeof DocsRoute
+    }
     '/docs/how-to/first-project': {
       id: '/docs/how-to/first-project'
       path: '/how-to/first-project'
@@ -560,6 +579,7 @@ interface DocsRouteChildren {
   DocsIndexRoute: typeof DocsIndexRoute
   DocsHowToBuildingContextRoute: typeof DocsHowToBuildingContextRoute
   DocsHowToFirstProjectRoute: typeof DocsHowToFirstProjectRoute
+  DocsHowToMcpBestPracticesRoute: typeof DocsHowToMcpBestPracticesRoute
   DocsHowToTicketsTasksRoute: typeof DocsHowToTicketsTasksRoute
 }
 
@@ -572,6 +592,7 @@ const DocsRouteChildren: DocsRouteChildren = {
   DocsIndexRoute: DocsIndexRoute,
   DocsHowToBuildingContextRoute: DocsHowToBuildingContextRoute,
   DocsHowToFirstProjectRoute: DocsHowToFirstProjectRoute,
+  DocsHowToMcpBestPracticesRoute: DocsHowToMcpBestPracticesRoute,
   DocsHowToTicketsTasksRoute: DocsHowToTicketsTasksRoute
 }
 

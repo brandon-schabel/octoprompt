@@ -2,7 +2,7 @@ import { Button } from '@ui'
 import { FileCode } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getEditorUrl } from '@/utils/editor-urls'
-import { EditorType } from '@promptliano/schemas'
+import { GlobalStateEditorType as EditorType } from '@promptliano/schemas'
 
 interface MCPConfigLinkProps {
   configPath: string

@@ -340,7 +340,7 @@ describe('FileSearchService', () => {
         query: '[invalid(regex',
         searchType: 'regex'
       })
-    ).rejects.toThrow('Invalid regex pattern')
+    ).rejects.toThrow('Invalid regex pattern:')
   })
 
   test('should handle programming keywords in search', async () => {

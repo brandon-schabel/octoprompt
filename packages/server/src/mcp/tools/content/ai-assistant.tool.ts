@@ -1,15 +1,6 @@
 import { z } from '@hono/zod-openapi'
-import {
-  validateDataField,
-  createTrackedHandler,
-  type MCPToolDefinition,
-  type MCPToolResponse
-} from '../shared'
-import { 
-  optimizeUserInput, 
-  getCompactProjectSummary,
-  getProjectSummaryWithOptions
-} from '@promptliano/services'
+import { validateDataField, createTrackedHandler, type MCPToolDefinition, type MCPToolResponse } from '../shared'
+import { optimizeUserInput, getCompactProjectSummary, getProjectSummaryWithOptions } from '@promptliano/services'
 import { SummaryOptionsSchema } from '@promptliano/schemas'
 
 export enum AIAssistantAction {
@@ -42,7 +33,7 @@ export const aiAssistantTool: MCPToolDefinition = {
       },
       projectId: {
         type: 'number',
-        description: 'The project ID (required for all actions). Example: 1750564533014'
+        description: 'The project ID (required for all actions). Example: 1754111018844'
       },
       data: {
         type: 'object',
@@ -59,12 +50,7 @@ export const aiAssistantTool: MCPToolDefinition = {
         const { action, projectId, data } = args
         switch (action) {
           case AIAssistantAction.OPTIMIZE_PROMPT: {
-            const prompt = validateDataField<string>(
-              data,
-              'prompt',
-              'string',
-              '"help me fix the authentication flow"'
-            )
+            const prompt = validateDataField<string>(data, 'prompt', 'string', '"help me fix the authentication flow"')
             const optimizedPrompt = await optimizeUserInput(projectId, prompt)
             return {
               content: [{ type: 'text', text: optimizedPrompt }]

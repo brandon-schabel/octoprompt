@@ -34,7 +34,7 @@ import { buildNodeContent, buildNodeSummaries } from '@promptliano/shared'
 
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { EditorType, ProjectFile } from '@promptliano/schemas'
+import { GlobalStateEditorType as EditorType, ProjectFile } from '@promptliano/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import { useProjectGitStatus, useStageFiles, useUnstageFiles, useFileDiff } from '@/hooks/api/use-git-api'
@@ -228,14 +228,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
-  const { 
-    selectedFiles, 
-    selectedFilePaths,
-    selectFiles, 
-    projectFileMap,
-    toggleFilePath,
-    isFileSelectedByPath 
-  } = useSelectedFiles()
+  const { selectedFiles, selectedFilePaths, selectFiles, projectFileMap, toggleFilePath, isFileSelectedByPath } =
+    useSelectedFiles()
   const resolveImports = projectTabState?.resolveImports ?? false
   const preferredEditor = projectTabState?.preferredEditor ?? 'vscode'
   const { copyToClipboard } = useCopyClipboard()
@@ -848,14 +842,8 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
   const rowRefs = useRef<(HTMLDivElement | null)[]>([])
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const [lastFocusedIndex, setLastFocusedIndex] = useState<number>(-1)
-  const { 
-    selectedFiles, 
-    selectedFilePaths,
-    selectFiles, 
-    projectFileMap,
-    toggleFilePath,
-    isFileSelectedByPath 
-  } = useSelectedFiles()
+  const { selectedFiles, selectedFilePaths, selectFiles, projectFileMap, toggleFilePath, isFileSelectedByPath } =
+    useSelectedFiles()
   const [projectTabState] = useActiveProjectTab()
   const projectId = projectTabState?.selectedProjectId
 

@@ -32,7 +32,7 @@ import {
 import { useGenerateCommand } from '@/hooks/api/use-commands-api'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useCommandGenerationCache } from '@/hooks/use-command-generation-cache'
-import type { CommandGenerationRequest, ClaudeCommand } from '@promptliano/schemas'
+import type { CommandGenerationRequest, ClaudeCommand, ClaudeCommandFrontmatter } from '@promptliano/schemas'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronDown } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -67,7 +67,19 @@ interface CommandGenerationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: number
-  onCommandGenerated?: (command: any) => void
+  onCommandGenerated?: (command: {
+    name: string
+    content: string
+    description: string
+    rationale: string
+    frontmatter: ClaudeCommandFrontmatter
+    namespace?: string
+    suggestedVariations?: Array<{
+      name: string
+      description: string
+      changes: string
+    }>
+  }) => void
 }
 
 // Helper function for cn
@@ -98,7 +110,7 @@ export function CommandGenerationDialog({
   const [showCachedCommand, setShowCachedCommand] = useState(false)
   const [showRecentCommands, setShowRecentCommands] = useState(false)
   const generateCommandMutation = useGenerateCommand(projectId)
-  const { selectedFileIds, selectedFilePaths } = useSelectedFiles()
+  const { selectedFiles, selectedFilePaths } = useSelectedFiles()
   const { cacheCommand, getCachedCommand, getRecentCommands } = useCommandGenerationCache(projectId)
   const recentCommands = getRecentCommands
 
@@ -128,7 +140,11 @@ export function CommandGenerationDialog({
         userIntent: formValues.userIntent || '',
         namespace: formValues.namespace,
         scope: formValues.scope,
-        context: {}
+        context: {
+          includeProjectSummary: formValues.includeProjectSummary,
+          includeFileStructure: formValues.includeFileStructure,
+          includeTechStack: formValues.includeTechStack
+        }
       }
 
       const cached = getCachedCommand(request)
@@ -278,8 +294,16 @@ export function CommandGenerationDialog({
                     variant='outline'
                     type='button'
                     onClick={() => {
-                      if (onCommandGenerated) {
-                        onCommandGenerated(cachedCommand)
+                      if (onCommandGenerated && cachedCommand) {
+                        // Extract only the properties expected by the callback
+                        onCommandGenerated({
+                          name: cachedCommand.name,
+                          content: cachedCommand.content,
+                          description: cachedCommand.description || '',
+                          rationale: 'Using cached command',
+                          frontmatter: cachedCommand.frontmatter,
+                          namespace: cachedCommand.namespace
+                        })
                       }
                       onOpenChange(false)
                     }}
@@ -337,8 +361,15 @@ export function CommandGenerationDialog({
                           className='ml-2'
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (onCommandGenerated) {
-                              onCommandGenerated(item.generatedCommand)
+                            if (onCommandGenerated && item.generatedCommand) {
+                              onCommandGenerated({
+                                name: item.generatedCommand.name,
+                                content: item.generatedCommand.content,
+                                description: item.generatedCommand.description || '',
+                                rationale: 'Using cached command',
+                                frontmatter: item.generatedCommand.frontmatter,
+                                namespace: item.generatedCommand.namespace
+                              })
                             }
                             onOpenChange(false)
                           }}

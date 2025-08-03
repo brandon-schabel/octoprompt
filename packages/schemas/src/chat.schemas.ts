@@ -2,7 +2,13 @@ import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from '@promptliano/config'
 
-import { unixTSArraySchemaSpec, unixTSSchemaSpec, entityIdSchema, entityIdOptionalSchema } from './schema-utils'
+import {
+  unixTSArraySchemaSpec,
+  unixTSSchemaSpec,
+  entityIdSchema,
+  entityIdOptionalSchema,
+  entityIdCoercibleSchema
+} from './schema-utils'
 import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'
 
 export type MessageRole = z.infer<typeof MessageRoleEnum> // Export the type if needed elsewhere
@@ -63,7 +69,7 @@ export const ChatMessageSchema = z
 // Request Parameter Schemas
 export const ChatIdParamsSchema = z
   .object({
-    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdCoercibleSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('ChatIdParams')
 
@@ -148,13 +154,13 @@ export const ModelListResponseSchema = z
 
 export const GetMessagesParamsSchema = z
   .object({
-    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdCoercibleSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('GetMessagesParams')
 
 export const ForkChatParamsSchema = z
   .object({
-    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdCoercibleSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('ForkChatParams')
 
@@ -167,7 +173,7 @@ export const ForkChatBodySchema = z
 // --- UPDATED: ForkChatFromMessageParamsSchema ---
 export const ForkChatFromMessageParamsSchema = z
   .object({
-    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } }),
+    chatId: entityIdCoercibleSchema.openapi({ param: { name: 'chatId', in: 'path' } }),
     messageId: unixTSSchemaSpec.openapi({ param: { name: 'messageId', in: 'path' } })
   })
   .openapi('ForkChatFromMessageParams')
@@ -180,19 +186,19 @@ export const ForkChatFromMessageBodySchema = z
 
 export const UpdateChatParamsSchema = z
   .object({
-    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdCoercibleSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('UpdateChatParams')
 
 export const DeleteChatParamsSchema = z
   .object({
-    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdCoercibleSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('DeleteChatParams')
 
 export const DeleteMessageParamsSchema = z
   .object({
-    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } }),
+    chatId: entityIdCoercibleSchema.openapi({ param: { name: 'chatId', in: 'path' } }),
     messageId: unixTSSchemaSpec.openapi({ param: { name: 'messageId', in: 'path' } })
   })
   .openapi('DeleteMessageParams')

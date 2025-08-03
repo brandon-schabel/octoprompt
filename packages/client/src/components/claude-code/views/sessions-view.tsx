@@ -27,6 +27,14 @@ interface SessionCardProps {
     messageCount: number
     gitBranch?: string
     cwd?: string
+    tokenUsage?: {
+      totalInputTokens: number
+      totalCacheCreationTokens: number
+      totalCacheReadTokens: number
+      totalOutputTokens: number
+      totalTokens: number
+    }
+    serviceTiers?: string[]
     totalTokensUsed?: number
     totalCostUsd?: number
   }
@@ -125,7 +133,9 @@ export function SessionsView({ projectId, projectName, onSelectSession }: Sessio
     error,
     refetch
   } = useClaudeSessions(projectId, {
-    search: searchQuery || undefined
+    search: searchQuery || undefined,
+    limit: 50,
+    offset: 0
   })
 
   const handleSessionClick = (sessionId: string) => {

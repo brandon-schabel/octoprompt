@@ -70,3 +70,25 @@ export const entityIdArraySchema = z.array(entityIdSchema).openapi({
   example: [1716537600000, 1716537600001],
   description: 'Array of entity IDs'
 })
+
+// Coercible entity ID schema - for URL parameters that come in as strings
+// This schema coerces string values to numbers before validation
+export const entityIdCoercibleSchema = z.coerce
+  .number()
+  .int('ID must be an integer')
+  .positive('ID must be positive')
+  .max(2524608000000, 'ID exceeds maximum allowed value')
+  .openapi({
+    type: 'integer',
+    format: 'int64',
+    example: 1716537600000,
+    description: 'Entity ID - coerces strings to positive integers for URL parameters'
+  })
+
+// Optional coercible entity ID schema
+export const entityIdCoercibleOptionalSchema = entityIdCoercibleSchema.optional().openapi({
+  type: 'integer',
+  format: 'int64',
+  example: 1716537600000,
+  description: 'Optional entity ID - coerces strings to positive integers for URL parameters'
+})

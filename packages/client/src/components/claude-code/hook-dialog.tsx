@@ -87,8 +87,8 @@ export function HookDialog({ open, onOpenChange, hookId, projectId, initialData 
   // Apply template
   useEffect(() => {
     if (selectedTemplate) {
-      setEventName(selectedTemplate.config.event)
-      setMatcher(selectedTemplate.config.matcher)
+      setEventName(selectedTemplate.event)
+      setMatcher(selectedTemplate.matcher)
       setCommand(selectedTemplate.config.command)
       setTimeout(selectedTemplate.config.timeout?.toString() || '')
     }
@@ -105,11 +105,11 @@ export function HookDialog({ open, onOpenChange, hookId, projectId, initialData 
       context: { suggestedEvent: eventName }
     })
 
-    if (result.data) {
-      setEventName(result.data.event)
-      setMatcher(result.data.matcher)
-      setCommand(result.data.command)
-      setTimeout(result.data.timeout?.toString() || '')
+    if (result) {
+      setEventName(result.event)
+      setMatcher(result.matcher)
+      setCommand(result.command)
+      setTimeout(result.timeout?.toString() || '')
       setActiveTab('manual')
       toast.success('Hook generated successfully')
     }
@@ -128,7 +128,7 @@ export function HookDialog({ open, onOpenChange, hookId, projectId, initialData 
     try {
       if (isEditing && initialData?.matcherIndex !== undefined) {
         await updateHook.mutateAsync({
-          eventName: initialData.eventName,
+          eventName,
           matcherIndex: initialData.matcherIndex,
           data: {
             matcher,

@@ -11,7 +11,10 @@ export {
   appSettingsSchema,
   type GlobalState,
   type ProjectTabState,
+  type ProjectTabStatePartial,
+  type ProjectTabsStateRecord,
   type AppSettings,
+  type Theme,
   type EditorType as GlobalStateEditorType
 } from './src/global-state-schema'
 export * from './src/kv-store.schemas'

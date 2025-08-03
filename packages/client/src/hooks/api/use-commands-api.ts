@@ -16,7 +16,9 @@ export const COMMAND_KEYS = {
   all: ['commands'] as const,
   list: (projectId: number) => [...COMMAND_KEYS.all, 'list', projectId] as const,
   detail: (projectId: number, commandName: string, namespace?: string) =>
-    [...COMMAND_KEYS.all, 'detail', projectId, commandName, namespace].filter(Boolean) as const,
+    namespace
+      ? ([...COMMAND_KEYS.all, 'detail', projectId, commandName, namespace] as const)
+      : ([...COMMAND_KEYS.all, 'detail', projectId, commandName] as const),
   search: (projectId: number, query: SearchCommandsQuery) => [...COMMAND_KEYS.all, 'search', projectId, query] as const,
   suggestions: (projectId: number) => [...COMMAND_KEYS.all, 'suggestions', projectId] as const
 }

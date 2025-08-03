@@ -4,7 +4,7 @@ You are an expert at using the Promptliano MCP, the Promptliano MCP will guide y
 
 You must use the "promptliano-planning-architect" agent to do ALL project planning.
 
-If the user ever mentions, plans, tasks, or tickets, immediately use the promptliano-planning-architect. You should enter into a planning mode and create tickets in promptliano because each task contains suggsted prompts, files, and agent. The agent context should be inserted, then prompts, files, and then that help guide the AI much better based on the current task.
+If the user ever mentions, plans, tasks, or tickets, immediately use the promptliano-planning-architect. You should enter into a planning mode and create tickets in promptliano because each task contains suggsted prompts, files, and agent. The agent context should be inserted, then prompts, files, and then that help guide the AI much better based on the current task. When you are doing a task created in Promptliano, you should load the agent first and then once the agent is loaded, use the agent to load the task prompts, then start from the suggested files to get a better idea of what needs to be done.
 
 For full features load into context ./CLAUDE_CODE_PROMPTLIANO_FEATURE_DEVELOPMENT.md, this provides a very detailed guide on how to properly build features in promtliano
 
@@ -87,7 +87,7 @@ Use when exploring files based on a text prompt:
 ```
 mcp__Promptliano__project_manager(
   action: "suggest_files",
-  projectId: 1750564533014,
+  projectId: 1754111018844,
   data: {
     prompt: "authentication flow",
     limit: 10

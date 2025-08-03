@@ -1,5 +1,11 @@
 import { z } from '@hono/zod-openapi'
-import { unixTSArraySchemaSpec, unixTSSchemaSpec, entityIdSchema, entityIdArraySchema } from './schema-utils'
+import {
+  unixTSArraySchemaSpec,
+  unixTSSchemaSpec,
+  entityIdSchema,
+  entityIdArraySchema,
+  entityIdCoercibleSchema
+} from './schema-utils'
 
 // Base schema - Represents the API structure
 export const ProjectSchema = z
@@ -65,7 +71,7 @@ export const ProjectFileSchema = z
 // Request Parameter Schemas
 export const ProjectIdParamsSchema = z
   .object({
-    projectId: entityIdSchema.openapi({ param: { name: 'projectId', in: 'path' } })
+    projectId: entityIdCoercibleSchema.openapi({ param: { name: 'projectId', in: 'path' } })
   })
   .openapi('ProjectIdParams')
 

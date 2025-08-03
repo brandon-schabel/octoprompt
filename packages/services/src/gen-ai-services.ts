@@ -421,6 +421,10 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateStructuredData')
+          // Don't retry JSON parsing errors here - let the caller handle fallback
+          if (mappedError.code === 'PROVIDER_JSON_PARSE_ERROR') {
+            return false
+          }
           return (
             mappedError.code === 'RATE_LIMIT_EXCEEDED' ||
             mappedError.code === 'PROVIDER_UNAVAILABLE' ||

@@ -1,10 +1,12 @@
-import type { HookConfig } from '@promptliano/schemas'
+import type { HookConfig, HookEvent } from '@promptliano/schemas'
 
 export interface HookTemplate {
   id: string
   name: string
   description: string
   category: 'security' | 'workflow' | 'logging' | 'testing' | 'productivity'
+  event: HookEvent
+  matcher: string
   config: HookConfig
   tags: string[]
 }
@@ -16,14 +18,14 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Block Dangerous rm Commands',
     description: 'Prevents execution of rm -rf commands to avoid accidental deletions',
     category: 'security',
+    event: 'PreToolUse',
+    matcher: '^Bash$',
     config: {
-      event: 'PreToolUse',
-      matcher: '^Bash$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command:
         'if [[ "$TOOL_INPUT" =~ rm.*-rf|rm.*-fr ]]; then echo "⚠️ Dangerous rm command blocked. Use with caution."; exit 1; fi',
-      message: 'Attempted to run dangerous rm command',
-      allow: false
+      timeout: 5,
+      run_in_background: false
     },
     tags: ['safety', 'bash', 'filesystem']
   },
@@ -32,13 +34,14 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Confirm Production Changes',
     description: 'Requires confirmation before making changes to production files',
     category: 'security',
+    event: 'PreToolUse',
+    matcher: '^(Edit|Write)$',
     config: {
-      event: 'PreToolUse',
-      matcher: '^(Edit|Write)$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command:
         'if [[ "$TOOL_INPUT" =~ production|prod\\.env ]]; then read -p "⚠️ Modifying production file. Continue? (y/n): " -n 1 -r; echo; [[ $REPLY =~ ^[Yy]$ ]]; fi',
-      message: 'Production file modification requires confirmation'
+      timeout: 30,
+      run_in_background: false
     },
     tags: ['production', 'safety', 'confirmation']
   },
@@ -49,12 +52,13 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Git Commit Reminder',
     description: 'Reminds to commit changes after significant edits',
     category: 'workflow',
+    event: 'PostToolUse',
+    matcher: '^(Edit|Write|MultiEdit)$',
     config: {
-      event: 'PostToolUse',
-      matcher: '^(Edit|Write|MultiEdit)$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command: 'echo "💡 Remember to commit your changes when ready: git add . && git commit -m \\"your message\\""',
-      message: 'File modification completed'
+      timeout: 5,
+      run_in_background: false
     },
     tags: ['git', 'reminder', 'version-control']
   },
@@ -63,13 +67,14 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Run Tests After Code Changes',
     description: 'Automatically runs tests after modifying source code files',
     category: 'workflow',
+    event: 'PostToolUse',
+    matcher: '^(Edit|Write)$',
     config: {
-      event: 'PostToolUse',
-      matcher: '^(Edit|Write)$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command:
         'if [[ "$TOOL_INPUT" =~ \\.(ts|tsx|js|jsx)$ ]] && [[ "$TOOL_INPUT" =~ src/ ]]; then echo "🧪 Running tests..."; npm test; fi',
-      message: 'Running tests after code change'
+      timeout: 120,
+      run_in_background: true
     },
     tags: ['testing', 'automation', 'ci']
   },
@@ -80,12 +85,13 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Log All Commands',
     description: 'Logs all bash commands to a file for audit purposes',
     category: 'logging',
+    event: 'PreToolUse',
+    matcher: '^Bash$',
     config: {
-      event: 'PreToolUse',
-      matcher: '^Bash$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command: 'echo "[$(date)] $TOOL_INPUT" >> ~/.claude/command-history.log',
-      message: 'Command logged to history'
+      timeout: 5,
+      run_in_background: false
     },
     tags: ['audit', 'history', 'bash']
   },
@@ -94,13 +100,14 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Track File Modifications',
     description: 'Logs all file modifications with timestamps',
     category: 'logging',
+    event: 'PostToolUse',
+    matcher: '^(Edit|Write|MultiEdit)$',
     config: {
-      event: 'PostToolUse',
-      matcher: '^(Edit|Write|MultiEdit)$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command:
         'echo "[$(date)] Modified: $(echo "$TOOL_INPUT" | jq -r .file_path 2>/dev/null || echo "unknown")" >> ~/.claude/file-changes.log',
-      message: 'File change logged'
+      timeout: 5,
+      run_in_background: false
     },
     tags: ['audit', 'tracking', 'files']
   },
@@ -111,13 +118,14 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Validate JSON Before Writing',
     description: 'Validates JSON syntax before writing to .json files',
     category: 'testing',
+    event: 'PreToolUse',
+    matcher: '^Write$',
     config: {
-      event: 'PreToolUse',
-      matcher: '^Write$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command:
         'if [[ "$TOOL_INPUT" =~ \\.json$ ]]; then echo "$TOOL_INPUT" | jq -r .content | jq . > /dev/null || { echo "❌ Invalid JSON content"; exit 1; }; fi',
-      message: 'Validating JSON content'
+      timeout: 10,
+      run_in_background: false
     },
     tags: ['validation', 'json', 'quality']
   },
@@ -126,13 +134,14 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Lint Code Before Git Operations',
     description: 'Runs linter before allowing git commits',
     category: 'testing',
+    event: 'PreToolUse',
+    matcher: '^Bash$',
     config: {
-      event: 'PreToolUse',
-      matcher: '^Bash$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command:
         'if [[ "$TOOL_INPUT" =~ git\\ commit ]]; then echo "🔍 Running linter..."; npm run lint || { echo "❌ Fix linting errors before committing"; exit 1; }; fi',
-      message: 'Running pre-commit linter'
+      timeout: 60,
+      run_in_background: false
     },
     tags: ['quality', 'git', 'linting']
   },
@@ -143,13 +152,14 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Auto-format Code on Save',
     description: 'Automatically formats code files after editing',
     category: 'productivity',
+    event: 'PostToolUse',
+    matcher: '^(Edit|Write|MultiEdit)$',
     config: {
-      event: 'PostToolUse',
-      matcher: '^(Edit|Write|MultiEdit)$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command:
         'if [[ "$TOOL_INPUT" =~ \\.(ts|tsx|js|jsx|css|scss)$ ]]; then prettier --write "$(echo "$TOOL_INPUT" | jq -r .file_path 2>/dev/null)" 2>/dev/null; fi',
-      message: 'Auto-formatting code'
+      timeout: 30,
+      run_in_background: true
     },
     tags: ['formatting', 'prettier', 'automation']
   },
@@ -158,13 +168,14 @@ export const HOOK_TEMPLATES: HookTemplate[] = [
     name: 'Backup Files Before Editing',
     description: 'Creates a backup copy of files before making changes',
     category: 'productivity',
+    event: 'PreToolUse',
+    matcher: '^(Edit|MultiEdit)$',
     config: {
-      event: 'PreToolUse',
-      matcher: '^(Edit|MultiEdit)$',
-      matcherType: 'tool_name_regex',
+      type: 'command',
       command:
         'FILE=$(echo "$TOOL_INPUT" | jq -r .file_path 2>/dev/null); if [[ -f "$FILE" ]]; then cp "$FILE" "$FILE.backup.$(date +%Y%m%d_%H%M%S)"; fi',
-      message: 'Creating backup of file'
+      timeout: 10,
+      run_in_background: false
     },
     tags: ['backup', 'safety', 'files']
   }
@@ -198,11 +209,8 @@ export function getAllTemplateTags(): string[] {
 export function templateToCreateBody(template: HookTemplate, level: 'user' | 'project' | 'local' = 'project') {
   return {
     level,
-    eventName: template.config.event,
-    matcher: template.config.matcher,
-    matcherType: template.config.matcherType,
-    command: template.config.command,
-    message: template.config.message,
-    allow: template.config.allow
+    eventName: template.event,
+    matcher: template.matcher,
+    config: template.config
   }
 }

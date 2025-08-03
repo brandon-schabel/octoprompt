@@ -461,7 +461,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                   onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}
                   projectRoot={project?.path || ''}
                   resolveImports={resolveImports}
-                  preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
+                  preferredEditor={preferredEditor}
                   onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
                   onNavigateToSearch={() => ref.searchInputRef.current?.focus()}
                 />

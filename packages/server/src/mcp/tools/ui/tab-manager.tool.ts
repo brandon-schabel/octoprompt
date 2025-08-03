@@ -10,12 +10,7 @@ import {
   type MCPToolDefinition,
   type MCPToolResponse
 } from '../shared'
-import {
-  getActiveTab,
-  setActiveTab,
-  clearActiveTab,
-  createTabNameGenerationService
-} from '@promptliano/services'
+import { getActiveTab, setActiveTab, clearActiveTab, createTabNameGenerationService } from '@promptliano/services'
 
 export enum TabManagerAction {
   GET_ACTIVE = 'get_active',
@@ -48,7 +43,7 @@ export const tabManagerTool: MCPToolDefinition = {
       },
       projectId: {
         type: 'number',
-        description: 'The project ID (required for all actions). Example: 1750564533014'
+        description: 'The project ID (required for all actions). Example: 1754111018844'
       },
       data: {
         type: 'object',
@@ -64,7 +59,7 @@ export const tabManagerTool: MCPToolDefinition = {
         const { action, projectId, data } = args
         switch (action) {
           case TabManagerAction.GET_ACTIVE: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
             const clientId = data?.clientId as string | undefined
             const activeTab = await getActiveTab(validProjectId, clientId)
             if (!activeTab) {
@@ -86,7 +81,7 @@ export const tabManagerTool: MCPToolDefinition = {
             }
           }
           case TabManagerAction.SET_ACTIVE: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
             const tabId = validateDataField<number>(data, 'tabId', 'number', '0')
             const clientId = data?.clientId as string | undefined
             const activeTab = await setActiveTab(validProjectId, tabId, clientId)
@@ -103,7 +98,7 @@ export const tabManagerTool: MCPToolDefinition = {
             }
           }
           case TabManagerAction.CLEAR_ACTIVE: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
             const clientId = data?.clientId as string | undefined
             const success = await clearActiveTab(validProjectId, clientId)
             return {
@@ -118,7 +113,7 @@ export const tabManagerTool: MCPToolDefinition = {
             }
           }
           case TabManagerAction.GENERATE_NAME: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
             const tabId = validateDataField<number>(data, 'tabId', 'number', '0')
             const tabData = data?.tabData || {}
             const existingNames = data?.existingNames || []

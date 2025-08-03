@@ -18,6 +18,7 @@ import {
 } from '@promptliano/config'
 import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/config'
 import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@promptliano/shared'
+import { mapProviderErrorToApiError } from './error-mappers'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@promptliano/storage'
 import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
@@ -722,18 +723,18 @@ export async function getProjectFilesByPaths(projectId: number, paths: string[])
   }
   await getProjectById(projectId) // Ensure project exists
   const uniquePaths = [...new Set(paths)]
-  
+
   try {
     const filesMap = await projectStorage.readProjectFiles(projectId)
     const resultFiles: ProjectFile[] = []
-    
+
     // Iterate through all files to find matches by path
     for (const file of Object.values(filesMap)) {
       if (uniquePaths.includes(file.path)) {
         resultFiles.push(file)
       }
     }
-    
+
     return resultFiles
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -753,14 +754,14 @@ export async function validateFilePaths(
   if (!paths || paths.length === 0) {
     return { valid: [], invalid: [] }
   }
-  
+
   try {
     const existingFiles = await getProjectFilesByPaths(projectId, paths)
-    const existingPaths = new Set(existingFiles.map(f => f.path))
-    
-    const valid = paths.filter(p => existingPaths.has(p))
-    const invalid = paths.filter(p => !existingPaths.has(p))
-    
+    const existingPaths = new Set(existingFiles.map((f) => f.path))
+
+    const valid = paths.filter((p) => existingPaths.has(p))
+    const invalid = paths.filter((p) => !existingPaths.has(p))
+
     return { valid, invalid }
   } catch (error) {
     logger.error('Failed to validate file paths', { projectId, paths, error })
@@ -854,16 +855,49 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
   }
 
   try {
-    const result = await generateStructuredData({
-      prompt: fileContent,
-      options: cfg,
-      schema: z.object({
-        summary: z.string()
-      }),
-      systemMessage: systemPrompt
-    })
+    let summary: string
 
-    const summary = result.object.summary
+    try {
+      // Try structured data generation first
+      const result = await generateStructuredData({
+        prompt: fileContent,
+        options: cfg,
+        schema: z.object({
+          summary: z.string()
+        }),
+        systemMessage: systemPrompt
+      })
+      summary = result.object.summary
+    } catch (structuredError: any) {
+      // Check if it's a JSON parsing error that we should fallback from
+      const mappedError = mapProviderErrorToApiError(structuredError, provider, 'generateStructuredData')
+
+      if (
+        mappedError.code === 'PROVIDER_JSON_PARSE_ERROR' ||
+        structuredError?.name === 'AI_NoObjectGeneratedError' ||
+        structuredError?.name === 'AI_JSONParseError'
+      ) {
+        logger.warn(
+          `Structured data generation failed for ${file.path}, falling back to text generation`,
+          structuredError
+        )
+
+        // Fallback to text generation
+        const textResult = await generateSingleText({
+          prompt: fileContent,
+          systemMessage:
+            systemPrompt +
+            '\n\nIMPORTANT: Return ONLY the summary text, no JSON formatting, no markdown, just plain text.',
+          options: cfg
+        })
+
+        summary = textResult.trim()
+      } else {
+        // Re-throw if it's not a JSON parsing error
+        throw structuredError
+      }
+    }
+
     const trimmedSummary = summary.trim()
 
     const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
@@ -909,16 +943,49 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
   }
 
   try {
-    const result = await generateStructuredData({
-      prompt: truncatedContent,
-      options: cfg,
-      schema: z.object({
-        summary: z.string()
-      }),
-      systemMessage: systemPrompt
-    })
+    let summary: string
 
-    const summary = result.object.summary
+    try {
+      // Try structured data generation first
+      const result = await generateStructuredData({
+        prompt: truncatedContent,
+        options: cfg,
+        schema: z.object({
+          summary: z.string()
+        }),
+        systemMessage: systemPrompt
+      })
+      summary = result.object.summary
+    } catch (structuredError: any) {
+      // Check if it's a JSON parsing error that we should fallback from
+      const mappedError = mapProviderErrorToApiError(structuredError, provider, 'generateStructuredData')
+
+      if (
+        mappedError.code === 'PROVIDER_JSON_PARSE_ERROR' ||
+        structuredError?.name === 'AI_NoObjectGeneratedError' ||
+        structuredError?.name === 'AI_JSONParseError'
+      ) {
+        logger.warn(
+          `Structured data generation failed for truncated file ${file.path}, falling back to text generation`,
+          structuredError
+        )
+
+        // Fallback to text generation
+        const textResult = await generateSingleText({
+          prompt: truncatedContent,
+          systemMessage:
+            systemPrompt +
+            '\n\nIMPORTANT: Return ONLY the summary text, no JSON formatting, no markdown, just plain text.',
+          options: cfg
+        })
+
+        summary = textResult.trim()
+      } else {
+        // Re-throw if it's not a JSON parsing error
+        throw structuredError
+      }
+    }
+
     const trimmedSummary = summary.trim() + ' [Note: File was truncated for summarization due to size]'
 
     const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {

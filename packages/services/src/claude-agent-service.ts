@@ -23,6 +23,12 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
     // Generate agent ID based on name
     const agentId = claudeAgentStorage.generateAgentId(data.name)
 
+    // Check if agent with this ID already exists
+    const existingAgent = await claudeAgentStorage.getAgentById(projectPath, agentId)
+    if (existingAgent) {
+      throw new ApiError(409, `Agent with ID '${agentId}' already exists.`, 'AGENT_ALREADY_EXISTS')
+    }
+
     // Prepare file path
     const filePath = data.filePath || `${agentId}.md`
     const fullFilePath = path.join(claudeAgentStorage.getAgentsDir(projectPath), filePath)

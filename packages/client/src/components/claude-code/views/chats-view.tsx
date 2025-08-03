@@ -261,7 +261,7 @@ export function ChatsView({ projectId, projectName, sessionId, onBack }: ChatsVi
     onSuccess: (chat) => {
       toast.success('Session imported to chat')
       // Navigate to the new chat
-      navigate({ to: '/chat', search: { id: chat.id } })
+      navigate({ to: '/chat', search: { chatId: chat.id } })
     },
     onError: (error) => {
       toast.error(`Failed to import session: ${error.message}`)

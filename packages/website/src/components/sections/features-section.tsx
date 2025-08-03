@@ -1,10 +1,19 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import {
+  Badge,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Button
+} from '@promptliano/ui'
 import { ArrowRight, Sparkles, Code2 } from 'lucide-react'
 import { featuresData, type FeatureItem, type FeatureCategory } from '@/schemas/features.schemas'
 import { fadeInUp, staggerContainer } from '@/components/ui/animation-utils'
