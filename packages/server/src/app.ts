@@ -18,6 +18,7 @@ import { agentFilesRoutes } from './routes/agent-files-routes'
 import { claudeAgentRoutes } from './routes/claude-agent-routes'
 import { claudeCommandRoutes } from './routes/claude-command-routes'
 import { claudeCodeRoutes } from './routes/claude-code-routes'
+import { claudeHookRoutesSimple } from './routes/claude-hook-routes-simple'
 import { mcpInstallationRoutes } from './routes/mcp-installation-routes'
 import { mcpProjectConfigApp } from './routes/mcp-project-config-routes'
 import { mcpGlobalConfigRoutes } from './routes/mcp-global-config-routes'
@@ -195,6 +196,7 @@ app.route('/', agentFilesRoutes)
 app.route('/', claudeAgentRoutes)
 app.route('/', claudeCommandRoutes)
 app.route('/', claudeCodeRoutes)
+app.route('/', claudeHookRoutesSimple)
 app.route('/', mcpInstallationRoutes)
 app.route('/', mcpProjectConfigApp)
 app.route('/', mcpGlobalConfigRoutes)

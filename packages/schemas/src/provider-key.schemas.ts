@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { unixTSSchemaSpec } from './schema-utils'
+import { unixTSSchemaSpec, entityIdSchema } from './schema-utils'
 
 export const AI_API_PROVIDERS = [
   'openai',
@@ -19,7 +19,7 @@ export type APIProviders = z.infer<typeof providerSchema>
 
 export const ProviderKeySchema = z
   .object({
-    id: unixTSSchemaSpec,
+    id: entityIdSchema,
     name: z.string().openapi({ example: 'My OpenAI Key', description: 'User-defined name for the key' }),
     provider: z
       .string()
@@ -32,9 +32,17 @@ export const ProviderKeySchema = z
       .string()
       .openapi({ example: 'sk-xxxxxxxxxxxxxxxxxxxx', description: 'The actual API Key (handle with care)' }),
     encrypted: z.boolean().default(false).openapi({ example: true, description: 'Whether this key is encrypted' }),
-    iv: z.string().optional().openapi({ example: 'base64string', description: 'Initialization vector for encryption' }),
-    tag: z.string().optional().openapi({ example: 'base64string', description: 'Authentication tag for AES-GCM' }),
-    salt: z.string().optional().openapi({ example: 'base64string', description: 'Salt for key derivation' }),
+    iv: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ example: 'base64string', description: 'Initialization vector for encryption' }),
+    tag: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ example: 'base64string', description: 'Authentication tag for AES-GCM' }),
+    salt: z.string().nullable().optional().openapi({ example: 'base64string', description: 'Salt for key derivation' }),
     isDefault: z
       .boolean()
       .default(false)

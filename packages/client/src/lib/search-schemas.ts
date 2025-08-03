@@ -36,7 +36,10 @@ export const assetViewSchema = z
   .optional()
 
 // Claude Code view sub-tabs enum
-export const claudeCodeViewSchema = z.enum(['agents', 'commands', 'mcp', 'sessions', 'chats', 'settings']).catch('agents').optional()
+export const claudeCodeViewSchema = z
+  .enum(['agents', 'commands', 'mcp', 'sessions', 'chats', 'hooks', 'settings'])
+  .catch('agents')
+  .optional()
 
 // Manage view sub-tabs enum
 export const manageViewSchema = z

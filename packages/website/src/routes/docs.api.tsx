@@ -556,9 +556,12 @@ function ApiReferencePage() {
           <p className='text-muted-foreground mb-4'>
             Check out our comprehensive guides or join the community for support.
           </p>
-          <div className='flex gap-4'>
-            <a href='/docs/guides' className='btn btn-primary'>
-              View Guides
+          <div className='flex flex-wrap gap-4'>
+            <a href='/docs/how-to/mcp-best-practices' className='btn btn-primary'>
+              MCP Best Practices
+            </a>
+            <a href='/docs/guides' className='btn btn-outline'>
+              View All Guides
             </a>
             <a href='/community' className='btn btn-outline'>
               Ask Community

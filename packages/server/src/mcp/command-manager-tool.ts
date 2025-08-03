@@ -10,10 +10,12 @@ import {
   deleteCommand,
   executeCommand,
   suggestCommands,
+  generateCommand,
   getProjectById,
   type CreateClaudeCommandBody,
   type UpdateClaudeCommandBody,
-  type SearchCommandsQuery
+  type SearchCommandsQuery,
+  type CommandGenerationRequest
 } from '@promptliano/services'
 
 // Action enum
@@ -25,7 +27,8 @@ export enum CommandManagerAction {
   DELETE = 'delete',
   EXECUTE = 'execute',
   SEARCH = 'search',
-  SUGGEST = 'suggest'
+  SUGGEST = 'suggest',
+  GENERATE = 'generate'
 }
 
 // Command Manager schema
@@ -96,7 +99,7 @@ function createTrackedHandler(toolName: string, handler: (args: any) => Promise<
 export const commandManagerTool: MCPToolDefinition = {
   name: 'command_manager',
   description:
-    'Manage Claude Code slash commands. Actions: list (list all commands), get (get command details), create (create new command), update (update command), delete (delete command), execute (execute command with arguments), search (search commands), suggest (AI-powered suggestions)',
+    'Manage Claude Code slash commands. Actions: list (list all commands), get (get command details), create (create new command), update (update command), delete (delete command), execute (execute command with arguments), search (search commands), suggest (AI-powered suggestions), generate (AI-powered command generation)',
   inputSchema: {
     type: 'object',
     properties: {
@@ -249,6 +252,54 @@ ${command.content}`
               .join('\n\n')
             return {
               content: [{ type: 'text', text: suggestionList || 'No command suggestions generated' }]
+            }
+          }
+
+          case CommandManagerAction.GENERATE: {
+            // Validate required fields
+            const name = validateDataField<string>(data, 'name', 'string', 'test-runner')
+            const description = validateDataField<string>(
+              data,
+              'description',
+              'string',
+              'Run tests for the current file'
+            )
+            const userIntent = validateDataField<string>(
+              data,
+              'userIntent',
+              'string',
+              'I want a command that runs tests with coverage'
+            )
+
+            // Build generation request
+            const generationRequest: CommandGenerationRequest = {
+              name,
+              description,
+              userIntent,
+              namespace: data?.namespace,
+              scope: data?.scope || 'project',
+              context: data?.context
+            }
+
+            // Generate the command
+            const generatedCommand = await generateCommand(validProjectId, generationRequest)
+
+            // Format the response
+            let response = `Generated Command: ${generatedCommand.name}\n\n`
+            response += `Description: ${generatedCommand.description}\n\n`
+            response += `Content:\n${generatedCommand.content}\n\n`
+            response += `Frontmatter:\n${JSON.stringify(generatedCommand.frontmatter, null, 2)}\n\n`
+            response += `Rationale: ${generatedCommand.rationale}\n`
+
+            if (generatedCommand.suggestedVariations && generatedCommand.suggestedVariations.length > 0) {
+              response += `\nSuggested Variations:\n`
+              generatedCommand.suggestedVariations.forEach((variation, idx) => {
+                response += `${idx + 1}. ${variation.name}: ${variation.description}\n   Changes: ${variation.changes}\n`
+              })
+            }
+
+            return {
+              content: [{ type: 'text', text: response }]
             }
           }
 

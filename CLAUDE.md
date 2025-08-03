@@ -4,7 +4,9 @@ You are an expert at using the Promptliano MCP, the Promptliano MCP will guide y
 
 You must use the "promptliano-planning-architect" agent to do ALL project planning.
 
-If the user ever mentions, plans, tasks, or tickets, immediately use the promptliano-planning-architect
+If the user ever mentions, plans, tasks, or tickets, immediately use the promptliano-planning-architect. You should enter into a planning mode and create tickets in promptliano because each task contains suggsted prompts, files, and agent. The agent context should be inserted, then prompts, files, and then that help guide the AI much better based on the current task.
+
+For full features load into context ./CLAUDE_CODE_PROMPTLIANO_FEATURE_DEVELOPMENT.md, this provides a very detailed guide on how to properly build features in promtliano
 
 - Use the Promptliano MCP Overview tool to understand what the user is currently working on, this will give you insights
   into their active project id, selected files, recent tickets. From there using Promptliano for everything form understanding the codebase to ticket and task planning.
@@ -12,6 +14,11 @@ If the user ever mentions, plans, tasks, or tickets, immediately use the promptl
 - When building new features use Promptliano to understand the architecture of the project. try to follow the patterns that the project is already using.
 - Before searching the internet for library docs, check to see if the user already has library docs in their Promptliano prompts library
 
+## Ports
+
+Dev Server: 3147
+Prod Server: 3579
+Client Dev Server: 1420
 Generally a fullstack feature consists of the follow
 
 - Zod data schemas
@@ -19,8 +26,8 @@ Generally a fullstack feature consists of the follow
 - Services using the zod schemas as the source of truth
 - Create MCP tools so AIs can use the new service
 - Feature routes with zod + hono openAPI integration
-- Add routes to api-client
-- Setup data hook using react tanstack query that consume the api-client and add data invalidations where it makes sense
+- Add routes to api-client (IMPORTANT: All API client code should be added to packages/api-client/api-client.ts as a service class extending BaseApiClient, following the pattern of existing services like ChatService, ProjectService, etc. Do NOT create separate client files)
+- Setup data hook using react tanstack query that consume the api-client and add data invalidations where it makes sense (React hooks go in packages/client/src/hooks/api/ and should import promptlianoClient from '@/hooks/promptliano-client')
 - Explorer if there are current components that meet current uses cases, if not add ShadCN components or compose new components based on the foundations of the primitive componets in the repo
 - Integrate components and data hooks into a page to complete the feature
 
@@ -63,6 +70,7 @@ The selected files feature has been migrated from ID-based to path-based trackin
 - **Component Analysis**: `docs/selected-files-components-analysis.md` - All affected components
 
 Key points:
+
 - File paths are stable identifiers (unique per project)
 - The system now stores both `selectedFiles` (IDs) and `selectedFilePaths` for compatibility
 - UI components should prefer path-based selection when available
@@ -145,12 +153,14 @@ Make strong use of the agents feature, make use of specialized agents to handle 
 
 You MUST proactively use Claude's built-in agents at appropriate times:
 
-#### After Feature Implementation:
+#### After Feature Implementation
+
 - **Always use `staff-engineer-code-reviewer`** after implementing any significant feature or functionality
 - This includes: new components, API endpoints, services, database changes, or any substantial code additions
 - The code reviewer will analyze implementation quality, suggest improvements, and catch potential issues
 
-#### When Refactoring or Simplifying:
+#### When Refactoring or Simplifying
+
 - **Use `code-modularization-expert`** when:
   - User asks to refactor code
   - User asks to simplify files or reduce complexity
@@ -158,7 +168,8 @@ You MUST proactively use Claude's built-in agents at appropriate times:
   - Breaking down large files into smaller, more manageable modules
   - Improving code organization and separation of concerns
 
-#### Other Key Agent Usage:
+#### Other Key Agent Usage
+
 - **Use `frontend-shadcn-expert`** when building React UI components or implementing frontend features
 - **Use `hono-bun-api-architect`** when creating or modifying API endpoints
 - **Use `zod-schema-architect`** when designing data validation schemas
@@ -168,10 +179,10 @@ You MUST proactively use Claude's built-in agents at appropriate times:
 - **Use `promptliano-mcp-tool-creator`** when creating new MCP tools
 - **Use `simple-git-integration-expert`** when implementing Git-related features
 - **Use `markdown-docs-writer`** when creating documentation
-- **Use `sqlite-json-migration-expert` when doing SQLite JSON schema migrations.
+- \*\*Use `sqlite-json-migration-expert` when doing SQLite JSON schema migrations.
 
+### Example Workflow
 
-### Example Workflow:
 ```
 1. User requests: "Add a new user profile feature"
 2. You implement: schemas, storage, services, API routes, UI components
@@ -180,7 +191,8 @@ You MUST proactively use Claude's built-in agents at appropriate times:
 5. Result: High-quality, well-reviewed, modular code
 ```
 
-### Important Notes:
+### Important Notes
+
 - Don't wait for user to ask for code review - do it proactively
 - Use multiple agents concurrently when appropriate for maximum efficiency
 - Each agent should receive clear context about what was implemented/changed
@@ -189,8 +201,10 @@ You MUST proactively use Claude's built-in agents at appropriate times:
 
 All UI navigation state (tabs, subtabs, views, filters) is persisted in URL search parameters and validated using Zod schemas. When adding any new UI navigation elements, you MUST update the corresponding validation schemas.
 
-### Key Principle:
+### Key Principle
+
 Any value that appears in the URL search params must have a corresponding Zod schema validation. This includes:
+
 - Main navigation tabs
 - Sub-navigation tabs within views
 - Filter states
@@ -198,11 +212,13 @@ Any value that appears in the URL search params must have a corresponding Zod sc
 - Selected item IDs
 - Any other UI state persisted in the URL
 
-### Common Validation Files:
+### Common Validation Files
+
 - `packages/client/src/lib/search-schemas.ts` - Contains all route search parameter schemas
 - `packages/schemas/` - Contains domain-specific schemas for forms and data
 
-### Required Updates When Adding New UI Navigation:
+### Required Updates When Adding New UI Navigation
+
 1. **Update the enum schema** for the navigation type in `search-schemas.ts`
 2. **Add the new value to the enum** with a `.catch()` default
 3. **Update the parent search schema** if adding a new navigation category
@@ -210,15 +226,20 @@ Any value that appears in the URL search params must have a corresponding Zod sc
 5. **Export types** if needed for TypeScript support
 6. **Update navigation components** to handle the new value
 
-### Examples:
+### Examples
 
-#### Adding a new subtab to an existing view:
+#### Adding a new subtab to an existing view
+
 ```typescript
 // In search-schemas.ts
-export const claudeCodeViewSchema = z.enum(['agents', 'commands', 'sessions', 'chats', 'settings']).catch('agents').optional()
+export const claudeCodeViewSchema = z
+  .enum(['agents', 'commands', 'sessions', 'chats', 'settings'])
+  .catch('agents')
+  .optional()
 ```
 
-#### Adding a new main tab with subtabs:
+#### Adding a new main tab with subtabs
+
 ```typescript
 // Define the new subtab schema
 export const analyticsViewSchema = z.enum(['overview', 'usage', 'performance']).catch('overview').optional()
@@ -230,19 +251,21 @@ export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema)
   ticketView: ticketViewSchema,
   assetView: assetViewSchema,
   claudeCodeView: claudeCodeViewSchema,
-  analyticsView: analyticsViewSchema, // Add here
+  analyticsView: analyticsViewSchema // Add here
   // ... other fields
 })
 ```
 
-### Common Issues and Solutions:
+### Common Issues and Solutions
+
 - **Tab click redirects to wrong view** → Missing enum value in schema
 - **Navigation state not persisting** → Schema not added to parent search schema
 - **Form validation errors** → Check optional field handling (use `.optional()` and `.catch()`)
 - **TypeScript errors** → Update exported types to match schema changes
 - **Default tab not working** → Ensure `.catch('default-value')` is set correctly
 
-### Testing Checklist:
+### Testing Checklist
+
 - [ ] Direct URL navigation works with new tab value
 - [ ] Tab click updates URL correctly
 - [ ] Refresh maintains selected tab
@@ -265,36 +288,153 @@ Implement These Practices:
 - Follow KISS (Keep it simple stupid)
 - Follow SRP (Single Responsibility Principle)
 
+## Testing
+
+### Running Tests
+
+The project has comprehensive test coverage across multiple packages. Use these commands to run tests:
+
+```bash
+# Run all tests across all packages
+bun run test:all
+
+# Run tests for individual packages
+bun run test:shared      # Shared utilities (133 tests ✅)
+bun run test:schemas     # Zod schemas (93 tests, 11 failing ❌)
+bun run test:services    # Services layer (multiple failing ❌)
+bun run test:storage     # Storage layer (multiple failing ❌)
+bun run test:api-client  # API client (multiple failing ❌)
+bun run test:config      # Configuration (5 tests ✅)
+bun run test:server      # Server (no tests yet ⚠️)
+```
+
+### Current Test Status
+
+- **Passing**: `shared` (133), `config` (5)
+- **Failing**: `schemas` (11), `services`, `storage`, `api-client`
+- **No tests**: `server`
+
+See `TEST_AND_TYPE_REPORT.md` for detailed failure information.
+
+## Type Checking
+
+### Running Type Checks
+
+All packages have TypeScript type checking configured. Use these commands:
+
+```bash
+# Run type checks for all packages
+bun run typecheck
+
+# Run type checks for individual packages
+bun run typecheck:server
+bun run typecheck:shared
+bun run typecheck:schemas
+bun run typecheck:services
+bun run typecheck:storage
+bun run typecheck:api-client
+bun run typecheck:config
+bun run typecheck:client
+bun run typecheck:website
+```
+
+### Type Safety Requirements
+
+- All packages must pass type checking before merging
+- Use `tsc --noEmit` to check types without building
+- Fix type errors immediately - don't use `@ts-ignore` unless absolutely necessary
+
+## Validation
+
+### Comprehensive Validation
+
+Use the validation scripts for CI/CD and pre-commit checks:
+
+```bash
+# Run complete validation (tests + type checks + formatting)
+bun run validate
+
+# Run quick validation (type checks + tests only)
+bun run validate:quick
+```
+
+The `validate` script runs:
+
+1. Type checking for all packages
+2. All unit tests
+3. Format checking with Prettier
+
+### CI/CD Integration
+
+The `scripts/validate-all.ts` script provides detailed output and exit codes suitable for CI/CD pipelines. It runs validations sequentially and provides a summary report.
+
+## Available Scripts
+
 use bun to run all npm scripts in package.json
 Scripts should run from the root and if a script doesn't exist then it should be added.
-Below are available scripts and what they do.
 
+### Development Scripts
+
+```bash
+"dev": "bun run scripts/start-dev.ts"                    # Start full dev environment
+"dev:client": "bun run scripts/start-client-dev.ts"      # Start client dev only
+"dev:server": "bun run scripts/start-server-dev.ts"      # Start server dev only
+"dev:website": "bun run scripts/start-website-dev.ts"    # Start website dev
+"stop": "bun run scripts/stop.ts"                        # Stop all dev processes
 ```
-scripts: {
-"dev": "bun run scripts/start-dev.ts",
-    "dev:client": "bun run scripts/start-client-dev.ts",
-    "dev:server": "bun run scripts/start-server-dev.ts",
-    "stop": "bun run scripts/stop.ts",
-    "build-binaries": "bun run scripts/build-binaries.ts",
-    "prepare-tauri-sidecars": "bun run scripts/prepare-tauri-sidecars.ts",
-    "prepare-dev-sidecar": "bun run scripts/prepare-dev-sidecar.ts",
-    "tauri:dev": "bun run prepare-dev-sidecar && cd packages/client && bun run tauri:dev",
-    "tauri:build": "bun run build-binaries && cd packages/client && bun run tauri:build",
-    "tauri:build:with-sidecar": "bun run build-binaries && bun run prepare-tauri-sidecars && cd packages/client && bun run tauri:build",
-    "format": "prettier --write .",
-    "test:shared": "cd packages/shared && bun run test",
-    "test:schemas": "cd packages/schemas && bun run test",
-    "test:services": "cd packages/services && bun run test",
-    "test:storage": "cd packages/storage && bun run test",
-    "test:api-client": "cd packages/api-client && bun run test",
-    "test:config": "cd packages/config && bun run test",
-    "test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client && bun run test:config",
-    "migrate:sqlite": "bun run scripts/migrate-to-sqlite.ts",
-    "migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run",
-    "generate-encryption-key": "bun run packages/shared/src/utils/generate-key.ts",
-    "migrate:encrypt-keys": "bun run packages/storage/src/migrations/encrypt-provider-keys.ts",
-    "dev:website": "bun run scripts/start-website-dev.ts",
-    "build:website": "cd packages/website && bun run build",
-    "preview:website": "cd packages/website && bun run preview"
-}
+
+### Build Scripts
+
+```bash
+"build-binaries": "bun run scripts/build-binaries.ts"
+"build:website": "cd packages/website && bun run build"
+"tauri:build": "bun run build-binaries && cd packages/client && bun run tauri:build"
+"tauri:build:with-sidecar": "bun run build-binaries && bun run prepare-tauri-sidecars && cd packages/client && bun run tauri:build"
+```
+
+### Test Scripts
+
+```bash
+"test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client && bun run test:config"
+"test:shared": "cd packages/shared && bun run test"
+"test:schemas": "cd packages/schemas && bun run test"
+"test:services": "cd packages/services && bun run test"
+"test:storage": "cd packages/storage && bun run test"
+"test:api-client": "cd packages/api-client && bun run test"
+"test:config": "cd packages/config && bun run test"
+"test:server": "cd packages/server && bun run test"
+```
+
+### Type Check Scripts
+
+```bash
+"typecheck": "bun run typecheck:server && bun run typecheck:shared && bun run typecheck:schemas && bun run typecheck:services && bun run typecheck:storage && bun run typecheck:api-client && bun run typecheck:config && bun run typecheck:client && bun run typecheck:website"
+"typecheck:server": "cd packages/server && bun run typecheck"
+"typecheck:shared": "cd packages/shared && bun run typecheck"
+"typecheck:schemas": "cd packages/schemas && bun run typecheck"
+"typecheck:services": "cd packages/services && bun run typecheck"
+"typecheck:storage": "cd packages/storage && bun run typecheck"
+"typecheck:api-client": "cd packages/api-client && bun run typecheck"
+"typecheck:config": "cd packages/config && bun run typecheck"
+"typecheck:client": "cd packages/client && tsc --noEmit"
+"typecheck:website": "cd packages/website && bun run typecheck"
+```
+
+### Validation Scripts
+
+```bash
+"validate": "bun run scripts/validate-all.ts"           # Full validation
+"validate:quick": "bun run typecheck && bun run test:all" # Quick validation
+```
+
+### Other Scripts
+
+```bash
+"format": "prettier --write ."                           # Format all files
+"migrate:sqlite": "bun run scripts/migrate-to-sqlite.ts"
+"migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run"
+"generate-encryption-key": "bun run packages/shared/src/utils/generate-key.ts"
+"migrate:encrypt-keys": "bun run packages/storage/src/migrations/encrypt-provider-keys.ts"
+"sync-version": "bun run scripts/sync-version.ts"
+"update-version": "bun run scripts/update-version.ts"
 ```

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Edit, Trash2, Terminal, Calendar, Loader2, FolderOpen, User } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Terminal, Calendar, Loader2, FolderOpen, User, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGetProjectCommands, useDeleteCommand } from '@/hooks/api-hooks'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,6 +18,7 @@ import {
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
 import { CommandDialog } from '../command-dialog'
+import { CommandGenerationDialog } from '../command-generation-dialog'
 import type { ClaudeCommand } from '@promptliano/schemas'
 
 interface CommandsViewProps {
@@ -31,6 +32,8 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
   const [deleteCommand, setDeleteCommand] = useState<{ name: string; namespace?: string } | null>(null)
   const [commandDialogOpen, setCommandDialogOpen] = useState(false)
   const [editingCommand, setEditingCommand] = useState<{ name: string; namespace?: string } | null>(null)
+  const [generatedCommand, setGeneratedCommand] = useState<ClaudeCommand | null>(null)
+  const [generationDialogOpen, setGenerationDialogOpen] = useState(false)
 
   // Fetch commands for this specific project
   const { data: commandsResponse, isLoading, error } = useGetProjectCommands(projectId)
@@ -50,11 +53,13 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
 
   const handleCreateCommand = () => {
     setEditingCommand(null)
+    setGeneratedCommand(null)
     setCommandDialogOpen(true)
   }
 
   const handleEditCommand = (command: ClaudeCommand) => {
     setEditingCommand({ name: command.name, namespace: command.namespace })
+    setGeneratedCommand(null)
     setCommandDialogOpen(true)
   }
 
@@ -81,6 +86,13 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
     }
   }
 
+  const handleCommandGenerated = (command: ClaudeCommand) => {
+    // After generating, open the command dialog with the generated content
+    setEditingCommand(null)
+    setGeneratedCommand(command)
+    setCommandDialogOpen(true)
+  }
+
   // Group commands by namespace
   const commandsByNamespace = filteredCommands.reduce(
     (acc, command) => {
@@ -102,10 +114,16 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
           <h2 className='text-2xl font-bold'>Claude Code Commands</h2>
           <p className='text-muted-foreground'>Manage slash commands for {projectName || 'this project'}</p>
         </div>
-        <Button onClick={handleCreateCommand}>
-          <Plus className='h-4 w-4 mr-2' />
-          New Command
-        </Button>
+        <div className='flex gap-2'>
+          <Button variant='outline' onClick={() => setGenerationDialogOpen(true)}>
+            <Sparkles className='h-4 w-4 mr-2' />
+            Generate with AI
+          </Button>
+          <Button onClick={handleCreateCommand}>
+            <Plus className='h-4 w-4 mr-2' />
+            New Command
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -203,7 +221,7 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
                     </CardHeader>
                     <CardContent>
                       <CardDescription className='mb-3'>{command.description || 'No description'}</CardDescription>
-                      
+
                       {/* Badges for scope and frontmatter */}
                       <div className='flex flex-wrap gap-2 mb-3'>
                         <Badge variant={command.scope === 'user' ? 'secondary' : 'default'}>
@@ -249,10 +267,16 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
             {searchQuery ? 'No commands found matching your search.' : 'No commands created yet.'}
           </p>
           {!searchQuery && (
-            <Button onClick={handleCreateCommand}>
-              <Plus className='h-4 w-4 mr-2' />
-              Create Your First Command
-            </Button>
+            <div className='flex gap-2 justify-center'>
+              <Button variant='outline' onClick={() => setGenerationDialogOpen(true)}>
+                <Sparkles className='h-4 w-4 mr-2' />
+                Generate with AI
+              </Button>
+              <Button onClick={handleCreateCommand}>
+                <Plus className='h-4 w-4 mr-2' />
+                Create Your First Command
+              </Button>
+            </div>
           )}
         </div>
       )}
@@ -288,11 +312,21 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
           setCommandDialogOpen(open)
           if (!open) {
             setEditingCommand(null)
+            setGeneratedCommand(null)
           }
         }}
         commandName={editingCommand?.name}
         namespace={editingCommand?.namespace}
         projectId={projectId}
+        initialData={generatedCommand}
+      />
+
+      {/* Command Generation Dialog */}
+      <CommandGenerationDialog
+        open={generationDialogOpen}
+        onOpenChange={setGenerationDialogOpen}
+        projectId={projectId}
+        onCommandGenerated={handleCommandGenerated}
       />
     </div>
   )

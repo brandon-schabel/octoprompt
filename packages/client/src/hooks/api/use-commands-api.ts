@@ -4,7 +4,8 @@ import type {
   UpdateClaudeCommandBody,
   ClaudeCommand,
   SearchCommandsQuery,
-  CommandSuggestions
+  CommandSuggestions,
+  CommandGenerationRequest
 } from '@promptliano/schemas'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -16,8 +17,7 @@ export const COMMAND_KEYS = {
   list: (projectId: number) => [...COMMAND_KEYS.all, 'list', projectId] as const,
   detail: (projectId: number, commandName: string, namespace?: string) =>
     [...COMMAND_KEYS.all, 'detail', projectId, commandName, namespace].filter(Boolean) as const,
-  search: (projectId: number, query: SearchCommandsQuery) =>
-    [...COMMAND_KEYS.all, 'search', projectId, query] as const,
+  search: (projectId: number, query: SearchCommandsQuery) => [...COMMAND_KEYS.all, 'search', projectId, query] as const,
   suggestions: (projectId: number) => [...COMMAND_KEYS.all, 'suggestions', projectId] as const
 }
 
@@ -99,15 +99,8 @@ export function useDeleteCommand(projectId: number) {
 
 export function useExecuteCommand(projectId: number) {
   return useMutation({
-    mutationFn: ({
-      commandName,
-      args,
-      namespace
-    }: {
-      commandName: string
-      args?: string
-      namespace?: string
-    }) => promptlianoClient.commands.executeCommand(projectId, commandName, args, namespace),
+    mutationFn: ({ commandName, args, namespace }: { commandName: string; args?: string; namespace?: string }) =>
+      promptlianoClient.commands.executeCommand(projectId, commandName, args, namespace),
     onSuccess: (result, { commandName }) => {
       toast.success(`Command '${commandName}' executed successfully`)
     },
@@ -127,6 +120,25 @@ export function useSuggestCommands(projectId: number) {
   })
 }
 
+export function useGenerateCommand(projectId: number) {
+  return useMutation({
+    mutationFn: (data: CommandGenerationRequest) => promptlianoClient.commands.generateCommand(projectId, data),
+    onSuccess: (result) => {
+      toast.success(`Command '${result.data.name}' generated successfully`)
+    },
+    onError: (error: any) => {
+      // Check if it's a timeout error
+      if (error.errorCode === 'TIMEOUT' || error.message?.includes('timeout')) {
+        toast.error(
+          'Command generation timed out. This can happen with complex requests. Please try again with simpler requirements or contact support if the issue persists.'
+        )
+      } else {
+        toast.error(error.message || 'Failed to generate command')
+      }
+    }
+  })
+}
+
 // --- Invalidation Utilities ---
 export function useInvalidateCommands() {
   const queryClient = useQueryClient()
@@ -141,12 +153,7 @@ export function useInvalidateCommands() {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey
-          return (
-            Array.isArray(key) &&
-            key[0] === 'commands' &&
-            key[1] === 'search' &&
-            key[2] === projectId
-          )
+          return Array.isArray(key) && key[0] === 'commands' && key[1] === 'search' && key[2] === projectId
         }
       })
     },
@@ -161,10 +168,10 @@ export function useInvalidateCommands() {
       })
     },
     setCommandDetail: (projectId: number, command: ClaudeCommand) => {
-      queryClient.setQueryData(
-        COMMAND_KEYS.detail(projectId, command.name, command.namespace),
-        { success: true, data: command }
-      )
+      queryClient.setQueryData(COMMAND_KEYS.detail(projectId, command.name, command.namespace), {
+        success: true,
+        data: command
+      })
     }
   }
 }

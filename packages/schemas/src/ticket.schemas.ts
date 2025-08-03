@@ -1,18 +1,25 @@
 import { z } from '@hono/zod-openapi'
-import { unixTSSchemaSpec, unixTSOptionalSchemaSpec } from './schema-utils'
+import {
+  unixTSSchemaSpec,
+  unixTSOptionalSchemaSpec,
+  entityIdSchema,
+  entityIdOptionalSchema,
+  entityIdNullableOptionalSchema,
+  entityIdArraySchema
+} from './schema-utils'
 
 // Base ticket schema with Promptliano patterns
 export const TicketSchema = z
   .object({
-    id: unixTSSchemaSpec,
-    projectId: unixTSSchemaSpec,
+    id: entityIdSchema,
+    projectId: entityIdSchema,
     title: z.string().min(1),
     overview: z.string().default(''),
     status: z.enum(['open', 'in_progress', 'closed']).default('open'),
     priority: z.enum(['low', 'normal', 'high']).default('normal'),
     suggestedFileIds: z.array(z.string()).default([]),
-    suggestedAgentIds: z.array(unixTSSchemaSpec).default([]),
-    suggestedPromptIds: z.array(unixTSSchemaSpec).default([]),
+    suggestedAgentIds: z.array(z.string()).default([]),
+    suggestedPromptIds: z.array(entityIdSchema).default([]),
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })
@@ -21,18 +28,18 @@ export const TicketSchema = z
 // Enhanced Task schema
 export const TicketTaskSchema = z
   .object({
-    id: unixTSSchemaSpec,
-    ticketId: unixTSSchemaSpec,
+    id: entityIdSchema,
+    ticketId: entityIdSchema,
     content: z.string().min(1), // Keep as task title/summary
     description: z.string().default(''), // NEW: Detailed task breakdown
     suggestedFileIds: z.array(z.string()).default([]), // NEW: File associations
     done: z.boolean().default(false),
     orderIndex: z.number().min(0),
-    estimatedHours: z.number().optional(), // NEW: Time estimation
-    dependencies: z.array(unixTSSchemaSpec).default([]), // NEW: Task dependencies
+    estimatedHours: z.number().nullable().optional(), // NEW: Time estimation
+    dependencies: z.array(entityIdSchema).default([]), // NEW: Task dependencies
     tags: z.array(z.string()).default([]), // NEW: Tags for categorization
-    agentId: unixTSOptionalSchemaSpec, // NEW: Assigned agent for this task
-    suggestedPromptIds: z.array(unixTSSchemaSpec).default([]), // NEW: Suggested prompts
+    agentId: z.string().nullable().optional(), // NEW: Assigned agent for this task
+    suggestedPromptIds: z.array(entityIdSchema).default([]), // NEW: Suggested prompts
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })
@@ -41,14 +48,14 @@ export const TicketTaskSchema = z
 // Create schemas (exclude computed fields)
 export const CreateTicketBodySchema = z
   .object({
-    projectId: unixTSSchemaSpec,
+    projectId: entityIdSchema,
     title: z.string().min(1),
     overview: z.string().default(''),
     status: z.enum(['open', 'in_progress', 'closed']).default('open'),
     priority: z.enum(['low', 'normal', 'high']).default('normal'),
     suggestedFileIds: z.array(z.string()).optional(),
-    suggestedAgentIds: z.array(unixTSSchemaSpec).optional(),
-    suggestedPromptIds: z.array(unixTSSchemaSpec).optional()
+    suggestedAgentIds: z.array(z.string()).optional(),
+    suggestedPromptIds: z.array(entityIdSchema).optional()
   })
   .openapi('CreateTicketBody')
 
@@ -59,8 +66,8 @@ export const UpdateTicketBodySchema = z
     status: z.enum(['open', 'in_progress', 'closed']).optional(),
     priority: z.enum(['low', 'normal', 'high']).optional(),
     suggestedFileIds: z.array(z.string()).optional(),
-    suggestedAgentIds: z.array(unixTSSchemaSpec).optional(),
-    suggestedPromptIds: z.array(unixTSSchemaSpec).optional()
+    suggestedAgentIds: z.array(z.string()).optional(),
+    suggestedPromptIds: z.array(entityIdSchema).optional()
   })
   .openapi('UpdateTicketBody')
 
@@ -69,11 +76,11 @@ export const CreateTaskBodySchema = z
     content: z.string().min(1),
     description: z.string().optional(),
     suggestedFileIds: z.array(z.string()).optional(),
-    estimatedHours: z.number().optional(),
-    dependencies: z.array(unixTSSchemaSpec).optional(),
+    estimatedHours: z.number().nullable().optional(),
+    dependencies: z.array(entityIdSchema).optional(),
     tags: z.array(z.string()).optional(),
-    agentId: unixTSOptionalSchemaSpec,
-    suggestedPromptIds: z.array(unixTSSchemaSpec).optional()
+    agentId: z.string().optional(),
+    suggestedPromptIds: z.array(entityIdSchema).optional()
   })
   .openapi('CreateTaskBody')
 
@@ -83,11 +90,11 @@ export const UpdateTaskBodySchema = z
     description: z.string().optional(),
     suggestedFileIds: z.array(z.string()).optional(),
     done: z.boolean().optional(),
-    estimatedHours: z.number().optional(),
-    dependencies: z.array(unixTSSchemaSpec).optional(),
+    estimatedHours: z.number().nullable().optional(),
+    dependencies: z.array(entityIdSchema).optional(),
     tags: z.array(z.string()).optional(),
-    agentId: unixTSOptionalSchemaSpec,
-    suggestedPromptIds: z.array(unixTSSchemaSpec).optional()
+    agentId: z.string().optional(),
+    suggestedPromptIds: z.array(entityIdSchema).optional()
   })
   .openapi('UpdateTaskBody')
 
@@ -95,7 +102,7 @@ export const ReorderTasksBodySchema = z
   .object({
     tasks: z.array(
       z.object({
-        taskId: unixTSSchemaSpec,
+        taskId: entityIdSchema,
         orderIndex: z.number().min(0)
       })
     )
@@ -110,8 +117,9 @@ export const TaskSuggestionsSchema = z
         title: z.string(),
         description: z.string().optional(),
         suggestedFileIds: z.array(z.string()).default([]), // NEW: Direct file IDs
-        estimatedHours: z.number().optional(), // NEW
+        estimatedHours: z.number().nullable().optional(), // NEW
         tags: z.array(z.string()).default([]), // NEW
+        suggestedAgentId: z.string().optional(), // NEW: Suggested agent for this task
         files: z
           .array(
             z.object({

@@ -1,10 +1,7 @@
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import { z, ZodError } from 'zod'
-import {
-  ClaudeAgentSchema,
-  type ClaudeAgent
-} from '@promptliano/schemas'
+import { ClaudeAgentSchema, type ClaudeAgent } from '@promptliano/schemas'
 import { toPosixPath, joinPosix, MarkdownParser } from '@promptliano/services'
 
 // Storage schemas
@@ -57,12 +54,12 @@ export const claudeAgentStorage = {
         }
       })
       const result = await parser.parse(content, filePath)
-      
+
       // Validate required fields
       if (!result.frontmatter.name) {
         throw new Error('Invalid agent file: missing name in frontmatter')
       }
-      
+
       return { frontmatter: result.frontmatter, body: result.body }
     } catch (error) {
       // Fall back to the simple regex parser if markdown parser fails
@@ -154,17 +151,8 @@ export const claudeAgentStorage = {
           // Generate ID from filename (without .md extension)
           const agentId = file.slice(0, -3)
 
-          // Generate a stable numeric ID from the string agentId
-          // This ensures consistency across reads
-          const numericId =
-            agentId.split('').reduce((acc, char) => {
-              return acc + char.charCodeAt(0)
-            }, 0) *
-              1000 +
-            agentId.length
-
           const agent: ClaudeAgent = {
-            id: numericId, // Stable ID based on filename
+            id: agentId, // Use filename without .md as ID
             name: frontmatter.name,
             description: frontmatter.description,
             color: (frontmatter.color as any) || 'blue',
@@ -217,10 +205,10 @@ export const claudeAgentStorage = {
       const filePath = path.join(this.getAgentsDir(projectPath), filename)
 
       await fs.unlink(filePath)
-      
+
       // Clear cache for this project
       agentCache.delete(projectPath)
-      
+
       return true
     } catch (error) {
       console.error('Error deleting agent:', error)

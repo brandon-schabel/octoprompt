@@ -20,11 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Loader2, Info, Code } from 'lucide-react'
 import { useCreateCommand, useUpdateCommand, useGetCommand } from '@/hooks/api-hooks'
 import type { ClaudeCommand, CommandScope } from '@promptliano/schemas'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronDown } from 'lucide-react'
 
 const commandFormSchema = z.object({
@@ -58,6 +54,7 @@ interface CommandDialogProps {
   commandName?: string | null
   namespace?: string | null
   projectId: number
+  initialData?: ClaudeCommand | null
 }
 
 const MODEL_OPTIONS = [
@@ -68,18 +65,26 @@ const MODEL_OPTIONS = [
   { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
 ]
 
-export function CommandDialog({ open, onOpenChange, commandName, namespace, projectId }: CommandDialogProps) {
+export function CommandDialog({
+  open,
+  onOpenChange,
+  commandName,
+  namespace,
+  projectId,
+  initialData
+}: CommandDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
-  const isEditing = !!commandName
+  const isEditing = !!commandName || !!initialData
 
-  // Fetch command data if editing
+  // Fetch command data if editing (but not if we have initialData)
+  const shouldFetch = isEditing && !initialData && !!commandName
   const { data: commandResponse, isLoading: isLoadingCommand } = useGetCommand(
     projectId,
-    commandName || '',
-    namespace || undefined
+    shouldFetch ? commandName : '',
+    shouldFetch ? namespace || undefined : undefined
   )
-  const command = commandResponse?.data
+  const command = initialData || commandResponse?.data
 
   // Mutations
   const createCommandMutation = useCreateCommand(projectId)
@@ -142,7 +147,8 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
       if (data.maxTurns) frontmatter['max-turns'] = data.maxTurns
       if (data.outputFormat) frontmatter['output-format'] = data.outputFormat
 
-      if (isEditing && commandName) {
+      if (isEditing && commandName && !initialData) {
+        // Update existing command
         await updateCommandMutation.mutateAsync({
           commandName,
           namespace: namespace || undefined,
@@ -153,6 +159,7 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
           }
         })
       } else {
+        // Create new command (including saving generated commands)
         await createCommandMutation.mutateAsync({
           name: data.name,
           namespace: data.namespace,
@@ -173,11 +180,15 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-[725px] max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Command' : 'Create New Command'}</DialogTitle>
+          <DialogTitle>
+            {initialData ? 'Save Generated Command' : isEditing ? 'Edit Command' : 'Create New Command'}
+          </DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? 'Update the command details below.'
-              : 'Create a new Claude Code slash command for this project.'}
+            {initialData
+              ? 'Review and save the AI-generated command. You can make any edits before saving.'
+              : isEditing
+                ? 'Update the command details below.'
+                : 'Create a new Claude Code slash command for this project.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -196,11 +207,7 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
                     <FormItem>
                       <FormLabel>Command Name</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder='review-code'
-                          {...field}
-                          disabled={isEditing}
-                        />
+                        <Input placeholder='review-code' {...field} disabled={isEditing && !initialData} />
                       </FormControl>
                       <FormDescription>Lowercase letters, numbers, and hyphens only</FormDescription>
                       <FormMessage />
@@ -232,11 +239,7 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
                     <FormItem>
                       <FormLabel>Command Scope</FormLabel>
                       <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className='flex gap-4'
-                        >
+                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className='flex gap-4'>
                           <div className='flex items-center space-x-2'>
                             <RadioGroupItem value='project' id='project' />
                             <Label htmlFor='project'>Project (saved in project directory)</Label>
@@ -260,10 +263,7 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
                   <FormItem>
                     <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder='Performs comprehensive code review with security analysis'
-                        {...field}
-                      />
+                      <Input placeholder='Performs comprehensive code review with security analysis' {...field} />
                     </FormControl>
                     <FormDescription>Brief description of what this command does</FormDescription>
                     <FormMessage />
@@ -308,10 +308,7 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
                       <FormItem>
                         <FormLabel>Allowed Tools</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder='Edit, Read, Bash(git:*), WebSearch'
-                            {...field}
-                          />
+                          <Input placeholder='Edit, Read, Bash(git:*), WebSearch' {...field} />
                         </FormControl>
                         <FormDescription>
                           Comma-separated list of tools Claude can use. Leave empty for all tools.
@@ -328,14 +325,9 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
                       <FormItem>
                         <FormLabel>Argument Hint</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder='[file-path] or [component-name]'
-                            {...field}
-                          />
+                          <Input placeholder='[file-path] or [component-name]' {...field} />
                         </FormControl>
-                        <FormDescription>
-                          Hint shown to users about expected arguments
-                        </FormDescription>
+                        <FormDescription>Hint shown to users about expected arguments</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -348,8 +340,8 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Preferred Model</FormLabel>
-                          <Select 
-                            onValueChange={(value) => field.onChange(value === '_none_' ? undefined : value)} 
+                          <Select
+                            onValueChange={(value) => field.onChange(value === '_none_' ? undefined : value)}
                             value={field.value || '_none_'}
                           >
                             <FormControl>
@@ -404,8 +396,8 @@ export function CommandDialog({ open, onOpenChange, commandName, namespace, proj
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Output Format</FormLabel>
-                        <Select 
-                          onValueChange={(value) => field.onChange(value === '_none_' ? undefined : value)} 
+                        <Select
+                          onValueChange={(value) => field.onChange(value === '_none_' ? undefined : value)}
                           value={field.value || '_none_'}
                         >
                           <FormControl>

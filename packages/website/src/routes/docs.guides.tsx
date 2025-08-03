@@ -26,6 +26,16 @@ function GuidesPage() {
         <p className='text-xl text-muted-foreground'>
           Learn how to make the most of Promptliano with these comprehensive guides and best practices.
         </p>
+
+        <div className='mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg'>
+          <p className='text-sm'>
+            <span className='font-medium'>New:</span> Check out our comprehensive{' '}
+            <a href='/docs/how-to/mcp-best-practices' className='text-primary hover:underline'>
+              Getting the Most Out of Promptliano MCP
+            </a>{' '}
+            guide for detailed workflows and AI prompting strategies.
+          </p>
+        </div>
       </div>
 
       {/* Building Context Efficiently */}

@@ -11,7 +11,9 @@ import {
   ClaudeCommandListResponseSchema,
   CommandSuggestionsResponseSchema,
   CommandExecutionResponseSchema,
-  SearchCommandsQuerySchema
+  SearchCommandsQuerySchema,
+  CommandGenerationRequestSchema,
+  CommandGenerationResponseSchema
 } from '@promptliano/schemas'
 import {
   createCommand,
@@ -21,6 +23,7 @@ import {
   deleteCommand,
   executeCommand,
   suggestCommands,
+  generateCommand,
   getProjectById
 } from '@promptliano/services'
 import { ErrorHandler } from '@promptliano/shared'
@@ -222,6 +225,43 @@ const executeClaudeCommandRoute = createRoute({
   }
 })
 
+const generateClaudeCommandRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/commands/generate',
+  tags: ['Claude Commands'],
+  summary: 'Generate a new Claude command using AI',
+  description: 'Uses AI to generate a complete slash command based on user requirements and project context',
+  request: {
+    params: ProjectIdParamsSchema,
+    body: {
+      content: { 'application/json': { schema: CommandGenerationRequestSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: CommandGenerationResponseSchema } },
+      description: 'Successfully generated command'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Bad Request - Invalid input data'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Project not found'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation Error'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error - AI generation failed'
+    }
+  }
+})
+
 const suggestClaudeCommandsRoute = createRoute({
   method: 'post',
   path: '/api/projects/{projectId}/commands/suggest',
@@ -269,7 +309,10 @@ export const claudeCommandRoutes = new OpenAPIHono()
       return c.json({ success: true, data: command }, 201)
     } catch (error) {
       const apiError = ErrorHandler.handleApiError(error)
-      return c.json({ success: false, error: apiError.toJSON() }, apiError.statusCode as any)
+      return c.json(
+        { success: false, error: { message: apiError.message, code: apiError.code, details: apiError.details } },
+        apiError.status as any
+      )
     }
   })
   .openapi(listClaudeCommandsRoute, async (c) => {
@@ -283,7 +326,10 @@ export const claudeCommandRoutes = new OpenAPIHono()
       return c.json({ success: true, data: commands })
     } catch (error) {
       const apiError = ErrorHandler.handleApiError(error)
-      return c.json({ success: false, error: apiError.toJSON() }, apiError.statusCode as any)
+      return c.json(
+        { success: false, error: { message: apiError.message, code: apiError.code, details: apiError.details } },
+        apiError.status as any
+      )
     }
   })
   .openapi(getClaudeCommandRoute, async (c) => {
@@ -297,7 +343,10 @@ export const claudeCommandRoutes = new OpenAPIHono()
       return c.json({ success: true, data: command })
     } catch (error) {
       const apiError = ErrorHandler.handleApiError(error)
-      return c.json({ success: false, error: apiError.toJSON() }, apiError.statusCode as any)
+      return c.json(
+        { success: false, error: { message: apiError.message, code: apiError.code, details: apiError.details } },
+        apiError.status as any
+      )
     }
   })
   .openapi(updateClaudeCommandRoute, async (c) => {
@@ -312,7 +361,10 @@ export const claudeCommandRoutes = new OpenAPIHono()
       return c.json({ success: true, data: command })
     } catch (error) {
       const apiError = ErrorHandler.handleApiError(error)
-      return c.json({ success: false, error: apiError.toJSON() }, apiError.statusCode as any)
+      return c.json(
+        { success: false, error: { message: apiError.message, code: apiError.code, details: apiError.details } },
+        apiError.status as any
+      )
     }
   })
   .openapi(deleteClaudeCommandRoute, async (c) => {
@@ -326,7 +378,10 @@ export const claudeCommandRoutes = new OpenAPIHono()
       return c.json({ success: true })
     } catch (error) {
       const apiError = ErrorHandler.handleApiError(error)
-      return c.json({ success: false, error: apiError.toJSON() }, apiError.statusCode as any)
+      return c.json(
+        { success: false, error: { message: apiError.message, code: apiError.code, details: apiError.details } },
+        apiError.status as any
+      )
     }
   })
   .openapi(executeClaudeCommandRoute, async (c) => {
@@ -349,7 +404,24 @@ export const claudeCommandRoutes = new OpenAPIHono()
       })
     } catch (error) {
       const apiError = ErrorHandler.handleApiError(error)
-      return c.json({ success: false, error: apiError.toJSON() }, apiError.statusCode as any)
+      return c.json(
+        { success: false, error: { message: apiError.message, code: apiError.code, details: apiError.details } },
+        apiError.status as any
+      )
+    }
+  })
+  .openapi(generateClaudeCommandRoute, async (c) => {
+    try {
+      const { projectId } = c.req.valid('param')
+      const body = c.req.valid('json')
+      const generatedCommand = await generateCommand(projectId, body)
+      return c.json({ success: true, data: generatedCommand })
+    } catch (error) {
+      const apiError = ErrorHandler.handleApiError(error)
+      return c.json(
+        { success: false, error: { message: apiError.message, code: apiError.code, details: apiError.details } },
+        apiError.status as any
+      )
     }
   })
   .openapi(suggestClaudeCommandsRoute, async (c) => {
@@ -362,6 +434,9 @@ export const claudeCommandRoutes = new OpenAPIHono()
       return c.json({ success: true, data: suggestions })
     } catch (error) {
       const apiError = ErrorHandler.handleApiError(error)
-      return c.json({ success: false, error: apiError.toJSON() }, apiError.statusCode as any)
+      return c.json(
+        { success: false, error: { message: apiError.message, code: apiError.code, details: apiError.details } },
+        apiError.status as any
+      )
     }
   })

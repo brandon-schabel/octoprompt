@@ -6,37 +6,35 @@ import {
   type CommandScope,
   type CommandSuggestions,
   CommandSuggestionsSchema,
-  type SearchCommandsQuery
+  type SearchCommandsQuery,
+  type CommandGenerationRequest,
+  type CommandGenerationResponse,
+  CommandGenerationResponseSchema
 } from '@promptliano/schemas'
-import { 
-  ValidationError, 
-  NotFoundError, 
-  ConflictError, 
-  ServiceError,
-  ErrorHandler 
-} from '@promptliano/shared'
+import { ValidationError, NotFoundError, ConflictError, ServiceError, ErrorHandler } from '@promptliano/shared'
 import { ZodError } from 'zod'
 import { generateStructuredData } from './gen-ai-services'
 import { getCompactProjectSummary } from './utils/project-summary-service'
 import { ClaudeCommandParser } from './parsers'
+import { HIGH_MODEL_CONFIG } from '@promptliano/config'
 
 export async function createCommand(projectPath: string, data: CreateClaudeCommandBody): Promise<ClaudeCommand> {
   try {
     // Validate command name
     if (!/^[a-z0-9-]+$/.test(data.name)) {
-      throw new ValidationError(
-        'Invalid command name. Use lowercase letters, numbers, and hyphens only.',
-        { field: 'name', value: data.name }
-      )
+      throw new ValidationError('Invalid command name. Use lowercase letters, numbers, and hyphens only.', {
+        field: 'name',
+        value: data.name
+      })
     }
 
     // Check if command already exists
     const existing = await claudeCommandStorage.getCommandByName(projectPath, data.name, data.namespace, data.scope)
     if (existing) {
-      throw new ConflictError(
-        `Command '${data.name}' already exists in namespace '${data.namespace || 'root'}'`,
-        { commandName: data.name, namespace: data.namespace }
-      )
+      throw new ConflictError(`Command '${data.name}' already exists in namespace '${data.namespace || 'root'}'`, {
+        commandName: data.name,
+        namespace: data.namespace
+      })
     }
 
     // Write command to filesystem
@@ -114,10 +112,7 @@ export async function getCommandByName(
   const command = await claudeCommandStorage.getCommandByName(projectPath, commandName, namespace)
 
   if (!command) {
-    throw new NotFoundError(
-      'Command',
-      namespace ? `${namespace}/${commandName}` : commandName
-    )
+    throw new NotFoundError('Command', namespace ? `${namespace}/${commandName}` : commandName)
   }
 
   return command
@@ -221,6 +216,103 @@ export async function executeCommand(
   }
 }
 
+export async function generateCommand(
+  projectId: number,
+  data: CommandGenerationRequest
+): Promise<CommandGenerationResponse['data']> {
+  try {
+    // Get project context if requested
+    let projectContext = ''
+    const contextOptions = data.context || {}
+
+    if (contextOptions.includeProjectSummary !== false) {
+      try {
+        projectContext = await getCompactProjectSummary(projectId)
+      } catch (error) {
+        console.log(`Warning: Could not get project summary: ${error instanceof Error ? error.message : String(error)}`)
+        projectContext = 'Project summary unavailable'
+      }
+    }
+
+    // Build system prompt for command generation
+    const systemPrompt = `You are an expert at creating Claude Code slash commands that automate development tasks.
+
+## Your Task:
+Generate a Claude Code slash command based on the user's requirements and project context.
+
+## Command Requirements:
+1. The command name should be: ${data.name}
+2. The command should accomplish: ${data.description}
+3. Detailed user intent: ${data.userIntent}
+${data.namespace ? `4. Place the command in namespace: ${data.namespace}` : ''}
+${data.scope ? `5. Command scope: ${data.scope}` : ''}
+
+## Command Creation Guidelines:
+- Use appropriate Claude tools (Edit, Read, Bash, WebSearch, etc.)
+- Include the $ARGUMENTS placeholder where user input is expected
+- Write clear, step-by-step instructions in the command content
+- Include error handling and validation where appropriate
+- Follow the project's coding conventions and tech stack
+- Make the command efficient and reliable
+
+## Frontmatter Guidelines:
+- Set allowed-tools to only the tools actually needed
+- Include a clear description
+- Add argument-hint if $ARGUMENTS is used
+- Specify model preference if the task is complex
+- Set max-turns appropriately for the task complexity
+
+## Output Requirements:
+- The command content should be complete and ready to use
+- Provide a clear rationale explaining your design choices
+- Suggest variations only if there are meaningful alternatives`
+
+    // Build user prompt with context
+    let userPrompt = ''
+
+    if (projectContext) {
+      userPrompt += `<project_context>\n${projectContext}\n</project_context>\n\n`
+    }
+
+    if (contextOptions.selectedFiles && contextOptions.selectedFiles.length > 0) {
+      userPrompt += `<relevant_files>\n${contextOptions.selectedFiles.join(', ')}\n</relevant_files>\n\n`
+    }
+
+    if (contextOptions.additionalContext) {
+      userPrompt += `<additional_context>\n${contextOptions.additionalContext}\n</additional_context>\n\n`
+    }
+
+    userPrompt += `Generate a Claude Code slash command that meets the requirements above. Focus on making it practical, efficient, and tailored to this specific project.`
+
+    // Generate the command using AI
+    const result = await generateStructuredData({
+      prompt: userPrompt,
+      schema: CommandGenerationResponseSchema.shape.data,
+      systemMessage: systemPrompt,
+      // model: 'claude-3-5-sonnet-20241022
+      options: HIGH_MODEL_CONFIG
+    })
+
+    // Ensure the generated name matches the requested name
+    result.object.name = data.name
+
+    // Apply namespace if specified
+    if (data.namespace !== undefined) {
+      result.object.namespace = data.namespace
+    }
+
+    return result.object
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new ValidationError('Failed to generate valid command structure', error.errors)
+    }
+    throw new ServiceError(
+      `Failed to generate command: ${error instanceof Error ? error.message : String(error)}`,
+      'GENERATE_COMMAND_FAILED'
+    )
+  }
+}
+
 export async function suggestCommands(
   projectId: number,
   context: string = '',
@@ -296,6 +388,7 @@ class ClaudeCommandService {
   deleteCommand = deleteCommand
   executeCommand = executeCommand
   suggestCommands = suggestCommands
+  generateCommand = generateCommand
 }
 
 // Export singleton instance

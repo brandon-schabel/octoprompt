@@ -191,7 +191,7 @@ export function ProjectNavigationMenu({
             onClick={() => onViewChange('claude-code')}
             className='h-7 px-3 text-sm'
           >
-            Claude Code
+            Claude
           </Button>
         )}
       </div>
@@ -250,7 +250,7 @@ export function ProjectNavigationMenu({
             />
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem 
+          <MenubarItem
             onClick={() => {
               if (selectedProjectId) {
                 copyToClipboard(selectedProjectId.toString(), {

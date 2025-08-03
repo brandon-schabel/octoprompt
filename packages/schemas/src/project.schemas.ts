@@ -1,10 +1,10 @@
 import { z } from '@hono/zod-openapi'
-import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
+import { unixTSArraySchemaSpec, unixTSSchemaSpec, entityIdSchema, entityIdArraySchema } from './schema-utils'
 
 // Base schema - Represents the API structure
 export const ProjectSchema = z
   .object({
-    id: unixTSSchemaSpec,
+    id: entityIdSchema,
     name: z.string(),
     description: z.string(),
     path: z.string(),
@@ -44,8 +44,8 @@ export const ExportInfoSchema = z
 
 export const ProjectFileSchema = z
   .object({
-    id: unixTSSchemaSpec,
-    projectId: unixTSSchemaSpec,
+    id: entityIdSchema,
+    projectId: entityIdSchema,
     name: z.string(),
     path: z.string(),
     extension: z.string(),
@@ -65,7 +65,7 @@ export const ProjectFileSchema = z
 // Request Parameter Schemas
 export const ProjectIdParamsSchema = z
   .object({
-    projectId: unixTSSchemaSpec.openapi({ param: { name: 'projectId', in: 'path' } })
+    projectId: entityIdSchema.openapi({ param: { name: 'projectId', in: 'path' } })
   })
   .openapi('ProjectIdParams')
 
@@ -91,8 +91,8 @@ export const UpdateProjectBodySchema = z
 
 export const SummarizeFilesBodySchema = z
   .object({
-    // file ids are unix timestamp in milliseconds
-    fileIds: unixTSArraySchemaSpec,
+    // file ids
+    fileIds: entityIdArraySchema,
     force: z
       .boolean()
       .optional()
@@ -103,7 +103,7 @@ export const SummarizeFilesBodySchema = z
 
 export const RemoveSummariesBodySchema = z
   .object({
-    fileIds: unixTSArraySchemaSpec
+    fileIds: entityIdArraySchema
   })
   .openapi('RemoveSummariesRequestBody')
 

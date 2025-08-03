@@ -228,7 +228,6 @@ const listProjectClaudeAgentsRoute = createRoute({
   }
 })
 
-
 const suggestClaudeAgentsRoute = createRoute({
   method: 'post',
   path: '/api/projects/{projectId}/suggest-agents',
@@ -308,7 +307,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
       throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
     }
 
-    const agent = await getAgentById(project.path, agentId.toString())
+    const agent = await getAgentById(project.path, agentId)
     return c.json({ success: true, data: agent } satisfies z.infer<typeof ClaudeAgentResponseSchema>, 200)
   })
   .openapi(updateClaudeAgentRoute, async (c) => {
@@ -325,7 +324,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
       throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
     }
 
-    const updatedAgent = await updateAgent(project.path, agentId.toString(), body)
+    const updatedAgent = await updateAgent(project.path, agentId, body)
     return c.json({ success: true, data: updatedAgent } satisfies z.infer<typeof ClaudeAgentResponseSchema>, 200)
   })
   .openapi(deleteClaudeAgentRoute, async (c) => {
@@ -341,7 +340,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
       throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
     }
 
-    await deleteAgent(project.path, agentId.toString())
+    await deleteAgent(project.path, agentId)
     return c.json(
       { success: true, message: 'Agent deleted successfully.' } satisfies z.infer<
         typeof OperationSuccessResponseSchema

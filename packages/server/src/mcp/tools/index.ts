@@ -4,7 +4,11 @@
 import { documentationSearchTool, websiteDemoRunnerTool } from './website'
 import { mcpConfigGeneratorTool, mcpCompatibilityCheckerTool, mcpSetupValidatorTool } from './setup'
 import { tabManagerTool, jobManagerTool } from './ui'
-import { aiAssistantTool } from './content'
+import { aiAssistantTool, agentManagerTool } from './content'
+import { projectManagerTool, promptManagerTool } from './project'
+import { ticketManagerTool, taskManagerTool } from './workflow'
+import { fileSummarizationManagerTool } from './analysis'
+import { gitManagerTool } from './git'
 
 // Import the command manager tool from parent directory
 import { commandManagerTool } from '../command-manager-tool'
@@ -14,6 +18,17 @@ import type { MCPToolDefinition } from '../tools-registry'
 
 // Export the consolidated tools array
 export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
+  // Project tools
+  projectManagerTool,
+  promptManagerTool,
+  // Workflow tools
+  ticketManagerTool,
+  taskManagerTool,
+  // Content tools
+  aiAssistantTool,
+  agentManagerTool,
+  // Analysis tools
+  fileSummarizationManagerTool,
   // Website tools
   documentationSearchTool,
   websiteDemoRunnerTool,
@@ -24,22 +39,14 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   // UI tools
   tabManagerTool,
   jobManagerTool,
-  // Content tools
-  aiAssistantTool,
   // Command tool
   commandManagerTool,
-  // TODO: Add remaining tools as they are migrated:
-  // - project_manager
-  // - prompt_manager
-  // - agent_manager
-  // - ticket_manager
-  // - task_manager
-  // - git_manager
-  // - file_summarization_manager
+  // Git tool
+  gitManagerTool
 ] as const
 
 // Helper functions
-export type ConsolidatedToolNames = typeof CONSOLIDATED_TOOLS[number]['name']
+export type ConsolidatedToolNames = (typeof CONSOLIDATED_TOOLS)[number]['name']
 
 export function getConsolidatedToolByName(name: string): MCPToolDefinition | undefined {
   return CONSOLIDATED_TOOLS.find((tool) => tool.name === name)

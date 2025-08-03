@@ -8,7 +8,7 @@ import { promptlianoClient } from '../promptliano-client'
 export const AGENT_KEYS = {
   all: ['agents'] as const,
   list: () => [...AGENT_KEYS.all, 'list'] as const,
-  detail: (agentId: number) => [...AGENT_KEYS.all, 'detail', agentId] as const,
+  detail: (agentId: string) => [...AGENT_KEYS.all, 'detail', agentId] as const,
   projectAgents: (projectId: number) => [...AGENT_KEYS.all, 'project', projectId] as const
 }
 
@@ -21,7 +21,7 @@ export function useGetAllAgents(projectId?: number) {
   })
 }
 
-export function useGetAgent(agentId: number, projectId?: number) {
+export function useGetAgent(agentId: string, projectId?: number) {
   return useQuery({
     queryKey: projectId ? [...AGENT_KEYS.detail(agentId), projectId] : AGENT_KEYS.detail(agentId),
     queryFn: () => promptlianoClient.agents.getAgent(agentId, projectId),
@@ -59,7 +59,7 @@ export function useUpdateAgent(projectId?: number) {
   const { invalidateAllAgents, setAgentDetail } = useInvalidateAgents()
 
   return useMutation({
-    mutationFn: ({ agentId, data }: { agentId: number; data: UpdateClaudeAgentBody }) =>
+    mutationFn: ({ agentId, data }: { agentId: string; data: UpdateClaudeAgentBody }) =>
       promptlianoClient.agents.updateAgent(agentId, data, projectId),
     onSuccess: ({ data: updatedAgent }: DataResponseSchema<ClaudeAgent>) => {
       invalidateAllAgents()
@@ -76,7 +76,7 @@ export function useDeleteAgent(projectId?: number) {
   const { invalidateAllAgents, removeAgent } = useInvalidateAgents()
 
   return useMutation({
-    mutationFn: (agentId: number) => promptlianoClient.agents.deleteAgent(agentId, projectId),
+    mutationFn: (agentId: string) => promptlianoClient.agents.deleteAgent(agentId, projectId),
     onSuccess: (_, agentId) => {
       invalidateAllAgents()
       removeAgent(agentId)
@@ -93,7 +93,7 @@ export function useAddAgentToProject() {
   const { invalidateProjectAgents } = useInvalidateAgents()
 
   return useMutation({
-    mutationFn: ({ projectId, agentId }: { projectId: number; agentId: number }) =>
+    mutationFn: ({ projectId, agentId }: { projectId: number; agentId: string }) =>
       promptlianoClient.agents.addAgentToProject(projectId, agentId),
     onSuccess: (_, { projectId }) => {
       invalidateProjectAgents(projectId)
@@ -109,7 +109,7 @@ export function useRemoveAgentFromProject() {
   const { invalidateProjectAgents } = useInvalidateAgents()
 
   return useMutation({
-    mutationFn: ({ projectId, agentId }: { projectId: number; agentId: number }) =>
+    mutationFn: ({ projectId, agentId }: { projectId: number; agentId: string }) =>
       promptlianoClient.agents.removeAgentFromProject(projectId, agentId),
     onSuccess: (_, { projectId }) => {
       invalidateProjectAgents(projectId)
@@ -140,13 +140,13 @@ export function useInvalidateAgents() {
     invalidateAllAgents: () => {
       queryClient.invalidateQueries({ queryKey: AGENT_KEYS.all })
     },
-    invalidateAgent: (agentId: number) => {
+    invalidateAgent: (agentId: string) => {
       queryClient.invalidateQueries({ queryKey: AGENT_KEYS.detail(agentId) })
     },
     invalidateProjectAgents: (projectId: number) => {
       queryClient.invalidateQueries({ queryKey: AGENT_KEYS.projectAgents(projectId) })
     },
-    removeAgent: (agentId: number) => {
+    removeAgent: (agentId: string) => {
       queryClient.removeQueries({ queryKey: AGENT_KEYS.detail(agentId) })
     },
     removeProjectAgents: (projectId: number) => {

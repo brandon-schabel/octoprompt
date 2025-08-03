@@ -1,9 +1,9 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Bot, MessageSquare, Clock, Settings, Terminal, Network } from 'lucide-react'
+import { Bot, MessageSquare, Clock, Settings, Terminal, Network, Zap } from 'lucide-react'
 
-export type ClaudeCodeView = 'agents' | 'commands' | 'mcp' | 'sessions' | 'chats' | 'settings'
+export type ClaudeCodeView = 'agents' | 'commands' | 'mcp' | 'sessions' | 'chats' | 'hooks' | 'settings'
 
 interface ClaudeCodeSidebarNavProps {
   activeView: ClaudeCodeView
@@ -46,6 +46,13 @@ export function ClaudeCodeSidebarNav({ activeView, onViewChange, className }: Cl
       label: 'Chats',
       icon: MessageSquare,
       description: 'Chat messages',
+      enabled: true
+    },
+    {
+      id: 'hooks' as ClaudeCodeView,
+      label: 'Hooks',
+      icon: Zap,
+      description: 'Automation hooks',
       enabled: true
     },
     {

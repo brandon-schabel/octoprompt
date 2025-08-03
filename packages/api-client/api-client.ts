@@ -95,7 +95,28 @@ import type {
   ExecuteClaudeCommandBody,
   ClaudeCommand,
   CommandSuggestions,
-  SearchCommandsQuery
+  SearchCommandsQuery,
+  CommandGenerationRequest
+} from '@promptliano/schemas'
+
+// Claude Hooks imports
+import type {
+  CreateHookConfigBody,
+  UpdateHookConfigBody,
+  HookGenerationRequest,
+  HookTestRequest,
+  HookEvent,
+  HookListItem
+} from '@promptliano/schemas'
+import {
+  HookResponseSchema,
+  HookListResponseSchema,
+  HookGenerationResponseSchema,
+  HookTestResponseSchema,
+  CreateHookRequestSchema,
+  UpdateHookRequestSchema,
+  HookGenerationRequestSchema,
+  HookTestRequestSchema
 } from '@promptliano/schemas'
 
 // Claude Code imports
@@ -114,7 +135,9 @@ import {
   ClaudeCommandListResponseSchema as ClaudeCommandListResponseSchemaZ,
   CommandSuggestionsResponseSchema as CommandSuggestionsResponseSchemaZ,
   CommandExecutionResponseSchema as CommandExecutionResponseSchemaZ,
-  SearchCommandsQuerySchema
+  SearchCommandsQuerySchema,
+  CommandGenerationRequestSchema,
+  CommandGenerationResponseSchema as CommandGenerationResponseSchemaZ
 } from '@promptliano/schemas'
 
 // MCP imports
@@ -309,6 +332,7 @@ class BaseApiClient {
       params?: Record<string, string | number | boolean>
       responseSchema?: z.ZodType<TResponse>
       skipValidation?: boolean
+      timeout?: number
     }
   ): Promise<TResponse> {
     // Handle both absolute and relative URLs
@@ -327,7 +351,8 @@ class BaseApiClient {
     }
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+    const requestTimeout = options?.timeout || this.timeout
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeout)
 
     try {
       console.log(`[API Client] Making ${method} request to:`, url.toString())
@@ -1093,7 +1118,7 @@ export class ClaudeAgentService extends BaseApiClient {
     return result as DataResponseSchema<ClaudeAgent>
   }
 
-  async getAgent(agentId: number, projectId?: number) {
+  async getAgent(agentId: string, projectId?: number) {
     const result = await this.request('GET', `/agents/${agentId}`, {
       params: projectId ? { projectId } : undefined,
       responseSchema: ClaudeAgentResponseSchemaZ
@@ -1101,7 +1126,7 @@ export class ClaudeAgentService extends BaseApiClient {
     return result as DataResponseSchema<ClaudeAgent>
   }
 
-  async updateAgent(agentId: number, data: UpdateClaudeAgentBody, projectId?: number) {
+  async updateAgent(agentId: string, data: UpdateClaudeAgentBody, projectId?: number) {
     const validatedData = this.validateBody(UpdateClaudeAgentBodySchema, data)
     const result = await this.request('PATCH', `/agents/${agentId}`, {
       params: projectId ? { projectId } : undefined,
@@ -1111,7 +1136,7 @@ export class ClaudeAgentService extends BaseApiClient {
     return result as DataResponseSchema<ClaudeAgent>
   }
 
-  async deleteAgent(agentId: number, projectId?: number): Promise<boolean> {
+  async deleteAgent(agentId: string, projectId?: number): Promise<boolean> {
     await this.request('DELETE', `/agents/${agentId}`, {
       params: projectId ? { projectId } : undefined,
       responseSchema: OperationSuccessResponseSchemaZ
@@ -1126,14 +1151,14 @@ export class ClaudeAgentService extends BaseApiClient {
     return result as DataResponseSchema<ClaudeAgent[]>
   }
 
-  async addAgentToProject(projectId: number, agentId: number): Promise<boolean> {
+  async addAgentToProject(projectId: number, agentId: string): Promise<boolean> {
     await this.request('POST', `/projects/${projectId}/agents/${agentId}`, {
       responseSchema: OperationSuccessResponseSchemaZ
     })
     return true
   }
 
-  async removeAgentFromProject(projectId: number, agentId: number): Promise<boolean> {
+  async removeAgentFromProject(projectId: number, agentId: string): Promise<boolean> {
     await this.request('DELETE', `/projects/${projectId}/agents/${agentId}`, {
       responseSchema: OperationSuccessResponseSchemaZ
     })
@@ -1214,11 +1239,7 @@ export class ClaudeCodeService extends BaseApiClient {
     return result as z.infer<typeof ClaudeSessionsResponseSchema>
   }
 
-  async getSessionMessages(
-    projectId: number, 
-    sessionId: string, 
-    query?: z.infer<typeof ClaudeMessageQuerySchema>
-  ) {
+  async getSessionMessages(projectId: number, sessionId: string, query?: z.infer<typeof ClaudeMessageQuerySchema>) {
     const result = await this.request('GET', `/claude-code/sessions/${projectId}/${sessionId}`, {
       params: query,
       responseSchema: ClaudeMessagesResponseSchema
@@ -1235,9 +1256,9 @@ export class ClaudeCodeService extends BaseApiClient {
 
   async importSession(projectId: number, sessionId: string) {
     const result = await this.request('POST', `/claude-code/import-session/${projectId}/${sessionId}`, {
-      responseSchema: ChatResponseSchema
+      responseSchema: ChatResponseSchemaZ
     })
-    return result as z.infer<typeof ChatResponseSchema>
+    return result as z.infer<typeof ChatResponseSchemaZ>
   }
 }
 
@@ -1307,6 +1328,16 @@ export class CommandService extends BaseApiClient {
       responseSchema: CommandSuggestionsResponseSchemaZ
     })
     return result as DataResponseSchema<CommandSuggestions>
+  }
+
+  async generateCommand(projectId: number, data: CommandGenerationRequest) {
+    const validatedData = this.validateBody(CommandGenerationRequestSchema, data)
+    const result = await this.request('POST', `/projects/${projectId}/commands/generate`, {
+      body: validatedData,
+      responseSchema: CommandGenerationResponseSchemaZ,
+      timeout: 120000 // 120 seconds timeout for AI generation
+    })
+    return result
   }
 }
 
@@ -1950,6 +1981,89 @@ export class MCPAnalyticsService extends BaseApiClient {
       })
     })
     return result as DataResponseSchema<MCPToolPattern[]>
+  }
+}
+
+// Claude Hooks Service
+export class ClaudeHooksService extends BaseApiClient {
+  async list(projectPath: string) {
+    const encodedPath = encodeURIComponent(projectPath)
+    const result = await this.request('GET', `/claude-hooks/${encodedPath}`, {
+      responseSchema: HookListResponseSchema
+    })
+    return result as DataResponseSchema<HookListItem[]>
+  }
+
+  async get(projectPath: string, eventName: HookEvent, matcherIndex: number) {
+    const encodedPath = encodeURIComponent(projectPath)
+    const result = await this.request('GET', `/claude-hooks/${encodedPath}/${eventName}/${matcherIndex}`, {
+      responseSchema: HookResponseSchema
+    })
+    return result as DataResponseSchema<HookListItem>
+  }
+
+  async create(projectPath: string, data: CreateHookConfigBody) {
+    const encodedPath = encodeURIComponent(projectPath)
+    const validatedData = this.validateBody(CreateHookRequestSchema, data)
+    const result = await this.request('POST', `/claude-hooks/${encodedPath}`, {
+      body: validatedData,
+      responseSchema: HookResponseSchema
+    })
+    return result as DataResponseSchema<HookListItem>
+  }
+
+  async update(projectPath: string, eventName: HookEvent, matcherIndex: number, data: UpdateHookConfigBody) {
+    const encodedPath = encodeURIComponent(projectPath)
+    const validatedData = this.validateBody(UpdateHookRequestSchema, data)
+    const result = await this.request('PUT', `/claude-hooks/${encodedPath}/${eventName}/${matcherIndex}`, {
+      body: validatedData,
+      responseSchema: HookResponseSchema
+    })
+    return result as DataResponseSchema<HookListItem>
+  }
+
+  async delete(projectPath: string, eventName: HookEvent, matcherIndex: number) {
+    const encodedPath = encodeURIComponent(projectPath)
+    const result = await this.request('DELETE', `/claude-hooks/${encodedPath}/${eventName}/${matcherIndex}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async generate(projectPath: string, data: HookGenerationRequest) {
+    const encodedPath = encodeURIComponent(projectPath)
+    const validatedData = this.validateBody(HookGenerationRequestSchema, data)
+    const result = await this.request('POST', `/claude-hooks/${encodedPath}/generate`, {
+      body: validatedData,
+      responseSchema: HookGenerationResponseSchema
+    })
+    return result as DataResponseSchema<{
+      event: HookEvent
+      matcher: string
+      command: string
+      timeout?: number
+      description: string
+      security_warnings?: string[]
+    }>
+  }
+
+  async test(projectPath: string, data: HookTestRequest) {
+    const encodedPath = encodeURIComponent(projectPath)
+    const validatedData = this.validateBody(HookTestRequestSchema, data)
+    const result = await this.request('POST', `/claude-hooks/${encodedPath}/test`, {
+      body: validatedData,
+      responseSchema: HookTestResponseSchema
+    })
+    return result as DataResponseSchema<{ message: string }>
+  }
+
+  async search(projectPath: string, query: string) {
+    const encodedPath = encodeURIComponent(projectPath)
+    const result = await this.request('GET', `/claude-hooks/${encodedPath}/search`, {
+      params: { query },
+      responseSchema: HookListResponseSchema
+    })
+    return result as DataResponseSchema<HookListItem[]>
   }
 }
 
@@ -2959,6 +3073,7 @@ export class PromptlianoClient {
   public readonly agents: ClaudeAgentService
   public readonly commands: CommandService
   public readonly claudeCode: ClaudeCodeService
+  public readonly claudeHooks: ClaudeHooksService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
   public readonly system: SystemService
@@ -2979,6 +3094,7 @@ export class PromptlianoClient {
     this.agents = new ClaudeAgentService(config)
     this.commands = new CommandService(config)
     this.claudeCode = new ClaudeCodeService(config)
+    this.claudeHooks = new ClaudeHooksService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
     this.system = new SystemService(config)

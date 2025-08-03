@@ -45,15 +45,16 @@ export type SelectedFilesListRef = {
 
 export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesListProps>(
   ({ onRemoveFile, onNavigateLeft, className = '', projectTabId }, ref) => {
-    const { 
-      undo, 
-      redo, 
-      canUndo, 
-      canRedo, 
-      clearSelectedFiles, 
+    const {
+      undo,
+      redo,
+      canUndo,
+      canRedo,
+      clearSelectedFiles,
+      clearRemovedFiles,
       selectedFiles,
       selectedFilePaths,
-      isFileSelectedByPath 
+      isFileSelectedByPath
     } = useSelectedFiles({
       tabId: projectTabId
     })
@@ -155,6 +156,11 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         return f && f.name.toLowerCase().includes(filterText.toLowerCase())
       })
     }, [filterText, displayFiles, projectFileMap])
+
+    // Check if there are any removed files
+    const hasRemovedFiles = useMemo(() => {
+      return selectedFiles.some((id) => !projectFileMap.has(id))
+    }, [selectedFiles, projectFileMap])
 
     // Hotkeys for removing files with r + number
     useHotkeys('r+1', () => selectedFiles[0] && onRemoveFile(selectedFiles[0]))
@@ -362,6 +368,18 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   <span>Clear Selected Files</span>
                 </DropdownMenuItem>
 
+                {hasRemovedFiles && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      clearRemovedFiles()
+                      toast.success('Cleared removed files')
+                    }}
+                  >
+                    <X className='mr-2 h-4 w-4' />
+                    <span>Clear Removed Files</span>
+                  </DropdownMenuItem>
+                )}
+
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
@@ -449,10 +467,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 if (!file) {
                   // File no longer exists - show placeholder
                   return (
-                    <div
-                      key={fileId}
-                      className='flex items-center gap-2 px-3 py-1.5 text-sm opacity-50 line-through'
-                    >
+                    <div key={fileId} className='flex items-center gap-2 px-3 py-1.5 text-sm opacity-50 line-through'>
                       <span className='text-muted-foreground'>File removed (ID: {fileId})</span>
                       <Button
                         variant='ghost'

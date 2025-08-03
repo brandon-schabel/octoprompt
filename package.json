@@ -21,7 +21,18 @@
     "test:storage": "cd packages/storage && bun run test",
     "test:api-client": "cd packages/api-client && bun run test",
     "test:config": "cd packages/config && bun run test",
+    "test:server": "cd packages/server && bun run test",
     "test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client && bun run test:config",
+    "typecheck": "bun run typecheck:server && bun run typecheck:shared && bun run typecheck:schemas && bun run typecheck:services && bun run typecheck:storage && bun run typecheck:api-client && bun run typecheck:config && bun run typecheck:client && bun run typecheck:website",
+    "typecheck:server": "cd packages/server && bun run typecheck",
+    "typecheck:shared": "cd packages/shared && bun run typecheck",
+    "typecheck:schemas": "cd packages/schemas && bun run typecheck",
+    "typecheck:services": "cd packages/services && bun run typecheck",
+    "typecheck:storage": "cd packages/storage && bun run typecheck",
+    "typecheck:api-client": "cd packages/api-client && bun run typecheck",
+    "typecheck:config": "cd packages/config && bun run typecheck",
+    "typecheck:client": "cd packages/client && tsc --noEmit",
+    "typecheck:website": "cd packages/website && bun run typecheck",
     "migrate:sqlite": "bun run scripts/migrate-to-sqlite.ts",
     "migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run",
     "generate-encryption-key": "bun run packages/shared/src/utils/generate-key.ts",
@@ -30,7 +41,9 @@
     "build:website": "cd packages/website && bun run build",
     "preview:website": "cd packages/website && bun run preview",
     "sync-version": "bun run scripts/sync-version.ts",
-    "update-version": "bun run scripts/update-version.ts"
+    "update-version": "bun run scripts/update-version.ts",
+    "validate": "bun run scripts/validate-all.ts",
+    "validate:quick": "bun run typecheck && bun run test:all"
   },
   "workspaces": [
     "packages/*"

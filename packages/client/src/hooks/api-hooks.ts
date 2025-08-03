@@ -968,3 +968,6 @@ export * from './api/use-agents-api'
 
 // Export command hooks
 export * from './api/use-commands-api'
+
+// Export Claude Code hooks
+export * from './api/use-claude-hooks'

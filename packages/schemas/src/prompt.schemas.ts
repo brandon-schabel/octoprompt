@@ -1,16 +1,16 @@
 import { z } from '@hono/zod-openapi'
 import { ProjectIdParamsSchema } from './project.schemas'
-import { unixTSOptionalSchemaSpec, unixTSSchemaSpec } from './schema-utils'
+import { unixTSOptionalSchemaSpec, unixTSSchemaSpec, entityIdSchema, entityIdOptionalSchema } from './schema-utils'
 
 export const PromptSchema = z
   .object({
-    id: unixTSSchemaSpec,
+    id: entityIdSchema,
     name: z.string().openapi({ example: 'Code Refactoring Prompt', description: 'Prompt name' }),
     content: z.string().openapi({
       example: 'Refactor the following code to be more efficient: {code}',
       description: 'Prompt content template'
     }),
-    projectId: unixTSOptionalSchemaSpec,
+    projectId: entityIdOptionalSchema,
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })
@@ -19,7 +19,7 @@ export const PromptSchema = z
 export const CreatePromptBodySchema = z
   .object({
     // Allow projectId to be optional during creation, linking can happen separately or via this field
-    projectId: unixTSOptionalSchemaSpec,
+    projectId: entityIdOptionalSchema,
     name: z.string().min(1).openapi({ example: 'My New Prompt' }),
     content: z.string().min(1).openapi({ example: 'Translate this text: {text}' })
   })
@@ -38,14 +38,14 @@ export const UpdatePromptBodySchema = z
 // --- Request Parameter Schemas ---
 export const PromptIdParamsSchema = z
   .object({
-    promptId: unixTSSchemaSpec.openapi({ param: { name: 'promptId', in: 'path' } })
+    promptId: entityIdSchema.openapi({ param: { name: 'promptId', in: 'path' } })
   })
   .openapi('PromptIdParams')
 
 export const ProjectAndPromptIdParamsSchema = z
   .object({
-    projectId: unixTSSchemaSpec.openapi({ param: { name: 'projectId', in: 'path' } }),
-    promptId: unixTSSchemaSpec.openapi({ param: { name: 'promptId', in: 'path' } })
+    projectId: entityIdSchema.openapi({ param: { name: 'projectId', in: 'path' } }),
+    promptId: entityIdSchema.openapi({ param: { name: 'promptId', in: 'path' } })
   })
   .openapi('ProjectAndPromptIdParams')
 
@@ -73,7 +73,7 @@ export type ProjectAndPromptIdParams = z.infer<typeof ProjectAndPromptIdParamsSc
 // --- Request Body Schema ---
 export const OptimizeUserInputRequestSchema = z
   .object({
-    projectId: unixTSSchemaSpec,
+    projectId: entityIdSchema,
     userContext: z.string().min(1).openapi({
       example: 'Make my login form better.',
       description: "The user's initial prompt or context to be optimized."
@@ -95,9 +95,9 @@ export const OptimizePromptResponseSchema = z
   .openapi('OptimizePromptResponse')
 
 export const PromptProjectSchema = z.object({
-  id: unixTSSchemaSpec,
-  promptId: unixTSSchemaSpec,
-  projectId: unixTSSchemaSpec
+  id: entityIdSchema,
+  promptId: entityIdSchema,
+  projectId: entityIdSchema
 })
 
 // --- Suggest Prompts Schemas ---

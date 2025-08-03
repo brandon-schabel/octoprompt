@@ -88,12 +88,12 @@ export function useSelectedFiles({
   const { pathToId, idToPath } = useMemo(() => {
     const pathToId = new Map<string, number>()
     const idToPath = new Map<number, string>()
-    
+
     for (const [id, file] of projectFileMap) {
       pathToId.set(file.path, id)
       idToPath.set(id, file.path)
     }
-    
+
     return { pathToId, idToPath }
   }, [projectFileMap])
 
@@ -105,8 +105,8 @@ export function useSelectedFiles({
       if (effectiveTabState !== null || effectivePathState !== null) {
         // Convert legacy ID-only state to include paths
         const ids = effectiveTabState || []
-        const paths = effectivePathState || ids.map(id => idToPath.get(id)).filter(Boolean) as string[]
-        
+        const paths = effectivePathState || (ids.map((id) => idToPath.get(id)).filter(Boolean) as string[])
+
         return {
           history: [{ ids, paths }],
           index: 0
@@ -146,12 +146,12 @@ export function useSelectedFiles({
     if (USE_PATH_BASED_SELECTION) {
       // Prefer paths, derive IDs
       if (newPaths && !newIds) {
-        newIds = newPaths.map(path => pathToId.get(path)).filter(Boolean) as number[]
+        newIds = newPaths.map((path) => pathToId.get(path)).filter(Boolean) as number[]
       }
     } else {
       // Legacy: Prefer IDs, derive paths
       if (newIds && !newPaths) {
-        newPaths = newIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
+        newPaths = newIds.map((id) => idToPath.get(id)).filter(Boolean) as string[]
       }
     }
 
@@ -238,7 +238,7 @@ export function useSelectedFiles({
   // Toggle a single file's selection
   const toggleFile = (fileId: number) => {
     if (!isInitialized) return
-    
+
     if (USE_PATH_BASED_SELECTION) {
       // Convert to path-based operation
       const path = idToPath.get(fileId)
@@ -247,8 +247,8 @@ export function useSelectedFiles({
       }
     } else {
       // Legacy behavior
-      const newIds = selectedFiles.includes(fileId) 
-        ? selectedFiles.filter((id) => id !== fileId) 
+      const newIds = selectedFiles.includes(fileId)
+        ? selectedFiles.filter((id) => id !== fileId)
         : [...selectedFiles, fileId]
       commitSelectionChange(newIds)
     }
@@ -258,7 +258,7 @@ export function useSelectedFiles({
   const toggleFilePath = (filePath: string) => {
     if (!isInitialized) return
     const newPaths = selectedFilePaths.includes(filePath)
-      ? selectedFilePaths.filter(p => p !== filePath)
+      ? selectedFilePaths.filter((p) => p !== filePath)
       : [...selectedFilePaths, filePath]
     commitSelectionChange(undefined, newPaths)
   }
@@ -266,12 +266,21 @@ export function useSelectedFiles({
   // Remove a file from selection
   const removeSelectedFile = (fileId: number) => {
     if (!isInitialized) return
-    
+
     if (USE_PATH_BASED_SELECTION) {
       const path = idToPath.get(fileId)
       if (path) {
-        const newPaths = selectedFilePaths.filter(p => p !== path)
+        // File exists - remove by path
+        const newPaths = selectedFilePaths.filter((p) => p !== path)
         commitSelectionChange(undefined, newPaths)
+      } else {
+        // File doesn't exist - remove by filtering both arrays directly
+        const newIds = selectedFiles.filter((id) => id !== fileId)
+        // Find corresponding path by index (if paths and IDs are synced)
+        const fileIndex = selectedFiles.indexOf(fileId)
+        const newPaths =
+          fileIndex !== -1 ? selectedFilePaths.filter((_, index) => index !== fileIndex) : selectedFilePaths
+        commitSelectionChange(newIds, newPaths)
       }
     } else {
       commitSelectionChange(selectedFiles.filter((id) => id !== fileId))
@@ -281,13 +290,13 @@ export function useSelectedFiles({
   // Toggle multiple files at once
   const toggleFiles = (fileIds: number[]) => {
     if (!isInitialized) return
-    
+
     if (USE_PATH_BASED_SELECTION) {
       // Convert to paths
-      const paths = fileIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
-      const toAdd = paths.filter(p => !selectedFilePaths.includes(p))
-      const toRemove = paths.filter(p => selectedFilePaths.includes(p))
-      const newPaths = selectedFilePaths.filter(p => !toRemove.includes(p)).concat(toAdd)
+      const paths = fileIds.map((id) => idToPath.get(id)).filter(Boolean) as string[]
+      const toAdd = paths.filter((p) => !selectedFilePaths.includes(p))
+      const toRemove = paths.filter((p) => selectedFilePaths.includes(p))
+      const newPaths = selectedFilePaths.filter((p) => !toRemove.includes(p)).concat(toAdd)
       commitSelectionChange(undefined, newPaths)
     } else {
       const toAdd = fileIds.filter((id) => !selectedFiles.includes(id))
@@ -299,19 +308,15 @@ export function useSelectedFiles({
   // Select multiple files (replacing current selection)
   const selectFiles = (fileIdsOrUpdater: number[] | ((prev: number[]) => number[])) => {
     if (!isInitialized) return
-    
+
     if (USE_PATH_BASED_SELECTION) {
       // Convert to paths
-      const newIds = typeof fileIdsOrUpdater === 'function' 
-        ? fileIdsOrUpdater(selectedFiles) 
-        : fileIdsOrUpdater
-      const newPaths = newIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
+      const newIds = typeof fileIdsOrUpdater === 'function' ? fileIdsOrUpdater(selectedFiles) : fileIdsOrUpdater
+      const newPaths = newIds.map((id) => idToPath.get(id)).filter(Boolean) as string[]
       commitSelectionChange(newIds, newPaths)
     } else {
       // Legacy
-      const newFileIds = typeof fileIdsOrUpdater === 'function' 
-        ? fileIdsOrUpdater(selectedFiles) 
-        : fileIdsOrUpdater
+      const newFileIds = typeof fileIdsOrUpdater === 'function' ? fileIdsOrUpdater(selectedFiles) : fileIdsOrUpdater
       commitSelectionChange(newFileIds)
     }
   }
@@ -326,6 +331,20 @@ export function useSelectedFiles({
   const clearSelectedFiles = () => {
     if (!isInitialized) return
     commitSelectionChange([], [])
+  }
+
+  // Clear only removed files (files that no longer exist)
+  const clearRemovedFiles = () => {
+    if (!isInitialized) return
+
+    // Filter out files that don't exist in the project anymore
+    const validIds = selectedFiles.filter((id) => projectFileMap.has(id))
+    const validPaths = selectedFilePaths.filter((path) => pathToId.has(path))
+
+    // Only update if there were actually removed files
+    if (validIds.length !== selectedFiles.length || validPaths.length !== selectedFilePaths.length) {
+      commitSelectionChange(validIds, validPaths)
+    }
   }
 
   // Check if a file is selected
@@ -350,13 +369,13 @@ export function useSelectedFiles({
     toggleFiles,
     selectFiles,
     isFileSelected,
-    
+
     // Path-based (NEW - preferred)
     selectedFilePaths: selectedFilePaths ?? [],
     toggleFilePath,
     selectFilePaths,
     isFileSelectedByPath,
-    
+
     // Shared
     projectFileMap,
     pathToId,
@@ -365,6 +384,7 @@ export function useSelectedFiles({
     undo,
     redo,
     clearSelectedFiles,
+    clearRemovedFiles,
     canUndo,
     canRedo
   }

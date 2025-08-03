@@ -7,6 +7,8 @@ export * from './src/mcp-storage'
 export * from './src/active-tab-storage'
 export * from './src/claude-agent-storage'
 export * from './src/claude-command-storage'
+export * from './src/claude-hook-storage'
+export * from './src/claude-hook-storage-simple'
 export * from './src/parser-registry'
 
 // Export everything from storage-v2 except MigrationConfig
@@ -42,3 +44,4 @@ export type { Migration, MigrationFunction, MigrationHistoryEntry, MigrationConf
 
 export * from './src/mcp-tracking-storage'
 export * from './src/encryption-key-storage'
+export * from './src/test-utils'

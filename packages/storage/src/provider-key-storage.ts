@@ -57,9 +57,9 @@ export const providerKeyStorage = {
         isDefault: Boolean(row.is_default),
         isActive: Boolean(row.is_active),
         environment: row.environment,
-        description: row.description,
-        expiresAt: row.expires_at,
-        lastUsed: row.last_used,
+        description: row.description || undefined,
+        expiresAt: row.expires_at || undefined,
+        lastUsed: row.last_used || undefined,
         created: row.created_at,
         updated: row.updated_at
       }
@@ -158,9 +158,9 @@ export const providerKeyStorage = {
       isDefault: Boolean(row.is_default),
       isActive: Boolean(row.is_active),
       environment: row.environment,
-      description: row.description,
-      expiresAt: row.expires_at,
-      lastUsed: row.last_used,
+      description: row.description || undefined,
+      expiresAt: row.expires_at || undefined,
+      lastUsed: row.last_used || undefined,
       created: row.created_at,
       updated: row.updated_at
     }
@@ -283,9 +283,9 @@ export const providerKeyStorage = {
         isDefault: Boolean(row.is_default),
         isActive: Boolean(row.is_active),
         environment: row.environment,
-        description: row.description,
-        expiresAt: row.expires_at,
-        lastUsed: row.last_used,
+        description: row.description || undefined,
+        expiresAt: row.expires_at || undefined,
+        lastUsed: row.last_used || undefined,
         created: row.created_at,
         updated: row.updated_at
       }
@@ -333,9 +333,9 @@ export const providerKeyStorage = {
         isDefault: Boolean(row.is_default),
         isActive: Boolean(row.is_active),
         environment: row.environment,
-        description: row.description,
-        expiresAt: row.expires_at,
-        lastUsed: row.last_used,
+        description: row.description || undefined,
+        expiresAt: row.expires_at || undefined,
+        lastUsed: row.last_used || undefined,
         created: row.created_at,
         updated: row.updated_at
       }
@@ -383,9 +383,9 @@ export const providerKeyStorage = {
         isDefault: Boolean(row.is_default),
         isActive: Boolean(row.is_active),
         environment: row.environment,
-        description: row.description,
-        expiresAt: row.expires_at,
-        lastUsed: row.last_used,
+        description: row.description || undefined,
+        expiresAt: row.expires_at || undefined,
+        lastUsed: row.last_used || undefined,
         created: row.created_at,
         updated: row.updated_at
       }

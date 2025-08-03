@@ -34,3 +34,39 @@ export const idArraySchemaSpec = z.array(idSchemaSpec).openapi({
   example: [1716537600000, 1716537600001],
   description: 'Array of ID fields that accept -1 as null or valid unix timestamps (milliseconds)'
 })
+
+// Entity ID schema - for database record IDs that should NOT be converted
+// This schema accepts positive integers without any timestamp preprocessing
+export const entityIdSchema = z
+  .number()
+  .int('ID must be an integer')
+  .positive('ID must be positive')
+  .max(2524608000000, 'ID exceeds maximum allowed value')
+  .openapi({
+    type: 'integer',
+    format: 'int64',
+    example: 1716537600000,
+    description: 'Entity ID - positive integer without timestamp conversion'
+  })
+
+// Optional entity ID schema
+export const entityIdOptionalSchema = entityIdSchema.optional().openapi({
+  type: 'integer',
+  format: 'int64',
+  example: 1716537600000,
+  description: 'Optional entity ID - positive integer without timestamp conversion'
+})
+
+// Nullable optional entity ID schema
+export const entityIdNullableOptionalSchema = entityIdSchema.nullable().optional().openapi({
+  type: 'integer',
+  format: 'int64',
+  example: 1716537600000,
+  description: 'Nullable optional entity ID - positive integer without timestamp conversion'
+})
+
+// Array of entity IDs
+export const entityIdArraySchema = z.array(entityIdSchema).openapi({
+  example: [1716537600000, 1716537600001],
+  description: 'Array of entity IDs'
+})

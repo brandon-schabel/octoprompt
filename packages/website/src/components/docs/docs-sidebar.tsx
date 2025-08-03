@@ -40,6 +40,7 @@ const navigation: NavItem[] = [
       { title: 'Your First Project', href: '/docs/how-to/first-project' },
       { title: 'Building Context for AI', href: '/docs/how-to/building-context' },
       { title: 'Managing Tickets & Tasks', href: '/docs/how-to/tickets-tasks' },
+      { title: 'Getting the Most from MCP', href: '/docs/how-to/mcp-best-practices', badge: 'New' },
       { title: 'Using File Suggestions', href: '/docs/guides#file-suggestions' },
       { title: 'Working with Prompts', href: '/docs/guides#prompts' }
     ]
@@ -63,7 +64,7 @@ const navigation: NavItem[] = [
       { title: 'What is MCP?', href: '/docs/guides#mcp-overview' },
       { title: 'Setup Guide', href: '/integrations' },
       { title: 'MCP Tools Reference', href: '/docs/api#mcp-tools' },
-      { title: 'Best Practices', href: '/docs/guides#mcp-best-practices' }
+      { title: 'Best Practices', href: '/docs/how-to/mcp-best-practices' }
     ]
   },
   {

@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from '@promptliano/config'
 
-import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
+import { unixTSArraySchemaSpec, unixTSSchemaSpec, entityIdSchema, entityIdOptionalSchema } from './schema-utils'
 import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'
 
 export type MessageRole = z.infer<typeof MessageRoleEnum> // Export the type if needed elsewhere
@@ -23,9 +23,9 @@ export type ModelOptions = z.infer<typeof baseModelOptionsSchema>
 // Base schemas for chat entities
 export const ChatSchema = z
   .object({
-    id: unixTSSchemaSpec,
+    id: entityIdSchema,
     title: z.string(),
-    projectId: unixTSSchemaSpec.optional(),
+    projectId: entityIdOptionalSchema,
     // unix timestamp in milliseconds
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
@@ -35,7 +35,7 @@ export const ChatSchema = z
 // Schema for chat message attachments
 export const ChatMessageAttachmentSchema = z
   .object({
-    id: unixTSSchemaSpec.describe('Unique ID for the attachment itself.'),
+    id: entityIdSchema.describe('Unique ID for the attachment itself.'),
     fileName: z.string().openapi({ description: 'Original name of the uploaded file.' }),
     mimeType: z.string().openapi({ description: 'MIME type of the file.' }),
     size: z.number().int().positive().openapi({ description: 'File size in bytes.' }),
@@ -46,8 +46,8 @@ export const ChatMessageAttachmentSchema = z
 
 export const ChatMessageSchema = z
   .object({
-    id: unixTSSchemaSpec,
-    chatId: unixTSSchemaSpec,
+    id: entityIdSchema,
+    chatId: entityIdSchema,
     role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
     content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
     type: z.string().optional().openapi({ description: 'Message type for categorization' }),
@@ -63,7 +63,7 @@ export const ChatMessageSchema = z
 // Request Parameter Schemas
 export const ChatIdParamsSchema = z
   .object({
-    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('ChatIdParams')
 
@@ -92,7 +92,7 @@ export const CreateChatMessageBodySchema = z
 // File upload schemas
 export const UploadFileParamsSchema = z
   .object({
-    chatId: unixTSSchemaSpec
+    chatId: entityIdSchema
   })
   .openapi('UploadFileParams')
 
@@ -148,13 +148,13 @@ export const ModelListResponseSchema = z
 
 export const GetMessagesParamsSchema = z
   .object({
-    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('GetMessagesParams')
 
 export const ForkChatParamsSchema = z
   .object({
-    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('ForkChatParams')
 
@@ -167,7 +167,7 @@ export const ForkChatBodySchema = z
 // --- UPDATED: ForkChatFromMessageParamsSchema ---
 export const ForkChatFromMessageParamsSchema = z
   .object({
-    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } }),
+    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } }),
     messageId: unixTSSchemaSpec.openapi({ param: { name: 'messageId', in: 'path' } })
   })
   .openapi('ForkChatFromMessageParams')
@@ -180,19 +180,19 @@ export const ForkChatFromMessageBodySchema = z
 
 export const UpdateChatParamsSchema = z
   .object({
-    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('UpdateChatParams')
 
 export const DeleteChatParamsSchema = z
   .object({
-    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
+    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('DeleteChatParams')
 
 export const DeleteMessageParamsSchema = z
   .object({
-    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } }),
+    chatId: entityIdSchema.openapi({ param: { name: 'chatId', in: 'path' } }),
     messageId: unixTSSchemaSpec.openapi({ param: { name: 'messageId', in: 'path' } })
   })
   .openapi('DeleteMessageParams')
@@ -223,7 +223,7 @@ export const messageSchema = z
 // Renamed for clarity and modified fields
 export const AiChatStreamRequestSchema = z
   .object({
-    chatId: unixTSSchemaSpec,
+    chatId: entityIdSchema,
     userMessage: z.string().min(1, { message: 'User message cannot be empty.' }).openapi({
       description: 'The latest message content from the user.',
       example: 'Thanks! Can you elaborate on the E=mc^2 part?'

@@ -16,7 +16,6 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { relativePosix, toPosixPath, toOSPath } from './utils/path-utils'
 
-
 export async function createAgent(projectPath: string, data: CreateClaudeAgentBody): Promise<ClaudeAgent> {
   const now = Date.now()
 
@@ -29,7 +28,7 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
     const fullFilePath = path.join(claudeAgentStorage.getAgentsDir(projectPath), filePath)
 
     const newAgentData: ClaudeAgent = {
-      id: now,
+      id: agentId,
       name: data.name,
       description: data.description,
       color: data.color,
@@ -63,7 +62,6 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
     throw error
   }
 }
-
 
 export async function getAgentById(projectPath: string, agentId: string): Promise<ClaudeAgent> {
   const agent = await claudeAgentStorage.getAgentById(projectPath, agentId)
@@ -219,6 +217,110 @@ Based on this project's structure and the user's context, suggest ${limit} speci
   }
 }
 
+export async function getAgentContentById(projectPath: string, agentId: string): Promise<string | null> {
+  try {
+    const agent = await getAgentById(projectPath, agentId)
+    return agent.content
+  } catch (error) {
+    console.log(
+      `Warning: Could not get agent content for ${agentId}: ${error instanceof Error ? error.message : String(error)}`
+    )
+    return null
+  }
+}
+
+export async function formatAgentContext(projectPath: string, agentId: string): Promise<string> {
+  try {
+    const agent = await getAgentById(projectPath, agentId)
+    return `## Agent: ${agent.name}
+
+${agent.content}
+
+---
+Agent ID: ${agent.id}
+Specialization: ${agent.description}
+`
+  } catch (error) {
+    console.log(
+      `Warning: Could not format agent context for ${agentId}: ${error instanceof Error ? error.message : String(error)}`
+    )
+    return `## Agent: ${agentId} (not found)
+
+This agent could not be loaded. Please proceed with general knowledge.
+`
+  }
+}
+
+export async function getAgentsByIds(projectPath: string, agentIds: string[]): Promise<ClaudeAgent[]> {
+  const agents: ClaudeAgent[] = []
+  for (const agentId of agentIds) {
+    try {
+      const agent = await getAgentById(projectPath, agentId)
+      agents.push(agent)
+    } catch (error) {
+      console.log(`Warning: Could not get agent ${agentId}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+  return agents
+}
+
+export async function suggestAgentForTask(
+  taskTitle: string,
+  taskDescription: string = '',
+  availableAgents: ClaudeAgent[]
+): Promise<string | null> {
+  if (availableAgents.length === 0) return null
+
+  // Simple heuristic-based matching
+  const taskContent = `${taskTitle} ${taskDescription}`.toLowerCase()
+
+  // Priority mappings for common task types
+  const agentPriorities: Record<string, string[]> = {
+    'zod-schema-architect': ['schema', 'zod', 'validation', 'data model', 'type'],
+    'frontend-shadcn-expert': ['ui', 'component', 'frontend', 'react', 'shadcn', 'button', 'form', 'page'],
+    'hono-bun-api-architect': ['api', 'endpoint', 'route', 'hono', 'rest', 'http'],
+    'promptliano-service-architect': ['service', 'business logic', 'storage'],
+    'promptliano-mcp-tool-creator': ['mcp', 'tool', 'claude'],
+    'staff-engineer-code-reviewer': ['review', 'quality', 'refactor', 'improve'],
+    'code-modularization-expert': ['modularize', 'split', 'refactor', 'organize'],
+    'sqlite-json-migration-expert': ['migration', 'database', 'sqlite', 'table'],
+    'tanstack-router-expert': ['route', 'router', 'navigation', 'tanstack'],
+    'vercel-ai-sdk-expert': ['ai', 'llm', 'vercel', 'streaming', 'chat'],
+    'simple-git-integration-expert': ['git', 'version', 'commit', 'branch'],
+    'promptliano-planning-architect': ['plan', 'architect', 'design', 'breakdown']
+  }
+
+  // Find best match
+  let bestMatch: string | null = null
+  let highestScore = 0
+
+  for (const agent of availableAgents) {
+    const keywords = agentPriorities[agent.id] || []
+    let score = 0
+
+    for (const keyword of keywords) {
+      if (taskContent.includes(keyword)) {
+        score += 1
+      }
+    }
+
+    // Also check agent description
+    const descWords = agent.description.toLowerCase().split(' ')
+    for (const word of descWords) {
+      if (taskContent.includes(word) && word.length > 3) {
+        score += 0.5
+      }
+    }
+
+    if (score > highestScore) {
+      highestScore = score
+      bestMatch = agent.id
+    }
+  }
+
+  return bestMatch
+}
+
 // Create singleton service instance
 class ClaudeAgentService {
   listAgents = listAgents
@@ -228,6 +330,10 @@ class ClaudeAgentService {
   deleteAgent = deleteAgent
   getAgentsByProjectId = getAgentsByProjectId
   suggestAgents = suggestAgents
+  getAgentContentById = getAgentContentById
+  formatAgentContext = formatAgentContext
+  getAgentsByIds = getAgentsByIds
+  suggestAgentForTask = suggestAgentForTask
 }
 
 // Export singleton instance

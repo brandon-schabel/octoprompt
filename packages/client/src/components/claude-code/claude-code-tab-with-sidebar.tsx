@@ -1,6 +1,6 @@
 import React from 'react'
 import { ClaudeCodeSidebarNav, type ClaudeCodeView } from './claude-code-sidebar-nav'
-import { AgentsView, CommandsView, MCPView, SessionsView, ChatsView } from './views'
+import { AgentsView, CommandsView, MCPView, SessionsView, ChatsView, HooksView } from './views'
 import { cn } from '@/lib/utils'
 
 interface ClaudeCodeTabWithSidebarProps {
@@ -35,8 +35,8 @@ export function ClaudeCodeTabWithSidebar({
         {claudeCodeView === 'commands' && <CommandsView projectId={projectId} projectName={projectName} />}
         {claudeCodeView === 'mcp' && <MCPView projectId={projectId} projectName={projectName} />}
         {claudeCodeView === 'sessions' && (
-          <SessionsView 
-            projectId={projectId} 
+          <SessionsView
+            projectId={projectId}
             projectName={projectName}
             onSelectSession={(sessionId) => {
               onSessionIdChange(sessionId)
@@ -45,8 +45,8 @@ export function ClaudeCodeTabWithSidebar({
           />
         )}
         {claudeCodeView === 'chats' && (
-          <ChatsView 
-            projectId={projectId} 
+          <ChatsView
+            projectId={projectId}
             projectName={projectName}
             sessionId={sessionId}
             onBack={() => {
@@ -55,6 +55,7 @@ export function ClaudeCodeTabWithSidebar({
             }}
           />
         )}
+        {claudeCodeView === 'hooks' && <HooksView projectId={projectId} projectName={projectName} />}
         {claudeCodeView === 'settings' && (
           <div className='p-6 text-center text-muted-foreground'>
             <p>Claude Code settings coming soon...</p>
