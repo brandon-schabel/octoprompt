@@ -8,7 +8,7 @@ export function NewsletterSignup() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (!email || !email.includes('@')) {
@@ -53,7 +53,7 @@ export function NewsletterSignup() {
             <Input
               type='email'
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               placeholder='Enter your email address'
               disabled={status === 'loading' || status === 'success'}
               className='w-full h-12 bg-background/50 pr-14'

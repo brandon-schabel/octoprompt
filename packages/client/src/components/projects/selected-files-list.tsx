@@ -339,7 +339,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         </Dialog>
 
         <div className={cn('flex flex-col h-full', className)}>
-          <div className='flex items-center gap-2 mb-2 shrink-0'>
+          <div className='flex items-center gap-2 mb-2 flex-shrink-0'>
             <Input
               placeholder='Filter files'
               value={filterText}
@@ -460,7 +460,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
             </DropdownMenu>
           </div>
 
-          <ScrollArea className='flex-1 min-h-0'>
+          <ScrollArea className='flex-1 w-full'>
             <div className='pr-3'>
               {filteredFileIds.map((fileId, index) => {
                 const file = projectFileMap.get(fileId)

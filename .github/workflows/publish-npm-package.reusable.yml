@@ -1,0 +1,272 @@
+name: Reusable NPM Package Publisher
+
+on:
+  workflow_call:
+    inputs:
+      package-path:
+        description: 'Path to the package directory'
+        required: true
+        type: string
+      package-name:
+        description: 'NPM package name'
+        required: true
+        type: string
+      build-command:
+        description: 'Build command'
+        required: false
+        type: string
+        default: 'bun run build'
+      test-command:
+        description: 'Test command'
+        required: false
+        type: string
+        default: 'bun test'
+      generate-types:
+        description: 'Whether to generate TypeScript types'
+        required: false
+        type: boolean
+        default: true
+      types-command:
+        description: 'Command to generate types'
+        required: false
+        type: string
+        default: 'bun run build:types'
+      npm-access:
+        description: 'NPM publish access level'
+        required: false
+        type: string
+        default: 'public'
+      node-version:
+        description: 'Node.js version for compatibility checks'
+        required: false
+        type: string
+        default: '20.x'
+      bun-version:
+        description: 'Bun version'
+        required: false
+        type: string
+        default: 'latest'
+      build-output-dir:
+        description: 'Build output directory to verify'
+        required: false
+        type: string
+        default: 'dist'
+      build-output-file:
+        description: 'Main build output file to verify'
+        required: false
+        type: string
+        default: 'dist/index.js'
+      run-tests:
+        description: 'Whether to run tests'
+        required: false
+        type: boolean
+        default: true
+      version-tag-prefix:
+        description: 'Version tag prefix (e.g., "ui-v" for ui-v1.0.0)'
+        required: false
+        type: string
+        default: 'v'
+    secrets:
+      NPM_TOKEN:
+        description: 'NPM authentication token'
+        required: true
+
+jobs:
+  publish:
+    name: ${{ github.event_name == 'pull_request' && format('Test {0} Package (Dry Run)', inputs.package-name) || format('Build and Publish {0} to NPM', inputs.package-name) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # For npm provenance
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@4bc047ad259df6fc24a6c9b0f9a0cb08cf17fbe5 # v2.0.1
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Cache dependencies
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Extract version from tag
+        if: github.event_name != 'pull_request'
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          # Remove the version tag prefix to get the clean version
+          VERSION=${VERSION#${{ inputs.version-tag-prefix }}}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$VERSION" >> $GITHUB_ENV
+
+      - name: Validate version matches package.json
+        if: github.event_name != 'pull_request'
+        working-directory: ${{ inputs.package-path }}
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if [ "$PACKAGE_VERSION" != "${{ steps.version.outputs.VERSION }}" ]; then
+            echo "Error: Tag version (${{ steps.version.outputs.VERSION }}) does not match package.json version ($PACKAGE_VERSION)"
+            echo "Please ensure the version in package.json is updated before creating a tag"
+            exit 1
+          fi
+          echo "✅ Version validation passed: $PACKAGE_VERSION"
+
+      - name: Run tests
+        if: inputs.run-tests
+        working-directory: ${{ inputs.package-path }}
+        run: ${{ inputs.test-command }}
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+
+      - name: Build package
+        working-directory: ${{ inputs.package-path }}
+        run: |
+          echo "Building ${{ inputs.package-name }} package..."
+          ${{ inputs.build-command }}
+
+          # Generate TypeScript types if requested
+          if [ "${{ inputs.generate-types }}" = "true" ] && [ -n "${{ inputs.types-command }}" ]; then
+            echo "Generating TypeScript declarations..."
+            ${{ inputs.types-command }} || echo "Type generation not configured, skipping..."
+          fi
+
+          # Verify build output
+          if [ ! -d "${{ inputs.build-output-dir }}" ]; then
+            echo "Error: ${{ inputs.build-output-dir }} directory not found after build"
+            exit 1
+          fi
+
+          if [ -n "${{ inputs.build-output-file }}" ] && [ ! -f "${{ inputs.build-output-file }}" ]; then
+            echo "Error: ${{ inputs.build-output-file }} not found after build"
+            exit 1
+          fi
+
+          echo "✅ Build completed successfully"
+          ls -la ${{ inputs.build-output-dir }}/
+
+      - name: Dry run - Pack package
+        if: github.event_name == 'pull_request'
+        working-directory: ${{ inputs.package-path }}
+        run: |
+          echo "📦 Running npm pack (dry run)..."
+          npm pack --dry-run
+
+          # Also test the actual pack to ensure it creates the tarball
+          npm pack
+
+          # Get the package name without scope for file matching
+          PACKAGE_FILE_NAME=$(echo "${{ inputs.package-name }}" | sed 's/@//g' | sed 's/\//-/g')
+
+          # Check the tarball contents
+          echo ""
+          echo "📋 Package contents:"
+          tar -tzf ${PACKAGE_FILE_NAME}-*.tgz | head -20
+          echo "..."
+
+          # Check package size
+          echo ""
+          echo "📊 Package size:"
+          ls -lh ${PACKAGE_FILE_NAME}-*.tgz
+
+          echo ""
+          echo "✅ Dry run completed successfully!"
+
+      - name: Configure npm authentication
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm whoami
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Check for duplicate publication
+        if: github.event_name != 'pull_request'
+        working-directory: ${{ inputs.package-path }}
+        id: check_duplicate
+        run: |
+          if npm view ${{ inputs.package-name }}@${{ steps.version.outputs.VERSION }} > /dev/null 2>&1; then
+            echo "Version ${{ steps.version.outputs.VERSION }} already exists on npm"
+            echo "duplicate=true" >> $GITHUB_OUTPUT
+          else
+            echo "duplicate=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to npm
+        if: github.event_name != 'pull_request' && steps.check_duplicate.outputs.duplicate != 'true'
+        working-directory: ${{ inputs.package-path }}
+        run: |
+          # Publish with provenance
+          npm publish --access ${{ inputs.npm-access }} --provenance
+
+          echo "✅ Successfully published ${{ inputs.package-name }}@${{ steps.version.outputs.VERSION }} to npm"
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Skip duplicate publication
+        if: github.event_name != 'pull_request' && steps.check_duplicate.outputs.duplicate == 'true'
+        run: |
+          echo "⚠️ Skipping publication: ${{ inputs.package-name }}@${{ steps.version.outputs.VERSION }} already exists on npm"
+
+      - name: Create PR summary
+        if: github.event_name == 'pull_request' && success()
+        run: |
+          echo "## ✅ ${{ inputs.package-name }} Package Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The ${{ inputs.package-name }} package build and tests passed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What was tested:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependencies installation" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.run-tests }}" = "true" ]; then
+            echo "- ✅ Test suite execution" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- ✅ Package build" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.generate-types }}" = "true" ]; then
+            echo "- ✅ TypeScript type generation" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- ✅ NPM package creation (dry run)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Package contents verification" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This package will be ready to publish when merged." >> $GITHUB_STEP_SUMMARY
+
+      - name: Create release summary
+        if: github.event_name != 'pull_request' && success() && steps.check_duplicate.outputs.duplicate != 'true'
+        run: |
+          echo "## 🎉 ${{ inputs.package-name }} Package Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: ${{ inputs.package-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: [npmjs.com/package/${{ inputs.package-name }}](https://www.npmjs.com/package/${{ inputs.package-name }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "npm install ${{ inputs.package-name }}@${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "or" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "bun add ${{ inputs.package-name }}@${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

@@ -58,23 +58,34 @@ const BreadcrumbPage = React.forwardRef<HTMLSpanElement, React.ComponentPropsWit
 )
 BreadcrumbPage.displayName = 'BreadcrumbPage'
 
-const BreadcrumbSeparator = ({ children, className, ...props }: React.ComponentProps<'li'>) => (
-  <li role='presentation' aria-hidden='true' className={cn('[&>svg]:w-3.5 [&>svg]:h-3.5', className)} {...props}>
-    {children ?? <ChevronRightIcon />}
-  </li>
+const BreadcrumbSeparator = React.forwardRef<HTMLLIElement, React.ComponentPropsWithoutRef<'li'>>(
+  ({ children, className, ...props }, ref) => (
+    <li
+      ref={ref}
+      role='presentation'
+      aria-hidden='true'
+      className={cn('[&>svg]:w-3.5 [&>svg]:h-3.5', className)}
+      {...props}
+    >
+      {children ?? <ChevronRightIcon />}
+    </li>
+  )
 )
 BreadcrumbSeparator.displayName = 'BreadcrumbSeparator'
 
-const BreadcrumbEllipsis = ({ className, ...props }: React.ComponentProps<'span'>) => (
-  <span
-    role='presentation'
-    aria-hidden='true'
-    className={cn('flex h-9 w-9 items-center justify-center', className)}
-    {...props}
-  >
-    <DotsHorizontalIcon className='h-4 w-4' />
-    <span className='sr-only'>More</span>
-  </span>
+const BreadcrumbEllipsis = React.forwardRef<HTMLSpanElement, React.ComponentPropsWithoutRef<'span'>>(
+  ({ className, ...props }, ref) => (
+    <span
+      ref={ref}
+      role='presentation'
+      aria-hidden='true'
+      className={cn('flex h-9 w-9 items-center justify-center', className)}
+      {...props}
+    >
+      <DotsHorizontalIcon className='h-4 w-4' />
+      <span className='sr-only'>More</span>
+    </span>
+  )
 )
 BreadcrumbEllipsis.displayName = 'BreadcrumbElipssis'
 

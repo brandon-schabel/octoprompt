@@ -156,7 +156,7 @@ export function DocsSearch() {
                   ref={inputRef}
                   type='text'
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
                   placeholder='Search documentation...'
                   className='flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0'
                   autoFocus

@@ -175,7 +175,7 @@ export function ConfigGenerator() {
                       {...field}
                       id='args'
                       value={field.value.join(' ')}
-                      onChange={(e) => field.onChange(e.target.value.split(' '))}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.value.split(' '))}
                       type='text'
                       placeholder='start --mcp'
                     />
@@ -249,14 +249,14 @@ export function ConfigGenerator() {
                   <Input
                     type='text'
                     value={pair.key}
-                    onChange={(e) => updateEnvPair(index, 'key', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEnvPair(index, 'key', e.target.value)}
                     placeholder='KEY'
                     className='flex-1'
                   />
                   <Input
                     type='text'
                     value={pair.value}
-                    onChange={(e) => updateEnvPair(index, 'value', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEnvPair(index, 'value', e.target.value)}
                     placeholder='VALUE'
                     className='flex-1'
                   />

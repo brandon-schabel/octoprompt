@@ -34,8 +34,8 @@ export function MarkdownRenderer({
   }, [codeTheme])
 
   const components: Components = {
-    // @ts-ignore
-    code: ({ inline, className, children, ...rest }) => {
+    code: ({ className, children, ...rest }: any) => {
+      const inline = rest.inline
       const match = /language-(\w+)/.exec(className || '')
       const codeString = String(children).replace(/\n$/, '')
 

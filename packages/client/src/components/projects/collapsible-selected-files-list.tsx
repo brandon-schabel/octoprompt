@@ -31,8 +31,14 @@ export const CollapsibleSelectedFilesList = forwardRef<SelectedFilesListRef, Col
     }
 
     return (
-      <div className={cn('border rounded-lg flex flex-col', isCollapsed ? '' : 'h-full', className)}>
-        <Collapsible open={!isCollapsed} onOpenChange={() => toggleCollapsed()}>
+      <div
+        className={cn(
+          'border rounded-lg flex flex-col',
+          isCollapsed ? 'flex-shrink-0' : 'h-full overflow-hidden',
+          className
+        )}
+      >
+        <Collapsible open={!isCollapsed} onOpenChange={() => toggleCollapsed()} className='h-full flex flex-col'>
           <CollapsibleTrigger asChild>
             <div className='flex-shrink-0 flex flex-row items-center justify-between p-2 border-b hover:bg-muted/50 cursor-pointer transition-colors'>
               <div className='flex items-center gap-2'>
@@ -67,14 +73,14 @@ export const CollapsibleSelectedFilesList = forwardRef<SelectedFilesListRef, Col
             </div>
           </CollapsibleTrigger>
 
-          <CollapsibleContent className='flex-1 flex flex-col overflow-hidden'>
+          <CollapsibleContent className='flex-1 overflow-hidden'>
             {projectTabId && (
               <SelectedFilesList
                 ref={ref}
                 onRemoveFile={(fileId: number) => {
                   removeSelectedFile(fileId)
                 }}
-                className='w-full h-full p-2'
+                className='h-full p-2'
                 projectTabId={projectTabId}
               />
             )}

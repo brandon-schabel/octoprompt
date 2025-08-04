@@ -42,8 +42,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     return (
       <ErrorBoundary>
-        <div className={cn('flex flex-col h-full overflow-hidden', className)}>
-          <div className='flex-1 flex flex-col min-h-0 p-4 overflow-hidden min-w-0'>
+        <div className={cn('flex flex-col h-full', className)}>
+          <div className='flex-1 flex flex-col p-4 overflow-hidden'>
             {/* Dynamic layout based on collapsed states */}
             {!promptsPanelCollapsed && !selectedFilesCollapsed ? (
               // Both expanded - use resizable panel for manual control
@@ -66,16 +66,16 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               />
             ) : (
               // At least one collapsed - use flex layout for automatic sizing
-              <div className='flex flex-col gap-4 h-full overflow-hidden'>
+              <div className='flex flex-col gap-4 h-full'>
                 <PromptsList
                   ref={promptsListRef}
                   projectTabId={activeProjectTabId || -1}
-                  className={promptsPanelCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}
+                  className={promptsPanelCollapsed ? 'flex-shrink-0' : 'flex-1 overflow-hidden'}
                 />
                 <CollapsibleSelectedFilesList
                   ref={selectedFilesListRef}
                   projectTabId={activeProjectTabId || -1}
-                  className={selectedFilesCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}
+                  className={selectedFilesCollapsed ? 'flex-shrink-0' : 'flex-1 overflow-hidden'}
                 />
               </div>
             )}

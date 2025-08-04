@@ -1,44 +1,43 @@
-name: Publish CLI Package
+name: Publish UI Package
 
 on:
   push:
     tags:
-      - 'cli-v*.*.*' # Changed to use cli-v prefix for consistency
-      - 'v*.*.*' # Keep backward compatibility with existing tags
+      - 'ui-v*.*.*'
   pull_request:
     branches: [main]
     paths:
-      - 'packages/promptliano/**'
-      - '.github/workflows/publish-cli.yml'
+      - 'packages/ui/**'
+      - '.github/workflows/publish-ui.yml'
       - '.github/workflows/publish-npm-package.reusable.yml'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (e.g., cli-v1.0.0 or v1.0.0)'
+        description: 'Tag to publish (e.g., ui-v1.0.0)'
         required: true
         type: string
 
 # Prevent concurrent executions for the same ref
 concurrency:
-  group: publish-cli-${{ github.ref }}
+  group: publish-ui-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  publish-cli:
-    name: Publish promptliano CLI
+  publish-ui:
+    name: Publish @promptliano/ui
     uses: ./.github/workflows/publish-npm-package.reusable.yml
     with:
-      package-path: packages/promptliano
-      package-name: 'promptliano'
+      package-path: packages/ui
+      package-name: '@promptliano/ui'
       build-command: 'bun run build'
-      test-command: 'bun test'
+      test-command: 'bun run typecheck' # UI package doesn't have tests yet, using typecheck
       generate-types: true
-      types-command: 'bun run build:types'
+      types-command: '' # tsup handles type generation automatically
       npm-access: 'public'
       bun-version: 'latest'
       build-output-dir: 'dist'
       build-output-file: 'dist/index.js'
       run-tests: true
-      version-tag-prefix: ${{ startsWith(github.ref, 'refs/tags/cli-v') && 'cli-v' || 'v' }}
+      version-tag-prefix: 'ui-v'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
