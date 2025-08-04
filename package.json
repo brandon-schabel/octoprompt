@@ -39,6 +39,7 @@
     "migrate:encrypt-keys": "bun run packages/storage/src/migrations/encrypt-provider-keys.ts",
     "dev:website": "bun run scripts/start-website-dev.ts",
     "build:website": "cd packages/website && bun run build",
+    "build:ui": "cd packages/ui && bun run build",
     "preview:website": "cd packages/website && bun run preview",
     "sync-version": "bun run scripts/sync-version.ts",
     "update-version": "bun run scripts/update-version.ts",
