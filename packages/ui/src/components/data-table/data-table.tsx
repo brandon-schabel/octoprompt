@@ -10,12 +10,12 @@ import {
   getFacetedUniqueValues
 } from '@tanstack/react-table'
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../data'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../data/index'
 import { DataTablePagination } from './data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
 import { cn } from '../../utils'
 import type { DataTableProps } from './types'
-import { Skeleton } from '../data'
+import { Skeleton } from '../data/index'
 
 export function DataTable<TData, TValue>({
   columns,

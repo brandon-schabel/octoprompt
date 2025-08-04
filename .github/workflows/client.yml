@@ -26,7 +26,7 @@ jobs:
       - name: Build UI package
         run: |
           cd packages/ui
-          bun run build
+          NODE_ENV=production bun run build:bun
 
       - name: Run client tests
         run: |

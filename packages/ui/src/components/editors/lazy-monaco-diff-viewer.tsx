@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Skeleton } from '../data'
+import { Skeleton } from '../data/index'
 
 // Lazy load Monaco Diff Viewer
 const MonacoDiffViewer = lazy(() =>

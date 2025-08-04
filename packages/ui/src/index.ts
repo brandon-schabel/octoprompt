@@ -136,7 +136,7 @@ export {
   CollapsibleContent,
   ScrollArea,
   ScrollBar
-} from './components/data'
+} from './components/data/index'
 
 // Interaction components
 export { Slider } from './components/interaction/slider'

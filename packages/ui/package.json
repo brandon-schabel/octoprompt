@@ -5,11 +5,12 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
+      "default": "./dist/index.js"
     }
   },
   "files": [
@@ -18,7 +19,9 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:bun": "bun run scripts/build-with-bun.ts",
     "dev": "tsup --watch",
+    "dev:bun": "bun run scripts/build-with-bun.ts --watch",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
   },
