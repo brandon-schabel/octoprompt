@@ -119,14 +119,24 @@ export {
   TableHead,
   TableRow,
   TableCell,
-  TableCaption
-} from './components/data/table'
-export { Skeleton } from './components/data/skeleton'
-export { Avatar, AvatarImage, AvatarFallback } from './components/data/avatar'
-export { Progress, type ProgressProps, type ProgressVariant } from './components/data/progress'
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './components/data/accordion'
-export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './components/data/collapsible'
-export { ScrollArea, ScrollBar } from './components/data/scroll-area'
+  TableCaption,
+  Skeleton,
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+  Progress,
+  type ProgressProps,
+  type ProgressVariant,
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+  ScrollArea,
+  ScrollBar
+} from './components/data'
 
 // Interaction components
 export { Slider } from './components/interaction/slider'
@@ -379,13 +389,7 @@ export type * from './components/core/popover'
 export type * from './components/core/sheet'
 export type * from './components/core/command'
 export type * from './components/core/alert-dialog'
-export type * from './components/data/table'
-export type * from './components/data/skeleton'
-export type * from './components/data/avatar'
-export type * from './components/data/progress'
-export type * from './components/data/accordion'
-export type * from './components/data/collapsible'
-export type * from './components/data/scroll-area'
+export type * from './components/data'
 export type * from './components/interaction/slider'
 export type * from './components/interaction/toggle'
 export type * from './components/interaction/toggle-group'
