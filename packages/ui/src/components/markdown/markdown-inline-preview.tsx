@@ -1,5 +1,5 @@
 import { MarkdownRenderer } from './markdown-renderer'
-import { ScrollArea } from '../data/index'
+import { ScrollArea } from '../data'
 import { cn } from '../../utils'
 
 export interface MarkdownInlinePreviewProps {
