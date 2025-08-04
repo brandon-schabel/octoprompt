@@ -16,6 +16,8 @@ For full features load into context ./CLAUDE_CODE_PROMPTLIANO_FEATURE_DEVELOPMEN
 - When building new features use Promptliano to understand the architecture of the project. try to follow the patterns that the project is already using.
 - Before searching the internet for library docs, check to see if the user already has library docs in their Promptliano prompts library
 
+When you are building new UI components and new UI pages, spawn the subagent `promptliano-ui-builder` and load in PROMPTLIANO_UI_REFERENCE.md into the agent context. From here the agent can build very powerful Promptliano UIs with `@promptliano/ui`
+
 ## Ports
 
 Dev Server: 3147
