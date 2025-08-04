@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GlassCard, CodeBlock, AnimateOnScroll } from '@/components/ui'
+import { GlassCard, CodeBlock, AnimateOnScroll, CTAButton } from '@/components/ui'
 import { HeroButton } from '@/components/ui/hero-button'
 import { ChevronRight, Check, Copy, Terminal, FileJson, Rocket, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'

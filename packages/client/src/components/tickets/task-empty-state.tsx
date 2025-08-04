@@ -1,4 +1,4 @@
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { CheckSquare, Plus, RefreshCcw, ListTodo, Wand2 } from 'lucide-react'
 
 interface TaskEmptyStateProps {

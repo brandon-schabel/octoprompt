@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { useBranchesEnhanced, useCreateBranch, useSwitchBranch, useDeleteBranch } from '@/hooks/api/use-git-api'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from '@promptliano/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Skeleton } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { useNavigate } from '@tanstack/react-router'
 import {
   AlertDialog,
@@ -16,22 +16,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from '@/components/ui/alert-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+} from '@promptliano/ui'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 import { GitBranch, Trash2, Plus, ArrowRightLeft, Clock, User, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { GitBranchEnhanced } from '@promptliano/schemas'
-import { Separator } from '@/components/ui/separator'
+import { Separator } from '@promptliano/ui'
 import { formatDistanceToNow, format } from 'date-fns'
 
 interface GitBranchesViewProps {

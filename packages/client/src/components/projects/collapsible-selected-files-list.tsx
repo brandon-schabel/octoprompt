@@ -1,6 +1,6 @@
 import { forwardRef, useMemo } from 'react'
-import { Badge } from '@ui'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui'
+import { Badge } from '@promptliano/ui'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@promptliano/ui'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'

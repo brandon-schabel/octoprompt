@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
 import { Plus, Search, Edit, Trash2, Terminal, Clock, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@promptliano/ui'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +15,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from '@/components/ui/alert-dialog'
+} from '@promptliano/ui'
 import { HookDialog } from '../hook-dialog'
 import type { HookListItem, HookEvent } from '@promptliano/schemas'
 import { useGetProjectHooks, useDeleteHook } from '@/hooks/api/use-claude-hooks'

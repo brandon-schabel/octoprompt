@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { CommandItem } from '@ui'
+import { CommandItem } from '@promptliano/ui'
 import { FileIcon, ChatBubbleIcon, GearIcon } from '@radix-ui/react-icons'
 
 type NavigationCommandProps = {

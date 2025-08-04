@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { APIProviders } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 import { PromptlianoCombobox } from '@/components/promptliano/promptliano-combobox'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'

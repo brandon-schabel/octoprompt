@@ -1,8 +1,17 @@
 import { AlertCircle, CheckCircle2, XCircle, Info } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@ui'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui/accordion'
+import { Alert, AlertDescription, AlertTitle } from '@promptliano/ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@promptliano/ui'
 
 interface TroubleshootingStep {
   title: string

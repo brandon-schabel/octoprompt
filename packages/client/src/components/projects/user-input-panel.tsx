@@ -3,12 +3,12 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useNavigate } from '@tanstack/react-router'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import {
   useActiveProjectTab,
   useUpdateActiveProjectTab,

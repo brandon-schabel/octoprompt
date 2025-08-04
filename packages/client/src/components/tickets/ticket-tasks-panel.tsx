@@ -7,10 +7,10 @@ import {
   useReorderTasks,
   useAutoGenerateTasks
 } from '../../hooks/api/use-tickets-api'
-import { Input } from '@ui'
-import { Button } from '@ui'
+import { Input } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
 import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Circle } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@promptliano/ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { toast } from 'sonner'
 import type { TicketTask } from '@promptliano/schemas'

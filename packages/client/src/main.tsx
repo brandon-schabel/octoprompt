@@ -3,7 +3,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from '@ui'
+import { Toaster } from '@promptliano/ui'
 import { promptlianoClient } from '@/hooks/promptliano-client'
 
 // Initialize core services

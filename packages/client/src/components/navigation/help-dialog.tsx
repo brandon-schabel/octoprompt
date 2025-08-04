@@ -1,10 +1,8 @@
 import { useHotkeys } from 'react-hotkeys-hook'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, Button } from '@ui' // Added Button
-import { Badge } from '@ui'
-import { ScrollArea } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, Button, Badge, ScrollArea } from '@promptliano/ui'
 import { AppShortcutDisplay, ShortcutDisplay } from '../app-shortcut-display'
 import { useActiveChatId, useAppSettings, useSelectSetting } from '@/hooks/use-kv-local-storage'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
 import { Link } from '@tanstack/react-router'
 import {
   Bot,

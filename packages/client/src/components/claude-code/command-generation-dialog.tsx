@@ -2,20 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { RadioGroup, RadioGroupItem } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
 import {
   Loader2,
   Sparkles,
@@ -33,10 +26,10 @@ import { useGenerateCommand } from '@/hooks/api/use-commands-api'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useCommandGenerationCache } from '@/hooks/use-command-generation-cache'
 import type { CommandGenerationRequest, ClaudeCommand, ClaudeCommandFrontmatter } from '@promptliano/schemas'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@promptliano/ui'
 import { ChevronDown } from 'lucide-react'
-import { Checkbox } from '@/components/ui/checkbox'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
 
 const commandGenerationFormSchema = z.object({
   name: z

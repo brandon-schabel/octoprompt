@@ -1,6 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@promptliano/ui'
 import { List, CheckCircle2, BarChart3, Clock } from 'lucide-react'
 
 export type TicketView = 'all' | 'active' | 'completed' | 'analytics'

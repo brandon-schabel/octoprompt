@@ -12,7 +12,7 @@ import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-
 import { CollapsibleSelectedFilesList } from '@/components/projects/collapsible-selected-files-list'
 import { type SelectedFilesListRef } from '@/components/projects/selected-files-list'
 import { useActiveProjectTab, useProjectTabField } from '@/hooks/use-kv-local-storage'
-import { VerticalResizablePanel } from '@ui'
+import { VerticalResizable as VerticalResizablePanel } from '@promptliano/ui'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 export type PromptOverviewPanelRef = {

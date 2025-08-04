@@ -1,15 +1,15 @@
 import React, { useMemo, useCallback } from 'react'
 import { useGetTicketsWithTasks, useDeleteTicket } from '@/hooks/api/use-tickets-api'
-import { Button } from '@ui'
-import { Input } from '@ui'
-import { Badge } from '@ui'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@promptliano/ui'
 import { Copy, Filter, FileText, Trash2, ExternalLink } from 'lucide-react'
-import { ScrollArea } from '@ui'
+import { ScrollArea } from '@promptliano/ui'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { buildTicketContent } from './utils/ticket-utils'
-import { Progress } from '@ui'
+import { Progress } from '@promptliano/ui'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from '@ui'
+} from '@promptliano/ui'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { TicketWithTasks } from '@promptliano/schemas'

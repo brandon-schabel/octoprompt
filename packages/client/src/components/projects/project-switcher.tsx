@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Folder, ChevronDown, Search, Clock, Star, FolderOpen, GitBranch } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +10,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
   DropdownMenuLabel
-} from '@ui'
-import { Input } from '@ui'
+} from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 import { Project } from '@promptliano/schemas'
 import { useGetProjects } from '@/hooks/api/use-projects-api'

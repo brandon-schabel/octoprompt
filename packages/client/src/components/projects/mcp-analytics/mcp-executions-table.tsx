@@ -1,12 +1,12 @@
 import React from 'react'
-import { DataTable } from '@/components/ui/data-table'
+import { DataTable } from '@promptliano/ui'
 import { mcpExecutionsColumns, defaultColumnVisibility } from './mcp-executions-columns'
 import { useGetMCPExecutions } from '@/hooks/api/use-mcp-analytics-api'
 import type { MCPExecutionQuery } from '@promptliano/schemas'
 import type { PaginationState, SortingState, ColumnFiltersState } from '@tanstack/react-table'
 import { RefreshCw, Download, FileJson } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Button } from '@promptliano/ui'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@promptliano/ui'
 
 interface MCPExecutionsTableProps {
   projectId: number

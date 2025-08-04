@@ -200,7 +200,8 @@ export const useCreateProjectTab = () => {
   const { mutate: updateProjectTabs, ...rest } = useSetKvValue('projectTabs')
   const [projectTabs] = useGetProjectTabs()
   const [activeProjectTabId] = useGetActiveProjectTabId()
-  const currentSelectedProjectId = useProjectTabById(activeProjectTabId ?? -1)?.selectedProjectId
+  const currentTab = useProjectTabById(activeProjectTabId ?? -1)
+  const currentSelectedProjectId = currentTab?.selectedProjectId
 
   const createProjectTab = (payload: ProjectTabStatePartial) => {
     // use unix timestamp in millisecondsc

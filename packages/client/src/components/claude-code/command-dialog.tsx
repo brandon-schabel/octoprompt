@@ -2,25 +2,18 @@ import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
+import { RadioGroup, RadioGroupItem } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
 import { Loader2, Info, Code } from 'lucide-react'
 import { useCreateCommand, useUpdateCommand, useGetCommand } from '@/hooks/api-hooks'
 import type { ClaudeCommand, CommandScope } from '@promptliano/schemas'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@promptliano/ui'
 import { ChevronDown } from 'lucide-react'
 
 const commandFormSchema = z.object({

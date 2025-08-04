@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
-import { Skeleton } from '@ui'
-import { Textarea } from '@ui'
+import { Skeleton } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
 
 // Lazy load Monaco Editor wrapper
 const MonacoEditorWrapper = lazy(() =>

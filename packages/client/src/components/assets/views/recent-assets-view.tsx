@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
 import { useRecentGenerations } from '@/hooks/use-recent-generations'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useCreatePrompt, useAddPromptToProject } from '@/hooks/api/use-prompts-api'
@@ -26,17 +26,10 @@ import {
 } from 'lucide-react'
 import { SvgInlinePreview } from '@/components/svg-inline-preview'
 import { MarkdownPreview } from '@/components/markdown-preview'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 
 interface RecentAssetsViewProps {
   projectId: number
@@ -241,6 +234,7 @@ export function RecentAssetsView({ projectId, projectName = 'Project' }: RecentA
                     <div className='border rounded-lg p-4 max-h-[300px] overflow-hidden'>
                       {isMarkdown ? (
                         <MarkdownPreview
+                          type='preview'
                           markdownContent={generation.content}
                           size='sm'
                           className='max-h-[250px] overflow-y-auto'

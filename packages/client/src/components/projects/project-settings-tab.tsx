@@ -1,12 +1,22 @@
 import { useProjectTabField, useUpdateActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 import { useSyncProject, useGetProject } from '@/hooks/api/use-projects-api'
 import { GlobalStateEditorType as EditorType, EDITOR_OPTIONS } from '@promptliano/schemas'
-import { Button, Input, Slider, Switch, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
+import {
+  Button,
+  Input,
+  Slider,
+  Switch,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@promptliano/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Copy, RefreshCw, Settings, HelpCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { MCPStatusIndicator } from './mcp-status-indicator'
 import { AgentFilesManager } from './agent-files-manager'
 import { MCPTroubleshooting } from './mcp-troubleshooting'

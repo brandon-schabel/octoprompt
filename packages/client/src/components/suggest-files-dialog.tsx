@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
-import { Button } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { ProjectFile } from '@promptliano/schemas'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'

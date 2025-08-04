@@ -10,7 +10,7 @@ import {
   TabsList,
   TabsTrigger,
   Skeleton
-} from '@ui'
+} from '@promptliano/ui'
 import { LazyMonacoDiffViewer } from '../lazy-monaco-diff-viewer'
 import { DiffViewer } from '../file-changes/diff-viewer'
 import { useFileDiff } from '@/hooks/api/use-git-api'

@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
 import {
   GitBranch,
   GitCommit,

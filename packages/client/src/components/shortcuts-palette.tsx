@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Button } from '@ui'
-import { Popover, PopoverTrigger, PopoverContent } from '@ui'
+import { Button } from '@promptliano/ui'
+import { Popover, PopoverTrigger, PopoverContent } from '@promptliano/ui'
 import { ChevronUp } from 'lucide-react'
 
 export function ChatShortcutsPalette({ children }: { children: React.ReactNode; icon?: React.ReactNode }) {

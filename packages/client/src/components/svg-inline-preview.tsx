@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from '@promptliano/ui'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 
 interface SvgInlinePreviewProps {
   svgContent: string

@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
 import { Plus, Search, Edit, Trash2, FileText, Calendar, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useGetProjectAgents, useDeleteAgent } from '@/hooks/api-hooks'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@promptliano/ui'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +16,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from '@/components/ui/alert-dialog'
+} from '@promptliano/ui'
 import { AgentDialog } from '../agent-dialog'
 
 interface AgentsViewProps {

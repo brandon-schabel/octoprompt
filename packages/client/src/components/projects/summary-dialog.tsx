@@ -1,5 +1,5 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
-import { Button } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
 import { Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'

@@ -1,6 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@promptliano/ui'
 import { BarChart3, Activity, FileText, Settings } from 'lucide-react'
 
 export type ManageView = 'statistics' | 'mcp-analytics' | 'summarization' | 'project-settings'

@@ -50,8 +50,8 @@ import {
   Input,
   Label,
   Slider
-} from '@ui'
-import { MarkdownRenderer } from '@/components/markdown-renderer'
+} from '@promptliano/ui'
+import { MarkdownRenderer } from '@promptliano/ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { APIProviders, AiSdkOptions } from '@promptliano/schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'

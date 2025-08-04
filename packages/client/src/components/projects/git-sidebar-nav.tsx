@@ -1,6 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@promptliano/ui'
 import { GitBranch, History, Package2, FileSignature, FolderTree } from 'lucide-react'
 
 export type GitView = 'changes' | 'history' | 'branches' | 'stashes' | 'worktrees'

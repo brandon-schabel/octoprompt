@@ -1,9 +1,9 @@
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
-import { Input } from '@ui'
-import { Button } from '@ui'
-import { Badge } from '@ui'
-import { ScrollArea } from '@ui'
-import { Skeleton } from '@ui'
+import { Input } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Skeleton } from '@promptliano/ui'
 import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { formatShortcut } from '@/lib/shortcuts'
@@ -31,7 +31,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+} from '@promptliano/ui'
 
 type ExplorerRefs = {
   searchInputRef: React.RefObject<HTMLInputElement>

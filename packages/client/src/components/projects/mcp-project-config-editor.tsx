@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { promptlianoClient } from '@/hooks/promptliano-client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
-import { Button } from '@ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
-import { Alert, AlertDescription, AlertTitle } from '@ui'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
+import { Alert, AlertDescription, AlertTitle } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
 import {
   FileIcon,
   FolderIcon,
@@ -24,10 +24,10 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Editor } from '@monaco-editor/react'
-import { Input } from '@ui'
-import { Label } from '@ui'
-import { Switch } from '@ui'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui'
+import { Input } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
+import { Switch } from '@promptliano/ui'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@promptliano/ui'
 import { getEditorInfoFromPath, getRelativeConfigPath } from '@/lib/utils/editor-utils'
 
 interface MCPProjectConfigEditorProps {

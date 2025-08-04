@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from '@ui'
-import { Button } from '@ui'
+import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
 import {
   BarChart3,
   FileText,

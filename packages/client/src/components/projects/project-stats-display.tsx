@@ -8,7 +8,7 @@
 import React from 'react'
 import { useGetProjectFilesWithoutContent } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from '@promptliano/schemas' // Using direct schema type
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@promptliano/ui'
 import {
   ChartContainer,
   ChartTooltip,
@@ -16,9 +16,9 @@ import {
   ChartLegend,
   ChartLegendContent,
   type ChartConfig
-} from '@/components/ui/chart'
+} from '@promptliano/ui'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@promptliano/ui'
 
 type ProjectStatsDisplayProps = { projectId: number }
 

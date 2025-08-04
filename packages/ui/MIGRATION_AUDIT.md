@@ -63,6 +63,13 @@ The migration of UI components to the shared @promptliano/ui package has been su
 
 - ✅ **sonner** (toast notifications - simplified version without next-themes)
 
+#### Editor Components (Newly Migrated)
+
+- ✅ **monaco-editor-wrapper** (Monaco Editor with keyboard shortcuts and theme support)
+- ✅ **monaco-diff-viewer** (Side-by-side diff viewer for code comparisons)
+- ✅ **lazy-monaco-editor** (Lazy-loaded editor with textarea fallback)
+- ✅ **lazy-monaco-diff-viewer** (Lazy-loaded diff viewer with simple fallback)
+
 #### Data Table Components (Partially Migrated)
 
 - ✅ **data-table** (main component)
@@ -71,20 +78,26 @@ The migration of UI components to the shared @promptliano/ui package has been su
 - ✅ **types** (all TypeScript types)
 - ⚠️ Additional data-table components (column-header, faceted-filter, etc.) can be migrated as needed
 
+#### Layout Components (Newly Migrated)
+
+- ✅ **sidebar** (with all sub-components including SidebarProvider, SidebarMenu, etc.)
+- ✅ **responsive-container** (with size variants)
+- ✅ **use-mobile** (hook for mobile detection)
+- ✅ **use-click-away** (hook for click outside detection)
+- ✅ **use-local-storage** (hook for localStorage management)
+
 ### Components NOT Migrated (Application-Specific)
 
 These components are specific to the client application and should remain in the client package:
 
-- ❌ **sidebar.tsx** - Complex component with app-specific hooks and state management
 - ❌ **copyable-text.tsx** - Domain-specific utility component
 - ❌ **icons.tsx** - Application-specific icon definitions
-- ❌ **resizable-panel.tsx** - Complex layout component
-- ❌ **responsive-container.tsx** - Custom layout component
-- ❌ **sortable-panel.tsx** - DnD functionality specific to the app
+- ❌ **resizable-panel.tsx** - Complex layout component (already migrated as part of resizable category)
+- ❌ **sortable-panel.tsx** - DnD functionality (already migrated as part of resizable category)
 - ❌ **token-usage-tooltip.tsx** - Domain-specific component
-- ❌ **draggable-three-column-panel.tsx** - Complex layout specific to the app
-- ❌ **three-column-resizable-panel.tsx** - Complex layout specific to the app
-- ❌ **vertical-resizable-panel.tsx** - Complex layout specific to the app
+- ❌ **draggable-three-column-panel.tsx** - Complex layout (already migrated as part of resizable category)
+- ❌ **three-column-resizable-panel.tsx** - Complex layout (already migrated as part of resizable category)
+- ❌ **vertical-resizable-panel.tsx** - Complex layout (already migrated as part of resizable category)
 - ❌ **chart.tsx** - Can be migrated later if needed (requires recharts)
 
 ## Next Steps for Client Package
@@ -105,6 +118,7 @@ The migration has successfully created a shared UI library with all commonly use
 - ✅ **Full set of overlay and interaction components**
 - ✅ **Basic data table implementation**
 - ✅ **Toast notifications with Sonner**
+- ✅ **Monaco Editor integration with lazy loading**
 - ✅ **Proper TypeScript support**
 - ✅ **Tree-shakeable exports**
 - ✅ **Consistent theming and styling**

@@ -8,10 +8,16 @@ import {
   AlertDialogTitle,
   AlertDialogCancel,
   AlertDialogAction
-} from '@ui'
+} from '@promptliano/ui'
 import { cn } from '@/lib/utils'
-import { Button } from '@ui'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@ui'
+import { Button } from '@promptliano/ui'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@promptliano/ui'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Project } from '@promptliano/schemas'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'

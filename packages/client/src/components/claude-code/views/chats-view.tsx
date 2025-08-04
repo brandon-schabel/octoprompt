@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Skeleton } from '@/components/ui/skeleton'
-import { CopyableInline, CopyableBlock, CopyableCode } from '@/components/ui/copyable-text'
-import { TokenBadge } from '@/components/ui/token-usage-tooltip'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Skeleton } from '@promptliano/ui'
+import { CopyableInline, CopyableBlock, CopyableCode } from '@promptliano/ui'
+import { TokenBadge } from '@promptliano/ui'
 import {
   ArrowLeft,
   MessageSquare,

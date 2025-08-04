@@ -206,6 +206,39 @@ export {
 } from './components/utility'
 export type { TokenUsageData } from './components/utility/token-usage-tooltip'
 
+// Layout components
+export {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInput,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+  ResponsiveContainer,
+  useIsMobile,
+  useClickAway,
+  useLocalStorage,
+  createTypedLocalStorage
+} from './components/layout'
+
 // Resizable components
 export {
   ResizableHandle,
@@ -217,6 +250,23 @@ export {
   ThreeColumnResizable,
   type ImperativePanelHandle
 } from './components/resizable/resizable-panels'
+
+// DND-based resizable components
+export { DndResizablePanel, type DndResizablePanelProps } from './components/resizable/dnd-resizable-panel'
+export {
+  DndVerticalResizablePanel,
+  type DndVerticalResizablePanelProps
+} from './components/resizable/dnd-vertical-resizable-panel'
+export {
+  DndThreeColumnResizablePanel,
+  type DndThreeColumnResizablePanelProps
+} from './components/resizable/dnd-three-column-resizable-panel'
+export {
+  DndDraggableThreeColumnPanel,
+  type DndDraggableThreeColumnPanelProps,
+  type PanelConfig
+} from './components/resizable/dnd-draggable-three-column-panel'
+export { SortablePanel, type SortablePanelProps } from './components/resizable/sortable-panel'
 
 // Data Table components
 export {
@@ -257,12 +307,52 @@ export { LoadingDots, LoadingSpinner, LoadingOverlay, LoadingSkeleton } from './
 // Code components
 export { CodeBlock, CodeTerminal, codeBlockVariants } from './components/code/code-block'
 
+// File components
+export { DiffViewer, FileUploadInput, FileUploadButton, computeLineDiff } from './components/file'
+export type { DiffChunk, FileUploadInputProps, FileUploadButtonProps } from './components/file'
+
 // Motion components and utilities
-export * from './components/motion/animation-utils'
+export {
+  // Animation variants
+  fadeIn,
+  fadeInUp,
+  fadeInDown,
+  fadeInLeft,
+  fadeInRight,
+  scaleIn,
+  rotateIn,
+  staggerContainer,
+  staggerItem,
+
+  // Hover animations
+  hoverScale,
+  hoverRotate,
+  hoverGlow,
+
+  // Components
+  AnimateOnScroll,
+  Parallax,
+  AnimatedText,
+  PageTransition,
+
+  // Re-exports from framer-motion
+  motion,
+  AnimatePresence
+} from './components/motion'
 
 // Marketing components
 export { CTAButton, CTAButtonAnimated, CTAButtonOutline, CTAButtonGroup } from './components/marketing/cta-button'
 export { FeatureCard, FeatureCardAnimated, FeatureGrid } from './components/marketing/feature-card'
+
+// Markdown components
+export { MarkdownRenderer, MarkdownPreview, MarkdownInlinePreview } from './components/markdown'
+
+// Editor components
+export { MonacoEditorWrapper, MonacoDiffViewer, LazyMonacoEditor, LazyMonacoDiffViewer } from './components/editors'
+
+// Error components
+export { ErrorBoundary, ComponentErrorBoundary, AIErrorDisplay } from './components/errors'
+export { parseAIError, extractProviderName } from './components/errors'
 
 // Utilities
 export { cn, formatDate } from './utils'
@@ -308,6 +398,17 @@ export type * from './components/utility/sonner'
 export type * from './components/surface/glass-card'
 export type * from './components/feedback/loading'
 export type * from './components/code/code-block'
-export type * from './components/motion/animation-utils'
+export type { Variants, MotionProps } from './components/motion'
 export type * from './components/marketing/cta-button'
 export type * from './components/marketing/feature-card'
+export type * from './components/layout/sidebar'
+export type * from './components/layout/responsive-container'
+export type * from './components/layout/use-local-storage'
+export type { MarkdownRendererProps } from './components/markdown/markdown-renderer'
+export type { MarkdownPreviewProps } from './components/markdown/markdown-preview'
+export type { MarkdownInlinePreviewProps } from './components/markdown/markdown-inline-preview'
+export type { MonacoEditorWrapperProps } from './components/editors/monaco-editor-wrapper'
+export type { MonacoDiffViewerProps } from './components/editors/monaco-diff-viewer'
+export type { LazyMonacoEditorProps } from './components/editors/lazy-monaco-editor'
+export type { LazyMonacoDiffViewerProps } from './components/editors/lazy-monaco-diff-viewer'
+export type { AIErrorType, AIErrorDisplayProps } from './components/errors/ai-error-display'

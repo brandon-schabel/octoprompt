@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@promptliano/ui'
 import { SelectedFilesListDisplay } from './selected-files-list-display'
 import { ProjectFileMap } from '@promptliano/schemas'
 import { SelectedFilesListRef } from '../../selected-files-list'

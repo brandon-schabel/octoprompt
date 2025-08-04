@@ -1,6 +1,6 @@
 import React from 'react'
 import { TicketDialog } from './ticket-dialog'
-import { Button } from '../ui/button'
+import { Button } from '@promptliano/ui'
 import { Plus } from 'lucide-react'
 import { TicketListPanel } from './ticket-list-panel'
 import { TicketWithTasks } from '@promptliano/schemas'

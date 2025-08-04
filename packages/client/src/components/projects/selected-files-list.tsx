@@ -1,13 +1,13 @@
 import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw, Eye } from 'lucide-react'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { Badge } from '@ui'
+import { Badge } from '@promptliano/ui'
 import { FormatTokenCount } from '../format-token-count'
 import { forwardRef, useRef, useState, useImperativeHandle, KeyboardEvent, useMemo, useCallback } from 'react'
-import { Input } from '@ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
-import { ScrollArea } from '@ui'
+import { Input } from '@promptliano/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuShortcut
-} from '@ui'
+} from '@promptliano/ui'
 import { toast } from 'sonner'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { formatShortcut } from '@/lib/shortcuts'

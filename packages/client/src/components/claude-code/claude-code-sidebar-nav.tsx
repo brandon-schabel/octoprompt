@@ -1,6 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@promptliano/ui'
 import { Bot, MessageSquare, Clock, Settings, Terminal, Network, Zap } from 'lucide-react'
 
 export type ClaudeCodeView = 'agents' | 'commands' | 'mcp' | 'sessions' | 'chats' | 'hooks' | 'settings'

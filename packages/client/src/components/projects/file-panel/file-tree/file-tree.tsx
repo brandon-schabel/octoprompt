@@ -9,12 +9,18 @@ import React, {
   RefObject,
   useMemo
 } from 'react'
-import { Button } from '@ui'
-import { Checkbox } from '@ui'
+import { Button } from '@promptliano/ui'
+import { Checkbox } from '@promptliano/ui'
 import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy, ClipboardList } from 'lucide-react'
 import clsx from 'clsx'
 import { toast } from 'sonner'
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@ui'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger
+} from '@promptliano/ui'
 
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'

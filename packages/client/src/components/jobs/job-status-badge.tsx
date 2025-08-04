@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@promptliano/ui'
 import { Loader2, CheckCircle, XCircle, Ban } from 'lucide-react'
 import type { JobStatus } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'

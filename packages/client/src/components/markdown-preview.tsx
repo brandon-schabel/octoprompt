@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { MarkdownRenderer } from './markdown-renderer'
-import { Button } from './ui/button'
-import { Badge } from './ui/badge'
-import { ScrollArea } from './ui/scroll-area'
+import { MarkdownRenderer } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
 import { ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Dialog, DialogContent } from './ui/dialog'
+import { Dialog, DialogContent } from '@promptliano/ui'
 
 interface MarkdownPreviewProps {
   markdownContent: string

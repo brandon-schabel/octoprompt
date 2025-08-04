@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 // Removed Switch import - no longer needed
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
 import { Loader2, Sparkles, FileText } from 'lucide-react'
 import { useCreateHook, useUpdateHook, useGenerateHook } from '@/hooks/api/use-claude-hooks'
 import { useGetProject } from '@/hooks/api/use-projects-api'

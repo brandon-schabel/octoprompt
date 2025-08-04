@@ -1,4 +1,4 @@
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { Plus, Search, Filter, Sparkles, ClipboardList } from 'lucide-react'
 
 interface TicketListEmptyStateProps {

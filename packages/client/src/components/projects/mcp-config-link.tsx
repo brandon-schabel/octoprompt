@@ -1,6 +1,6 @@
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { FileCode } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { getEditorUrl } from '@/utils/editor-urls'
 import { GlobalStateEditorType as EditorType } from '@promptliano/schemas'
 

@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@promptliano/ui'
 import { MCPGlobalConfigEditor } from './mcp-global-config-editor'
 
 interface SettingsDialogProps {

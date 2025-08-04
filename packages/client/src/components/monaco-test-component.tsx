@@ -13,8 +13,8 @@
 import { useState } from 'react'
 import { LazyMonacoEditor } from './lazy-monaco-editor'
 import { LazyMonacoDiffViewer } from './lazy-monaco-diff-viewer'
-import { Button } from '@ui'
-import { Card, CardHeader, CardTitle, CardContent } from '@ui'
+import { Button } from '@promptliano/ui'
+import { Card, CardHeader, CardTitle, CardContent } from '@promptliano/ui'
 
 // Sample code for different languages to test Monaco syntax highlighting
 const sampleCode = {

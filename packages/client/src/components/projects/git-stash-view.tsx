@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@promptliano/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Skeleton } from '@promptliano/ui'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +15,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from '@/components/ui/alert-dialog'
+} from '@promptliano/ui'
 import { Package2, Plus, ChevronRight, Trash2, GitBranch, Clock, AlertCircle, FileText, Info } from 'lucide-react'
 import {
   useGitStashList,

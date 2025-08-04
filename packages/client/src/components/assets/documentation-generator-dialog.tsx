@@ -1,22 +1,15 @@
 import React, { useState, useMemo } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
 import { LazyMonacoEditor } from '@/components/lazy-monaco-editor'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
+import { Checkbox } from '@promptliano/ui'
 import { toast } from 'sonner'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useGenerateStructuredData } from '@/hooks/api/use-gen-ai-api'
@@ -24,7 +17,7 @@ import { Copy, Download, Loader2, FileText, Code, GitBranch, Database, Book } fr
 import { estimateTokenCount, formatTokenCount } from '@promptliano/shared'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { ProviderModelSelector, useModelSelection } from '@/components/model-selection'
-import { Separator } from '@/components/ui/separator'
+import { Separator } from '@promptliano/ui'
 
 interface DocumentationGeneratorDialogProps {
   open: boolean

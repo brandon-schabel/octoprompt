@@ -8,9 +8,9 @@ import {
   SelectValue,
   SelectGroup,
   SelectLabel
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+} from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { Skeleton } from '@promptliano/ui'
 import { GitBranch, Star, Clock, User } from 'lucide-react'
 
 interface BranchSelectorProps {

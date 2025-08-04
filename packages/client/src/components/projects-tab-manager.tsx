@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
-import { Tabs, TabsList, TabsTrigger } from '@ui'
-import { Button } from '@ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
-import { Input } from '@ui'
-import { Badge } from '@ui'
+import { Tabs, TabsList, TabsTrigger } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
 import { PromptlianoTooltip } from './promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from './app-shortcut-display'
 import { LinkIcon, Plus, Pencil, Trash2, LayoutGrid } from 'lucide-react'
@@ -47,8 +47,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const [activeTabId] = useGetActiveProjectTabId()
   const { data: projects } = useGetProjects()
   const { createProjectTab } = useCreateProjectTab()
-  // by default use selected tabs project id, otherwise fallback to the first project
-  const projectId = activeProjectTabState?.selectedProjectId ?? projects?.data[0]?.id
 
   const scrollableTabsRef = useRef<HTMLDivElement>(null)
   const [showFade, setShowFade] = useState(false)
@@ -162,11 +160,18 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   }, [tabs, finalTabOrder]) // Re-check when tabs or their order changes
 
   const handleCreateTab = async () => {
-    const newTabId = createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
+    // Use the project ID from the currently active tab
+    const currentProjectId = activeProjectTabState?.selectedProjectId
+    if (!currentProjectId) {
+      toast.error('Please select a project first')
+      return
+    }
+
+    const newTabId = createProjectTab({ selectedProjectId: currentProjectId, selectedFiles: [] })
 
     // Auto-generate name for the new tab
-    if (projectId && projects?.data) {
-      const project = projects.data.find((p) => p.id === projectId)
+    if (currentProjectId && projects?.data) {
+      const project = projects.data.find((p) => p.id === currentProjectId)
       if (project) {
         try {
           const generatedName = await generateTabNameMutation.mutateAsync({
@@ -277,10 +282,12 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   if (!tabs || validTabs.length === 0) {
     return (
       <div className={cn('flex flex-col gap-2 p-2', className)}>
-        <Button onClick={handleCreateTab}>
+        <Button onClick={handleCreateTab} disabled={!activeProjectTabState?.selectedProjectId}>
           <Plus className='mr-2 h-4 w-4' /> New Project Tab
         </Button>
-        <div className='text-sm text-muted-foreground'>No project tabs yet.</div>
+        <div className='text-sm text-muted-foreground'>
+          {!activeProjectTabState?.selectedProjectId ? 'Please select a project first.' : 'No project tabs yet.'}
+        </div>
       </div>
     )
   }
@@ -340,7 +347,12 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                 size='icon'
                 className='w-6 h-6'
                 variant='ghost'
-                title={`New Project Tab (${hotkeyPrefix}+?)`}
+                disabled={!activeProjectTabState?.selectedProjectId}
+                title={
+                  !activeProjectTabState?.selectedProjectId
+                    ? 'Select a project first'
+                    : `New Project Tab (${hotkeyPrefix}+?)`
+                }
               >
                 <Plus className='h-4 w-4' />
               </Button>

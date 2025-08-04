@@ -1,5 +1,6 @@
 // Hero components - website specific
 export { Hero, HeroGradient, HeroTyping } from './hero'
+export { HeroButton } from './hero-button'
 
 // Screenshot components - website specific
 export { FeatureScreenshot } from './feature-screenshot'
@@ -9,6 +10,10 @@ export { ScreenshotCarousel } from './screenshot-carousel'
 // Terminal and code components - website specific (different API than UI library)
 // These have animation and website-specific features not in the generic UI library
 export { CodeTerminal, CodeBlock } from './code-terminal'
+
+// Website-specific wrappers and components
+export { DownloadButton, DownloadButtonCompact } from './download-button'
+export { CTAButton, CTAButtonAnimated, CTAButtonOutline, CTAButtonGroup } from './cta-button'
 
 // Re-export components from @promptliano/ui
 export {
@@ -45,10 +50,6 @@ export {
   LoadingSkeleton,
 
   // Marketing components
-  CTAButton,
-  CTAButtonAnimated,
-  CTAButtonOutline,
-  CTAButtonGroup,
   FeatureCard,
   FeatureCardAnimated,
   FeatureGrid,
@@ -70,11 +71,6 @@ export {
   hoverScale,
   hoverRotate,
   hoverGlow,
-
-  // Interaction components
-  DownloadButton,
-  DownloadButtonCompact,
-  DownloadButtonDropdown,
 
   // Types
   type DownloadPlatform

@@ -1,5 +1,5 @@
 import { AlertCircle, AlertTriangle, Info, RefreshCw, Key, Clock, Zap } from 'lucide-react'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
