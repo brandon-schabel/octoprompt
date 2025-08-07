@@ -17,7 +17,7 @@ export default defineConfig({
       include: ['src'],
       exclude: ['**/*.test.*', '**/*.stories.*'],
       outDir: 'dist',
-      rollupTypes: true,
+      // Removed rollupTypes as it requires api-extractor configuration
       insertTypesEntry: true,
       copyDtsFiles: false
     })
