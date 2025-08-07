@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite'
-import { resolve } from 'path'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import react from '@vitejs/plugin-react-swc'
 import dts from 'vite-plugin-dts'
 import { libInjectCss } from 'vite-plugin-lib-inject-css'
 import peerDepsExternal from 'rollup-plugin-peer-deps-external'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [
@@ -24,16 +27,19 @@ export default defineConfig({
   
   resolve: {
     alias: {
-      '@': resolve(process.cwd(), './src'),
-      '@components': resolve(process.cwd(), './src/components')
+      '@': resolve(__dirname, './src'),
+      '@components': resolve(__dirname, './src/components')
     },
-    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
+    // Ensure index files are resolved correctly
+    mainFields: ['module', 'jsnext:main', 'jsnext', 'main'],
+    conditions: ['import', 'module', 'browser', 'default']
   },
   
   build: {
     copyPublicDir: false,
     lib: {
-      entry: resolve(process.cwd(), 'src/index.ts'),
+      entry: resolve(__dirname, 'src/index.ts'),
       name: 'PromptlianoUI',
       formats: ['es', 'cjs'],
       fileName: (format) => `index.${format === 'es' ? 'mjs' : 'cjs'}`
