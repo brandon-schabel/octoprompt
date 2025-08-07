@@ -4,14 +4,11 @@ import { fileURLToPath } from 'url'
 import react from '@vitejs/plugin-react-swc'
 import dts from 'vite-plugin-dts'
 import { libInjectCss } from 'vite-plugin-lib-inject-css'
-import peerDepsExternal from 'rollup-plugin-peer-deps-external'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [
-    // Must be first - automatically externalizes peer deps
-    peerDepsExternal(),
     react(),
     // Injects CSS imports for each component
     libInjectCss(),
@@ -21,7 +18,8 @@ export default defineConfig({
       exclude: ['**/*.test.*', '**/*.stories.*'],
       outDir: 'dist',
       rollupTypes: true,
-      insertTypesEntry: true
+      insertTypesEntry: true,
+      copyDtsFiles: false
     })
   ],
   
@@ -43,11 +41,12 @@ export default defineConfig({
     },
     
     rollupOptions: {
+      // Externalize all peer dependencies
       external: [
         'react',
         'react-dom',
         'react/jsx-runtime',
-        // Radix UI packages - all should be peer deps
+        // Radix UI packages
         /^@radix-ui\//,
         // DND Kit packages  
         /^@dnd-kit\//,
@@ -93,7 +92,10 @@ export default defineConfig({
             return 'index.css'
           }
           return assetInfo.name ?? 'assets/[name][extname]'
-        }
+        },
+        // Optimize chunking for better tree-shaking
+        manualChunks: undefined,
+        inlineDynamicImports: false
       }
     },
     
