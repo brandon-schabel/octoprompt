@@ -56,6 +56,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build UI package
+        run: |
+          cd packages/ui
+          NODE_ENV=production bun run build
+
       - name: Build server binaries
         run: bun run build-binaries
 

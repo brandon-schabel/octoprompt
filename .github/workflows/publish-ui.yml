@@ -29,7 +29,7 @@ jobs:
     with:
       package-path: packages/ui
       package-name: '@promptliano/ui'
-      build-command: 'NODE_ENV=production bun run build:bun'
+      build-command: 'NODE_ENV=production bun run build'
       test-command: 'bun run typecheck' # UI package doesn't have tests yet, using typecheck
       generate-types: true
       types-command: '' # tsup handles type generation automatically
