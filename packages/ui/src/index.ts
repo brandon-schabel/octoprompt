@@ -119,24 +119,14 @@ export {
   TableHead,
   TableRow,
   TableCell,
-  TableCaption,
-  Skeleton,
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-  Progress,
-  type ProgressProps,
-  type ProgressVariant,
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-  ScrollArea,
-  ScrollBar
-} from './components/data'
+  TableCaption
+} from './components/data/table'
+export { Skeleton } from './components/data/skeleton'
+export { Avatar, AvatarImage, AvatarFallback } from './components/data/avatar'
+export { Progress, type ProgressProps, type ProgressVariant } from './components/data/progress'
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './components/data/accordion'
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './components/data/collapsible'
+export { ScrollArea, ScrollBar } from './components/data/scroll-area'
 
 // Interaction components
 export { Slider } from './components/interaction/slider'
@@ -204,17 +194,10 @@ export {
 } from './components/overlay/drawer'
 
 // Utility components
-export {
-  Toaster,
-  CopyableText,
-  CopyableCode,
-  CopyableInline,
-  CopyableBlock,
-  Icons,
-  TokenUsageTooltip,
-  TokenBadge
-} from './components/utility'
-export type { TokenUsageData } from './components/utility/token-usage-tooltip'
+export { Toaster } from './components/utility/sonner'
+export { CopyableText, CopyableCode, CopyableInline, CopyableBlock } from './components/utility/copyable-text'
+export { Icons } from './components/utility/icons'
+export { TokenUsageTooltip, TokenBadge, type TokenUsageData } from './components/utility/token-usage-tooltip'
 
 // Layout components
 export {
@@ -241,13 +224,12 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
-  ResponsiveContainer,
-  useIsMobile,
-  useClickAway,
-  useLocalStorage,
-  createTypedLocalStorage
-} from './components/layout'
+  useSidebar
+} from './components/layout/sidebar'
+export { ResponsiveContainer } from './components/layout/responsive-container'
+export { useIsMobile } from './components/layout/use-mobile'
+export { useClickAway } from './components/layout/use-click-away'
+export { useLocalStorage, createTypedLocalStorage } from './components/layout/use-local-storage'
 
 // Resizable components
 export {
@@ -279,15 +261,13 @@ export {
 export { SortablePanel, type SortablePanelProps } from './components/resizable/sortable-panel'
 
 // Data Table components
-export {
-  DataTable,
-  DataTableToolbar,
-  DataTablePagination,
-  DataTableColumnHeader,
-  DataTableColumnFilter,
-  DataTableFacetedFilter,
-  DataTableViewOptions
-} from './components/data-table'
+export { DataTable } from './components/data-table/data-table'
+export { DataTableToolbar } from './components/data-table/data-table-toolbar'
+export { DataTablePagination } from './components/data-table/data-table-pagination'
+export { DataTableColumnHeader } from './components/data-table/data-table-column-header'
+export { DataTableColumnFilter } from './components/data-table/data-table-column-filter'
+export { DataTableFacetedFilter } from './components/data-table/data-table-faceted-filter'
+export { DataTableViewOptions } from './components/data-table/data-table-view-options'
 export type * from './components/data-table/types'
 
 // Chart components
@@ -318,8 +298,14 @@ export { LoadingDots, LoadingSpinner, LoadingOverlay, LoadingSkeleton } from './
 export { CodeBlock, CodeTerminal, codeBlockVariants } from './components/code/code-block'
 
 // File components
-export { DiffViewer, FileUploadInput, FileUploadButton, computeLineDiff } from './components/file'
-export type { DiffChunk, FileUploadInputProps, FileUploadButtonProps } from './components/file'
+export { DiffViewer } from './components/file/diff-viewer'
+export {
+  FileUploadInput,
+  FileUploadButton,
+  type FileUploadInputProps,
+  type FileUploadButtonProps
+} from './components/file/file-upload-input'
+export { computeLineDiff, type DiffChunk } from './components/file/compute-line-diff'
 
 // Motion components and utilities
 export {
@@ -343,26 +329,30 @@ export {
   AnimateOnScroll,
   Parallax,
   AnimatedText,
-  PageTransition,
-
-  // Re-exports from framer-motion
-  motion,
-  AnimatePresence
-} from './components/motion'
+  PageTransition
+} from './components/motion/animation-utils'
+export { motion, AnimatePresence } from 'framer-motion'
 
 // Marketing components
 export { CTAButton, CTAButtonAnimated, CTAButtonOutline, CTAButtonGroup } from './components/marketing/cta-button'
 export { FeatureCard, FeatureCardAnimated, FeatureGrid } from './components/marketing/feature-card'
 
 // Markdown components
-export { MarkdownRenderer, MarkdownPreview, MarkdownInlinePreview } from './components/markdown'
+export { MarkdownRenderer } from './components/markdown/markdown-renderer'
+export { MarkdownPreview } from './components/markdown/markdown-preview'
+export { MarkdownInlinePreview } from './components/markdown/markdown-inline-preview'
 
 // Editor components
-export { MonacoEditorWrapper, MonacoDiffViewer, LazyMonacoEditor, LazyMonacoDiffViewer } from './components/editors'
+export { MonacoEditorWrapper } from './components/editors/monaco-editor-wrapper'
+export { MonacoDiffViewer } from './components/editors/monaco-diff-viewer'
+export { LazyMonacoEditor } from './components/editors/lazy-monaco-editor'
+export { LazyMonacoDiffViewer } from './components/editors/lazy-monaco-diff-viewer'
 
 // Error components
-export { ErrorBoundary, ComponentErrorBoundary, AIErrorDisplay } from './components/errors'
-export { parseAIError, extractProviderName } from './components/errors'
+export { ErrorBoundary } from './components/errors/error-boundary'
+export { ComponentErrorBoundary } from './components/errors/component-error-boundary'
+export { AIErrorDisplay } from './components/errors/ai-error-display'
+export { parseAIError, extractProviderName } from './components/errors/error-utils'
 
 // Utilities
 export { cn, formatDate } from './utils'
@@ -389,7 +379,13 @@ export type * from './components/core/popover'
 export type * from './components/core/sheet'
 export type * from './components/core/command'
 export type * from './components/core/alert-dialog'
-export type * from './components/data'
+export type * from './components/data/table'
+export type * from './components/data/skeleton'
+export type * from './components/data/avatar'
+export type * from './components/data/progress'
+export type * from './components/data/accordion'
+export type * from './components/data/collapsible'
+export type * from './components/data/scroll-area'
 export type * from './components/interaction/slider'
 export type * from './components/interaction/toggle'
 export type * from './components/interaction/toggle-group'
@@ -402,7 +398,7 @@ export type * from './components/utility/sonner'
 export type * from './components/surface/glass-card'
 export type * from './components/feedback/loading'
 export type * from './components/code/code-block'
-export type { Variants, MotionProps } from './components/motion'
+export type { Variants, MotionProps } from 'framer-motion'
 export type * from './components/marketing/cta-button'
 export type * from './components/marketing/feature-card'
 export type * from './components/layout/sidebar'
