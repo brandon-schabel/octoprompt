@@ -1,21 +1,12 @@
-name: Publish UI Package
+name: Test UI Package
 
 on:
-  push:
-    tags:
-      - 'ui-v*.*.*'
   pull_request:
     branches: [main]
     paths:
       - 'packages/ui/**'
       - '.github/workflows/publish-ui.yml'
-      - '.github/workflows/publish-npm-package.reusable.yml'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag to publish (e.g., ui-v1.0.0)'
-        required: true
-        type: string
 
 # Prevent concurrent executions for the same ref
 concurrency:
@@ -23,21 +14,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish-ui:
-    name: Publish @promptliano/ui
-    uses: ./.github/workflows/publish-npm-package.reusable.yml
-    with:
-      package-path: packages/ui
-      package-name: '@promptliano/ui'
-      build-command: 'NODE_ENV=production bun run build'
-      test-command: 'bun run typecheck' # UI package doesn't have tests yet, using typecheck
-      generate-types: true
-      types-command: '' # tsup handles type generation automatically
-      npm-access: 'public'
-      bun-version: 'latest'
-      build-output-dir: 'dist'
-      build-output-file: 'dist/index.js'
-      run-tests: true
-      version-tag-prefix: 'ui-v'
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  test-ui:
+    name: Test UI Package TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 'latest'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type check UI package
+        run: |
+          cd packages/ui
+          bun run typecheck
+
+      - name: Verify imports work
+        run: |
+          cd packages/client
+          bun run typecheck
