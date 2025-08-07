@@ -26,7 +26,8 @@ export default defineConfig({
     alias: {
       '@': resolve(process.cwd(), './src'),
       '@components': resolve(process.cwd(), './src/components')
-    }
+    },
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']
   },
   
   build: {
