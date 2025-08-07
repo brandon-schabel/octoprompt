@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
-import { Skeleton } from '../data/skeleton.tsx'
-import { Textarea } from '../core/textarea.tsx'
+import { Skeleton } from '../data/skeleton'
+import { Textarea } from '../core/textarea'
 
 // Lazy load Monaco Editor wrapper
 const MonacoEditorWrapper = lazy(() =>

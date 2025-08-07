@@ -30,10 +30,7 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
       '@components': resolve(__dirname, './src/components')
     },
-    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
-    // Ensure index files are resolved correctly
-    mainFields: ['module', 'jsnext:main', 'jsnext', 'main'],
-    conditions: ['import', 'module', 'browser', 'default']
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']
   },
   
   build: {
