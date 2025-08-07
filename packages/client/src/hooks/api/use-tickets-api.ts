@@ -13,6 +13,7 @@ import type {
 } from '@promptliano/schemas'
 import { commonErrorHandler } from './common-mutation-error-handler'
 import { promptlianoClient } from '../promptliano-client'
+import { TICKETS_STALE_TIME, RETRY_MAX_ATTEMPTS, RETRY_MAX_DELAY } from '@/lib/constants'
 
 // Query keys for caching
 export const TICKET_KEYS = {
@@ -86,7 +87,7 @@ export function useGetTickets(projectId: number, status?: string) {
       return response.data
     },
     enabled: !!projectId,
-    staleTime: 30 * 1000 // 30 seconds
+    staleTime: TICKETS_STALE_TIME
   })
 }
 
@@ -110,7 +111,7 @@ export function useGetTicketsWithCounts(projectId: number, status?: string) {
       return response.data
     },
     enabled: !!projectId,
-    staleTime: 30 * 1000 // 30 seconds
+    staleTime: TICKETS_STALE_TIME
   })
 }
 
@@ -118,11 +119,18 @@ export function useGetTicketsWithTasks(projectId: number, status?: string) {
   return useQuery({
     queryKey: TICKET_KEYS.withTasks(projectId, status),
     queryFn: async () => {
-      const response = await promptlianoClient.tickets.getTicketsWithTasks(projectId, status)
-      return response.data
+      try {
+        const response = await promptlianoClient.tickets.getTicketsWithTasks(projectId, status)
+        return response.data || []
+      } catch (error) {
+        // Re-throw to let React Query handle the error
+        throw error
+      }
     },
     enabled: !!projectId,
-    staleTime: 30 * 1000 // 30 seconds
+    staleTime: TICKETS_STALE_TIME,
+    retry: RETRY_MAX_ATTEMPTS,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, RETRY_MAX_DELAY)
   })
 }
 
@@ -135,7 +143,7 @@ export function useGetTasks(ticketId: number) {
       return response.data
     },
     enabled: !!ticketId,
-    staleTime: 30 * 1000 // 30 seconds
+    staleTime: TICKETS_STALE_TIME
   })
 }
 

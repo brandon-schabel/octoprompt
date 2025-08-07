@@ -5,11 +5,14 @@ import { Button } from '@promptliano/ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
 import { Checkbox } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
-import { CalendarDays, Clock, FileText, Hash, Link2, Plus, Edit } from 'lucide-react'
+import { CalendarDays, Clock, FileText, Hash, Link2, Plus, Edit, ListOrdered, ArrowRight, Copy } from 'lucide-react'
 import { useUpdateTask } from '@/hooks/api/use-tickets-api'
+import { useGetQueue } from '@/hooks/api/use-queue-api'
+import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { toast } from 'sonner'
 import { TicketDialog } from './ticket-dialog'
 import { formatDistanceToNow } from 'date-fns'
+import { useNavigate } from '@tanstack/react-router'
 
 interface TicketDetailViewProps {
   ticket: TicketWithTasks | null
@@ -32,6 +35,11 @@ const PRIORITY_COLORS = {
 export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDetailViewProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const updateTask = useUpdateTask()
+  const navigate = useNavigate()
+  const { copyToClipboard } = useCopyClipboard()
+
+  // Fetch queue information if ticket is in a queue
+  const { data: queueData } = useGetQueue(ticket?.ticket.queueId || 0)
 
   if (!ticket) {
     return (
@@ -57,6 +65,40 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
     }
   }
 
+  const generateMarkdown = () => {
+    if (!ticket) return ''
+
+    let markdown = `# ${ticket.ticket.title}\n\n`
+
+    // Add overview if exists
+    if (ticket.ticket.overview) {
+      markdown += `## Overview\n\n${ticket.ticket.overview}\n\n`
+    }
+
+    // Add tasks
+    if (ticket.tasks.length > 0) {
+      markdown += `## Tasks\n\n`
+      ticket.tasks.forEach((task) => {
+        // Add checkbox - checked if done, unchecked if not
+        markdown += `- [${task.done ? 'x' : ' '}] ${task.content}\n`
+        // Add description if exists (indented)
+        if (task.description) {
+          markdown += `  ${task.description}\n`
+        }
+      })
+    }
+
+    return markdown
+  }
+
+  const handleCopyAsMarkdown = () => {
+    const markdown = generateMarkdown()
+    copyToClipboard(markdown, {
+      successMessage: 'Ticket copied as Markdown',
+      errorMessage: 'Failed to copy ticket'
+    })
+  }
+
   return (
     <div className='h-full overflow-y-auto p-6'>
       <div className='max-w-4xl mx-auto space-y-6'>
@@ -66,10 +108,16 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
             <h1 className='text-2xl font-bold'>{ticket.ticket.title}</h1>
             <p className='text-muted-foreground'>Created {formatDistanceToNow(new Date(ticket.ticket.created))} ago</p>
           </div>
-          <Button onClick={() => setIsEditDialogOpen(true)}>
-            <Edit className='h-4 w-4 mr-2' />
-            Edit Ticket
-          </Button>
+          <div className='flex gap-2'>
+            <Button variant='outline' onClick={handleCopyAsMarkdown}>
+              <Copy className='h-4 w-4 mr-2' />
+              Copy as Markdown
+            </Button>
+            <Button onClick={() => setIsEditDialogOpen(true)}>
+              <Edit className='h-4 w-4 mr-2' />
+              Edit Ticket
+            </Button>
+          </div>
         </div>
 
         {/* Status and Priority */}
@@ -84,6 +132,77 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
             {completedTasks} of {totalTasks} tasks completed ({completionPercentage}%)
           </div>
         </div>
+
+        {/* Queue Information */}
+        {ticket.ticket.queueId && queueData && (
+          <Card className='border-l-4 border-l-blue-500'>
+            <CardHeader className='pb-3'>
+              <div className='flex items-center justify-between'>
+                <CardTitle className='text-lg flex items-center gap-2'>
+                  <ListOrdered className='h-5 w-5' />
+                  Queue Information
+                </CardTitle>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => {
+                    navigate({
+                      to: '/projects',
+                      search: (prev: any) => ({
+                        ...prev,
+                        activeView: 'flow',
+                        flowView: 'queues',
+                        selectedQueueId: ticket.ticket.queueId
+                      })
+                    })
+                  }}
+                >
+                  View Queue
+                  <ArrowRight className='h-4 w-4 ml-1' />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className='space-y-2'>
+              <div className='flex items-center justify-between text-sm'>
+                <span className='text-muted-foreground'>Queue Name:</span>
+                <span className='font-medium'>{queueData.name}</span>
+              </div>
+              {ticket.ticket.queuePosition !== null && ticket.ticket.queuePosition !== undefined && (
+                <div className='flex items-center justify-between text-sm'>
+                  <span className='text-muted-foreground'>Position in Queue:</span>
+                  <Badge variant='secondary'>#{ticket.ticket.queuePosition}</Badge>
+                </div>
+              )}
+              {ticket.ticket.queueStatus && (
+                <div className='flex items-center justify-between text-sm'>
+                  <span className='text-muted-foreground'>Queue Status:</span>
+                  <Badge
+                    variant={ticket.ticket.queueStatus === 'completed' ? 'default' : 'secondary'}
+                    className={cn(
+                      ticket.ticket.queueStatus === 'in_progress' && 'bg-yellow-500/10 text-yellow-700',
+                      ticket.ticket.queueStatus === 'completed' && 'bg-green-500/10 text-green-700',
+                      ticket.ticket.queueStatus === 'failed' && 'bg-red-500/10 text-red-700'
+                    )}
+                  >
+                    {ticket.ticket.queueStatus.replace('_', ' ').toUpperCase()}
+                  </Badge>
+                </div>
+              )}
+              {ticket.ticket.queuePriority !== null && ticket.ticket.queuePriority !== undefined && (
+                <div className='flex items-center justify-between text-sm'>
+                  <span className='text-muted-foreground'>Queue Priority:</span>
+                  <span className='font-medium'>{ticket.ticket.queuePriority}</span>
+                </div>
+              )}
+              {ticket.ticket.queuedAt && (
+                <div className='flex items-center justify-between text-sm'>
+                  <span className='text-muted-foreground'>Queued:</span>
+                  <span className='text-xs'>{formatDistanceToNow(new Date(ticket.ticket.queuedAt))} ago</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Overview */}
         {ticket.ticket.overview && (

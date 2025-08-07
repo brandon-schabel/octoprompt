@@ -14,7 +14,7 @@ export const routes = {
   tickets: '/tickets',
   assets: '/assets',
   prompts: '/prompts',
-  keys: '/keys',
+  providers: '/providers',
   health: '/health',
   projectSummarization: '/project-summarization'
 } as const

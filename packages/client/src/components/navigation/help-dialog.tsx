@@ -42,7 +42,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[80vh] min-w-[800px] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Help & Information: Keys and Prompts Management</DialogTitle>
+          <DialogTitle>Help & Information: Providers and Prompts Management</DialogTitle>
         </DialogHeader>
         <Tabs defaultValue='getting-started' className='w-full'>
           <TabsList className='grid w-full grid-cols-6'>
@@ -50,7 +50,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
             <TabsTrigger value='agent'>Agent Usage</TabsTrigger>
             <TabsTrigger value='chat'>Chat</TabsTrigger>
             <TabsTrigger value='prompts'>Prompts</TabsTrigger>
-            <TabsTrigger value='keys'>Keys</TabsTrigger>
+            <TabsTrigger value='keys'>Providers</TabsTrigger>
             <TabsTrigger value='shortcuts'>Shortcuts</TabsTrigger>
           </TabsList>
           <TabsContent value='shortcuts'>
@@ -311,8 +311,8 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <p>
                   To configure your provider and model, use the settings icon within the chat interface. You can manage
                   your API keys on the
-                  <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
-                    Keys
+                  <Link to='/providers' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
+                    Providers
                   </Link>
                   page.
                 </p>
@@ -451,8 +451,12 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                     <em>
                       (Note: This feature requires project file summarization to be enabled for your project, which in
                       turn needs an API key to be configured on the
-                      <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
-                        Keys
+                      <Link
+                        to='/providers'
+                        className='text-blue-500 hover:underline'
+                        onClick={() => onOpenChange?.(false)}
+                      >
+                        Providers
                       </Link>
                       page).
                     </em>
@@ -530,8 +534,8 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 </p>
                 <p>
                   If you have AI features enabled (by configuring your API keys on the
-                  <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
-                    Keys
+                  <Link to='/providers' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
+                    Providers
                   </Link>
                   page), and you enable file summaries for your project (usually in the project's settings or a
                   dedicated "Summary" page after creation), Promptliano will begin to create summaries of your project
@@ -559,7 +563,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
               <div className='space-y-3 p-4 text-sm'>
                 <h3 className='font-semibold mb-2'>Managing API Keys</h3>
                 <p>
-                  The "Keys" page is where you configure and manage the API keys required to access various Large
+                  The "Providers" page is where you configure and manage the API keys required to access various Large
                   Language Models (LLMs). These keys enable Promptliano to utilize external AI services for features
                   like chat, agent runs, and file summarization.
                 </p>
@@ -595,8 +599,12 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <ul className='list-disc list-inside space-y-1 pl-4'>
                   <li>
                     Navigate to the
-                    <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
-                      Keys
+                    <Link
+                      to='/providers'
+                      className='text-blue-500 hover:underline'
+                      onClick={() => onOpenChange?.(false)}
+                    >
+                      Providers
                     </Link>
                     page.
                   </li>
@@ -662,8 +670,8 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 </ul>
                 <p className='mt-3'>
                   Once you have your API key from the provider, return to the
-                  <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
-                    Keys
+                  <Link to='/providers' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
+                    Providers
                   </Link>
                   page in Promptliano to add it.
                 </p>

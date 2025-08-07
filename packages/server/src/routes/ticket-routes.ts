@@ -637,8 +637,8 @@ export const ticketRoutes = new OpenAPIHono()
 
   .openapi(createTaskRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
-    const { content } = c.req.valid('json')
-    const task = await createTask(parseNumericId(ticketId), content)
+    const body = c.req.valid('json')
+    const task = await createTask(parseNumericId(ticketId), body)
     const formattedTask = formatTaskData(task)
     const payload: z.infer<typeof TaskResponseSchema> = { success: true, data: formattedTask }
     return c.json(payload, 201)

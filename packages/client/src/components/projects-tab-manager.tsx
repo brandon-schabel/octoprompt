@@ -326,9 +326,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
           }}
           className={cn('flex flex-col justify-start rounded-none border-b', className)}
         >
-          <TabsList className='h-auto bg-background justify-start rounded-none p-1'>
+          <TabsList className='h-auto bg-background justify-start rounded-none p-1 pl-12 sm:pl-1'>
             <div className='text-xs lg:text-sm px-2 font-semibold flex items-center gap-1 mr-2 whitespace-nowrap'>
-              Project Tabs
+              <span className='hidden sm:inline'>Project Tabs</span>
+              <span className='sm:hidden'>Tabs</span>
               <PromptlianoTooltip>{titleTooltipContent}</PromptlianoTooltip>
               <Button
                 variant='ghost'

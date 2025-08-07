@@ -201,6 +201,182 @@ You MUST proactively use Claude's built-in agents at appropriate times:
 - Use multiple agents concurrently when appropriate for maximum efficiency
 - Each agent should receive clear context about what was implemented/changed
 
+## Task Queue System
+
+The task queue system allows AI agents to continuously process tickets and tasks in a structured way. It provides multiple queue lanes for parallel processing and ensures tasks are completed with proper validation and review.
+
+### Overview
+
+- **Queue-based Processing**: Tasks and tickets can be added to queues for continuous AI processing
+- **Multiple Lanes**: Support for multiple queue lanes allowing parallel AI agent processing
+- **Priority System**: Tasks are processed based on priority (1-10, lower number = higher priority)
+- **Status Tracking**: Real-time tracking of queued, in-progress, completed, failed, and cancelled items
+- **Agent Assignment**: Automatic assignment of tasks to AI agents with tracking
+
+### MCP Tools for Queue Management
+
+#### 1. Queue Manager Tool (`queue_manager`)
+
+Used for managing queues and enqueuing items:
+
+```
+mcp__promptliano__queue_manager(
+  action: "create_queue",
+  projectId: 1754111018844,
+  data: {
+    name: "Feature Development",
+    description: "Queue for new feature tasks",
+    maxParallelItems: 2
+  }
+)
+
+// Enqueue an entire ticket with all its tasks
+mcp__promptliano__queue_manager(
+  action: "enqueue_ticket",
+  projectId: 1754111018844,
+  data: {
+    queueId: 123,
+    ticketId: 456,
+    priority: 5
+  }
+)
+```
+
+Actions available:
+
+- `create_queue`: Create a new task queue
+- `list_queues`: List all queues for a project
+- `enqueue_item`: Add a single task to the queue
+- `enqueue_ticket`: Add all tasks from a ticket to the queue
+- `get_stats`: Get queue statistics
+- `pause_queue`: Pause processing on a queue
+- `resume_queue`: Resume processing on a queue
+- `delete_queue`: Delete a queue (and all its items)
+
+#### 2. Queue Processor Tool (`queue_processor`)
+
+Used by AI agents to process queue items:
+
+```
+// Get the next task from the queue
+mcp__promptliano__queue_processor(
+  action: "get_next_task",
+  data: {
+    queueId: 123,
+    agentId: "frontend-shadcn-expert"
+  }
+)
+
+// Mark task as completed
+mcp__promptliano__queue_processor(
+  action: "complete_task",
+  data: {
+    itemId: 789,
+    completionNotes: "Implemented user profile component with shadcn/ui"
+  }
+)
+```
+
+Actions available:
+
+- `get_next_task`: Get the next highest priority task from the queue
+- `update_status`: Update the status of a queue item
+- `complete_task`: Mark a task as completed and remove from queue
+- `fail_task`: Mark a task as failed with error details
+- `release_task`: Release a task back to the queue (if agent can't complete it)
+
+### Queue Processing Workflow
+
+1. **Queue Creation**: Create queues for different types of work (features, bugs, refactoring, etc.)
+2. **Task Enqueuing**: Add tickets or individual tasks to queues with appropriate priorities
+3. **Agent Processing**:
+   - Agent calls `get_next_task` to retrieve work
+   - Agent processes the task using appropriate tools and sub-agents
+   - Agent uses `staff-engineer-code-reviewer` to review implementation
+   - Agent calls `complete_task` when done or `fail_task` if unable to complete
+4. **Continuous Loop**: Agent continues calling `get_next_task` until queue is empty
+
+### UI Integration
+
+- **Queues Tab**: Access queues through the "Queues" tab in the project view
+- **Queue Management**: Create, pause, resume, and delete queues
+- **Progress Tracking**: Visual progress bars showing completion status
+- **Statistics View**: Queue statistics appear in the project statistics view
+- **Project Overview**: Active queues with pending tasks are shown in the project overview
+
+### Best Practices
+
+1. **Queue Organization**: Create separate queues for different types of work
+2. **Priority Management**: Use priorities to ensure critical tasks are processed first
+3. **Agent Specialization**: Use agent IDs to assign tasks to specialized agents
+4. **Error Handling**: Always check if tasks have been completed before re-processing
+5. **Queue Monitoring**: Monitor queue statistics to ensure healthy processing
+
+### Example: Processing a Feature Queue
+
+```
+// 1. Create a feature development queue
+mcp__promptliano__queue_manager(
+  action: "create_queue",
+  projectId: 1754111018844,
+  data: {
+    name: "Feature Queue",
+    description: "New features to implement",
+    maxParallelItems: 1
+  }
+)
+
+// 2. Add a ticket to the queue
+mcp__promptliano__queue_manager(
+  action: "enqueue_ticket",
+  projectId: 1754111018844,
+  data: {
+    queueId: 123,
+    ticketId: 456,
+    priority: 5
+  }
+)
+
+// 3. Process tasks (in a loop)
+while (true) {
+  // Get next task
+  const result = mcp__promptliano__queue_processor(
+    action: "get_next_task",
+    data: {
+      queueId: 123,
+      agentId: "my-agent"
+    }
+  )
+
+  if (!result.queueItem) {
+    // No more tasks in queue
+    break
+  }
+
+  // Process the task...
+  // Implementation code here...
+
+  // Mark as completed
+  mcp__promptliano__queue_processor(
+    action: "complete_task",
+    data: {
+      itemId: result.queueItem.id,
+      completionNotes: "Task completed successfully"
+    }
+  )
+}
+```
+
+### Queue Status in Project Overview
+
+When using the project overview MCP tool, queue information is automatically included:
+
+- Total number of active queues
+- Number of pending items across all queues
+- Reminder to use `queue_processor` tool when items are pending
+
+This ensures AI agents are always aware of pending work when they check the project overview.
+
 ## Validation Requirements for UI Navigation and Search Parameters
 
 All UI navigation state (tabs, subtabs, views, filters) is persisted in URL search parameters and validated using Zod schemas. When adding any new UI navigation elements, you MUST update the corresponding validation schemas.

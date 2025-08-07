@@ -6,7 +6,14 @@ import { toast } from 'sonner'
 // Query Keys
 const GEN_AI_KEYS = {
   all: ['genAi'] as const,
-  models: (provider: string) => [...GEN_AI_KEYS.all, 'models', provider] as const
+  models: (provider: string, options?: { ollamaUrl?: string; lmstudioUrl?: string }) =>
+    [
+      ...GEN_AI_KEYS.all,
+      'models',
+      provider,
+      options?.ollamaUrl || 'default',
+      options?.lmstudioUrl || 'default'
+    ] as const
 }
 
 // Simplified hook for generating text
@@ -40,10 +47,10 @@ export const useStreamText = () => {
 }
 
 // Hook for getting available models
-export const useGetModels = (provider: string) => {
+export const useGetModels = (provider: string, options?: { ollamaUrl?: string; lmstudioUrl?: string }) => {
   return useQuery({
-    queryKey: GEN_AI_KEYS.models(provider),
-    queryFn: () => promptlianoClient.genAi.getModels(provider),
+    queryKey: GEN_AI_KEYS.models(provider, options),
+    queryFn: () => promptlianoClient.genAi.getModels(provider, options),
     enabled: !!provider,
     staleTime: 10 * 60 * 1000 // 10 minutes - models don't change frequently
   })

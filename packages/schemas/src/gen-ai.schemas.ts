@@ -15,6 +15,15 @@ export const AiMessageSchema = z
 // Not all parameters are supported by all models or providers.
 export const AiSdkOptionsSchema = z
   .object({
+    // Provider URL overrides
+    ollamaUrl: z.string().url().optional().openapi({
+      description: 'Custom Ollama server URL to use instead of the default.',
+      example: 'http://192.168.1.100:11434'
+    }),
+    lmstudioUrl: z.string().url().optional().openapi({
+      description: 'Custom LMStudio server URL to use instead of the default.',
+      example: 'http://localhost:1234'
+    }),
     temperature: z
       .number()
       .min(0)

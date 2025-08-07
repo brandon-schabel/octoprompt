@@ -175,7 +175,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
       </div>
 
       {/* Tasks List */}
-      <div className='space-y-2 max-h-64 overflow-auto'>
+      <div className='space-y-2 max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800'>
         {isLoading && <p className='text-sm text-muted-foreground'>Loading tasks...</p>}
         {!isLoading && tasks.length === 0 && (
           <TaskEmptyState

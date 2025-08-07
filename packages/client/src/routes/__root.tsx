@@ -4,7 +4,7 @@ import type { RouterContext } from '../main'
 // Removed: import { AppNavbar } from '@/components/navigation/app-navbar';
 import { AppSidebar } from '@/components/navigation/app-sidebar' // Added
 import { SidebarProvider, SidebarTrigger } from '@promptliano/ui' // Added
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useSidecarServer } from '@/hooks/use-sidecar-server' // Added for Tauri sidecar
 import {
@@ -123,6 +123,14 @@ function GlobalCommandPalette() {
           </CommandItem>
           <CommandItem
             onSelect={() => {
+              navigate({ to: '/providers' })
+              setOpen(false)
+            }}
+          >
+            Manage Providers
+          </CommandItem>
+          <CommandItem
+            onSelect={() => {
               navigate({ to: '/assets' })
               setOpen(false)
             }}
@@ -156,12 +164,20 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   const [activeProjectTabId] = useGetActiveProjectTabId()
+  const navigate = useNavigate()
 
   // Migrate legacy defaultTab to numeric ID system
   useMigrateDefaultTab()
 
   // Migrate old tab views to new Manage sub-view structure
   useMigrateTabViews()
+
+  // Redirect from old /keys route to new /providers route
+  useEffect(() => {
+    if (window.location.pathname === '/keys') {
+      navigate({ to: '/providers', replace: true })
+    }
+  }, [])
 
   // Initialize sidecar server for Tauri builds
   const { isStarting, isReady, error: sidecarError } = useSidecarServer()

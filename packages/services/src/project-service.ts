@@ -1293,19 +1293,31 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     // Validate project exists and get basic info
     const project = await getProjectById(projectId)
 
-    // Import necessary functions
+    // Import necessary functions - including queue stats
+    const { getQueuesWithStats } = await import('./queue-service')
+
     // Get all data in parallel for performance
-    const [activeTab, prompts, ticketsWithTaskCount, statistics, gitStatus, gitBranch, fileTree, unsummarizedFiles] =
-      await Promise.all([
-        getActiveTab(projectId).catch(() => null),
-        listPromptsByProject(projectId).catch(() => []),
-        listTicketsWithTaskCount(projectId).catch(() => []),
-        getProjectStatistics(projectId).catch(() => null),
-        getProjectGitStatus(projectId).catch(() => null),
-        getCurrentBranch(projectId).catch(() => 'unknown'),
-        getProjectFileTree(projectId).catch(() => 'Unable to load file tree'),
-        fileSummarizationTracker.getUnsummarizedFilesWithImportance(projectId, 20).catch(() => [])
-      ])
+    const [
+      activeTab,
+      prompts,
+      ticketsWithTaskCount,
+      statistics,
+      gitStatus,
+      gitBranch,
+      fileTree,
+      unsummarizedFiles,
+      queueStats
+    ] = await Promise.all([
+      getActiveTab(projectId).catch(() => null),
+      listPromptsByProject(projectId).catch(() => []),
+      listTicketsWithTaskCount(projectId).catch(() => []),
+      getProjectStatistics(projectId).catch(() => null),
+      getProjectGitStatus(projectId).catch(() => null),
+      getCurrentBranch(projectId).catch(() => 'unknown'),
+      getProjectFileTree(projectId).catch(() => 'Unable to load file tree'),
+      fileSummarizationTracker.getUnsummarizedFilesWithImportance(projectId, 20).catch(() => []),
+      getQueuesWithStats(projectId).catch(() => [])
+    ])
 
     // Build the overview sections
     const lines: string[] = []
@@ -1385,6 +1397,38 @@ export async function getProjectOverview(projectId: number): Promise<string> {
       }
     } else {
       lines.push('No open tickets')
+    }
+    lines.push('')
+
+    // Task queues section
+    lines.push(`=== TASK QUEUES (${queueStats.length} total) ===`)
+    if (queueStats.length > 0) {
+      let totalQueuedItems = 0
+      let totalInProgressItems = 0
+
+      queueStats.forEach(({ queue, stats }) => {
+        totalQueuedItems += stats.queuedItems
+        totalInProgressItems += stats.inProgressItems
+
+        const statusIcon = queue.status === 'active' ? '✓' : '⏸'
+        lines.push(
+          `${statusIcon} ${queue.name}: ${stats.queuedItems} queued, ${stats.inProgressItems} in progress, ${stats.completedItems} completed`
+        )
+        if (stats.currentAgents.length > 0) {
+          lines.push(`  Active agents: ${stats.currentAgents.join(', ')}`)
+        }
+      })
+
+      if (totalQueuedItems > 0 || totalInProgressItems > 0) {
+        lines.push('')
+        lines.push(
+          `Total items pending: ${totalQueuedItems + totalInProgressItems} (${totalQueuedItems} queued, ${totalInProgressItems} in progress)`
+        )
+        lines.push('Use queue_processor tool to process tasks from the queue')
+      }
+    } else {
+      lines.push('No task queues configured')
+      lines.push('Use queue_manager tool to create queues for AI task processing')
     }
     lines.push('')
 

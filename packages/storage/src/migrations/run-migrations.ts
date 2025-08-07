@@ -12,6 +12,9 @@ import { promptProjectsColumnsMigration } from './011-prompt-projects-columns'
 import { projectFilesColumnsMigration } from './012-project-files-columns'
 import { removeAgentProjectsTableMigration } from './013-remove-agent-projects'
 import { chatTablesColumnsMigration } from './014-chat-tables-columns'
+import { taskQueueSystemMigration } from './015-task-queue-system'
+import { kanbanBoardEnhancementsMigration } from './016-kanban-board-enhancements'
+import { unifiedFlowSystemMigration } from './017-unified-flow-system'
 import type { Database } from 'bun:sqlite'
 
 interface Migration {
@@ -36,7 +39,10 @@ const migrations: Migration[] = [
   promptProjectsColumnsMigration,
   projectFilesColumnsMigration,
   removeAgentProjectsTableMigration,
-  chatTablesColumnsMigration
+  chatTablesColumnsMigration,
+  taskQueueSystemMigration,
+  kanbanBoardEnhancementsMigration,
+  unifiedFlowSystemMigration
 ]
 
 /**

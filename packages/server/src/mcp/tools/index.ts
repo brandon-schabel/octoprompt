@@ -6,7 +6,7 @@ import { mcpConfigGeneratorTool, mcpCompatibilityCheckerTool, mcpSetupValidatorT
 import { tabManagerTool, jobManagerTool } from './ui'
 import { aiAssistantTool, agentManagerTool } from './content'
 import { projectManagerTool, promptManagerTool } from './project'
-import { ticketManagerTool, taskManagerTool } from './workflow'
+import { ticketManagerTool, taskManagerTool, queueManagerTool, queueProcessorTool } from './workflow'
 import { fileSummarizationManagerTool } from './analysis'
 import { gitManagerTool } from './git'
 
@@ -24,6 +24,8 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   // Workflow tools
   ticketManagerTool,
   taskManagerTool,
+  queueManagerTool,
+  queueProcessorTool,
   // Content tools
   aiAssistantTool,
   agentManagerTool,

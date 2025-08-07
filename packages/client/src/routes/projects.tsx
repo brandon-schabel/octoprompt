@@ -25,7 +25,7 @@ import { Tabs, TabsContent } from '@promptliano/ui'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { AssetsTabWithSidebar } from '@/components/assets/assets-tab-with-sidebar'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
-import { TicketsTabWithSidebar } from '@/components/tickets/tickets-tab-with-sidebar'
+import { FlowTabWithSidebar } from '@/components/flow/flow-tab-with-sidebar'
 import { GitTabWithSidebar } from '@/components/projects/git-tab-with-sidebar'
 import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
 import { ClaudeCodeTabWithSidebar } from '@/components/claude-code'
@@ -49,6 +49,21 @@ export function ProjectsPage() {
 
   // Sync active tab with backend
   useActiveTabSync(selectedProjectId)
+
+  // Handle backward compatibility - redirect tickets/queues to flow
+  useEffect(() => {
+    if (search.activeView === 'tickets' || search.activeView === 'queues') {
+      navigate({
+        to: '/projects',
+        search: (prev) => ({
+          ...prev,
+          activeView: 'flow',
+          flowView: search.activeView === 'queues' ? 'queues' : 'tickets'
+        }),
+        replace: true
+      })
+    }
+  }, [search.activeView, navigate])
 
   // Clear section parameter after navigation
   useEffect(() => {
@@ -322,18 +337,19 @@ export function ProjectsPage() {
             />
           </TabsContent>
 
-          <TabsContent value='tickets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+          <TabsContent value='flow' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData && activeProjectTabId ? (
-              <TicketsTabWithSidebar
+              <FlowTabWithSidebar
                 projectId={selectedProjectId}
                 projectName={projectData.name}
                 projectTabId={activeProjectTabId}
-                ticketView={search.ticketView}
+                flowView={search.flowView || search.ticketView || search.queueView}
                 selectedTicketId={search.selectedTicketId}
-                onTicketViewChange={(view) => {
+                selectedQueueId={search.selectedQueueId}
+                onFlowViewChange={(view) => {
                   navigate({
                     to: '/projects',
-                    search: (prev) => ({ ...prev, ticketView: view }),
+                    search: (prev) => ({ ...prev, flowView: view }),
                     replace: true
                   })
                 }}
@@ -344,9 +360,16 @@ export function ProjectsPage() {
                     replace: true
                   })
                 }}
+                onQueueSelect={(queueId) => {
+                  navigate({
+                    to: '/projects',
+                    search: (prev) => ({ ...prev, selectedQueueId: queueId }),
+                    replace: true
+                  })
+                }}
               />
             ) : (
-              <p className='p-4 md:p-6'>No project selected for tickets.</p>
+              <p className='p-4 md:p-6'>No project selected for Flow.</p>
             )}
           </TabsContent>
 

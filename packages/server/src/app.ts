@@ -7,6 +7,8 @@ import { projectRoutes } from './routes/project-routes'
 import { providerKeyRoutes } from './routes/provider-key-routes'
 import { promptRoutes } from './routes/prompt-routes'
 import { ticketRoutes } from './routes/ticket-routes'
+import { queueRoutes } from './routes/queue-routes'
+import { flowRoutes } from './routes/flow-routes'
 import { browseDirectoryRoutes } from './routes/browse-directory-routes'
 import { mcpRoutes } from './routes/mcp-routes'
 import { gitRoutes } from './routes/git-routes'
@@ -184,6 +186,8 @@ app.route('/', projectRoutes)
 app.route('/', providerKeyRoutes)
 app.route('/', promptRoutes)
 app.route('/', ticketRoutes)
+app.route('/', queueRoutes)
+app.route('/', flowRoutes)
 app.route('/', genAiRoutes)
 app.route('/', browseDirectoryRoutes)
 app.route('/', mcpRoutes)

@@ -57,7 +57,17 @@ import {
   ProviderKeyResponseSchema as ProviderKeyResponseSchemaZ,
   ProviderKeyListResponseSchema as ProviderKeyListResponseSchemaZ,
   CreateProviderKeyBodySchema,
-  UpdateProviderKeyBodySchema
+  UpdateProviderKeyBodySchema,
+  TestProviderRequestSchema,
+  TestProviderResponseSchema as TestProviderResponseSchemaZ,
+  BatchTestProviderRequestSchema,
+  BatchTestProviderResponseSchema as BatchTestProviderResponseSchemaZ,
+  ProviderHealthStatusListResponseSchema as ProviderHealthStatusListResponseSchemaZ,
+  type TestProviderRequest,
+  type TestProviderResponse,
+  type BatchTestProviderRequest,
+  type BatchTestProviderResponse,
+  type ProviderHealthStatus
 } from '@promptliano/schemas'
 
 import {
@@ -188,6 +198,36 @@ import {
   SuggestTasksBodySchema,
   TicketSuggestFilesBodySchema,
   SuggestFilesBodySchema
+} from '@promptliano/schemas'
+
+// Queue imports
+import type {
+  TaskQueue,
+  QueueItem,
+  CreateQueueBody,
+  UpdateQueueBody,
+  EnqueueItemBody,
+  UpdateQueueItemBody,
+  QueueStats,
+  QueueWithStats,
+  GetNextTaskResponse,
+  BatchEnqueueBody,
+  BatchUpdateItemsBody,
+  QueueTimeline
+} from '@promptliano/schemas'
+import {
+  TaskQueueSchema,
+  QueueItemSchema,
+  CreateQueueBodySchema,
+  UpdateQueueBodySchema,
+  EnqueueItemBodySchema,
+  UpdateQueueItemBodySchema,
+  QueueStatsSchema,
+  QueueWithStatsSchema,
+  GetNextTaskResponseSchema,
+  BatchEnqueueBodySchema,
+  BatchUpdateItemsBodySchema,
+  QueueTimelineSchema
 } from '@promptliano/schemas'
 
 // Git imports
@@ -355,7 +395,6 @@ class BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), requestTimeout)
 
     try {
-      console.log(`[API Client] Making ${method} request to:`, url.toString())
       const response = await this.customFetch(url.toString(), {
         method,
         headers: this.headers,
@@ -364,7 +403,6 @@ class BaseApiClient {
       })
 
       clearTimeout(timeoutId)
-      console.log(`[API Client] Response status:`, response.status)
 
       const responseText = await response.text()
       let responseData: any
@@ -1381,6 +1419,33 @@ export class ProviderKeyService extends BaseApiClient {
     })
     return true
   }
+
+  async testProvider(data: TestProviderRequest) {
+    const validatedData = this.validateBody(TestProviderRequestSchema, data)
+    const result = await this.request('POST', '/providers/test', {
+      body: validatedData,
+      responseSchema: TestProviderResponseSchemaZ
+    })
+    return result as DataResponseSchema<TestProviderResponse>
+  }
+
+  async batchTestProviders(data: BatchTestProviderRequest) {
+    const validatedData = this.validateBody(BatchTestProviderRequestSchema, data)
+    const result = await this.request('POST', '/providers/batch-test', {
+      body: validatedData,
+      responseSchema: BatchTestProviderResponseSchemaZ
+    })
+    return result as DataResponseSchema<BatchTestProviderResponse>
+  }
+
+  async getProvidersHealth(refresh?: boolean) {
+    const params = refresh ? { refresh: 'true' } : undefined
+    const result = await this.request('GET', '/providers/health', {
+      params,
+      responseSchema: ProviderHealthStatusListResponseSchemaZ
+    })
+    return result as DataResponseSchema<ProviderHealthStatus[]>
+  }
 }
 
 // Gen AI Service
@@ -1403,9 +1468,13 @@ export class GenAiService extends BaseApiClient {
     return result as { success: true; data: { output: any } }
   }
 
-  async getModels(provider: string) {
+  async getModels(provider: string, options?: { ollamaUrl?: string; lmstudioUrl?: string }) {
+    const params: Record<string, string> = { provider }
+    if (options?.ollamaUrl) params.ollamaUrl = options.ollamaUrl
+    if (options?.lmstudioUrl) params.lmstudioUrl = options.lmstudioUrl
+
     const result = await this.request('GET', '/models', {
-      params: { provider },
+      params,
       responseSchema: ModelsListResponseSchema
     })
 
@@ -1913,6 +1982,265 @@ export class TicketService extends BaseApiClient {
       })
     })
     return result as DataResponseSchema<TicketWithTasks[]>
+  }
+}
+
+// Queue Service
+export class QueueService extends BaseApiClient {
+  async createQueue(projectId: number, data: CreateQueueBody) {
+    const validatedData = this.validateBody(CreateQueueBodySchema, data)
+    const result = await this.request('POST', `/projects/${projectId}/queues`, {
+      body: { ...validatedData, projectId },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TaskQueueSchema
+      })
+    })
+    return result as DataResponseSchema<TaskQueue>
+  }
+
+  async listQueues(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/queues`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TaskQueueSchema)
+      })
+    })
+    return result as DataResponseSchema<TaskQueue[]>
+  }
+
+  async getQueue(queueId: number) {
+    const result = await this.request('GET', `/queues/${queueId}`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TaskQueueSchema
+      })
+    })
+    return result as DataResponseSchema<TaskQueue>
+  }
+
+  async updateQueue(queueId: number, data: UpdateQueueBody) {
+    const validatedData = this.validateBody(UpdateQueueBodySchema, data)
+    const result = await this.request('PATCH', `/queues/${queueId}`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TaskQueueSchema
+      })
+    })
+    return result as DataResponseSchema<TaskQueue>
+  }
+
+  async deleteQueue(queueId: number) {
+    const result = await this.request('DELETE', `/queues/${queueId}`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({ deleted: z.boolean() })
+      })
+    })
+    return result as DataResponseSchema<{ deleted: boolean }>
+  }
+
+  async enqueueItem(queueId: number, data: EnqueueItemBody) {
+    const validatedData = this.validateBody(EnqueueItemBodySchema, data)
+    const result = await this.request('POST', `/queues/${queueId}/items`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: QueueItemSchema
+      })
+    })
+    return result as DataResponseSchema<QueueItem>
+  }
+
+  async enqueueTicket(queueId: number, ticketId: number, priority?: number) {
+    const result = await this.request('POST', `/queues/${queueId}/enqueue-ticket`, {
+      body: { ticketId, priority },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(QueueItemSchema)
+      })
+    })
+    return result as DataResponseSchema<QueueItem[]>
+  }
+
+  async batchEnqueue(queueId: number, data: BatchEnqueueBody) {
+    const validatedData = this.validateBody(BatchEnqueueBodySchema, data)
+    const result = await this.request('POST', `/queues/${queueId}/batch-enqueue`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(QueueItemSchema)
+      })
+    })
+    return result as DataResponseSchema<QueueItem[]>
+  }
+
+  async getQueueItems(queueId: number, status?: string) {
+    const params: Record<string, any> = {}
+    if (status) params.status = status
+
+    const result = await this.request('GET', `/queues/${queueId}/items`, {
+      params,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(
+          z.object({
+            queueItem: QueueItemSchema,
+            ticket: z.any().optional(),
+            task: z.any().optional()
+          })
+        )
+      })
+    })
+    return result as DataResponseSchema<
+      Array<{
+        queueItem: QueueItem
+        ticket?: any
+        task?: any
+      }>
+    >
+  }
+
+  async updateQueueItem(itemId: number, data: UpdateQueueItemBody) {
+    const validatedData = this.validateBody(UpdateQueueItemBodySchema, data)
+    const result = await this.request('PATCH', `/queue-items/${itemId}`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: QueueItemSchema
+      })
+    })
+    return result as DataResponseSchema<QueueItem>
+  }
+
+  async batchUpdateItems(data: BatchUpdateItemsBody) {
+    const validatedData = this.validateBody(BatchUpdateItemsBodySchema, data)
+    const result = await this.request('PATCH', `/queue-items/batch`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(QueueItemSchema)
+      })
+    })
+    return result as DataResponseSchema<QueueItem[]>
+  }
+
+  async deleteQueueItem(itemId: number) {
+    const result = await this.request('DELETE', `/queue-items/${itemId}`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({ deleted: z.boolean() })
+      })
+    })
+    return result as DataResponseSchema<{ deleted: boolean }>
+  }
+
+  async getQueueStats(queueId: number) {
+    const result = await this.request('GET', `/queues/${queueId}/stats`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: QueueStatsSchema
+      })
+    })
+    return result as DataResponseSchema<QueueStats>
+  }
+
+  async getQueuesWithStats(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/queues-with-stats`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(QueueWithStatsSchema)
+      })
+    })
+    return result as DataResponseSchema<QueueWithStats[]>
+  }
+
+  async getNextTask(queueId: number, agentId?: string) {
+    const result = await this.request('POST', `/queues/${queueId}/next-task`, {
+      body: { agentId },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: GetNextTaskResponseSchema
+      })
+    })
+    return result as DataResponseSchema<GetNextTaskResponse>
+  }
+
+  async bulkMoveItems(itemIds: number[], targetQueueId: number, positions?: number[]) {
+    const result = await this.request('POST', '/queue-items/bulk-move', {
+      body: { itemIds, targetQueueId, positions },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({ moved: z.boolean() })
+      })
+    })
+    return result as DataResponseSchema<{ moved: boolean }>
+  }
+
+  async reorderQueueItems(queueId: number, itemIds: number[]) {
+    const result = await this.request('POST', '/queue-items/reorder', {
+      body: { queueId, itemIds },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({ reordered: z.boolean() })
+      })
+    })
+    return result as DataResponseSchema<{ reordered: boolean }>
+  }
+
+  async getQueueTimeline(queueId: number) {
+    const result = await this.request('GET', `/queues/${queueId}/timeline`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: QueueTimelineSchema
+      })
+    })
+    return result as DataResponseSchema<QueueTimeline>
+  }
+
+  async getUnqueuedItems(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/unqueued-items`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          tickets: z.array(
+            z.object({
+              id: z.number(),
+              title: z.string(),
+              priority: z.string().optional(),
+              created_at: z.number(),
+              estimated_hours: z.number().nullable().optional()
+            })
+          ),
+          tasks: z.array(
+            z.object({
+              id: z.number(),
+              title: z.string(),
+              ticket_id: z.number(),
+              estimated_hours: z.number().nullable().optional(),
+              ticket_title: z.string()
+            })
+          )
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      tickets: Array<{
+        id: number
+        title: string
+        priority?: string
+        created_at: number
+        estimated_hours?: number | null
+      }>
+      tasks: Array<{
+        id: number
+        title: string
+        ticket_id: number
+        estimated_hours?: number | null
+        ticket_title: string
+      }>
+    }>
   }
 }
 
@@ -3065,6 +3393,156 @@ export class MCPGlobalConfigService extends BaseApiClient {
   }
 }
 
+// Flow Service - Unified ticket and queue management
+export class FlowService extends BaseApiClient {
+  async getFlowData(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/flow`, {
+      responseSchema: z.object({
+        unqueued: z.object({
+          tickets: z.array(TicketSchema),
+          tasks: z.array(TicketTaskSchema)
+        }),
+        queues: z.record(
+          z.string(),
+          z.object({
+            queue: TaskQueueSchema,
+            tickets: z.array(TicketSchema),
+            tasks: z.array(TicketTaskSchema)
+          })
+        )
+      })
+    })
+    return result
+  }
+
+  async getFlowItems(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/flow/items`, {
+      responseSchema: z.array(
+        z.object({
+          id: z.string(),
+          type: z.enum(['ticket', 'task']),
+          title: z.string(),
+          description: z.string().optional(),
+          ticket: TicketSchema.optional(),
+          task: TicketTaskSchema.optional(),
+          queueId: z.number().nullable().optional(),
+          queuePosition: z.number().nullable().optional(),
+          queueStatus: z.string().nullable().optional(),
+          queuePriority: z.number().optional(),
+          created: z.number(),
+          updated: z.number()
+        })
+      )
+    })
+    return result
+  }
+
+  async getUnqueuedItems(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/flow/unqueued`, {
+      responseSchema: z.object({
+        tickets: z.array(TicketSchema),
+        tasks: z.array(TicketTaskSchema)
+      })
+    })
+    return result
+  }
+
+  async enqueueTicket(ticketId: number, data: { queueId: number; priority?: number; includeTasks?: boolean }) {
+    const result = await this.request('POST', `/flow/tickets/${ticketId}/enqueue`, {
+      body: data,
+      responseSchema: TicketSchema
+    })
+    return result
+  }
+
+  async enqueueTask(taskId: number, data: { queueId: number; priority?: number }) {
+    const result = await this.request('POST', `/flow/tasks/${taskId}/enqueue`, {
+      body: data,
+      responseSchema: TicketTaskSchema
+    })
+    return result
+  }
+
+  async dequeueTicket(ticketId: number) {
+    const result = await this.request('POST', `/flow/tickets/${ticketId}/dequeue`, {
+      responseSchema: TicketSchema
+    })
+    return result
+  }
+
+  async dequeueTask(taskId: number) {
+    const result = await this.request('POST', `/flow/tasks/${taskId}/dequeue`, {
+      responseSchema: TicketTaskSchema
+    })
+    return result
+  }
+
+  async moveItem(data: {
+    itemType: 'ticket' | 'task'
+    itemId: number
+    targetQueueId: number | null
+    priority?: number
+  }) {
+    const result = await this.request('POST', '/flow/move', {
+      body: data,
+      responseSchema: z.object({
+        id: z.string(),
+        type: z.enum(['ticket', 'task']),
+        title: z.string(),
+        description: z.string().optional(),
+        ticket: TicketSchema.optional(),
+        task: TicketTaskSchema.optional(),
+        queueId: z.number().nullable().optional(),
+        queuePosition: z.number().nullable().optional(),
+        queueStatus: z.string().nullable().optional(),
+        queuePriority: z.number().optional(),
+        created: z.number(),
+        updated: z.number()
+      })
+    })
+    return result
+  }
+
+  async bulkMoveItems(data: {
+    items: Array<{ itemType: 'ticket' | 'task'; itemId: number }>
+    targetQueueId: number | null
+    priority?: number
+  }) {
+    const result = await this.request('POST', '/flow/bulk-move', {
+      body: data,
+      responseSchema: z.object({
+        success: z.boolean(),
+        movedCount: z.number()
+      })
+    })
+    return result
+  }
+
+  async startProcessingItem(data: { itemType: 'ticket' | 'task'; itemId: number; agentId: string }) {
+    const result = await this.request('POST', '/flow/process/start', {
+      body: data,
+      responseSchema: z.object({ success: z.boolean() })
+    })
+    return result
+  }
+
+  async completeProcessingItem(data: { itemType: 'ticket' | 'task'; itemId: number; processingTime?: number }) {
+    const result = await this.request('POST', '/flow/process/complete', {
+      body: data,
+      responseSchema: z.object({ success: z.boolean() })
+    })
+    return result
+  }
+
+  async failProcessingItem(data: { itemType: 'ticket' | 'task'; itemId: number; errorMessage: string }) {
+    const result = await this.request('POST', '/flow/process/fail', {
+      body: data,
+      responseSchema: z.object({ success: z.boolean() })
+    })
+    return result
+  }
+}
+
 // Main Promptliano Client
 export class PromptlianoClient {
   public readonly chats: ChatService
@@ -3079,6 +3557,8 @@ export class PromptlianoClient {
   public readonly system: SystemService
   public readonly mcp: MCPService
   public readonly tickets: TicketService
+  public readonly queues: QueueService
+  public readonly flow: FlowService
   public readonly git: GitService
   public readonly mcpAnalytics: MCPAnalyticsService
   public readonly jobs: JobService
@@ -3100,6 +3580,8 @@ export class PromptlianoClient {
     this.system = new SystemService(config)
     this.mcp = new MCPService(config)
     this.tickets = new TicketService(config)
+    this.queues = new QueueService(config)
+    this.flow = new FlowService(config)
     this.git = new GitService(config)
     this.mcpAnalytics = new MCPAnalyticsService(config)
     this.jobs = new JobService(config)

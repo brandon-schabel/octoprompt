@@ -11,7 +11,6 @@ import { appConfig } from '@promptliano/config'
 import {
   FolderIcon,
   MessageSquareIcon,
-  KeyIcon,
   Settings as SettingsIcon, // Renamed to avoid conflict with Settings state
   HelpCircleIcon,
   LightbulbIcon,
@@ -19,7 +18,8 @@ import {
   FolderCogIcon,
   FolderTreeIcon,
   Bot,
-  Sparkles
+  Sparkles,
+  Cloud
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
 import { useActiveProjectTab, useSelectSetting, useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
@@ -46,8 +46,8 @@ const mainNavItems = [
     routeIds: ['/projects']
   },
   { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
-  { id: 'keys', title: 'Keys', to: '/keys', icon: KeyIcon, routeIds: ['/keys'] },
-  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] }
+  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] },
+  { id: 'providers', title: 'Providers', to: '/providers', icon: Cloud, routeIds: ['/providers'] }
 ]
 
 export function AppSidebar() {

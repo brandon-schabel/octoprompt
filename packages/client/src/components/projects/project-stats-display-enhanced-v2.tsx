@@ -6,6 +6,7 @@ import { Progress } from '@promptliano/ui'
 import { Badge } from '@promptliano/ui'
 import { FileText, CheckCircle2, Circle, Sparkles, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { QueueOverviewSection } from '@/components/queues/queue-overview-section'
 
 interface ProjectStatsDisplayEnhancedProps {
   projectId: number
@@ -164,6 +165,9 @@ export function ProjectStatsDisplayEnhanced({ projectId }: ProjectStatsDisplayEn
           )}
         </CardContent>
       </Card>
+
+      {/* Task Queues */}
+      <QueueOverviewSection projectId={projectId} />
 
       {/* Project Insights */}
       <Card>

@@ -136,7 +136,7 @@ export {
   CollapsibleContent,
   ScrollArea,
   ScrollBar
-} from './components/data'
+} from './components/data/index.js'
 
 // Interaction components
 export { Slider } from './components/interaction/slider'
@@ -247,7 +247,7 @@ export {
   useClickAway,
   useLocalStorage,
   createTypedLocalStorage
-} from './components/layout'
+} from './components/layout/index.js'
 
 // Resizable components
 export {
@@ -287,7 +287,7 @@ export {
   DataTableColumnFilter,
   DataTableFacetedFilter,
   DataTableViewOptions
-} from './components/data-table'
+} from './components/data-table/index.js'
 export type * from './components/data-table/types'
 
 // Chart components
@@ -318,8 +318,8 @@ export { LoadingDots, LoadingSpinner, LoadingOverlay, LoadingSkeleton } from './
 export { CodeBlock, CodeTerminal, codeBlockVariants } from './components/code/code-block'
 
 // File components
-export { DiffViewer, FileUploadInput, FileUploadButton, computeLineDiff } from './components/file'
-export type { DiffChunk, FileUploadInputProps, FileUploadButtonProps } from './components/file'
+export { DiffViewer, FileUploadInput, FileUploadButton, computeLineDiff } from './components/file/index.js'
+export type { DiffChunk, FileUploadInputProps, FileUploadButtonProps } from './components/file/index.js'
 
 // Motion components and utilities
 export {
@@ -348,21 +348,26 @@ export {
   // Re-exports from framer-motion
   motion,
   AnimatePresence
-} from './components/motion'
+} from './components/motion/index.js'
 
 // Marketing components
 export { CTAButton, CTAButtonAnimated, CTAButtonOutline, CTAButtonGroup } from './components/marketing/cta-button'
 export { FeatureCard, FeatureCardAnimated, FeatureGrid } from './components/marketing/feature-card'
 
 // Markdown components
-export { MarkdownRenderer, MarkdownPreview, MarkdownInlinePreview } from './components/markdown'
+export { MarkdownRenderer, MarkdownPreview, MarkdownInlinePreview } from './components/markdown/index.js'
 
 // Editor components
-export { MonacoEditorWrapper, MonacoDiffViewer, LazyMonacoEditor, LazyMonacoDiffViewer } from './components/editors'
+export {
+  MonacoEditorWrapper,
+  MonacoDiffViewer,
+  LazyMonacoEditor,
+  LazyMonacoDiffViewer
+} from './components/editors/index.js'
 
 // Error components
-export { ErrorBoundary, ComponentErrorBoundary, AIErrorDisplay } from './components/errors'
-export { parseAIError, extractProviderName } from './components/errors'
+export { ErrorBoundary, ComponentErrorBoundary, AIErrorDisplay } from './components/errors/index.js'
+export { parseAIError, extractProviderName } from './components/errors/index.js'
 
 // Utilities
 export { cn, formatDate } from './utils'
@@ -389,7 +394,7 @@ export type * from './components/core/popover'
 export type * from './components/core/sheet'
 export type * from './components/core/command'
 export type * from './components/core/alert-dialog'
-export type * from './components/data'
+export type * from './components/data/index.js'
 export type * from './components/interaction/slider'
 export type * from './components/interaction/toggle'
 export type * from './components/interaction/toggle-group'

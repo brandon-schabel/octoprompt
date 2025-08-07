@@ -9,6 +9,8 @@ import { Skeleton } from '@promptliano/ui'
 import { Button } from '@promptliano/ui'
 import { Plus } from 'lucide-react'
 import { TicketDialog } from './ticket-dialog'
+import { QueueManagementPanel } from '@/components/queues/queue-management-panel'
+import { KanbanBoard } from '@/components/queues/kanban-board'
 
 interface TicketsTabWithSidebarProps {
   projectId: number
@@ -70,75 +72,13 @@ export function TicketsTabWithSidebar({
           </div>
         )
 
+      case 'queues':
+        return <QueueManagementPanel projectId={projectId} />
+
       case 'all':
       case 'active':
       case 'completed':
-        return (
-          <div className='flex h-full'>
-            {/* Ticket List */}
-            <div className='w-96 border-r flex-shrink-0'>
-              <div className='h-full flex flex-col'>
-                <div className='flex items-center justify-between p-4 border-b'>
-                  <h3 className='font-semibold'>
-                    {ticketView === 'active'
-                      ? 'Active Tickets'
-                      : ticketView === 'completed'
-                        ? 'Completed Tickets'
-                        : 'All Tickets'}
-                  </h3>
-                  <Button size='sm' onClick={handleCreateNewTicket}>
-                    <Plus className='h-4 w-4 mr-1' />
-                    New
-                  </Button>
-                </div>
-                <div className='flex-1 overflow-hidden'>
-                  {isLoading ? (
-                    <div className='p-4 space-y-3'>
-                      <Skeleton className='h-24 w-full' />
-                      <Skeleton className='h-24 w-full' />
-                      <Skeleton className='h-24 w-full' />
-                    </div>
-                  ) : (
-                    <div className='h-full overflow-y-auto'>
-                      {tickets &&
-                        tickets.map((ticket) => (
-                          <div
-                            key={ticket.ticket.id}
-                            className={cn(
-                              'p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors',
-                              selectedTicketId === ticket.ticket.id && 'bg-muted'
-                            )}
-                            onClick={() => handleSelectTicket(ticket)}
-                          >
-                            <h4 className='font-medium line-clamp-1'>{ticket.ticket.title}</h4>
-                            <p className='text-sm text-muted-foreground line-clamp-2 mt-1'>{ticket.ticket.overview}</p>
-                            <div className='flex items-center gap-2 mt-2'>
-                              <span className='text-xs text-muted-foreground'>
-                                {ticket.tasks.filter((t) => t.done).length}/{ticket.tasks.length} tasks
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      {tickets && tickets.length === 0 && (
-                        <div className='p-4 text-center text-muted-foreground'>
-                          <p>No tickets found</p>
-                          <Button variant='link' size='sm' onClick={handleCreateNewTicket} className='mt-2'>
-                            Create your first ticket
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Ticket Detail */}
-            <div className='flex-1 overflow-hidden'>
-              <TicketDetailView ticket={selectedTicket} projectId={projectId} onTicketUpdate={refetch} />
-            </div>
-          </div>
-        )
+        return <KanbanBoard projectId={projectId} onCreateTicket={handleCreateNewTicket} />
     }
   }
 

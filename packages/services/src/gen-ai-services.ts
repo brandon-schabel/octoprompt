@@ -5,7 +5,6 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createGroq } from '@ai-sdk/groq'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { createOllama } from 'ollama-ai-provider'
 import { createChatService, createProviderKeyService } from '@promptliano/services'
 import type { APIProviders, ProviderKey } from '@promptliano/schemas'
 import type { AiChatStreamRequest } from '@promptliano/schemas'
@@ -231,8 +230,15 @@ async function getProviderLanguageModelInterface(
     }
     // --- OpenAI Compatible Providers ---
     case 'lmstudio': {
-      const lmStudioUrl = providersConfig.lmstudio.baseURL
+      // Use custom URL from options if provided, otherwise fall back to config
+      let lmStudioUrl = options.lmstudioUrl || providersConfig.lmstudio.baseURL
       if (!lmStudioUrl) throw new ApiError(500, 'LMStudio Base URL not configured.', 'LMSTUDIO_URL_MISSING')
+
+      // Ensure URL ends with /v1 for OpenAI compatibility
+      if (!lmStudioUrl.endsWith('/v1')) {
+        lmStudioUrl = lmStudioUrl.replace(/\/$/, '') + '/v1'
+      }
+
       return createOpenAI({
         baseURL: lmStudioUrl,
         apiKey: 'lm-studio-ignored-key'
@@ -250,9 +256,14 @@ async function getProviderLanguageModelInterface(
     }
     // --- Local Providers ---
     case 'ollama': {
-      const ollamaUrl = providersConfig.ollama.baseURL
+      // Use custom URL from options if provided, otherwise fall back to config
+      const ollamaUrl = options.ollamaUrl || providersConfig.ollama.baseURL
       if (!ollamaUrl) throw new ApiError(500, 'Ollama Base URL not configured.', 'OLLAMA_URL_MISSING')
-      return createOllama({ baseURL: ollamaUrl })(modelId)
+      // Use OpenAI provider with Ollama's OpenAI-compatible API
+      return createOpenAI({
+        baseURL: `${ollamaUrl}/v1`,
+        apiKey: 'ollama' // Ollama doesn't need a real API key
+      })(modelId)
     }
     default:
       console.error(`[UnifiedProviderService] Unsupported provider: ${provider}. Attempting fallback to OpenAI.`)

@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { buildTicketContent } from './utils/ticket-utils'
 import { Progress } from '@promptliano/ui'
+import { QueueBadge } from '../queues/queue-badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -262,9 +263,12 @@ export function TicketListPanel({ projectTabId, onSelectTicket, onCreateTicket }
               >
                 <div className='flex items-center justify-between'>
                   <h2 className='font-semibold'>{ticket.ticket.title}</h2>
-                  <Badge variant='secondary'>
-                    {completedTasks}/{totalTasks} tasks
-                  </Badge>
+                  <div className='flex items-center gap-2'>
+                    {ticket.ticket.queueId && <QueueBadge item={ticket.ticket} projectId={projectId} size='sm' />}
+                    <Badge variant='secondary'>
+                      {completedTasks}/{totalTasks} tasks
+                    </Badge>
+                  </div>
                 </div>
                 <div className='mt-1 text-sm text-muted-foreground'>{snippet(ticket.ticket.overview ?? '', 100)}</div>
                 <div className='mt-2 mb-2'>

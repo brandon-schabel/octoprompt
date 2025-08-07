@@ -20,6 +20,18 @@ export const TicketSchema = z
     suggestedFileIds: z.array(z.string()).default([]),
     suggestedAgentIds: z.array(z.string()).default([]),
     suggestedPromptIds: z.array(entityIdSchema).default([]),
+    // Queue integration fields (unified flow system)
+    queueId: entityIdNullableOptionalSchema,
+    queuePosition: z.number().nullable().optional(),
+    queueStatus: z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled']).nullable().optional(),
+    queuePriority: z.number().default(0).optional(),
+    queuedAt: unixTSOptionalSchemaSpec,
+    queueStartedAt: unixTSOptionalSchemaSpec,
+    queueCompletedAt: unixTSOptionalSchemaSpec,
+    queueAgentId: z.string().nullable().optional(),
+    queueErrorMessage: z.string().nullable().optional(),
+    estimatedProcessingTime: z.number().nullable().optional(),
+    actualProcessingTime: z.number().nullable().optional(),
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })
@@ -40,6 +52,18 @@ export const TicketTaskSchema = z
     tags: z.array(z.string()).default([]), // NEW: Tags for categorization
     agentId: z.string().nullable().optional(), // NEW: Assigned agent for this task
     suggestedPromptIds: z.array(entityIdSchema).default([]), // NEW: Suggested prompts
+    // Queue integration fields (unified flow system)
+    queueId: entityIdNullableOptionalSchema,
+    queuePosition: z.number().nullable().optional(),
+    queueStatus: z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled']).nullable().optional(),
+    queuePriority: z.number().default(0).optional(),
+    queuedAt: unixTSOptionalSchemaSpec,
+    queueStartedAt: unixTSOptionalSchemaSpec,
+    queueCompletedAt: unixTSOptionalSchemaSpec,
+    queueAgentId: z.string().nullable().optional(),
+    queueErrorMessage: z.string().nullable().optional(),
+    estimatedProcessingTime: z.number().nullable().optional(),
+    actualProcessingTime: z.number().nullable().optional(),
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })

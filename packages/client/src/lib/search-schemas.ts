@@ -16,7 +16,7 @@ export const tabSearchSchema = z.object({
 
 // Project view tabs enum
 export const projectViewSchema = z
-  .enum(['context', 'tickets', 'git', 'manage', 'assets', 'claude-code'])
+  .enum(['context', 'flow', 'git', 'manage', 'assets', 'claude-code'])
   .catch('context')
   .optional()
 
@@ -26,8 +26,8 @@ export const gitViewSchema = z
   .catch('changes')
   .optional()
 
-// Ticket view sub-tabs enum
-export const ticketViewSchema = z.enum(['all', 'active', 'completed', 'analytics']).catch('all').optional()
+// Flow view sub-tabs enum (combines tickets, tasks, and queues)
+export const flowViewSchema = z.enum(['queues', 'tickets', 'kanban', 'analytics']).catch('queues').optional()
 
 // Asset view sub-tabs enum
 export const assetViewSchema = z
@@ -47,15 +47,22 @@ export const manageViewSchema = z
   .catch('statistics')
   .optional()
 
+// Deprecated - kept for backward compatibility, will be removed later
+export const ticketViewSchema = flowViewSchema
+export const queueViewSchema = flowViewSchema
+
 // Route-specific search schemas
 export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema).extend({
   activeView: projectViewSchema,
   gitView: gitViewSchema,
-  ticketView: ticketViewSchema,
+  flowView: flowViewSchema,
+  ticketView: flowViewSchema, // Deprecated - mapped to flowView for backward compatibility
   assetView: assetViewSchema,
   claudeCodeView: claudeCodeViewSchema,
   manageView: manageViewSchema,
+  queueView: flowViewSchema, // Deprecated - mapped to flowView for backward compatibility
   selectedTicketId: z.coerce.number().optional().catch(undefined),
+  selectedQueueId: z.coerce.number().optional().catch(undefined),
   gitBranch: z.string().optional().catch(undefined),
   section: z.string().optional().catch(undefined),
   sessionId: z.string().optional().catch(undefined)
@@ -84,19 +91,27 @@ export const settingsSearchSchema = z.object({
   tab: settingsTabSchema
 })
 
+// Queue dashboard search schema
+export const queueDashboardSearchSchema = z.object({
+  projectId: z.coerce.number().optional().catch(undefined)
+})
+
 // Type exports for easier usage
 export type ProjectsSearch = z.infer<typeof projectsSearchSchema>
 export type ProjectView = z.infer<typeof projectViewSchema>
 export type GitView = z.infer<typeof gitViewSchema>
-export type TicketView = z.infer<typeof ticketViewSchema>
+export type FlowView = z.infer<typeof flowViewSchema>
+export type TicketView = z.infer<typeof ticketViewSchema> // Deprecated
 export type AssetView = z.infer<typeof assetViewSchema>
 export type ClaudeCodeView = z.infer<typeof claudeCodeViewSchema>
 export type ManageView = z.infer<typeof manageViewSchema>
+export type QueueView = z.infer<typeof queueViewSchema> // Deprecated
 export type ChatSearch = z.infer<typeof chatSearchSchema>
 export type TicketsSearch = z.infer<typeof ticketsSearchSchema>
 export type AssetsSearch = z.infer<typeof assetsSearchSchema>
 export type SettingsSearch = z.infer<typeof settingsSearchSchema>
 export type SettingsTab = z.infer<typeof settingsTabSchema>
+export type QueueDashboardSearch = z.infer<typeof queueDashboardSearchSchema>
 
 // Utility function to merge search schemas
 export function mergeSearchSchemas<T extends z.ZodObject<any>, U extends z.ZodObject<any>>(

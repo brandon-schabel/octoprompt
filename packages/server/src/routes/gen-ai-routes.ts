@@ -272,7 +272,12 @@ export const genAiRoutes = new OpenAPIHono()
     }, {} as any)
 
     const modelFetcherService = new ModelFetcherService(providerKeysConfig)
-    const listOptions = { ollamaBaseUrl: OLLAMA_BASE_URL, lmstudioBaseUrl: LMSTUDIO_BASE_URL }
+
+    // Get custom URLs from query params if provided, otherwise use defaults
+    const ollamaUrl = c.req.query('ollamaUrl') || OLLAMA_BASE_URL
+    const lmstudioUrl = c.req.query('lmstudioUrl') || LMSTUDIO_BASE_URL
+
+    const listOptions = { ollamaBaseUrl: ollamaUrl, lmstudioBaseUrl: lmstudioUrl }
 
     const models = await modelFetcherService.listModels(provider as APIProviders, listOptions)
 

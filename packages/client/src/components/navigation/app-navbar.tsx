@@ -23,7 +23,7 @@ export function AppNavbar() {
   const matches = useMatches()
   const isOnProjectsRoute = matches.some((match) => match.routeId === '/projects')
   const isOnChatRoute = matches.some((match) => match.routeId === '/chat')
-  const isOnKeysRoute = matches.some((match) => match.routeId === '/keys')
+  const isOnProvidersRoute = matches.some((match) => match.routeId === '/providers')
   const isOnPromptsRoute = matches.some((match) => match.routeId === '/prompts')
 
   const theme = useSelectSetting('theme')
@@ -119,20 +119,20 @@ export function AppNavbar() {
             </Link>
             <div className='h-4 w-[1px] bg-border' />
 
-            {/* Keys link */}
+            {/* Providers link */}
             <Link
-              to='/keys'
+              to='/providers'
               className={`inline-flex items-center gap-1 md:gap-2 text-sm font-medium transition-colors 
                                 px-2 py-1 md:px-3 md:py-2 rounded-md 
                                 ${
-                                  isOnKeysRoute
+                                  isOnProvidersRoute
                                     ? 'text-accent-foreground bg-accent/20'
                                     : 'text-foreground hover:text-accent-foreground hover:bg-accent/10'
                                 }`}
-              title='Keys'
+              title='Providers'
             >
               <KeyIcon className='w-4 h-4 flex-shrink-0' />
-              <span className='hidden md:inline'>Keys</span>
+              <span className='hidden md:inline'>Providers</span>
             </Link>
             <div className='h-4 w-[1px] bg-border' />
 
