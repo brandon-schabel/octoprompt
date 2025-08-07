@@ -23,21 +23,42 @@ export const unifiedFlowSystemMigration = {
 
       // Check if columns already exist (for idempotency)
       const ticketColumns = db.prepare('PRAGMA table_info(tickets)').all() as any[]
-      const hasQueueId = ticketColumns.some((col: any) => col.name === 'queue_id')
+      const ticketColumnNames = new Set(ticketColumns.map((col: any) => col.name))
 
-      if (!hasQueueId) {
+      // Add each column only if it doesn't exist
+      if (!ticketColumnNames.has('queue_id')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN queue_id INTEGER REFERENCES task_queues(id) ON DELETE SET NULL`)
+      }
+      if (!ticketColumnNames.has('queue_position')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN queue_position INTEGER`)
+      }
+      if (!ticketColumnNames.has('queue_status')) {
         db.exec(
           `ALTER TABLE tickets ADD COLUMN queue_status TEXT CHECK (queue_status IN ('queued', 'in_progress', 'completed', 'failed', 'cancelled'))`
         )
+      }
+      if (!ticketColumnNames.has('queue_priority')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN queue_priority INTEGER DEFAULT 0`)
+      }
+      if (!ticketColumnNames.has('queued_at')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN queued_at INTEGER`)
+      }
+      if (!ticketColumnNames.has('queue_started_at')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN queue_started_at INTEGER`)
+      }
+      if (!ticketColumnNames.has('queue_completed_at')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN queue_completed_at INTEGER`)
+      }
+      if (!ticketColumnNames.has('queue_agent_id')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN queue_agent_id TEXT`)
+      }
+      if (!ticketColumnNames.has('queue_error_message')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN queue_error_message TEXT`)
+      }
+      if (!ticketColumnNames.has('estimated_processing_time')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN estimated_processing_time INTEGER`)
+      }
+      if (!ticketColumnNames.has('actual_processing_time')) {
         db.exec(`ALTER TABLE tickets ADD COLUMN actual_processing_time INTEGER`)
       }
 
@@ -45,21 +66,42 @@ export const unifiedFlowSystemMigration = {
       console.log('[Migration] Adding queue columns to ticket_tasks table...')
 
       const taskColumns = db.prepare('PRAGMA table_info(ticket_tasks)').all() as any[]
-      const taskHasQueueId = taskColumns.some((col: any) => col.name === 'queue_id')
+      const taskColumnNames = new Set(taskColumns.map((col: any) => col.name))
 
-      if (!taskHasQueueId) {
+      // Add each column only if it doesn't exist
+      if (!taskColumnNames.has('queue_id')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN queue_id INTEGER REFERENCES task_queues(id) ON DELETE SET NULL`)
+      }
+      if (!taskColumnNames.has('queue_position')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN queue_position INTEGER`)
+      }
+      if (!taskColumnNames.has('queue_status')) {
         db.exec(
           `ALTER TABLE ticket_tasks ADD COLUMN queue_status TEXT CHECK (queue_status IN ('queued', 'in_progress', 'completed', 'failed', 'cancelled'))`
         )
+      }
+      if (!taskColumnNames.has('queue_priority')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN queue_priority INTEGER DEFAULT 0`)
+      }
+      if (!taskColumnNames.has('queued_at')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN queued_at INTEGER`)
+      }
+      if (!taskColumnNames.has('queue_started_at')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN queue_started_at INTEGER`)
+      }
+      if (!taskColumnNames.has('queue_completed_at')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN queue_completed_at INTEGER`)
+      }
+      if (!taskColumnNames.has('queue_agent_id')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN queue_agent_id TEXT`)
+      }
+      if (!taskColumnNames.has('queue_error_message')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN queue_error_message TEXT`)
+      }
+      if (!taskColumnNames.has('estimated_processing_time')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN estimated_processing_time INTEGER`)
+      }
+      if (!taskColumnNames.has('actual_processing_time')) {
         db.exec(`ALTER TABLE ticket_tasks ADD COLUMN actual_processing_time INTEGER`)
       }
 

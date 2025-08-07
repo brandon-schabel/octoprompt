@@ -156,7 +156,19 @@ export enum GitManagerAction {
   REVERT = 'revert',
   CLONE = 'clone',
   GET_IGNORED_FILES = 'get_ignored_files',
-  ADD_TO_GITIGNORE = 'add_to_gitignore'
+  ADD_TO_GITIGNORE = 'add_to_gitignore',
+  // Additional Git actions
+  BLAME = 'blame',
+  CLEAN = 'clean',
+  CONFIG_GET = 'config_get',
+  CONFIG_SET = 'config_set',
+  BRANCHES_ENHANCED = 'branches_enhanced',
+  WORKTREE_LIST = 'worktree_list',
+  WORKTREE_ADD = 'worktree_add',
+  WORKTREE_REMOVE = 'worktree_remove',
+  WORKTREE_LOCK = 'worktree_lock',
+  WORKTREE_UNLOCK = 'worktree_unlock',
+  WORKTREE_PRUNE = 'worktree_prune'
 }
 
 export const GitManagerSchema = z.object({

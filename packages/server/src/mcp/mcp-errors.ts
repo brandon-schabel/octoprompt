@@ -15,6 +15,7 @@ import * as path from 'path'
  */
 export enum MCPErrorCode {
   // Parameter validation errors
+  INVALID_PARAMS = 'INVALID_PARAMS',
   MISSING_REQUIRED_PARAM = 'MISSING_REQUIRED_PARAM',
   INVALID_PARAM_VALUE = 'INVALID_PARAM_VALUE',
   INVALID_PARAM_TYPE = 'INVALID_PARAM_TYPE',

@@ -44,7 +44,7 @@ export function QueueTimelineView({ projectId, selectedQueueId }: QueueTimelineV
     const timeline: TimelineItem[] = []
 
     // Process in-progress items first
-    const safeItems = ensureArray(items)
+    const safeItems = ensureArray<QueueItem>(items)
     const inProgressItems = safeItems.filter((i) => i.status === 'in_progress')
     const queuedItems = safeItems.filter((i) => i.status === 'queued')
     const completedItems = safeItems.filter(
@@ -295,10 +295,10 @@ export function QueueTimelineView({ projectId, selectedQueueId }: QueueTimelineV
                       </div>
 
                       {/* Error message */}
-                      {timeline.item.error && (
+                      {timeline.item.errorMessage && (
                         <Alert className='mt-2' variant='destructive'>
                           <AlertCircle className='h-4 w-4' />
-                          <AlertDescription className='text-xs'>{timeline.item.error}</AlertDescription>
+                          <AlertDescription className='text-xs'>{timeline.item.errorMessage}</AlertDescription>
                         </Alert>
                       )}
                     </div>

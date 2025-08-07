@@ -52,13 +52,15 @@ export function ProjectsPage() {
 
   // Handle backward compatibility - redirect tickets/queues to flow
   useEffect(() => {
-    if (search.activeView === 'tickets' || search.activeView === 'queues') {
+    // Cast to string to handle legacy values that might come from URLs
+    const view = search.activeView as string | undefined
+    if (view === 'tickets' || view === 'queues') {
       navigate({
         to: '/projects',
         search: (prev) => ({
           ...prev,
           activeView: 'flow',
-          flowView: search.activeView === 'queues' ? 'queues' : 'tickets'
+          flowView: view === 'queues' ? 'queues' : 'tickets'
         }),
         replace: true
       })

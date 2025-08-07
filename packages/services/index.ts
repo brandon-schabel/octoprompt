@@ -51,6 +51,15 @@ export * from './src/mcp-project-server-manager'
 export * from './src/mcp-global-config-service'
 export * from './src/claude-agent-service'
 export * from './src/claude-command-service'
+// Re-export types from schemas for backward compatibility
+export type {
+  CreateClaudeCommandBody,
+  UpdateClaudeCommandBody,
+  SearchCommandsQuery,
+  CommandGenerationRequest,
+  CreateProjectBody,
+  UpdateProjectBody
+} from '@promptliano/schemas'
 export * from './src/claude-code-mcp-service'
 export * from './src/claude-code-file-reader-service'
 export * from './src/claude-code-import-service'
