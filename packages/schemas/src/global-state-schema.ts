@@ -519,7 +519,8 @@ export const createSafeGlobalState = (): GlobalState => ({
         fileTypes: ['claude'],
         priority: 'claude' as const,
         includeGlobal: false,
-        includeProjectRoot: true
+        includeProjectRoot: true,
+        includeHierarchy: true
       }
     }
   },

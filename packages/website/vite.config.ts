@@ -195,9 +195,7 @@ export default defineConfig({
   // Resolve
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@promptliano/ui': path.resolve(__dirname, '../ui/src'),
-      '@promptliano/brand-kit': path.resolve(__dirname, '../brand-kit/src')
+      '@': path.resolve(__dirname, './src')
     }
   }
 })

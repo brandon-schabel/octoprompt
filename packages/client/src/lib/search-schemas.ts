@@ -27,7 +27,10 @@ export const gitViewSchema = z
   .optional()
 
 // Flow view sub-tabs enum (combines tickets, tasks, and queues)
-export const flowViewSchema = z.enum(['queues', 'tickets', 'kanban', 'analytics']).catch('queues').optional()
+export const flowViewSchema = z
+  .enum(['queues', 'tickets', 'kanban', 'analytics', 'overview', 'items', 'timeline'])
+  .catch('queues')
+  .optional()
 
 // Asset view sub-tabs enum
 export const assetViewSchema = z
