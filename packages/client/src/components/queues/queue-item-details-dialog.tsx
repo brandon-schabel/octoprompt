@@ -41,8 +41,8 @@ export function QueueItemDetailsDialog({ item, projectId, open, onOpenChange }: 
 
   // Fetch ticket and task details
   const { data: ticketData } = useGetTicket(item.ticketId || 0)
-  const ticket = ticketData?.ticket
-  const task = ticketData?.tasks.find((t) => t.id === item.taskId)
+  const ticket = ticketData
+  const task = ticket?.tasks?.find((t: any) => t.id === item.taskId)
 
   // Fetch files for the project
   const { data: filesResponse } = useGetProjectFiles(projectId)
@@ -175,12 +175,6 @@ export function QueueItemDetailsDialog({ item, projectId, open, onOpenChange }: 
                       <p className='text-muted-foreground'>Priority</p>
                       <p className='font-medium'>Level {item.priority}</p>
                     </div>
-                    {item.retryCount > 0 && (
-                      <div>
-                        <p className='text-muted-foreground'>Retry Count</p>
-                        <p className='font-medium'>{item.retryCount} attempts</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -326,22 +320,6 @@ export function QueueItemDetailsDialog({ item, projectId, open, onOpenChange }: 
                       </h3>
                       <div className='p-4 rounded-lg border border-red-200 bg-red-50'>
                         <pre className='text-sm whitespace-pre-wrap text-red-800'>{item.errorMessage}</pre>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Completion Notes */}
-                {item.completionNotes && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h3 className='font-semibold mb-3 flex items-center gap-2'>
-                        <CheckCircle2 className='h-4 w-4' />
-                        Completion Notes
-                      </h3>
-                      <div className='p-4 rounded-lg border'>
-                        <pre className='text-sm whitespace-pre-wrap'>{item.completionNotes}</pre>
                       </div>
                     </div>
                   </>

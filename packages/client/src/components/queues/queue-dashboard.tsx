@@ -142,7 +142,7 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
   const filteredItems = useMemo(() => {
     if (!items) return []
     if (selectedStatus === 'all') return items
-    return items.filter((item) => item.status === selectedStatus)
+    return items.filter((item) => item.queueItem.status === selectedStatus)
   }, [items, selectedStatus])
 
   return (
@@ -276,13 +276,6 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
               value={formatDistanceToNow(new Date(queue.updated), { addSuffix: true })}
               icon={<RefreshCw className='h-4 w-4' />}
             />
-            {stats.lastProcessedAt && (
-              <MetricItem
-                label='Last Processed'
-                value={formatDistanceToNow(new Date(stats.lastProcessedAt), { addSuffix: true })}
-                icon={<Activity className='h-4 w-4' />}
-              />
-            )}
           </div>
         </CardContent>
       </Card>
@@ -329,11 +322,11 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
                 <TableBody>
                   {filteredItems.map((item) => (
                     <QueueItemRow
-                      key={item.id}
-                      item={item}
+                      key={item.queueItem.id}
+                      item={item.queueItem}
                       onRemove={handleRemoveItem}
                       onRetry={handleRetryItem}
-                      onSelect={() => setSelectedItem(item)}
+                      onSelect={() => setSelectedItem(item.queueItem)}
                     />
                   ))}
                 </TableBody>

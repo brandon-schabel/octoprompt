@@ -51,7 +51,7 @@ export function QueueAnalyticsView({ projectId, selectedQueueId }: QueueAnalytic
     // Status breakdown for pie chart
     const statusCounts = items.reduce(
       (acc, item) => {
-        acc[item.status] = (acc[item.status] || 0) + 1
+        acc[item.queueItem.status] = (acc[item.queueItem.status] || 0) + 1
         return acc
       },
       {} as Record<string, number>
@@ -64,18 +64,25 @@ export function QueueAnalyticsView({ projectId, selectedQueueId }: QueueAnalytic
     }))
 
     // Processing times for completed items
-    const completedItems = items.filter((i) => i.status === 'completed' && i.startedAt && i.completedAt)
+    const completedItems = items.filter(
+      (i) => i.queueItem.status === 'completed' && i.queueItem.startedAt && i.queueItem.completedAt
+    )
 
     const processingTimes = completedItems
       .map((item) => {
-        if (!item.completedAt || !item.startedAt || item.completedAt <= 0 || item.startedAt <= 0) {
+        if (
+          !item.queueItem.completedAt ||
+          !item.queueItem.startedAt ||
+          item.queueItem.completedAt <= 0 ||
+          item.queueItem.startedAt <= 0
+        ) {
           return null
         }
         try {
           return {
-            id: item.id,
-            duration: Math.round((item.completedAt - item.startedAt) / 60), // minutes
-            date: new Date(item.completedAt * 1000).toLocaleDateString()
+            id: item.queueItem.id,
+            duration: Math.round((item.queueItem.completedAt - item.queueItem.startedAt) / 60), // minutes
+            date: new Date(item.queueItem.completedAt * 1000).toLocaleDateString()
           }
         } catch (e) {
           return null
@@ -87,23 +94,23 @@ export function QueueAnalyticsView({ projectId, selectedQueueId }: QueueAnalytic
     // Agent performance
     const agentStats = items.reduce(
       (acc, item) => {
-        if (item.agentId) {
-          if (!acc[item.agentId]) {
-            acc[item.agentId] = {
+        if (item.queueItem.agentId) {
+          if (!acc[item.queueItem.agentId]) {
+            acc[item.queueItem.agentId] = {
               total: 0,
               completed: 0,
               failed: 0,
               avgTime: []
             }
           }
-          acc[item.agentId].total++
-          if (item.status === 'completed') {
-            acc[item.agentId].completed++
-            if (item.startedAt && item.completedAt) {
-              acc[item.agentId].avgTime.push((item.completedAt - item.startedAt) / 60)
+          acc[item.queueItem.agentId].total++
+          if (item.queueItem.status === 'completed') {
+            acc[item.queueItem.agentId].completed++
+            if (item.queueItem.startedAt && item.queueItem.completedAt) {
+              acc[item.queueItem.agentId].avgTime.push((item.queueItem.completedAt - item.queueItem.startedAt) / 60)
             }
-          } else if (item.status === 'failed') {
-            acc[item.agentId].failed++
+          } else if (item.queueItem.status === 'failed') {
+            acc[item.queueItem.agentId].failed++
           }
         }
         return acc
@@ -133,10 +140,10 @@ export function QueueAnalyticsView({ projectId, selectedQueueId }: QueueAnalytic
 
       const completed = items.filter(
         (item) =>
-          item.status === 'completed' &&
-          item.completedAt &&
-          item.completedAt * 1000 >= hour.getTime() &&
-          item.completedAt * 1000 < nextHour.getTime()
+          item.queueItem.status === 'completed' &&
+          item.queueItem.completedAt &&
+          item.queueItem.completedAt * 1000 >= hour.getTime() &&
+          item.queueItem.completedAt * 1000 < nextHour.getTime()
       ).length
 
       return {
@@ -156,8 +163,10 @@ export function QueueAnalyticsView({ projectId, selectedQueueId }: QueueAnalytic
     const avgProcessingTime =
       completedItems.length > 0
         ? Math.round(
-            completedItems.reduce((sum, item) => sum + (item.completedAt! - item.startedAt!) / 60, 0) /
-              completedItems.length
+            completedItems.reduce(
+              (sum, item) => sum + (item.queueItem.completedAt! - item.queueItem.startedAt!) / 60,
+              0
+            ) / completedItems.length
           )
         : 0
 

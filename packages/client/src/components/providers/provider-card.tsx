@@ -107,8 +107,8 @@ export function ProviderCard({
   }
 
   const getPerformanceScore = () => {
-    if (!health?.responseTime) return null
-    const time = health.responseTime
+    if (!health?.averageResponseTime) return null
+    const time = health.averageResponseTime
     if (time < 200) return { label: 'Excellent', color: 'text-green-500', value: 100 }
     if (time < 500) return { label: 'Good', color: 'text-blue-500', value: 80 }
     if (time < 1000) return { label: 'Fair', color: 'text-yellow-500', value: 60 }
@@ -118,7 +118,7 @@ export function ProviderCard({
   const performance = getPerformanceScore()
 
   return (
-    <AnimateOnScroll animation='fade-up' duration={0.3} className={className}>
+    <AnimateOnScroll className={className}>
       <GlassCard
         className={cn(
           'relative group transition-all duration-500',
@@ -253,7 +253,9 @@ export function ProviderCard({
               </div>
               <div className='p-2 rounded-lg bg-muted/50 backdrop-blur'>
                 <p className='text-xs text-muted-foreground mb-1'>Response</p>
-                <p className='text-sm font-bold'>{health?.responseTime ? `${health.responseTime}ms` : '--'}</p>
+                <p className='text-sm font-bold'>
+                  {health?.averageResponseTime ? `${health.averageResponseTime}ms` : '--'}
+                </p>
               </div>
               <div className='p-2 rounded-lg bg-muted/50 backdrop-blur'>
                 <p className='text-xs text-muted-foreground mb-1'>Status</p>
@@ -287,14 +289,14 @@ export function ProviderCard({
           </div>
 
           {/* Last Tested */}
-          {health?.lastTested && (
+          {health?.lastChecked && (
             <div className='flex items-center justify-between text-xs'>
               <span className='text-muted-foreground flex items-center gap-1'>
                 <Clock className='h-3 w-3' />
                 Last tested
               </span>
               <span className='font-medium'>
-                {formatDistanceToNow(new Date(health.lastTested), { addSuffix: true })}
+                {formatDistanceToNow(new Date(health.lastChecked), { addSuffix: true })}
               </span>
             </div>
           )}

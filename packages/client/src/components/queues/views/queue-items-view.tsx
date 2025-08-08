@@ -74,7 +74,8 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     if (!searchQuery) return safeItems
 
     const query = searchQuery.toLowerCase()
-    return safeItems.filter((item) => {
+    return safeItems.filter((itemWithRelations) => {
+      const item = itemWithRelations.queueItem
       // Search in ticket/task IDs
       if (item.ticketId && item.ticketId.toString().includes(query)) return true
       if (item.taskId && item.taskId.toString().includes(query)) return true
@@ -117,9 +118,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
       data: {
         status: 'queued',
         errorMessage: null,
-        agentId: null,
-        startedAt: null,
-        completedAt: null
+        agentId: null
       }
     })
   }
@@ -365,7 +364,11 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
             </p>
           </div>
         ) : (
-          <DataTable data={filteredItems} columns={columns} className='border rounded-lg' />
+          <DataTable
+            data={filteredItems.map((item) => item.queueItem)}
+            columns={columns}
+            className='border rounded-lg'
+          />
         )}
       </div>
 

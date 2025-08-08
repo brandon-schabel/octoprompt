@@ -204,9 +204,7 @@ export function QueueDetailsDialog({ queue, open, onOpenChange }: QueueDetailsDi
       data: {
         status: 'queued',
         errorMessage: null,
-        agentId: null,
-        startedAt: null,
-        completedAt: null
+        agentId: null
       }
     })
   }
@@ -217,7 +215,7 @@ export function QueueDetailsDialog({ queue, open, onOpenChange }: QueueDetailsDi
           .filter((item) => item.queueItem.status === 'queued')
           .map((item) => ({
             itemId: item.queueItem.id,
-            status: 'cancelled' as QueueItemStatus
+            data: { status: 'cancelled' as QueueItemStatus }
           }))
       : []
 

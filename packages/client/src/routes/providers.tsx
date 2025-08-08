@@ -170,7 +170,7 @@ function ProvidersPage() {
 
     if (providersToRender.length === 0) {
       return (
-        <AnimateOnScroll animation='fade-up'>
+        <AnimateOnScroll>
           <Card className='border-dashed'>
             <CardContent className='flex flex-col items-center justify-center py-12'>
               <div className='rounded-full bg-muted p-3 mb-4'>
@@ -268,8 +268,10 @@ function ProvidersPage() {
 
   // Handle test all connections
   const handleTestAllConnections = async () => {
-    const keyIds = providers.map((p) => p.id)
-    await batchTestMutation.mutateAsync({ keyIds })
+    const providerRequests = providers.map((p) => ({
+      provider: p.provider
+    }))
+    await batchTestMutation.mutateAsync({ providers: providerRequests, parallel: true })
   }
 
   // Handle form submit
@@ -321,7 +323,7 @@ function ProvidersPage() {
           {/* Animated Header */}
           <div className='relative overflow-hidden border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent'>
             <div className='absolute inset-0 bg-grid-white/[0.02] bg-[size:20px_20px]' />
-            <AnimateOnScroll animation='fade-up' duration={0.5}>
+            <AnimateOnScroll>
               <div className='relative px-6 py-8'>
                 <div className='flex items-start justify-between'>
                   <div className='space-y-1'>
@@ -364,7 +366,7 @@ function ProvidersPage() {
                     { label: 'Connected', value: stats.connected, icon: Wifi, color: 'text-green-500' },
                     { label: 'Disconnected', value: stats.disconnected, icon: WifiOff, color: 'text-red-500' }
                   ].map((stat, index) => (
-                    <AnimateOnScroll key={stat.label} animation='fade-up' delay={index * 0.1}>
+                    <AnimateOnScroll key={stat.label} delay={index * 100}>
                       <GlassCard className='relative overflow-hidden'>
                         <div className='absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent' />
                         <CardContent className='relative p-4'>

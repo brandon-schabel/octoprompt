@@ -266,7 +266,7 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
 
           {/* Results */}
           {testComplete && (
-            <AnimateOnScroll animation='fade-up' duration={0.3}>
+            <AnimateOnScroll>
               <div className='space-y-4'>
                 {isSuccess ? (
                   <>

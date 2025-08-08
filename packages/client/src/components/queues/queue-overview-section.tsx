@@ -6,6 +6,7 @@ import { Skeleton } from '@promptliano/ui'
 import { useGetQueuesWithStats } from '@/hooks/api/use-queue-api'
 import { AlertCircle, Clock, CheckCircle2, PlayCircle, ListPlus, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Link } from '@tanstack/react-router'
 
 interface QueueOverviewSectionProps {
   projectId: number

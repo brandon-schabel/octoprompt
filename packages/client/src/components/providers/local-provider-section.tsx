@@ -115,7 +115,7 @@ export function LocalProviderSection({ providers, onEdit, isLoading }: LocalProv
         ]
 
     return (
-      <AnimateOnScroll animation='fade-up' delay={isOllama ? 0 : 0.1}>
+      <AnimateOnScroll delay={isOllama ? 0 : 100}>
         <GlassCard
           className={cn(
             'relative overflow-hidden transition-all duration-500',
