@@ -254,14 +254,14 @@ export function ProjectSettingsTab() {
                           <div key={type} className='flex items-start space-x-2'>
                             <Checkbox
                               id={`file-type-${type}`}
-                              checked={(instructionFileSettings?.fileTypes || ['claude']).includes(type)}
+                              checked={(instructionFileSettings?.fileTypes || ['claude']).includes(type as any)}
                               onCheckedChange={(checked) => {
                                 setInstructionFileSettings((prev) => {
                                   const fileTypes = prev.fileTypes || ['claude']
                                   if (checked) {
                                     return { ...prev, fileTypes: [...fileTypes, type] }
                                   } else {
-                                    return { ...prev, fileTypes: fileTypes.filter((t) => t !== type) }
+                                    return { ...prev, fileTypes: fileTypes.filter((t: any) => t !== type) }
                                   }
                                 })
                               }}

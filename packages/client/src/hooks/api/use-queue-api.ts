@@ -255,7 +255,7 @@ export function useClearQueue(queueId: number) {
       const items = itemsResponse.data
 
       // Delete each item
-      const deletePromises = items.map((item) => promptlianoClient.queues.deleteQueueItem(item.id))
+      const deletePromises = items.map((item) => promptlianoClient.queues.deleteQueueItem(item.queueItem.id))
 
       await Promise.all(deletePromises)
       return { clearedCount: items.length }

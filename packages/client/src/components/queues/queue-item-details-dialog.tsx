@@ -7,7 +7,7 @@ import { Button } from '@promptliano/ui'
 import { Skeleton } from '@promptliano/ui'
 import { Separator } from '@promptliano/ui'
 import { QueueItem } from '@promptliano/schemas'
-import { useGetTicket } from '@/hooks/api/use-tickets-api'
+import { useGetTicket, useGetTasks } from '@/hooks/api/use-tickets-api'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -40,9 +40,9 @@ export function QueueItemDetailsDialog({ item, projectId, open, onOpenChange }: 
   const [activeTab, setActiveTab] = useState('details')
 
   // Fetch ticket and task details
-  const { data: ticketData } = useGetTicket(item.ticketId || 0)
-  const ticket = ticketData
-  const task = ticket?.tasks?.find((t: any) => t.id === item.taskId)
+  const { data: ticket } = useGetTicket(item.ticketId || 0)
+  const { data: tasks } = useGetTasks(item.ticketId || 0)
+  const task = tasks?.find((t) => t.id === item.taskId)
 
   // Fetch files for the project
   const { data: filesResponse } = useGetProjectFiles(projectId)
@@ -201,9 +201,6 @@ export function QueueItemDetailsDialog({ item, projectId, open, onOpenChange }: 
                           <FileIcon className='h-4 w-4 text-blue-600 flex-shrink-0' />
                           <div className='flex-1 min-w-0'>
                             <p className='text-sm font-medium truncate'>{file.path || `File #${file.id}`}</p>
-                            {file.projectId && (
-                              <p className='text-xs text-muted-foreground'>Project ID: {file.projectId}</p>
-                            )}
                           </div>
                           <Button size='sm' variant='ghost'>
                             <Code className='h-4 w-4' />

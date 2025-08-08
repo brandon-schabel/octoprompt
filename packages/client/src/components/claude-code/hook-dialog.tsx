@@ -124,6 +124,8 @@ export function HookDialog({ open, onOpenChange, hookId, projectId, initialData 
           eventName,
           matcherIndex: initialData.matcherIndex,
           data: {
+            event: eventName,
+            matcherIndex: initialData.matcherIndex,
             matcher,
             command,
             timeout: timeout ? parseInt(timeout, 10) : undefined

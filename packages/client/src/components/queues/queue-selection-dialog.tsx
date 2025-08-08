@@ -172,10 +172,10 @@ export function QueueSelectionDialog({ isOpen, onClose, ticketId, projectId }: Q
                                   </div>
                                 </div>
 
-                                {queueData.stats.activeAgents && queueData.stats.activeAgents.length > 0 && (
+                                {queueData.stats.currentAgents && queueData.stats.currentAgents.length > 0 && (
                                   <div className='mt-2 flex items-center gap-1 text-xs text-muted-foreground'>
                                     <Users className='h-3 w-3' />
-                                    <span>Agents: {queueData.stats.activeAgents.join(', ')}</span>
+                                    <span>Agents: {queueData.stats.currentAgents.join(', ')}</span>
                                   </div>
                                 )}
                               </CardContent>

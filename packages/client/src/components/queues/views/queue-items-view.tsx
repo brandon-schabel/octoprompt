@@ -74,7 +74,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     if (!searchQuery) return safeItems
 
     const query = searchQuery.toLowerCase()
-    return safeItems.filter((itemWithRelations) => {
+    return safeItems.filter((itemWithRelations: any) => {
       const item = itemWithRelations.queueItem
       // Search in ticket/task IDs
       if (item.ticketId && item.ticketId.toString().includes(query)) return true
@@ -134,6 +134,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
   const columns = [
     {
       header: 'Status',
+      accessorFn: (item: QueueItem) => item.status,
       cell: (item: QueueItem) => {
         // Ensure status has a value, default to 'queued' if undefined
         const status = item.status || 'queued'
@@ -149,6 +150,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     },
     {
       header: 'Task',
+      accessorFn: (item: QueueItem) => item.ticketId || item.taskId || item.id,
       cell: (item: QueueItem) => {
         const details = getTaskDetails(item)
         if (!details) {
@@ -179,6 +181,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     },
     {
       header: 'Priority',
+      accessorFn: (item: QueueItem) => item.priority,
       cell: (item: QueueItem) => (
         <Badge variant='outline' className='text-xs'>
           Priority {item.priority}
@@ -187,6 +190,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     },
     {
       header: 'Agent',
+      accessorFn: (item: QueueItem) => item.agentId || 'unassigned',
       cell: (item: QueueItem) => {
         if (!item.agentId) {
           return <span className='text-muted-foreground'>Unassigned</span>
@@ -201,6 +205,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     },
     {
       header: 'Time',
+      accessorFn: (item: QueueItem) => item.created,
       cell: (item: QueueItem) => {
         if (item.completedAt && item.completedAt > 0) {
           const startTime = item.startedAt && item.startedAt > 0 ? item.startedAt : item.created
@@ -226,6 +231,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     },
     {
       header: 'Actions',
+      accessorFn: (item: QueueItem) => item.id,
       cell: (item: QueueItem) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -365,7 +371,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
           </div>
         ) : (
           <DataTable
-            data={filteredItems.map((item) => item.queueItem)}
+            data={filteredItems.map((item: any) => item.queueItem)}
             columns={columns}
             className='border rounded-lg'
           />

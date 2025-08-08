@@ -121,7 +121,7 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
         try {
           const result = await testMutation.mutateAsync({
             provider: provider.provider,
-            keyId: provider.id
+            timeout: 30000
           })
 
           const phaseTime = Date.now() - startTime
@@ -135,7 +135,7 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
                   ? {
                       ...p,
                       status: 'success',
-                      message: `Found ${result.data.modelCount || 0} models`,
+                      message: `Found ${result.data.models?.length || 0} models`,
                       responseTime: phaseTime
                     }
                   : idx < i
@@ -143,7 +143,7 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
                     : p
               )
             )
-            setModelCount(result.data.modelCount || 0)
+            setModelCount(result.data.models?.length || 0)
             setTestComplete(true)
 
             // Show success toast
@@ -221,7 +221,6 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
               return (
                 <AnimateOnScroll
                   key={phase.id}
-                  animation='fade-right'
                   delay={index * 0.1}
                   className={cn(
                     'flex items-start gap-3 p-3 rounded-lg border transition-all',

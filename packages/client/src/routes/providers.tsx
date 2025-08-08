@@ -269,7 +269,8 @@ function ProvidersPage() {
   // Handle test all connections
   const handleTestAllConnections = async () => {
     const providerRequests = providers.map((p) => ({
-      provider: p.provider
+      provider: p.provider,
+      timeout: 30000
     }))
     await batchTestMutation.mutateAsync({ providers: providerRequests, parallel: true })
   }

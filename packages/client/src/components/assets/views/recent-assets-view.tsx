@@ -234,7 +234,6 @@ export function RecentAssetsView({ projectId, projectName = 'Project' }: RecentA
                     <div className='border rounded-lg p-4 max-h-[300px] overflow-hidden'>
                       {isMarkdown ? (
                         <MarkdownPreview
-                          type='preview'
                           markdownContent={generation.content}
                           size='sm'
                           className='max-h-[250px] overflow-y-auto'

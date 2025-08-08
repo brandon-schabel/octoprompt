@@ -19,7 +19,7 @@ import {
 } from '@promptliano/ui'
 import { CommandDialog } from '../command-dialog'
 import { CommandGenerationDialog } from '../command-generation-dialog'
-import type { ClaudeCommand } from '@promptliano/schemas'
+import type { ClaudeCommand, ClaudeCommandFrontmatter } from '@promptliano/schemas'
 
 interface CommandsViewProps {
   projectId: number
@@ -86,10 +86,30 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
     }
   }
 
-  const handleCommandGenerated = (command: ClaudeCommand) => {
+  const handleCommandGenerated = (command: {
+    name: string
+    content: string
+    description: string
+    rationale: string
+    frontmatter: ClaudeCommandFrontmatter
+    namespace?: string
+    suggestedVariations?: Array<{
+      name: string
+      description: string
+      changes: string
+    }>
+  }) => {
     // After generating, open the command dialog with the generated content
+    // Create a partial ClaudeCommand with available fields
+    const partialCommand: Partial<ClaudeCommand> = {
+      name: command.name,
+      content: command.content,
+      description: command.description,
+      frontmatter: command.frontmatter,
+      namespace: command.namespace
+    }
     setEditingCommand(null)
-    setGeneratedCommand(command)
+    setGeneratedCommand(partialCommand as ClaudeCommand)
     setCommandDialogOpen(true)
   }
 

@@ -58,9 +58,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     className='h-full w-full'
                   />
                 }
-                initialTopPanelHeight={50}
-                minTopPanelHeight={20}
-                maxTopPanelHeight={80}
+                defaultSize={50}
+                minSize={20}
+                maxSize={80}
                 storageKey='prompts-files-split'
                 className='h-full w-full'
               />

@@ -139,7 +139,6 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
           title: ticket.title,
           type: 'ticket',
           priority: ticket.priority,
-          estimatedHours: ticket.estimatedHours,
           actualId: ticket.id,
           taskCount: totalTaskCount,
           completedTaskCount: completedTaskCount
@@ -166,7 +165,7 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
           id: `task-${task.id}`,
           title: task.content,
           type: 'task',
-          estimatedHours: task.estimatedHours,
+          estimatedHours: task.estimatedHours ?? undefined,
           ticketTitle,
           ticketId: task.ticketId,
           actualId: task.id
@@ -206,7 +205,6 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
           title: ticket.title,
           type: 'ticket',
           priority: ticket.priority,
-          estimatedHours: ticket.estimatedHours,
           actualId: ticket.id,
           currentQueueId: queueId,
           queuePosition: ticket.queuePosition,
@@ -232,7 +230,7 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
           id: `task-${task.id}`,
           title: task.content,
           type: 'task',
-          estimatedHours: task.estimatedHours,
+          estimatedHours: task.estimatedHours ?? undefined,
           ticketTitle,
           ticketId: task.ticketId,
           actualId: task.id,
