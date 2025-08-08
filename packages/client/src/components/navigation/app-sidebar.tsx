@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useMatches, useNavigate } from '@tanstack/react-router'
-import { Button } from '@/components/ui/button' // Assuming @ui maps to @/components/ui
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@promptliano/ui' // Assuming @ui maps to @/components/ui
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@promptliano/ui'
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
 import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
@@ -11,7 +11,6 @@ import { appConfig } from '@promptliano/config'
 import {
   FolderIcon,
   MessageSquareIcon,
-  KeyIcon,
   Settings as SettingsIcon, // Renamed to avoid conflict with Settings state
   HelpCircleIcon,
   LightbulbIcon,
@@ -19,11 +18,12 @@ import {
   FolderCogIcon,
   FolderTreeIcon,
   Bot,
-  Sparkles
+  Sparkles,
+  Cloud
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
 import { useActiveProjectTab, useSelectSetting, useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
-import { Logo } from '@/components/ui/logo'
+import { Logo } from '@promptliano/ui'
 import {
   Sidebar,
   SidebarContent,
@@ -34,7 +34,7 @@ import {
   SidebarMenuButton,
   useSidebar,
   SidebarRail
-} from '@/components/ui/sidebar' // Correct path to your sidebar.tsx
+} from '@promptliano/ui' // Correct path to your sidebar.tsx
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 const mainNavItems = [
@@ -46,8 +46,8 @@ const mainNavItems = [
     routeIds: ['/projects']
   },
   { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
-  { id: 'keys', title: 'Keys', to: '/keys', icon: KeyIcon, routeIds: ['/keys'] },
-  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] }
+  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] },
+  { id: 'providers', title: 'Providers', to: '/providers', icon: Cloud, routeIds: ['/providers'] }
 ]
 
 export function AppSidebar() {

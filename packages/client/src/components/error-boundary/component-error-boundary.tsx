@@ -1,6 +1,6 @@
 import { Component, type PropsWithChildren } from 'react'
 import { AlertCircle } from 'lucide-react'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 
 type ComponentErrorBoundaryProps = PropsWithChildren & {
   componentName: string

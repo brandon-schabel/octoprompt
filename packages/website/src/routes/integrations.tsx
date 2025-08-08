@@ -8,7 +8,14 @@ export const Route = createFileRoute()({
         title: 'MCP Integrations - Promptliano',
         description:
           'Integrate Promptliano with VS Code, Cursor, Claude Desktop, and more through the Model Context Protocol for efficient AI-powered development.',
-        keywords: ['MCP integration', 'VS Code', 'Cursor', 'Claude Desktop', 'developer tools integration', 'AI development']
+        keywords: [
+          'MCP integration',
+          'VS Code',
+          'Cursor',
+          'Claude Desktop',
+          'developer tools integration',
+          'AI development'
+        ]
       } as SeoMetadata
     }
   },

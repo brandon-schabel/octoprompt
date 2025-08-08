@@ -1,7 +1,7 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
-import { Progress } from '@ui'
-import { Badge } from '@ui'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Progress } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { FileText, Clock, Binary, AlertCircle, FileX, CheckCircle2, HelpCircle, TrendingUp } from 'lucide-react'
 import { ProjectFile } from '@promptliano/schemas'
 import {

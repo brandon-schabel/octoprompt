@@ -183,7 +183,14 @@ export default defineConfig({
   },
   // Optimizations
   optimizeDeps: {
-    include: ['react', 'react-dom', '@tanstack/react-router', '@tanstack/react-query', 'framer-motion']
+    include: [
+      'react',
+      'react-dom',
+      '@tanstack/react-router',
+      '@tanstack/react-query',
+      'framer-motion',
+      '@promptliano/ui'
+    ]
   },
   // Resolve
   resolve: {

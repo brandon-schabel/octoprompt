@@ -1,4 +1,5 @@
 export { ApiError } from './src/error/api-error'
+export * from './src/error/domain-error'
 export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher'
 export * from './src/utils/merge-deep'
 
@@ -23,3 +24,9 @@ export * from './src/utils/prompts-map'
 
 // service utilities
 export * from './src/utils/service-utils'
+
+// security utilities
+export * from './src/utils/secure-path-validator'
+
+// Claude hook templates
+export * from './src/claude-hook-templates'

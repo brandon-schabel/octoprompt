@@ -3,12 +3,12 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useNavigate } from '@tanstack/react-router'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import {
   useActiveProjectTab,
   useUpdateActiveProjectTab,
@@ -87,7 +87,6 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
   const totalTokens = useMemo(() => {
     return calculateTotalTokens(promptData?.data, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap)
   }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap])
-
 
   // Update localUserPrompt if global changes externally
   useEffect(() => {
@@ -278,9 +277,7 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
                   </ul>
                 </div>
               </PromptlianoTooltip>
-              <div className='ml-auto text-xs text-muted-foreground'>
-                {formatCompactTokenCount(totalTokens)} tokens
-              </div>
+              <div className='ml-auto text-xs text-muted-foreground'>{formatCompactTokenCount(totalTokens)} tokens</div>
             </div>
 
             <div className='flex-1 min-h-0 flex flex-col'>

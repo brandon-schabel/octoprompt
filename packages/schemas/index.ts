@@ -1,6 +1,22 @@
 export * from './src/chat.schemas'
 export * from './src/common.schemas'
-export * from './src/global-state-schema'
+export {
+  globalStateSchema,
+  createInitialGlobalState,
+  createSafeGlobalState,
+  validateAndRepairGlobalState,
+  getDefaultProjectTabState,
+  EDITOR_OPTIONS,
+  projectTabStateSchema,
+  appSettingsSchema,
+  type GlobalState,
+  type ProjectTabState,
+  type ProjectTabStatePartial,
+  type ProjectTabsStateRecord,
+  type AppSettings,
+  type Theme,
+  type EditorType as GlobalStateEditorType
+} from './src/global-state-schema'
 export * from './src/kv-store.schemas'
 export * from './src/project.schemas'
 export * from './src/prompt.schemas'
@@ -20,6 +36,11 @@ export * from './src/job.schemas'
 export * from './src/summary-options.schemas'
 export * from './src/file-summarization.schemas'
 export * from './src/claude-agent.schemas'
+export * from './src/claude-command.schemas'
+export * from './src/claude-code.schemas'
+export * from './src/claude-hook.schemas'
+export * from './src/parser-config.schemas'
+export * from './src/queue.schemas'
 
 // export constants
 export * from './src/constants/models-temp-not-allowed'

@@ -1,9 +1,9 @@
 import * as React from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
-import { Button } from '@ui'
-import { Input } from '@ui'
-import { Label } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from '@/hooks/api/use-projects-api'
 import { useEffect, useState } from 'react'
 import { CreateProjectRequestBody } from '@promptliano/schemas'
@@ -100,7 +100,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
     // Always extract folder name from path (cross-platform)
     const pathParts = path.split(/[/\\]/).filter(Boolean)
     const folderName = pathParts[pathParts.length - 1]
-    
+
     if (folderName) {
       setFormData((prev) => ({ ...prev, name: folderName.trim() }))
     }

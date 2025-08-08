@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Folder, ChevronDown, Search, Clock, Star, FolderOpen, GitBranch } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +10,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
   DropdownMenuLabel
-} from '@ui'
-import { Input } from '@ui'
+} from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 import { Project } from '@promptliano/schemas'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
@@ -101,7 +101,9 @@ export function ProjectSwitcher({ currentProject, className, onManageProjects }:
             <Folder className='h-4 w-4 shrink-0 text-muted-foreground' />
           )}
           <div className='flex flex-col items-start max-w-[300px]'>
-            <span className='truncate text-sm'>{isLoading ? 'Loading...' : currentProject?.name || 'Select Project'}</span>
+            <span className='truncate text-sm'>
+              {isLoading ? 'Loading...' : currentProject?.name || 'Select Project'}
+            </span>
             {currentProject && currentBranch && (
               <div className='flex items-center gap-1 text-xs text-muted-foreground'>
                 <GitBranch className='h-3 w-3 shrink-0' />

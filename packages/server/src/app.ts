@@ -7,6 +7,8 @@ import { projectRoutes } from './routes/project-routes'
 import { providerKeyRoutes } from './routes/provider-key-routes'
 import { promptRoutes } from './routes/prompt-routes'
 import { ticketRoutes } from './routes/ticket-routes'
+import { queueRoutes } from './routes/queue-routes'
+import { flowRoutes } from './routes/flow-routes'
 import { browseDirectoryRoutes } from './routes/browse-directory-routes'
 import { mcpRoutes } from './routes/mcp-routes'
 import { gitRoutes } from './routes/git-routes'
@@ -16,6 +18,9 @@ import { jobApp } from './routes/job-routes'
 import { projectTabRoutes } from './routes/project-tab-routes'
 import { agentFilesRoutes } from './routes/agent-files-routes'
 import { claudeAgentRoutes } from './routes/claude-agent-routes'
+import { claudeCommandRoutes } from './routes/claude-command-routes'
+import { claudeCodeRoutes } from './routes/claude-code-routes'
+import { claudeHookRoutesSimple } from './routes/claude-hook-routes-simple'
 import { mcpInstallationRoutes } from './routes/mcp-installation-routes'
 import { mcpProjectConfigApp } from './routes/mcp-project-config-routes'
 import { mcpGlobalConfigRoutes } from './routes/mcp-global-config-routes'
@@ -90,7 +95,7 @@ const generalLimiter = rateLimiter({
   limit: RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: 'draft-6', // Return rate limit info in headers
   keyGenerator: getClientIP,
-  handler: (c, key, rateLimitInfo) => {
+  handler: (c) => {
     return c.json(
       {
         success: false,
@@ -98,9 +103,7 @@ const generalLimiter = rateLimiter({
           message: 'Too many requests. Please try again later.',
           code: 'RATE_LIMIT_EXCEEDED',
           details: {
-            limit: rateLimitInfo.limit,
-            used: rateLimitInfo.used,
-            resetAt: rateLimitInfo.resetTime || Date.now() + 15 * 60 * 1000
+            resetAt: Date.now() + RATE_LIMIT_WINDOW_MS
           }
         }
       } satisfies z.infer<typeof ApiErrorResponseSchema>,
@@ -115,7 +118,7 @@ const aiLimiter = rateLimiter({
   limit: AI_RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: 'draft-6',
   keyGenerator: getClientIP,
-  handler: (c, key, rateLimitInfo) => {
+  handler: (c) => {
     return c.json(
       {
         success: false,
@@ -123,9 +126,7 @@ const aiLimiter = rateLimiter({
           message: 'AI endpoint rate limit exceeded. Please try again later.',
           code: 'AI_RATE_LIMIT_EXCEEDED',
           details: {
-            limit: rateLimitInfo.limit,
-            used: rateLimitInfo.used,
-            resetAt: rateLimitInfo.resetTime || Date.now() + 10 * 60 * 1000
+            resetAt: Date.now() + AI_RATE_LIMIT_WINDOW_MS
           }
         }
       } satisfies z.infer<typeof ApiErrorResponseSchema>,
@@ -155,6 +156,7 @@ if (RATE_LIMIT_ENABLED) {
   app.use('/api/tickets/*/suggest-files', aiLimiter)
   app.use('/api/tickets/*/auto-generate-tasks', aiLimiter)
   app.use('/api/projects/*/suggest-agents', aiLimiter)
+  app.use('/api/projects/*/commands/suggest', aiLimiter)
 } else {
   console.log('[Server] Rate limiting disabled in development mode')
 }
@@ -180,6 +182,8 @@ app.route('/', projectRoutes)
 app.route('/', providerKeyRoutes)
 app.route('/', promptRoutes)
 app.route('/', ticketRoutes)
+app.route('/', queueRoutes)
+app.route('/', flowRoutes)
 app.route('/', genAiRoutes)
 app.route('/', browseDirectoryRoutes)
 app.route('/', mcpRoutes)
@@ -190,6 +194,9 @@ app.route('/api/jobs', jobApp)
 app.route('/', projectTabRoutes)
 app.route('/', agentFilesRoutes)
 app.route('/', claudeAgentRoutes)
+app.route('/', claudeCommandRoutes)
+app.route('/', claudeCodeRoutes)
+app.route('/', claudeHookRoutesSimple)
 app.route('/', mcpInstallationRoutes)
 app.route('/', mcpProjectConfigApp)
 app.route('/', mcpGlobalConfigRoutes)

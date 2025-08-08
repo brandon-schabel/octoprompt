@@ -8,7 +8,7 @@
 import React, { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X } from 'lucide-react'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 

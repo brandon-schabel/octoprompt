@@ -1,6 +1,15 @@
 import * as React from 'react'
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, ScrollArea, Separator } from '@ui'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  Button,
+  ScrollArea,
+  Separator
+} from '@promptliano/ui'
 import { ChevronRight, Folder, FolderOpen, Home, ChevronUp } from 'lucide-react'
 import { useBrowseDirectory } from '@/hooks/api/use-browse-directory'
 import type { DirectoryEntry } from '@promptliano/schemas'

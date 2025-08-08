@@ -18,10 +18,12 @@ import {
 } from '@promptliano/config'
 import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/config'
 import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@promptliano/shared'
+import { mapProviderErrorToApiError } from './error-mappers'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@promptliano/storage'
 import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { generateStructuredData, generateSingleText } from './gen-ai-services'
+import { getProviderUrl } from './provider-settings-service'
 import { getFullProjectSummary, invalidateProjectSummaryCache } from './utils/project-summary-service'
 import { resolvePath } from './utils/path-utils'
 import { fileRelevanceService } from './file-relevance-service'
@@ -106,7 +108,7 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
 export async function getProjectById(projectId: number): Promise<Project> {
   try {
     const projects = await projectStorage.readProjects()
-    const project = projects[projectId]
+    const project = projects[String(projectId)]
     if (!project) {
       throw new ApiError(404, `Project not found with ID ${projectId}.`, 'PROJECT_NOT_FOUND')
     }
@@ -159,7 +161,7 @@ export async function updateProject(projectId: number, data: UpdateProjectBody):
 
     const validatedProject = ProjectSchema.parse(updatedProjectData)
 
-    projects[projectId] = validatedProject
+    projects[String(projectId)] = validatedProject
     await projectStorage.writeProjects(projects)
 
     return validatedProject
@@ -184,11 +186,11 @@ export async function updateProject(projectId: number, data: UpdateProjectBody):
 export async function deleteProject(projectId: number): Promise<boolean> {
   try {
     const projects = await projectStorage.readProjects()
-    if (!projects[projectId]) {
+    if (!projects[String(projectId)]) {
       throw new ApiError(404, `Project not found with ID ${projectId} for deletion.`, 'PROJECT_NOT_FOUND')
     }
 
-    delete projects[projectId]
+    delete projects[String(projectId)]
     await projectStorage.writeProjects(projects)
 
     await projectStorage.deleteProjectData(projectId)
@@ -715,6 +717,60 @@ export async function getProjectFilesByIds(projectId: number, fileIds: number[])
   }
 }
 
+/** Retrieves specific files by paths for a project */
+export async function getProjectFilesByPaths(projectId: number, paths: string[]): Promise<ProjectFile[]> {
+  if (!paths || paths.length === 0) {
+    return []
+  }
+  await getProjectById(projectId) // Ensure project exists
+  const uniquePaths = [...new Set(paths)]
+
+  try {
+    const filesMap = await projectStorage.readProjectFiles(projectId)
+    const resultFiles: ProjectFile[] = []
+
+    // Iterate through all files to find matches by path
+    for (const file of Object.values(filesMap)) {
+      if (uniquePaths.includes(file.path)) {
+        resultFiles.push(file)
+      }
+    }
+
+    return resultFiles
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to fetch files by paths for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'PROJECT_FILES_GET_BY_PATHS_FAILED'
+    )
+  }
+}
+
+/** Validates that file paths exist in a project */
+export async function validateFilePaths(
+  projectId: number,
+  paths: string[]
+): Promise<{ valid: string[]; invalid: string[] }> {
+  if (!paths || paths.length === 0) {
+    return { valid: [], invalid: [] }
+  }
+
+  try {
+    const existingFiles = await getProjectFilesByPaths(projectId, paths)
+    const existingPaths = new Set(existingFiles.map((f) => f.path))
+
+    const valid = paths.filter((p) => existingPaths.has(p))
+    const invalid = paths.filter((p) => !existingPaths.has(p))
+
+    return { valid, invalid }
+  } catch (error) {
+    logger.error('Failed to validate file paths', { projectId, paths, error })
+    // Return all as invalid on error
+    return { valid: [], invalid: paths }
+  }
+}
+
 /** Summarizes a single file if it meets conditions and updates the project's file storage. */
 export async function summarizeSingleFile(file: ProjectFile, force: boolean = false): Promise<ProjectFile | null> {
   // Check if file needs summarization based on timestamp
@@ -767,12 +823,12 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   const exportsContext = file.exports?.length
     ? `The file exports: ${file.exports
-      .map((e) => {
-        if (e.type === 'default') return 'default export'
-        if (e.type === 'all') return `all from ${e.source}`
-        return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
-      })
-      .join(', ')}`
+        .map((e) => {
+          if (e.type === 'default') return 'default export'
+          if (e.type === 'all') return `all from ${e.source}`
+          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+        })
+        .join(', ')}`
     : ''
 
   const systemPrompt = `
@@ -789,6 +845,9 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
   const provider = (cfg.provider as APIProviders) || 'openrouter'
   const modelId = cfg.model
 
+  // Add LMStudio URL if provider is lmstudio
+  const options = provider === 'lmstudio' ? { ...cfg, lmstudioUrl: getProviderUrl('lmstudio') } : cfg
+
   if (!modelId) {
     logger.error(`Model not configured for summarize-file task for file ${file.path}.`)
     throw new ApiError(
@@ -800,16 +859,49 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
   }
 
   try {
-    const result = await generateStructuredData({
-      prompt: fileContent,
-      options: cfg,
-      schema: z.object({
-        summary: z.string()
-      }),
-      systemMessage: systemPrompt
-    })
+    let summary: string
 
-    const summary = result.object.summary
+    try {
+      // Try structured data generation first
+      const result = await generateStructuredData({
+        prompt: fileContent,
+        options: options,
+        schema: z.object({
+          summary: z.string()
+        }),
+        systemMessage: systemPrompt
+      })
+      summary = result.object.summary
+    } catch (structuredError: any) {
+      // Check if it's a JSON parsing error that we should fallback from
+      const mappedError = mapProviderErrorToApiError(structuredError, provider, 'generateStructuredData')
+
+      if (
+        mappedError.code === 'PROVIDER_JSON_PARSE_ERROR' ||
+        structuredError?.name === 'AI_NoObjectGeneratedError' ||
+        structuredError?.name === 'AI_JSONParseError'
+      ) {
+        logger.warn(
+          `Structured data generation failed for ${file.path}, falling back to text generation`,
+          structuredError
+        )
+
+        // Fallback to text generation
+        const textResult = await generateSingleText({
+          prompt: fileContent,
+          systemMessage:
+            systemPrompt +
+            '\n\nIMPORTANT: Return ONLY the summary text, no JSON formatting, no markdown, just plain text.',
+          options: cfg
+        })
+
+        summary = textResult.trim()
+      } else {
+        // Re-throw if it's not a JSON parsing error
+        throw structuredError
+      }
+    }
+
     const trimmedSummary = summary.trim()
 
     const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
@@ -844,6 +936,9 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
   const provider = (cfg.provider as APIProviders) || 'openrouter'
   const modelId = cfg.model
 
+  // Add LMStudio URL if provider is lmstudio
+  const options = provider === 'lmstudio' ? { ...cfg, lmstudioUrl: getProviderUrl('lmstudio') } : cfg
+
   if (!modelId) {
     logger.error(`Model not configured for summarize-file task for file ${file.path}.`)
     throw new ApiError(
@@ -855,16 +950,49 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
   }
 
   try {
-    const result = await generateStructuredData({
-      prompt: truncatedContent,
-      options: cfg,
-      schema: z.object({
-        summary: z.string()
-      }),
-      systemMessage: systemPrompt
-    })
+    let summary: string
 
-    const summary = result.object.summary
+    try {
+      // Try structured data generation first
+      const result = await generateStructuredData({
+        prompt: truncatedContent,
+        options: options,
+        schema: z.object({
+          summary: z.string()
+        }),
+        systemMessage: systemPrompt
+      })
+      summary = result.object.summary
+    } catch (structuredError: any) {
+      // Check if it's a JSON parsing error that we should fallback from
+      const mappedError = mapProviderErrorToApiError(structuredError, provider, 'generateStructuredData')
+
+      if (
+        mappedError.code === 'PROVIDER_JSON_PARSE_ERROR' ||
+        structuredError?.name === 'AI_NoObjectGeneratedError' ||
+        structuredError?.name === 'AI_JSONParseError'
+      ) {
+        logger.warn(
+          `Structured data generation failed for truncated file ${file.path}, falling back to text generation`,
+          structuredError
+        )
+
+        // Fallback to text generation
+        const textResult = await generateSingleText({
+          prompt: truncatedContent,
+          systemMessage:
+            systemPrompt +
+            '\n\nIMPORTANT: Return ONLY the summary text, no JSON formatting, no markdown, just plain text.',
+          options: cfg
+        })
+
+        summary = textResult.trim()
+      } else {
+        // Re-throw if it's not a JSON parsing error
+        throw structuredError
+      }
+    }
+
     const trimmedSummary = summary.trim() + ' [Note: File was truncated for summarization due to size]'
 
     const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
@@ -941,12 +1069,12 @@ export async function summarizeFiles(
 
   logger.info(
     `File summarization batch complete for project ${projectId}. ` +
-    `Total to process: ${totalProcessed}, ` +
-    `Successfully summarized: ${summarizedCount}, ` +
-    `Skipped (empty): ${skippedByEmptyCount}, ` +
-    `Skipped (too large): ${skippedBySizeCount}, ` +
-    `Skipped (errors): ${errorCount}, ` +
-    `Total not summarized: ${finalSkippedCount}`
+      `Total to process: ${totalProcessed}, ` +
+      `Successfully summarized: ${summarizedCount}, ` +
+      `Skipped (empty): ${skippedByEmptyCount}, ` +
+      `Skipped (too large): ${skippedBySizeCount}, ` +
+      `Skipped (errors): ${errorCount}, ` +
+      `Total not summarized: ${finalSkippedCount}`
   )
 
   return {
@@ -1172,19 +1300,31 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     // Validate project exists and get basic info
     const project = await getProjectById(projectId)
 
-    // Import necessary functions
+    // Import necessary functions - including queue stats
+    const { getQueuesWithStats } = await import('./queue-service')
+
     // Get all data in parallel for performance
-    const [activeTab, prompts, ticketsWithTaskCount, statistics, gitStatus, gitBranch, fileTree, unsummarizedFiles] =
-      await Promise.all([
-        getActiveTab(projectId).catch(() => null),
-        listPromptsByProject(projectId).catch(() => []),
-        listTicketsWithTaskCount(projectId).catch(() => []),
-        getProjectStatistics(projectId).catch(() => null),
-        getProjectGitStatus(projectId).catch(() => null),
-        getCurrentBranch(projectId).catch(() => 'unknown'),
-        getProjectFileTree(projectId).catch(() => 'Unable to load file tree'),
-        fileSummarizationTracker.getUnsummarizedFilesWithImportance(projectId, 20).catch(() => [])
-      ])
+    const [
+      activeTab,
+      prompts,
+      ticketsWithTaskCount,
+      statistics,
+      gitStatus,
+      gitBranch,
+      fileTree,
+      unsummarizedFiles,
+      queueStats
+    ] = await Promise.all([
+      getActiveTab(projectId).catch(() => null),
+      listPromptsByProject(projectId).catch(() => []),
+      listTicketsWithTaskCount(projectId).catch(() => []),
+      getProjectStatistics(projectId).catch(() => null),
+      getProjectGitStatus(projectId).catch(() => null),
+      getCurrentBranch(projectId).catch(() => 'unknown'),
+      getProjectFileTree(projectId).catch(() => 'Unable to load file tree'),
+      fileSummarizationTracker.getUnsummarizedFilesWithImportance(projectId, 20).catch(() => []),
+      getQueuesWithStats(projectId).catch(() => [])
+    ])
 
     // Build the overview sections
     const lines: string[] = []
@@ -1264,6 +1404,38 @@ export async function getProjectOverview(projectId: number): Promise<string> {
       }
     } else {
       lines.push('No open tickets')
+    }
+    lines.push('')
+
+    // Task queues section
+    lines.push(`=== TASK QUEUES (${queueStats.length} total) ===`)
+    if (queueStats.length > 0) {
+      let totalQueuedItems = 0
+      let totalInProgressItems = 0
+
+      queueStats.forEach(({ queue, stats }) => {
+        totalQueuedItems += stats.queuedItems
+        totalInProgressItems += stats.inProgressItems
+
+        const statusIcon = queue.status === 'active' ? '✓' : '⏸'
+        lines.push(
+          `${statusIcon} ${queue.name}: ${stats.queuedItems} queued, ${stats.inProgressItems} in progress, ${stats.completedItems} completed`
+        )
+        if (stats.currentAgents.length > 0) {
+          lines.push(`  Active agents: ${stats.currentAgents.join(', ')}`)
+        }
+      })
+
+      if (totalQueuedItems > 0 || totalInProgressItems > 0) {
+        lines.push('')
+        lines.push(
+          `Total items pending: ${totalQueuedItems + totalInProgressItems} (${totalQueuedItems} queued, ${totalInProgressItems} in progress)`
+        )
+        lines.push('Use queue_processor tool to process tasks from the queue')
+      }
+    } else {
+      lines.push('No task queues configured')
+      lines.push('Use queue_manager tool to create queues for AI task processing')
     }
     lines.push('')
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Search, FileText, Hash, Command } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Input, Button } from '@promptliano/ui'
 
 interface SearchResult {
   id: string
@@ -151,13 +152,13 @@ export function DocsSearch() {
             <div className='bg-background border rounded-lg shadow-lg'>
               <div className='flex items-center gap-3 p-4 border-b'>
                 <Search className='h-5 w-5 text-muted-foreground' />
-                <input
+                <Input
                   ref={inputRef}
                   type='text'
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
                   placeholder='Search documentation...'
-                  className='flex-1 bg-transparent outline-none placeholder:text-muted-foreground'
+                  className='flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0'
                   autoFocus
                 />
                 <button

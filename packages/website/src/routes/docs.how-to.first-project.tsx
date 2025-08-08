@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { CodeBlock } from '@/components/docs'
 import { FeatureScreenshot } from '@/components/ui'
 import { CheckCircle, AlertCircle, Lightbulb } from 'lucide-react'
@@ -24,7 +24,8 @@ function FirstProjectGuide() {
       <div>
         <h1 className='text-4xl font-bold mb-4'>Creating Your First Project</h1>
         <p className='text-xl text-muted-foreground'>
-          This guide walks you through creating your first Promptliano project, from initial setup to your first AI-powered workflow.
+          This guide walks you through creating your first Promptliano project, from initial setup to your first
+          AI-powered workflow.
         </p>
       </div>
 
@@ -38,7 +39,8 @@ function FirstProjectGuide() {
               Make sure you have Promptliano running. If not, see our{' '}
               <a href='/docs/download-installation' className='text-primary hover:underline'>
                 installation guide
-              </a>.
+              </a>
+              .
             </p>
           </div>
         </div>
@@ -55,7 +57,8 @@ function FirstProjectGuide() {
 
         <div className='space-y-6'>
           <p className='text-muted-foreground'>
-            When you first open Promptliano, you'll see the project creation dialog. If you already have projects, click the project name in the top-left to access the project selector.
+            When you first open Promptliano, you'll see the project creation dialog. If you already have projects, click
+            the project name in the top-left to access the project selector.
           </p>
 
           <FeatureScreenshot
@@ -68,7 +71,7 @@ function FirstProjectGuide() {
 
           <div className='space-y-4'>
             <h3 className='text-xl font-medium'>Fill in Project Details</h3>
-            
+
             <div className='grid md:grid-cols-2 gap-4'>
               <GlassCard className='p-4'>
                 <h4 className='font-medium mb-2'>Project Name</h4>
@@ -91,7 +94,8 @@ function FirstProjectGuide() {
                 <div>
                   <p className='font-medium'>Pro Tip: Choose the Right Folder</p>
                   <p className='text-sm text-muted-foreground mt-1'>
-                    Select the root folder that contains your entire codebase. Promptliano will respect your .gitignore file and won't index excluded files.
+                    Select the root folder that contains your entire codebase. Promptliano will respect your .gitignore
+                    file and won't index excluded files.
                   </p>
                 </div>
               </div>
@@ -124,7 +128,7 @@ function FirstProjectGuide() {
         <div className='grid md:grid-cols-2 gap-6'>
           <div className='space-y-4'>
             <h3 className='text-lg font-medium'>Key Areas to Know</h3>
-            
+
             <GlassCard className='p-4'>
               <h4 className='font-medium mb-2'>File Browser (Left)</h4>
               <ul className='text-sm text-muted-foreground space-y-1'>
@@ -146,7 +150,7 @@ function FirstProjectGuide() {
 
           <div className='space-y-4'>
             <h3 className='text-lg font-medium'>Quick Actions</h3>
-            
+
             <GlassCard className='p-4'>
               <h4 className='font-medium mb-2'>User Input Box</h4>
               <p className='text-sm text-muted-foreground'>
@@ -157,9 +161,15 @@ function FirstProjectGuide() {
             <GlassCard className='p-4'>
               <h4 className='font-medium mb-2'>Action Buttons</h4>
               <ul className='text-sm text-muted-foreground space-y-1'>
-                <li>• <strong>Copy All</strong> - Copy your entire context</li>
-                <li>• <strong>Suggest Files</strong> - Get AI recommendations</li>
-                <li>• <strong>Summary</strong> - View project overview</li>
+                <li>
+                  • <strong>Copy All</strong> - Copy your entire context
+                </li>
+                <li>
+                  • <strong>Suggest Files</strong> - Get AI recommendations
+                </li>
+                <li>
+                  • <strong>Summary</strong> - View project overview
+                </li>
               </ul>
             </GlassCard>
           </div>
@@ -176,15 +186,14 @@ function FirstProjectGuide() {
         </h2>
 
         <p className='text-muted-foreground'>
-          Let's practice building context for a simple task. We'll use the example of adding a new feature to your project.
+          Let's practice building context for a simple task. We'll use the example of adding a new feature to your
+          project.
         </p>
 
         <div className='space-y-6'>
           <div>
             <h3 className='text-xl font-medium mb-3'>Step 3.1: Describe Your Task</h3>
-            <p className='text-muted-foreground mb-3'>
-              In the User Input box, describe what you want to do:
-            </p>
+            <p className='text-muted-foreground mb-3'>In the User Input box, describe what you want to do:</p>
             <CodeBlock
               code='I need to add a user authentication feature with login and logout functionality'
               language='text'
@@ -211,9 +220,7 @@ function FirstProjectGuide() {
 
           <div>
             <h3 className='text-xl font-medium mb-3'>Step 3.3: Add Additional Files</h3>
-            <p className='text-muted-foreground mb-3'>
-              You can also manually browse and select files:
-            </p>
+            <p className='text-muted-foreground mb-3'>You can also manually browse and select files:</p>
             <ul className='space-y-2 text-muted-foreground'>
               <li>• Navigate through folders in the file browser</li>
               <li>• Click files to add them to your selection</li>
@@ -231,7 +238,8 @@ function FirstProjectGuide() {
               layout='centered'
             />
             <p className='text-muted-foreground mt-3'>
-              Click "Copy All" to copy your selected files, prompts, and instructions to your clipboard. You can now paste this into any AI tool!
+              Click "Copy All" to copy your selected files, prompts, and instructions to your clipboard. You can now
+              paste this into any AI tool!
             </p>
           </div>
         </div>
@@ -299,9 +307,7 @@ function FirstProjectGuide() {
           <GlassCard className='p-6'>
             <Lightbulb className='h-5 w-5 text-yellow-500 mb-3' />
             <h3 className='font-medium mb-3'>Use File Suggestions</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              Let AI help you find relevant files:
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>Let AI help you find relevant files:</p>
             <ul className='text-sm text-muted-foreground space-y-1'>
               <li>• Saves time searching manually</li>
               <li>• Discovers related files you might miss</li>
@@ -312,9 +318,7 @@ function FirstProjectGuide() {
           <GlassCard className='p-6'>
             <Lightbulb className='h-5 w-5 text-yellow-500 mb-3' />
             <h3 className='font-medium mb-3'>Watch Token Usage</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              Keep an eye on the token counter:
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>Keep an eye on the token counter:</p>
             <ul className='text-sm text-muted-foreground space-y-1'>
               <li>• Most AI models have token limits</li>
               <li>• Start with 5-10 files max</li>
@@ -325,9 +329,7 @@ function FirstProjectGuide() {
           <GlassCard className='p-6'>
             <Lightbulb className='h-5 w-5 text-yellow-500 mb-3' />
             <h3 className='font-medium mb-3'>Save Useful Prompts</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              Build your prompt library over time:
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>Build your prompt library over time:</p>
             <ul className='text-sm text-muted-foreground space-y-1'>
               <li>• Navigate to the Prompts page</li>
               <li>• Save prompts that work well</li>

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { CodeTerminal } from '@/components/ui/code-terminal'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { FeatureScreenshot } from '@/components/ui'
@@ -78,7 +78,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__project_manager(
   action: "overview",
-  projectId: 1753220774680
+  projectId: 1754111018844
 )`}
                   language='typescript'
                 />
@@ -86,7 +86,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`{
   "project": {
-    "id": 1753220774680,
+    "id": 1754111018844,
     "name": "E-Commerce Platform",
     "path": "/Users/dev/projects/ecommerce",
     "currentBranch": "feature/checkout"
@@ -122,7 +122,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__project_manager(
   action: "suggest_files",
-  projectId: 1753220774680,
+  projectId: 1754111018844,
   data: {
     prompt: "authentication components",
     limit: 10
@@ -220,7 +220,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__ticket_manager(
   action: "create",
-  projectId: 1753220774680,
+  projectId: 1754111018844,
   data: {
     title: "Implement user authentication",
     overview: "Add login/logout functionality with JWT tokens",
@@ -234,7 +234,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`{
   "id": 456,
-  "projectId": 1753220774680,
+  "projectId": 1754111018844,
   "title": "Implement user authentication",
   "overview": "Add login/logout functionality with JWT tokens",
   "priority": "high",
@@ -244,7 +244,6 @@ function ApiReferencePage() {
 }`}
                   language='json'
                 />
-                
                 <p className='text-sm text-muted-foreground mt-6 mb-3'>AI Request (Auto-Generate Tasks):</p>
                 <CodeTerminal
                   code={`mcp__promptliano__ticket_manager(
@@ -444,7 +443,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__git_manager(
   action: "worktree_add",
-  projectId: 1753220774680,
+  projectId: 1754111018844,
   data: {
     path: "../feature-auth",
     newBranch: "feature/authentication"
@@ -468,12 +467,12 @@ function ApiReferencePage() {
 }`}
                   language='json'
                 />
-                
+
                 <p className='text-sm text-muted-foreground mt-6 mb-3'>AI Request (List Worktrees):</p>
                 <CodeTerminal
                   code={`mcp__promptliano__git_manager(
   action: "worktree_list",
-  projectId: 1753220774680
+  projectId: 1754111018844
 )`}
                   language='typescript'
                 />
@@ -557,9 +556,12 @@ function ApiReferencePage() {
           <p className='text-muted-foreground mb-4'>
             Check out our comprehensive guides or join the community for support.
           </p>
-          <div className='flex gap-4'>
-            <a href='/docs/guides' className='btn btn-primary'>
-              View Guides
+          <div className='flex flex-wrap gap-4'>
+            <a href='/docs/how-to/mcp-best-practices' className='btn btn-primary'>
+              MCP Best Practices
+            </a>
+            <a href='/docs/guides' className='btn btn-outline'>
+              View All Guides
             </a>
             <a href='/community' className='btn btn-outline'>
               Ask Community

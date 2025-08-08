@@ -1,7 +1,7 @@
 import type { ProviderConfig } from '../types'
 
 // Check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined'
+const isBrowser = typeof globalThis !== 'undefined' && 'window' in globalThis
 
 // Safe environment variable access
 const getEnvVar = (key: string, defaultValue: string): string => {

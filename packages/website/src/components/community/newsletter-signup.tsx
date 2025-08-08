@@ -1,13 +1,14 @@
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { Mail, Send, CheckCircle } from 'lucide-react'
 import { useState } from 'react'
+import { Input, Button, Separator } from '@promptliano/ui'
 
 export function NewsletterSignup() {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (!email || !email.includes('@')) {
@@ -49,19 +50,20 @@ export function NewsletterSignup() {
 
         <form onSubmit={handleSubmit} className='space-y-4'>
           <div className='relative'>
-            <input
+            <Input
               type='email'
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               placeholder='Enter your email address'
               disabled={status === 'loading' || status === 'success'}
-              className='w-full px-4 py-3 bg-background/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed'
+              className='w-full h-12 bg-background/50 pr-14'
             />
 
-            <button
+            <Button
               type='submit'
               disabled={status === 'loading' || status === 'success'}
-              className='absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              size='sm'
+              className='absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0'
             >
               {status === 'loading' ? (
                 <div className='w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin' />
@@ -70,7 +72,7 @@ export function NewsletterSignup() {
               ) : (
                 <Send className='w-5 h-5' />
               )}
-            </button>
+            </Button>
           </div>
 
           {message && <p className={`text-sm ${status === 'error' ? 'text-red-500' : 'text-green-500'}`}>{message}</p>}
@@ -87,7 +89,9 @@ export function NewsletterSignup() {
           </div>
         </form>
 
-        <div className='mt-6 grid grid-cols-3 gap-4 pt-6 border-t border-border/50'>
+        <Separator className='my-6' />
+
+        <div className='grid grid-cols-3 gap-4'>
           <div className='text-center'>
             <p className='text-2xl font-bold'>10K+</p>
             <p className='text-sm text-muted-foreground'>Subscribers</p>

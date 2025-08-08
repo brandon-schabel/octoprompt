@@ -5,7 +5,6 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createGroq } from '@ai-sdk/groq'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { createOllama } from 'ollama-ai-provider'
 import { createChatService, createProviderKeyService } from '@promptliano/services'
 import type { APIProviders, ProviderKey } from '@promptliano/schemas'
 import type { AiChatStreamRequest } from '@promptliano/schemas'
@@ -16,8 +15,24 @@ import { structuredDataSchemas } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 import { mapProviderErrorToApiError } from './error-mappers'
 import { retryOperation } from './utils/bulk-operations'
+import { getProviderUrl } from './provider-settings-service'
+import { LMStudioProvider } from './providers/lmstudio-provider'
 
 const providersConfig = getProvidersConfig()
+
+// Provider capabilities map - which providers support structured output via generateObject
+// Note: LM Studio now uses a custom provider that supports native structured outputs
+const PROVIDER_CAPABILITIES = {
+  openai: { structuredOutput: true, useCustomProvider: false },
+  anthropic: { structuredOutput: true, useCustomProvider: false },
+  google_gemini: { structuredOutput: true, useCustomProvider: false },
+  groq: { structuredOutput: true, useCustomProvider: false },
+  openrouter: { structuredOutput: true, useCustomProvider: false },
+  lmstudio: { structuredOutput: true, useCustomProvider: true }, // Uses custom provider for native json_schema support
+  ollama: { structuredOutput: false, useCustomProvider: false }, // Still uses text fallback (TODO: add custom provider)
+  xai: { structuredOutput: true, useCustomProvider: false },
+  together: { structuredOutput: true, useCustomProvider: false }
+} as const
 
 let providerKeysCache: ProviderKey[] | null = null
 
@@ -231,11 +246,27 @@ async function getProviderLanguageModelInterface(
     }
     // --- OpenAI Compatible Providers ---
     case 'lmstudio': {
-      const lmStudioUrl = providersConfig.lmstudio.baseURL
+      // Priority: options > provider settings > config
+      let lmStudioUrl = options.lmstudioUrl || getProviderUrl('lmstudio') || providersConfig.lmstudio.baseURL
       if (!lmStudioUrl) throw new ApiError(500, 'LMStudio Base URL not configured.', 'LMSTUDIO_URL_MISSING')
+
+      // Log when custom URL is detected
+      if (options.lmstudioUrl || getProviderUrl('lmstudio')) {
+        console.log(`[UnifiedProviderService] Using custom LMStudio URL: ${lmStudioUrl}`)
+      }
+
+      // Ensure URL ends with /v1 for OpenAI compatibility
+      if (!lmStudioUrl.endsWith('/v1')) {
+        lmStudioUrl = lmStudioUrl.replace(/\/$/, '') + '/v1'
+      }
+
+      // LM Studio supports structured outputs via json_schema format
+      // Note: The Vercel AI SDK's generateObject doesn't map correctly to LM Studio's format
+      // so we mark it as not supporting structured output and use text fallback
       return createOpenAI({
         baseURL: lmStudioUrl,
-        apiKey: 'lm-studio-ignored-key'
+        apiKey: 'lm-studio-ignored-key',
+        compatibility: 'strict' // Use strict mode for better compatibility
       })(modelId)
     }
     case 'xai': {
@@ -250,9 +281,20 @@ async function getProviderLanguageModelInterface(
     }
     // --- Local Providers ---
     case 'ollama': {
-      const ollamaUrl = providersConfig.ollama.baseURL
+      // Priority: options > provider settings > config
+      const ollamaUrl = options.ollamaUrl || getProviderUrl('ollama') || providersConfig.ollama.baseURL
       if (!ollamaUrl) throw new ApiError(500, 'Ollama Base URL not configured.', 'OLLAMA_URL_MISSING')
-      return createOllama({ baseURL: ollamaUrl })(modelId)
+
+      // Log when custom URL is detected
+      if (options.ollamaUrl || getProviderUrl('ollama')) {
+        console.log(`[UnifiedProviderService] Using custom Ollama URL: ${ollamaUrl}`)
+      }
+
+      // Use OpenAI provider with Ollama's OpenAI-compatible API
+      return createOpenAI({
+        baseURL: `${ollamaUrl}/v1`,
+        apiKey: 'ollama' // Ollama doesn't need a real API key
+      })(modelId)
     }
     default:
       console.error(`[UnifiedProviderService] Unsupported provider: ${provider}. Attempting fallback to OpenAI.`)
@@ -383,13 +425,193 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
   if (!prompt) {
     throw new ApiError(400, "'prompt' must be provided for generateStructuredData.", 'MISSING_PROMPT_FOR_STRUCTURED')
   }
-  const modelInstance = await getProviderLanguageModelInterface(provider, { ...finalOptions, model: model })
+
+  // Check if provider supports structured output
+  const supportsStructuredOutput = PROVIDER_CAPABILITIES[provider]?.structuredOutput ?? true
+  const useCustomProvider = PROVIDER_CAPABILITIES[provider]?.useCustomProvider ?? false
 
   if (debug) {
     console.log(
-      `[UnifiedProviderService] Generating structured data: Provider=${provider}, ModelID=${modelInstance.modelId}, Schema=${schema.description || 'Unnamed Schema'}`
+      `[UnifiedProviderService] Generating structured data: Provider=${provider}, ModelID=${model}, Schema=${schema.description || 'Unnamed Schema'}, SupportsStructuredOutput=${supportsStructuredOutput}, UseCustomProvider=${useCustomProvider}`
     )
   }
+
+  // Use custom LM Studio provider for native structured output support
+  if (provider === 'lmstudio' && useCustomProvider) {
+    if (debug) {
+      console.log(`[UnifiedProviderService] Using custom LM Studio provider for native structured output`)
+    }
+
+    try {
+      const lmstudioProvider = new LMStudioProvider({ ...finalOptions, debug })
+      const result = await lmstudioProvider.generateObject(schema, prompt, {
+        model: model,
+        systemMessage,
+        temperature: finalOptions.temperature,
+        maxTokens: finalOptions.maxTokens,
+        topP: finalOptions.topP,
+        frequencyPenalty: finalOptions.frequencyPenalty,
+        presencePenalty: finalOptions.presencePenalty,
+        debug
+      })
+
+      if (debug) {
+        console.log(
+          `[UnifiedProviderService] LM Studio native structured output finished. Usage: ${JSON.stringify(result.usage)}`
+        )
+      }
+
+      return result
+    } catch (error: any) {
+      if (error instanceof ApiError) throw error
+      console.error(`[UnifiedProviderService - generateStructuredData] LM Studio custom provider error:`, error)
+      throw mapProviderErrorToApiError(error, provider, 'generateStructuredData')
+    }
+  }
+
+  // If provider doesn't support structured output, use text generation with JSON parsing
+  if (!supportsStructuredOutput) {
+    if (debug) {
+      console.log(
+        `[UnifiedProviderService] Provider ${provider} doesn't support structured output, using text generation fallback`
+      )
+    }
+
+    try {
+      // Create a prompt that instructs the model to output JSON
+      // Get example structure from the schema
+      const schemaKeys = schema._def.shape ? Object.keys(schema._def.shape) : []
+      const exampleStructure = schemaKeys.reduce((acc: any, key: string) => {
+        const fieldDef = schema._def.shape?.[key]
+        if (fieldDef?._def?.typeName === 'ZodString') {
+          acc[key] = 'string value here'
+        } else if (fieldDef?._def?.typeName === 'ZodNumber') {
+          acc[key] = 0
+        } else if (fieldDef?._def?.typeName === 'ZodBoolean') {
+          acc[key] = false
+        } else if (fieldDef?._def?.typeName === 'ZodArray') {
+          acc[key] = []
+        } else if (fieldDef?._def?.typeName === 'ZodObject') {
+          acc[key] = {}
+        } else {
+          acc[key] = null
+        }
+        return acc
+      }, {})
+
+      const jsonPrompt = `${systemMessage ? systemMessage + '\n\n' : ''}${prompt}
+
+IMPORTANT: Return ONLY valid JSON matching this exact structure, nothing else:
+${JSON.stringify(exampleStructure, null, 2)}
+
+Your entire response must be a single JSON object. Do not explain, do not add any text before or after.
+Start your response with { and end with }`
+
+      // Use text generation
+      const textResult = await generateSingleText({
+        prompt: jsonPrompt,
+        options: finalOptions,
+        debug
+      })
+
+      if (debug) {
+        console.log(`[UnifiedProviderService] Raw text response from ${provider}:`, textResult)
+      }
+
+      // Try to extract JSON from the response
+      let jsonStr = textResult.trim()
+
+      // Remove markdown code blocks if present
+      if (jsonStr.startsWith('```json')) {
+        jsonStr = jsonStr.slice(7)
+      }
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.slice(3)
+      }
+      if (jsonStr.endsWith('```')) {
+        jsonStr = jsonStr.slice(0, -3)
+      }
+      jsonStr = jsonStr.trim()
+
+      // Try to extract JSON from the response - handle various formats
+      // Some models include extra text before/after the JSON
+      const jsonPatterns = [
+        /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/, // Match complete JSON object with nested objects
+        /\[[\s\S]*\]/ // Match first complete JSON array
+      ]
+
+      let extractedJson: string | null = null
+      for (const pattern of jsonPatterns) {
+        const matches = jsonStr.match(pattern)
+        if (matches) {
+          // Try to parse each match to find valid JSON
+          for (const match of matches) {
+            try {
+              JSON.parse(match)
+              extractedJson = match
+              break
+            } catch {
+              // Continue to next match
+            }
+          }
+          if (extractedJson) break
+        }
+      }
+
+      if (extractedJson) {
+        jsonStr = extractedJson
+      }
+
+      // Parse and validate the JSON
+      let parsedObject: any
+      try {
+        parsedObject = JSON.parse(jsonStr)
+      } catch (parseError) {
+        console.error(`[UnifiedProviderService] Failed to parse JSON from ${provider} response:`, jsonStr)
+
+        // For local models, provide a more helpful error message
+        if (provider === 'lmstudio' || provider === 'ollama') {
+          throw new ApiError(
+            400,
+            `The model did not return valid JSON. This may happen with smaller models (< 7B parameters). Try using a larger model or a different provider.`,
+            'PROVIDER_JSON_PARSE_ERROR',
+            { provider, response: jsonStr, suggestion: 'Use a model with 7B+ parameters for better JSON generation' }
+          )
+        }
+
+        throw new ApiError(
+          400,
+          `Failed to parse JSON response from ${provider}. The model did not return valid JSON.`,
+          'PROVIDER_JSON_PARSE_ERROR',
+          { provider, response: jsonStr }
+        )
+      }
+
+      // Validate against schema
+      const validatedObject = schema.parse(parsedObject)
+
+      // Return in the same format as generateObject
+      return {
+        object: validatedObject,
+        usage: {
+          completionTokens: 0, // We don't have exact token counts from generateSingleText
+          promptTokens: 0,
+          totalTokens: 0
+        },
+        finishReason: 'stop'
+      }
+    } catch (error: any) {
+      if (error instanceof ApiError) throw error
+      console.error(
+        `[UnifiedProviderService - generateStructuredData] Text generation fallback error for ${provider}:`,
+        error
+      )
+      throw mapProviderErrorToApiError(error, provider, 'generateStructuredData')
+    }
+  }
+
+  // Provider supports structured output, use generateObject
+  const modelInstance = await getProviderLanguageModelInterface(provider, { ...finalOptions, model: model })
 
   try {
     // Wrap the AI call in retry logic
@@ -421,6 +643,10 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateStructuredData')
+          // Don't retry JSON parsing errors here - let the caller handle fallback
+          if (mappedError.code === 'PROVIDER_JSON_PARSE_ERROR') {
+            return false
+          }
           return (
             mappedError.code === 'RATE_LIMIT_EXCEEDED' ||
             mappedError.code === 'PROVIDER_UNAVAILABLE' ||

@@ -1,9 +1,9 @@
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
-import { Input } from '@ui'
-import { Button } from '@ui'
-import { Badge } from '@ui'
-import { ScrollArea } from '@ui'
-import { Skeleton } from '@ui'
+import { Input } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Skeleton } from '@promptliano/ui'
 import { PromptlianoTooltip } from '@/components/promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { formatShortcut } from '@/lib/shortcuts'
@@ -31,7 +31,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+} from '@promptliano/ui'
 
 type ExplorerRefs = {
   searchInputRef: React.RefObject<HTMLInputElement>
@@ -94,7 +94,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     },
     [debouncedSetFileSearch]
   )
-  const { selectedFiles, selectFiles } = useSelectedFiles()
+  const { selectedFiles, selectFiles, toggleFilePath } = useSelectedFiles()
 
   // Get git status for the project
   const { data: gitStatus } = useProjectGitStatus(selectedProjectId)
@@ -120,14 +120,10 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
   const toggleFileInSelection = useCallback(
     (file: ProjectFile) => {
-      selectFiles((prev) => {
-        if (prev.includes(file.id)) {
-          return prev.filter((id) => id !== file.id)
-        }
-        return [...prev, file.id]
-      })
+      // Use path-based toggle which includes auto-include logic
+      toggleFilePath(file.path)
     },
-    [selectFiles]
+    [toggleFilePath]
   )
 
   const searchContainerRef = useRef<HTMLDivElement>(null)
@@ -461,7 +457,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                   onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}
                   projectRoot={project?.path || ''}
                   resolveImports={resolveImports}
-                  preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
+                  preferredEditor={preferredEditor}
                   onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
                   onNavigateToSearch={() => ref.searchInputRef.current?.focus()}
                 />

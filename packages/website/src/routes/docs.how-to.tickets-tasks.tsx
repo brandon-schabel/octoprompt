@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { CodeBlock } from '@/components/docs'
 import { FeatureScreenshot } from '@/components/ui'
 import { TicketIcon, ListTodo, Sparkles, GitBranch, Target, Clock, CheckCircle } from 'lucide-react'
@@ -10,7 +10,8 @@ export const Route = createFileRoute('/docs/how-to/tickets-tasks')({
     return {
       meta: {
         title: 'Managing Tickets & Tasks - Promptliano How-To Guide',
-        description: 'Learn how to organize your work with tickets and let AI generate implementation tasks based on your codebase.',
+        description:
+          'Learn how to organize your work with tickets and let AI generate implementation tasks based on your codebase.',
         keywords: ['tickets', 'tasks', 'project management', 'AI planning', 'workflow organization']
       } as SeoMetadata
     }
@@ -31,7 +32,7 @@ function TicketsTasksGuide() {
       {/* Why Use Tickets */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Why Use the Ticket System?</h2>
-        
+
         <div className='grid md:grid-cols-3 gap-6'>
           <GlassCard className='p-6'>
             <Target className='h-5 w-5 text-primary mb-3' />
@@ -85,14 +86,12 @@ function TicketsTasksGuide() {
 
           <div>
             <h3 className='text-xl font-medium mb-3'>Create a New Ticket</h3>
-            <p className='text-muted-foreground mb-3'>
-              Click "New Ticket" and fill in the details:
-            </p>
-            
+            <p className='text-muted-foreground mb-3'>Click "New Ticket" and fill in the details:</p>
+
             <div className='space-y-4'>
               <GlassCard className='p-6'>
                 <h4 className='font-medium mb-3'>Ticket Fields Explained</h4>
-                
+
                 <div className='space-y-4'>
                   <div>
                     <h5 className='font-medium text-sm mb-1'>Title</h5>
@@ -163,10 +162,8 @@ function TicketsTasksGuide() {
         <div className='space-y-6'>
           <div>
             <h3 className='text-xl font-medium mb-3'>Generate Tasks</h3>
-            <p className='text-muted-foreground mb-3'>
-              Click the "Generate Tasks" button on your ticket. AI will:
-            </p>
-            
+            <p className='text-muted-foreground mb-3'>Click the "Generate Tasks" button on your ticket. AI will:</p>
+
             <div className='grid md:grid-cols-2 gap-4'>
               <GlassCard className='p-4'>
                 <h4 className='font-medium mb-2'>Analyze Your Codebase</h4>
@@ -195,14 +192,16 @@ function TicketsTasksGuide() {
             <p className='text-muted-foreground mb-3'>
               Here's what AI might generate for a "Add user authentication" ticket:
             </p>
-            
+
             <GlassCard className='p-6 bg-muted/30'>
               <div className='space-y-3'>
                 <div className='flex items-start gap-3'>
                   <CheckCircle className='h-4 w-4 text-muted-foreground mt-0.5' />
                   <div className='flex-1'>
                     <p className='text-sm font-medium'>Create authentication schema</p>
-                    <p className='text-xs text-muted-foreground'>Define Zod schemas for login/register in schemas/auth.schema.ts</p>
+                    <p className='text-xs text-muted-foreground'>
+                      Define Zod schemas for login/register in schemas/auth.schema.ts
+                    </p>
                   </div>
                 </div>
 
@@ -210,7 +209,9 @@ function TicketsTasksGuide() {
                   <CheckCircle className='h-4 w-4 text-muted-foreground mt-0.5' />
                   <div className='flex-1'>
                     <p className='text-sm font-medium'>Set up JWT service</p>
-                    <p className='text-xs text-muted-foreground'>Implement token generation/validation in services/auth.service.ts</p>
+                    <p className='text-xs text-muted-foreground'>
+                      Implement token generation/validation in services/auth.service.ts
+                    </p>
                   </div>
                 </div>
 
@@ -218,7 +219,9 @@ function TicketsTasksGuide() {
                   <CheckCircle className='h-4 w-4 text-muted-foreground mt-0.5' />
                   <div className='flex-1'>
                     <p className='text-sm font-medium'>Create login component</p>
-                    <p className='text-xs text-muted-foreground'>Build form with validation in components/auth/LoginForm.tsx</p>
+                    <p className='text-xs text-muted-foreground'>
+                      Build form with validation in components/auth/LoginForm.tsx
+                    </p>
                   </div>
                 </div>
 
@@ -226,7 +229,9 @@ function TicketsTasksGuide() {
                   <CheckCircle className='h-4 w-4 text-muted-foreground mt-0.5' />
                   <div className='flex-1'>
                     <p className='text-sm font-medium'>Add auth API routes</p>
-                    <p className='text-xs text-muted-foreground'>Implement /login and /register endpoints in api/auth.route.ts</p>
+                    <p className='text-xs text-muted-foreground'>
+                      Implement /login and /register endpoints in api/auth.route.ts
+                    </p>
                   </div>
                 </div>
 
@@ -234,7 +239,9 @@ function TicketsTasksGuide() {
                   <CheckCircle className='h-4 w-4 text-muted-foreground mt-0.5' />
                   <div className='flex-1'>
                     <p className='text-sm font-medium'>Create auth hook</p>
-                    <p className='text-xs text-muted-foreground'>Build useAuth hook for state management in hooks/useAuth.ts</p>
+                    <p className='text-xs text-muted-foreground'>
+                      Build useAuth hook for state management in hooks/useAuth.ts
+                    </p>
                   </div>
                 </div>
               </div>
@@ -243,9 +250,7 @@ function TicketsTasksGuide() {
 
           <div>
             <h3 className='text-xl font-medium mb-3'>Review and Customize</h3>
-            <p className='text-muted-foreground mb-3'>
-              AI suggestions are a starting point. You can:
-            </p>
+            <p className='text-muted-foreground mb-3'>AI suggestions are a starting point. You can:</p>
             <ul className='space-y-2'>
               <li className='flex items-center gap-2'>
                 <span className='text-primary'>✓</span>
@@ -280,7 +285,7 @@ function TicketsTasksGuide() {
         <div className='space-y-6'>
           <div>
             <h3 className='text-xl font-medium mb-3'>Task Management Features</h3>
-            
+
             <div className='grid md:grid-cols-2 gap-4'>
               <GlassCard className='p-4'>
                 <ListTodo className='h-5 w-5 text-primary mb-2' />
@@ -316,17 +321,13 @@ function TicketsTasksGuide() {
 
           <div>
             <h3 className='text-xl font-medium mb-3'>Task Context & Files</h3>
-            <p className='text-muted-foreground mb-3'>
-              Each task can include:
-            </p>
-            
+            <p className='text-muted-foreground mb-3'>Each task can include:</p>
+
             <GlassCard className='p-6'>
               <div className='space-y-4'>
                 <div>
                   <h4 className='font-medium text-sm mb-2'>Description</h4>
-                  <p className='text-sm text-muted-foreground'>
-                    Detailed steps or requirements for implementation
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Detailed steps or requirements for implementation</p>
                 </div>
 
                 <div>
@@ -343,9 +344,7 @@ function TicketsTasksGuide() {
 
                 <div>
                   <h4 className='font-medium text-sm mb-2'>Tags</h4>
-                  <p className='text-sm text-muted-foreground mb-2'>
-                    Categorize tasks for better organization
-                  </p>
+                  <p className='text-sm text-muted-foreground mb-2'>Categorize tasks for better organization</p>
                   <div className='flex gap-2'>
                     <span className='text-xs px-2 py-1 bg-blue-500/20 text-blue-500 rounded'>frontend</span>
                     <span className='text-xs px-2 py-1 bg-green-500/20 text-green-500 rounded'>feature</span>
@@ -367,28 +366,36 @@ function TicketsTasksGuide() {
             <h3 className='font-medium mb-3'>🚀 Feature Development Flow</h3>
             <ol className='space-y-3 text-sm'>
               <li className='flex gap-3'>
-                <span className='flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs'>1</span>
+                <span className='flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs'>
+                  1
+                </span>
                 <div>
                   <p className='font-medium'>Create feature ticket</p>
                   <p className='text-muted-foreground'>Describe the feature and requirements</p>
                 </div>
               </li>
               <li className='flex gap-3'>
-                <span className='flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs'>2</span>
+                <span className='flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs'>
+                  2
+                </span>
                 <div>
                   <p className='font-medium'>Generate tasks with AI</p>
                   <p className='text-muted-foreground'>Get implementation steps based on your codebase</p>
                 </div>
               </li>
               <li className='flex gap-3'>
-                <span className='flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs'>3</span>
+                <span className='flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs'>
+                  3
+                </span>
                 <div>
                   <p className='font-medium'>Work through tasks</p>
                   <p className='text-muted-foreground'>Mark as in-progress, use suggested files for context</p>
                 </div>
               </li>
               <li className='flex gap-3'>
-                <span className='flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs'>4</span>
+                <span className='flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs'>
+                  4
+                </span>
                 <div>
                   <p className='font-medium'>Track progress</p>
                   <p className='text-muted-foreground'>Complete tasks, add notes for future reference</p>
@@ -403,8 +410,10 @@ function TicketsTasksGuide() {
               <div className='p-3 bg-red-500/10 rounded'>
                 <p className='text-sm font-medium'>Quick Ticket Creation</p>
                 <p className='text-xs text-muted-foreground mt-1'>
-                  Title: "Fix login form validation error"<br />
-                  Priority: High<br />
+                  Title: "Fix login form validation error"
+                  <br />
+                  Priority: High
+                  <br />
                   Overview: Include error message and steps to reproduce
                 </p>
               </div>
@@ -534,7 +543,8 @@ mcp__promptliano__task_manager(
       <GlassCard className='p-8 bg-primary/5 border-primary/20'>
         <h3 className='text-xl font-semibold mb-3'>Start Organizing Your Work</h3>
         <p className='mb-4 text-muted-foreground'>
-          Great development starts with good organization. Use tickets to plan, track, and complete your projects efficiently!
+          Great development starts with good organization. Use tickets to plan, track, and complete your projects
+          efficiently!
         </p>
         <ul className='space-y-2'>
           <li className='flex items-center gap-2'>

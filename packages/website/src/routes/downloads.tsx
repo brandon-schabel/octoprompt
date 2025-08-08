@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
-import { AnimateOnScroll } from '@/components/ui/animation-utils'
+import { GlassCard } from '@/components/ui'
+import { AnimateOnScroll } from '@/components/ui'
 import { CodeBlock } from '@/components/ui/code-terminal'
 import {
   Download,
@@ -122,7 +122,8 @@ function DownloadsPage() {
           <div className='text-center mb-12'>
             <h1 className='text-4xl md:text-5xl font-bold mb-4'>Install Promptliano</h1>
             <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
-              Get started with Promptliano in seconds with our one-command installer, or download platform-specific binaries.
+              Get started with Promptliano in seconds with our one-command installer, or download platform-specific
+              binaries.
             </p>
           </div>
         </AnimateOnScroll>
@@ -142,12 +143,7 @@ function DownloadsPage() {
                 <p className='text-muted-foreground mb-4'>
                   The fastest way to get started. This command will download, install, and configure everything for you:
                 </p>
-                <CodeBlock
-                  code='npx promptliano@latest'
-                  language='bash'
-                  showLineNumbers={false}
-                  className='text-lg'
-                />
+                <CodeBlock code='npx promptliano@latest' language='bash' showLineNumbers={false} className='text-lg' />
                 <div className='mt-4 grid md:grid-cols-2 gap-3'>
                   <div className='flex items-start gap-2'>
                     <CheckCircle className='h-4 w-4 text-green-500 mt-0.5 flex-shrink-0' />
@@ -202,7 +198,6 @@ function DownloadsPage() {
           </GlassCard>
         </AnimateOnScroll>
 
-
         {/* Quick Start Info */}
         <AnimateOnScroll>
           <GlassCard className='p-6 mb-12 max-w-4xl mx-auto'>
@@ -224,12 +219,10 @@ function DownloadsPage() {
         <AnimateOnScroll>
           <GlassCard className='p-8 max-w-4xl mx-auto'>
             <h2 className='text-2xl font-bold mb-6'>Need More Options?</h2>
-            
             <div className='space-y-4'>
               <p className='text-muted-foreground'>
                 Looking for platform-specific binaries or manual installation options?
               </p>
-              
               <div className='space-y-2'>
                 <a href='/docs/download-installation' className='text-primary hover:underline flex items-center gap-2'>
                   View Manual Installation Guide

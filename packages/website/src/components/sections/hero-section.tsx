@@ -1,9 +1,9 @@
 import { HeroGradient } from '@/components/ui'
-import { CTAButton, CTAButtonOutline } from '@/components/ui'
+import { HeroButton } from '@/components/ui/hero-button'
 import { CodeTerminal } from '@/components/ui'
 import { AnimateOnScroll } from '@/components/ui'
 import { ScreenshotCarousel } from '@/components/ui'
-import { Logo } from '@/components/ui'
+import { Logo } from '@promptliano/ui'
 import { CodeBlock } from '@/components/ui/code-terminal'
 import type { HeroSection } from '@/schemas'
 import { ArrowRight, Github, Terminal } from 'lucide-react'
@@ -85,9 +85,7 @@ export function HeroSection() {
               <h1 className='text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent'>
                 {heroData.title}
               </h1>
-              <p className='mt-6 text-lg sm:text-xl text-muted-foreground'>
-                {heroData.subtitle}
-              </p>
+              <p className='mt-6 text-lg sm:text-xl text-muted-foreground'>{heroData.subtitle}</p>
             </div>
 
             {/* Quick Install - right after subtitle */}
@@ -97,25 +95,26 @@ export function HeroSection() {
                   <Terminal className='h-4 w-4 text-primary' />
                   <span className='text-sm font-medium'>Quick Install</span>
                 </div>
-                <CodeBlock 
-                  code='npx promptliano@latest' 
-                  language='bash' 
-                  showLineNumbers={false}
-                  className='text-sm'
-                />
+                <CodeBlock code='npx promptliano@latest' language='bash' showLineNumbers={false} className='text-sm' />
               </div>
             </AnimateOnScroll>
 
             {/* CTA Buttons */}
             <div className='flex flex-wrap gap-4'>
-              <CTAButton href={heroData.ctas[0].href} size='lg'>
+              <HeroButton href={heroData.ctas[0].href} size='lg'>
                 Promptliano Docs
                 <ArrowRight className='ml-2 h-4 w-4' />
-              </CTAButton>
-              <CTAButtonOutline href={heroData.ctas[1].href} size='lg' target='_blank' className='whitespace-nowrap'>
+              </HeroButton>
+              <HeroButton
+                href={heroData.ctas[1].href}
+                size='lg'
+                variant='outline'
+                target='_blank'
+                className='whitespace-nowrap'
+              >
                 <Github className='mr-2 h-4 w-4' />
                 {heroData.ctas[1].text}
-              </CTAButtonOutline>
+              </HeroButton>
             </div>
 
             {/* Key benefits */}
@@ -149,7 +148,6 @@ export function HeroSection() {
                 className='shadow-2xl'
               />
             </AnimateOnScroll>
-
           </div>
         </div>
       </div>

@@ -36,50 +36,50 @@ const benefits = [
 ]
 
 const ArchitectureDiagram = () => (
-  <div className="flex flex-col items-center gap-4 p-4 max-w-full">
+  <div className='flex flex-col items-center gap-4 p-4 max-w-full'>
     {/* Your Development Environment */}
-    <div className="w-full max-w-2xl">
-      <div className="border-2 border-border rounded-lg p-4 bg-card/50">
-        <h3 className="text-center font-semibold mb-4">Your Development Environment</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="border border-border/50 rounded p-2 text-center text-sm">VS Code</div>
-          <div className="border border-border/50 rounded p-2 text-center text-sm">Cursor</div>
-          <div className="border border-border/50 rounded p-2 text-center text-sm">Claude Desktop</div>
-          <div className="border border-border/50 rounded p-2 text-center text-sm">Claude Code</div>
+    <div className='w-full max-w-2xl'>
+      <div className='border-2 border-border rounded-lg p-4 bg-card/50'>
+        <h3 className='text-center font-semibold mb-4'>Your Development Environment</h3>
+        <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
+          <div className='border border-border/50 rounded p-2 text-center text-sm'>VS Code</div>
+          <div className='border border-border/50 rounded p-2 text-center text-sm'>Cursor</div>
+          <div className='border border-border/50 rounded p-2 text-center text-sm'>Claude Desktop</div>
+          <div className='border border-border/50 rounded p-2 text-center text-sm'>Claude Code</div>
         </div>
       </div>
     </div>
-    
+
     {/* Connection Line */}
-    <div className="h-8 w-0.5 bg-border"></div>
-    
+    <div className='h-8 w-0.5 bg-border'></div>
+
     {/* MCP Protocol */}
-    <div className="border-2 border-primary/50 rounded-lg p-4 bg-primary/5">
-      <h3 className="text-center font-semibold">MCP Protocol</h3>
-      <p className="text-center text-sm text-muted-foreground">(JSON-RPC)</p>
+    <div className='border-2 border-primary/50 rounded-lg p-4 bg-primary/5'>
+      <h3 className='text-center font-semibold'>MCP Protocol</h3>
+      <p className='text-center text-sm text-muted-foreground'>(JSON-RPC)</p>
     </div>
-    
+
     {/* Connection Line */}
-    <div className="h-8 w-0.5 bg-border"></div>
-    
+    <div className='h-8 w-0.5 bg-border'></div>
+
     {/* Promptliano MCP Server */}
-    <div className="border-2 border-accent rounded-lg p-4 bg-accent/10">
-      <h3 className="text-center font-semibold">Promptliano</h3>
-      <p className="text-center text-sm text-muted-foreground">MCP Server</p>
+    <div className='border-2 border-accent rounded-lg p-4 bg-accent/10'>
+      <h3 className='text-center font-semibold'>Promptliano</h3>
+      <p className='text-center text-sm text-muted-foreground'>MCP Server</p>
     </div>
-    
+
     {/* Connection Line */}
-    <div className="h-8 w-0.5 bg-border"></div>
-    
+    <div className='h-8 w-0.5 bg-border'></div>
+
     {/* Core Services */}
-    <div className="w-full max-w-2xl">
-      <div className="border-2 border-border rounded-lg p-4 bg-card/50">
-        <h3 className="text-center font-semibold mb-4">Core Services</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="border border-border/50 rounded p-2 text-center text-sm">Project Manager</div>
-          <div className="border border-border/50 rounded p-2 text-center text-sm">File System</div>
-          <div className="border border-border/50 rounded p-2 text-center text-sm">Ticket System</div>
-          <div className="border border-border/50 rounded p-2 text-center text-sm">Git Ops</div>
+    <div className='w-full max-w-2xl'>
+      <div className='border-2 border-border rounded-lg p-4 bg-card/50'>
+        <h3 className='text-center font-semibold mb-4'>Core Services</h3>
+        <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
+          <div className='border border-border/50 rounded p-2 text-center text-sm'>Project Manager</div>
+          <div className='border border-border/50 rounded p-2 text-center text-sm'>File System</div>
+          <div className='border border-border/50 rounded p-2 text-center text-sm'>Ticket System</div>
+          <div className='border border-border/50 rounded p-2 text-center text-sm'>Git Ops</div>
         </div>
       </div>
     </div>

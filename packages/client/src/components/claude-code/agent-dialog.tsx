@@ -2,19 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 import { Loader2 } from 'lucide-react'
 import { useCreateAgent, useUpdateAgent, useGetAgent } from '@/hooks/api-hooks'
 import type { ClaudeAgent, AgentColor } from '@promptliano/schemas'
@@ -31,7 +24,7 @@ type AgentFormData = z.infer<typeof agentFormSchema>
 interface AgentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  agentId?: number | null
+  agentId?: string | null
   projectId?: number
 }
 
@@ -51,7 +44,7 @@ export function AgentDialog({ open, onOpenChange, agentId, projectId }: AgentDia
   const isEditing = !!agentId
 
   // Fetch agent data if editing
-  const { data: agentResponse, isLoading: isLoadingAgent } = useGetAgent(agentId || 0, projectId)
+  const { data: agentResponse, isLoading: isLoadingAgent } = useGetAgent(agentId || '', projectId)
   const agent = agentResponse?.data
 
   // Mutations

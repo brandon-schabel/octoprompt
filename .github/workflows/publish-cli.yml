@@ -3,167 +3,42 @@ name: Publish CLI Package
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'cli-v*.*.*' # Changed to use cli-v prefix for consistency
+      - 'v*.*.*' # Keep backward compatibility with existing tags
   pull_request:
     branches: [main]
     paths:
       - 'packages/promptliano/**'
       - '.github/workflows/publish-cli.yml'
+      - '.github/workflows/publish-npm-package.reusable.yml'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (e.g., v1.0.0)'
+        description: 'Tag to publish (e.g., cli-v1.0.0 or v1.0.0)'
         required: true
         type: string
 
+# Prevent concurrent executions for the same ref
+concurrency:
+  group: publish-cli-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test-and-publish:
-    name: ${{ github.event_name == 'pull_request' && 'Test CLI Package (Dry Run)' || 'Build and Publish to NPM' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # For npm provenance
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
-      
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-      
-      - name: Extract version from tag
-        if: github.event_name != 'pull_request'
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.tag }}"
-          else
-            VERSION=${GITHUB_REF#refs/tags/}
-          fi
-          VERSION=${VERSION#v}
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "TAG=$VERSION" >> $GITHUB_ENV
-      
-      - name: Validate version matches package.json
-        if: github.event_name != 'pull_request'
-        working-directory: packages/promptliano
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          if [ "$PACKAGE_VERSION" != "${{ steps.version.outputs.VERSION }}" ]; then
-            echo "Error: Tag version (${{ steps.version.outputs.VERSION }}) does not match package.json version ($PACKAGE_VERSION)"
-            echo "Please ensure the version in package.json is updated before creating a tag"
-            exit 1
-          fi
-          echo "✅ Version validation passed: $PACKAGE_VERSION"
-      
-      - name: Run tests
-        working-directory: packages/promptliano
-        run: bun test
-      
-      - name: Build package
-        working-directory: packages/promptliano
-        run: |
-          echo "Building CLI package..."
-          bun run build
-          echo "Generating TypeScript declarations..."
-          bun run build:types
-          
-          # Verify build output
-          if [ ! -d "dist" ]; then
-            echo "Error: dist directory not found after build"
-            exit 1
-          fi
-          
-          if [ ! -f "dist/index.js" ]; then
-            echo "Error: dist/index.js not found after build"
-            exit 1
-          fi
-          
-          echo "✅ Build completed successfully"
-          ls -la dist/
-      
-      - name: Dry run - Pack package
-        if: github.event_name == 'pull_request'
-        working-directory: packages/promptliano
-        run: |
-          echo "📦 Running npm pack (dry run)..."
-          npm pack --dry-run
-          
-          # Also test the actual pack to ensure it creates the tarball
-          npm pack
-          
-          # Check the tarball contents
-          echo ""
-          echo "📋 Package contents:"
-          tar -tzf promptliano-*.tgz | head -20
-          echo "..."
-          
-          # Check package size
-          echo ""
-          echo "📊 Package size:"
-          ls -lh promptliano-*.tgz
-          
-          echo ""
-          echo "✅ Dry run completed successfully!"
-      
-      - name: Configure npm authentication
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-          npm whoami
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
-      - name: Publish to npm
-        if: github.event_name != 'pull_request'
-        working-directory: packages/promptliano
-        run: |
-          # Check if version already exists
-          if npm view promptliano@${{ steps.version.outputs.VERSION }} > /dev/null 2>&1; then
-            echo "Version ${{ steps.version.outputs.VERSION }} already exists on npm"
-            exit 1
-          fi
-          
-          # Publish with provenance
-          npm publish --access public --provenance
-          
-          echo "✅ Successfully published promptliano@${{ steps.version.outputs.VERSION }} to npm"
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
-      - name: Create PR summary
-        if: github.event_name == 'pull_request' && success()
-        run: |
-          echo "## ✅ CLI Package Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The CLI package build and tests passed successfully!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### What was tested:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Dependencies installation" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Test suite execution" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Package build (JavaScript + TypeScript types)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ NPM package creation (dry run)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Package contents verification" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "This package will be ready to publish when merged." >> $GITHUB_STEP_SUMMARY
-      
-      - name: Create release summary
-        if: github.event_name != 'pull_request' && success()
-        run: |
-          echo "## 🎉 CLI Package Published!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Package**: promptliano" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: ${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Registry**: [npmjs.com/package/promptliano](https://www.npmjs.com/package/promptliano)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Installation" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "npx promptliano@latest" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+  publish-cli:
+    name: Publish promptliano CLI
+    uses: ./.github/workflows/publish-npm-package.reusable.yml
+    with:
+      package-path: packages/promptliano
+      package-name: 'promptliano'
+      build-command: 'bun run build'
+      test-command: 'bun test'
+      generate-types: true
+      types-command: 'bun run build:types'
+      npm-access: 'public'
+      bun-version: 'latest'
+      build-output-dir: 'dist'
+      build-output-file: 'dist/index.js'
+      run-tests: true
+      version-tag-prefix: ${{ startsWith(github.ref, 'refs/tags/cli-v') && 'cli-v' || 'v' }}
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

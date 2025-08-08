@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { promptlianoClient } from '@/hooks/promptliano-client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
-import { Button } from '@ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
-import { Alert, AlertDescription, AlertTitle } from '@ui'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
+import { Alert, AlertDescription, AlertTitle } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
 import {
   FileIcon,
   FolderIcon,
@@ -24,10 +24,10 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Editor } from '@monaco-editor/react'
-import { Input } from '@ui'
-import { Label } from '@ui'
-import { Switch } from '@ui'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui'
+import { Input } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
+import { Switch } from '@promptliano/ui'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@promptliano/ui'
 import { getEditorInfoFromPath, getRelativeConfigPath } from '@/lib/utils/editor-utils'
 
 interface MCPProjectConfigEditorProps {
@@ -165,22 +165,22 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
           .replace('/.vscode/mcp.json', '')
           .replace('/.cursor/mcp.json', '')
           .replace('/mcp.json', '')
-        
+
         // For Promptliano project itself, the script is in packages/server
         // For other projects, we'd need to know where Promptliano is installed
         let scriptPath = ''
         if (basePath.includes('promptliano')) {
           // This is the Promptliano project itself
-          scriptPath = window.navigator.platform.includes('Win') 
+          scriptPath = window.navigator.platform.includes('Win')
             ? `${basePath}/packages/server/mcp-start.bat`
             : `${basePath}/packages/server/mcp-start.sh`
         } else {
           // For other projects, we'll use a placeholder that users need to update
           scriptPath = window.navigator.platform.includes('Win')
-            ? '/path/to/promptliano/packages/server/mcp-start.bat' 
+            ? '/path/to/promptliano/packages/server/mcp-start.bat'
             : '/path/to/promptliano/packages/server/mcp-start.sh'
         }
-        
+
         const command = `claude mcp add promptliano ${scriptPath}`
         setClaudeCodeCommand(command)
       }
@@ -345,23 +345,23 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
         {/* Claude Code CLI */}
         <div className='space-y-2'>
           <h4 className='text-sm font-medium'>Claude Code CLI</h4>
-          <div className={cn(
-            'flex items-center justify-between p-3 rounded-md text-sm',
-            'bg-background border border-dashed'
-          )}>
+          <div
+            className={cn(
+              'flex items-center justify-between p-3 rounded-md text-sm',
+              'bg-background border border-dashed'
+            )}
+          >
             <div className='flex items-center gap-3 flex-1'>
               <Terminal className={cn('h-4 w-4', 'text-orange-500')} />
               <div className='flex-1'>
                 <div className='flex items-center gap-2'>
                   <span className='font-medium'>Claude Code</span>
                 </div>
-                <p className='text-xs text-muted-foreground mt-0.5'>
-                  Add Promptliano MCP server to Claude Code CLI
-                </p>
+                <p className='text-xs text-muted-foreground mt-0.5'>Add Promptliano MCP server to Claude Code CLI</p>
               </div>
             </div>
           </div>
-          
+
           {/* Command block */}
           <div className='relative'>
             <div className='bg-muted rounded-md p-4 font-mono text-sm'>

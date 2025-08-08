@@ -1,4 +1,4 @@
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { CheckCircle2, Circle, Clock, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 

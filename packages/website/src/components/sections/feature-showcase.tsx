@@ -116,7 +116,7 @@ const features: ExtendedFeature[] = [
 
 export function FeatureShowcase() {
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null)
-  
+
   const showcaseData = {
     sectionTitle: 'Everything You Need for AI-Enhanced Development',
     sectionSubtitle:
@@ -197,7 +197,7 @@ export function FeatureShowcase() {
             )
           })}
         </FeatureGrid>
-        
+
         {/* Expanded Screenshot Modal */}
         {expandedFeature && (
           <div
@@ -205,12 +205,12 @@ export function FeatureShowcase() {
             onClick={() => setExpandedFeature(null)}
           >
             <div className='max-w-5xl w-full' onClick={(e) => e.stopPropagation()}>
-              {features.find(f => f.id === expandedFeature)?.screenshot && (
+              {features.find((f) => f.id === expandedFeature)?.screenshot && (
                 <FeatureScreenshot
-                  src={features.find(f => f.id === expandedFeature)!.screenshot!}
-                  alt={features.find(f => f.id === expandedFeature)!.screenshotAlt!}
-                  title={features.find(f => f.id === expandedFeature)!.title}
-                  description={features.find(f => f.id === expandedFeature)!.description}
+                  src={features.find((f) => f.id === expandedFeature)!.screenshot!}
+                  alt={features.find((f) => f.id === expandedFeature)!.screenshotAlt!}
+                  title={features.find((f) => f.id === expandedFeature)!.title}
+                  description={features.find((f) => f.id === expandedFeature)!.description}
                   layout='centered'
                   priority
                 />

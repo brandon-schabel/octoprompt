@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@promptliano/ui'
+import { Checkbox } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
 import { GitBranch, GitCommit, Plus, Minus, FileText, AlertCircle } from 'lucide-react'
 import {
   useProjectGitStatus,

@@ -35,7 +35,7 @@ export const LinkSchema = z.object({
  */
 export const BadgeSchema = z.object({
   text: z.string(),
-  variant: z.enum(['default', 'primary', 'secondary', 'success', 'warning', 'danger']).default('default'),
+  variant: z.enum(['default', 'secondary', 'destructive', 'outline', 'count', 'warning', 'high']).default('default'),
   size: z.enum(['sm', 'md', 'lg']).default('md')
 })
 

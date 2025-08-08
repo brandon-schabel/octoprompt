@@ -26,7 +26,7 @@ export class EncryptionKeyStorage {
   private encryptionKey: string | null = null
   private readonly keyFileName = 'encryption.key'
 
-  private constructor() { }
+  private constructor() {}
 
   static getInstance(): EncryptionKeyStorage {
     if (!EncryptionKeyStorage.instance) {

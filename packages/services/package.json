@@ -4,7 +4,8 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "test": "bun test src/ --timeout 5000"
+    "test": "bun test src/ --timeout 5000",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@promptliano/config": "workspace:*"

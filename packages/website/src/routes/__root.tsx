@@ -23,7 +23,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   const matches = useMatches()
-  
+
   // Get the loader data from the leaf route
   const leafMatch = matches[matches.length - 1]
   const routeMeta = leafMatch?.loaderData?.meta as SeoMetadata | undefined

@@ -1,9 +1,9 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { List, CheckCircle2, BarChart3, Clock } from 'lucide-react'
+import { Button } from '@promptliano/ui'
+import { List, CheckCircle2, BarChart3, Clock, ListPlus } from 'lucide-react'
 
-export type TicketView = 'all' | 'active' | 'completed' | 'analytics'
+export type TicketView = 'all' | 'active' | 'completed' | 'queues' | 'analytics'
 
 interface TicketsSidebarNavProps {
   activeView: TicketView
@@ -30,6 +30,12 @@ export function TicketsSidebarNav({ activeView, onViewChange, className }: Ticke
       label: 'Completed',
       icon: CheckCircle2,
       description: 'Closed tickets'
+    },
+    {
+      id: 'queues' as TicketView,
+      label: 'Task Queues',
+      icon: ListPlus,
+      description: 'AI task processing queues'
     },
     {
       id: 'analytics' as TicketView,

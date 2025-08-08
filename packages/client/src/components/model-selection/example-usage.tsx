@@ -5,7 +5,7 @@
 
 import { ProviderModelSelector, useModelSelection, ModelSettingsPopover } from '@/components/model-selection'
 import { APIProviders, AiSdkOptions } from '@promptliano/schemas'
-import { Card, CardContent, CardHeader, CardTitle } from '@ui'
+import { Card, CardContent, CardHeader, CardTitle } from '@promptliano/ui'
 import { useState } from 'react'
 
 // Example 1: Basic usage with useModelSelection hook

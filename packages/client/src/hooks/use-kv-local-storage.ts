@@ -134,7 +134,7 @@ export const useAppSettingsKvApi = () => {
 
 export const useInvalidateKv = (key: KVKey) => {
   // No-op for local storage, as updates are synchronous
-  return () => { }
+  return () => {}
 }
 
 export const useGetProjectTabById = (
@@ -200,7 +200,8 @@ export const useCreateProjectTab = () => {
   const { mutate: updateProjectTabs, ...rest } = useSetKvValue('projectTabs')
   const [projectTabs] = useGetProjectTabs()
   const [activeProjectTabId] = useGetActiveProjectTabId()
-  const currentSelectedProjectId = useProjectTabById(activeProjectTabId ?? -1)?.selectedProjectId
+  const currentTab = useProjectTabById(activeProjectTabId ?? -1)
+  const currentSelectedProjectId = currentTab?.selectedProjectId
 
   const createProjectTab = (payload: ProjectTabStatePartial) => {
     // use unix timestamp in millisecondsc
@@ -274,7 +275,7 @@ export function useProjectTabField<K extends keyof ProjectTabState>(
       const newVal =
         typeof valueOrFn === 'function'
           ? // @ts-ignore
-          (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
+            (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
           : valueOrFn
 
       // Call the refactored updateTab hook, which handles the API call

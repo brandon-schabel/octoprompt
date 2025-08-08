@@ -1,5 +1,5 @@
 import { AnimateOnScroll, GlassCard } from '@/components/ui'
-import { CTAButton } from '@/components/ui'
+import { HeroButton } from '@/components/ui/hero-button'
 import { McpEditor, McpIntegration } from '@/schemas'
 import { motion } from 'framer-motion'
 import { Check, ArrowRight } from 'lucide-react'
@@ -111,10 +111,10 @@ export function McpIntegrationSection() {
                 ))}
               </div>
               <div className='mt-8 text-center'>
-                <CTAButton href='/docs/getting-started' size='lg'>
+                <HeroButton href='/docs/getting-started' size='lg'>
                   Get Started with MCP
                   <ArrowRight className='ml-2 h-4 w-4' />
-                </CTAButton>
+                </HeroButton>
               </div>
             </GlassCard>
           </div>

@@ -1,18 +1,21 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { settingsSearchSchema, type SettingsSearch } from '@/lib/search-schemas'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
-import { ScrollArea } from '@ui'
-import { Switch } from '@ui'
-import { Label } from '@ui'
-import { Input } from '@ui'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Link } from '@tanstack/react-router'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Switch } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Theme } from '@promptliano/schemas'
 import { useAppSettings } from '@/hooks/use-kv-local-storage'
 import { MCPGlobalConfigEditor } from '@/components/settings/mcp-global-config-editor'
+import { ArrowRight, Cloud } from 'lucide-react'
 
 type ThemeOption = {
   label: string
@@ -37,8 +40,6 @@ export function SettingsPage() {
     useSpacebarToSelectAutocomplete: spacebarToSelectAutocomplete = true,
     hideInformationalTooltips,
     autoScrollEnabled,
-    ollamaGlobalUrl,
-    lmStudioGlobalUrl,
     codeThemeDark,
     codeThemeLight,
     theme,
@@ -64,12 +65,6 @@ export function SettingsPage() {
     })
   }
 
-  const handleUrlChange = (key: 'ollamaGlobalUrl' | 'lmStudioGlobalUrl', value: string) => {
-    updateSettings({
-      [key]: value
-    })
-  }
-
   return (
     <div className='container mx-auto p-6 space-y-6'>
       <div>
@@ -88,13 +83,38 @@ export function SettingsPage() {
         }}
         className='w-full'
       >
-        <TabsList className='grid w-full grid-cols-3'>
+        <TabsList className='grid w-full grid-cols-2'>
           <TabsTrigger value='general'>General</TabsTrigger>
-          <TabsTrigger value='local-providers'>Local Model Providers</TabsTrigger>
           <TabsTrigger value='global-mcp'>Global MCP</TabsTrigger>
         </TabsList>
 
         <TabsContent value='general' className='space-y-6'>
+          <Card>
+            <CardHeader>
+              <CardTitle>LLM Provider Configuration</CardTitle>
+              <CardDescription>Manage API keys and local model providers</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-3'>
+                  <div className='p-2 bg-primary/10 rounded-lg'>
+                    <Cloud className='h-5 w-5 text-primary' />
+                  </div>
+                  <div>
+                    <p className='font-medium'>Provider Management</p>
+                    <p className='text-sm text-muted-foreground'>Configure API keys, Ollama, LM Studio, and more</p>
+                  </div>
+                </div>
+                <Button asChild>
+                  <Link to='/providers'>
+                    Manage Providers
+                    <ArrowRight className='ml-2 h-4 w-4' />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>General Settings</CardTitle>
@@ -221,36 +241,6 @@ export function SettingsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value='local-providers' className='space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Local Model Providers</CardTitle>
-              <CardDescription>Configure API endpoints for local model providers</CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='ollama-url'>Ollama URL</Label>
-                <Input
-                  id='ollama-url'
-                  placeholder='http://localhost:11434'
-                  value={ollamaGlobalUrl}
-                  onChange={(e) => handleUrlChange('ollamaGlobalUrl', e.target.value)}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='lmstudio-url'>LM Studio URL</Label>
-                <Input
-                  id='lmstudio-url'
-                  placeholder='http://localhost:1234'
-                  value={lmStudioGlobalUrl}
-                  onChange={(e) => handleUrlChange('lmStudioGlobalUrl', e.target.value)}
-                />
               </div>
             </CardContent>
           </Card>

@@ -1,5 +1,5 @@
 import { type Ticket } from '@promptliano/schemas'
-import { Badge } from '@ui'
+import { Badge } from '@promptliano/ui'
 
 interface TicketListProps {
   tickets: Ticket[]

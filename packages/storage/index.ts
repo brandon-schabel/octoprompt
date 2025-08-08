@@ -3,9 +3,14 @@ export * from './src/project-storage'
 export * from './src/prompt-storage'
 export * from './src/provider-key-storage'
 export * from './src/ticket-storage'
+export * from './src/queue-storage'
 export * from './src/mcp-storage'
 export * from './src/active-tab-storage'
 export * from './src/claude-agent-storage'
+export * from './src/claude-command-storage'
+export * from './src/claude-hook-storage'
+export * from './src/claude-hook-storage-simple'
+export * from './src/parser-registry'
 
 // Export everything from storage-v2 except MigrationConfig
 export { StorageV2, FileAdapter, MemoryAdapter } from './src/storage-v2'
@@ -40,3 +45,4 @@ export type { Migration, MigrationFunction, MigrationHistoryEntry, MigrationConf
 
 export * from './src/mcp-tracking-storage'
 export * from './src/encryption-key-storage'
+export * from './src/test-utils'

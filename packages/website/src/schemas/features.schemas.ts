@@ -22,26 +22,34 @@ export const FeatureItemSchema = z.object({
   title: z.string(),
   description: z.string(),
   category: z.string(),
-  icon: z.object({
-    type: z.enum(['icon', 'emoji', 'svg']),
-    value: z.string(),
-    color: z.string().optional()
-  }).optional(),
+  icon: z
+    .object({
+      type: z.enum(['icon', 'emoji', 'svg']),
+      value: z.string(),
+      color: z.string().optional()
+    })
+    .optional(),
   highlights: z.array(z.string()).optional(),
-  badge: z.object({
-    text: z.string(),
-    variant: z.enum(['default', 'secondary', 'destructive', 'outline', 'success', 'warning']).default('default')
-  }).optional(),
-  metrics: z.object({
-    value: z.string(),
-    label: z.string(),
-    improvement: z.string().optional()
-  }).optional(),
-  codeExample: z.object({
-    language: z.string(),
-    code: z.string(),
-    filename: z.string().optional()
-  }).optional(),
+  badge: z
+    .object({
+      text: z.string(),
+      variant: z.enum(['default', 'secondary', 'destructive', 'outline', 'count', 'warning', 'high']).default('default')
+    })
+    .optional(),
+  metrics: z
+    .object({
+      value: z.string(),
+      label: z.string(),
+      improvement: z.string().optional()
+    })
+    .optional(),
+  codeExample: z
+    .object({
+      language: z.string(),
+      code: z.string(),
+      filename: z.string().optional()
+    })
+    .optional(),
   learnMoreLink: z.string().optional()
 })
 
@@ -56,12 +64,14 @@ export const FeaturesSectionSchema = z.object({
   features: z.array(FeatureItemSchema),
   layout: z.object({
     type: z.enum(['grid', 'tabs', 'accordion', 'cards']).default('tabs'),
-    columns: z.object({
-      mobile: z.number().min(1).max(2).default(1),
-      tablet: z.number().min(2).max(3).default(2),
-      desktop: z.number().min(3).max(4).default(3),
-      wide: z.number().min(4).max(6).default(4)
-    }).optional()
+    columns: z
+      .object({
+        mobile: z.number().min(1).max(2).default(1),
+        tablet: z.number().min(2).max(3).default(2),
+        desktop: z.number().min(3).max(4).default(3),
+        wide: z.number().min(4).max(6).default(4)
+      })
+      .optional()
   })
 })
 
@@ -74,7 +84,8 @@ export type FeaturesSection = z.infer<typeof FeaturesSectionSchema>
 export const featuresData: FeaturesSection = {
   title: 'Everything You Need for AI-Powered Development',
   subtitle: 'Comprehensive tools designed to supercharge your workflow',
-  description: 'Promptliano brings together powerful features that work seamlessly with your favorite AI coding assistants.',
+  description:
+    'Promptliano brings together powerful features that work seamlessly with your favorite AI coding assistants.',
   layout: {
     type: 'tabs',
     columns: {
@@ -121,7 +132,8 @@ export const featuresData: FeaturesSection = {
     {
       id: 'overview-tool',
       title: 'MCP Overview Tool',
-      description: 'Get instant context about your project with a single command. Shows active files, recent tickets, prompts, and project structure.',
+      description:
+        'Get instant context about your project with a single command. Shows active files, recent tickets, prompts, and project structure.',
       category: 'core-tools',
       icon: { type: 'emoji', value: '🔍' },
       highlights: [
@@ -154,7 +166,8 @@ export const featuresData: FeaturesSection = {
     {
       id: 'tickets-tasks',
       title: 'Tickets & Tasks System',
-      description: 'Organize complex projects with a hierarchical ticket and task system designed for AI collaboration.',
+      description:
+        'Organize complex projects with a hierarchical ticket and task system designed for AI collaboration.',
       category: 'workflow',
       icon: { type: 'emoji', value: '🎯' },
       highlights: [
@@ -168,7 +181,8 @@ export const featuresData: FeaturesSection = {
     {
       id: 'project-tabs',
       title: 'Project Tabs',
-      description: 'Maintain multiple contexts within a project. Switch between different features without losing state.',
+      description:
+        'Maintain multiple contexts within a project. Switch between different features without losing state.',
       category: 'workflow',
       icon: { type: 'emoji', value: '📑' },
       highlights: [
@@ -197,20 +211,16 @@ export const featuresData: FeaturesSection = {
         'Import relationship analysis',
         'Performance metrics included'
       ],
-      badge: { text: 'Game Changer', variant: 'success' }
+      badge: { text: 'Game Changer', variant: 'high' }
     },
     {
       id: 'file-summarization',
       title: 'Intelligent File Summarization',
-      description: 'Automatic file summaries that help AI assistants understand your codebase without reading entire files.',
+      description:
+        'Automatic file summaries that help AI assistants understand your codebase without reading entire files.',
       category: 'efficiency',
       icon: { type: 'emoji', value: '📝' },
-      highlights: [
-        'Batch processing',
-        'Smart grouping strategies',
-        'Progress tracking',
-        'Stale summary detection'
-      ]
+      highlights: ['Batch processing', 'Smart grouping strategies', 'Progress tracking', 'Stale summary detection']
     },
     {
       id: 'prompt-library',
@@ -218,12 +228,7 @@ export const featuresData: FeaturesSection = {
       description: 'Save and reuse documentation, patterns, and knowledge across all your projects.',
       category: 'efficiency',
       icon: { type: 'emoji', value: '📚' },
-      highlights: [
-        'Project associations',
-        'Quick retrieval',
-        'Library organization',
-        'Knowledge sharing'
-      ]
+      highlights: ['Project associations', 'Quick retrieval', 'Library organization', 'Knowledge sharing']
     },
 
     // AI Collaboration
@@ -233,12 +238,7 @@ export const featuresData: FeaturesSection = {
       description: 'Get intelligent prompt suggestions based on your current task and project context.',
       category: 'collaboration',
       icon: { type: 'emoji', value: '💡' },
-      highlights: [
-        'Task-specific suggestions',
-        'Context awareness',
-        'Prompt optimization',
-        'Usage tracking'
-      ]
+      highlights: ['Task-specific suggestions', 'Context awareness', 'Prompt optimization', 'Usage tracking']
     },
     {
       id: 'chat-integration',
@@ -260,12 +260,7 @@ export const featuresData: FeaturesSection = {
       description: 'Your selected files and context automatically sync with AI assistants for seamless collaboration.',
       category: 'collaboration',
       icon: { type: 'emoji', value: '🔄' },
-      highlights: [
-        'Real-time sync',
-        'Context preservation',
-        'Multi-file selection',
-        'AI awareness'
-      ]
+      highlights: ['Real-time sync', 'Context preservation', 'Multi-file selection', 'AI awareness']
     },
     {
       id: 'project-assets',
@@ -273,12 +268,7 @@ export const featuresData: FeaturesSection = {
       description: 'Manage documentation, diagrams, and visual assets that AI can reference and use.',
       category: 'collaboration',
       icon: { type: 'emoji', value: '🎨' },
-      highlights: [
-        'Markdown documentation',
-        'Mermaid diagrams',
-        'SVG assets',
-        'AI-accessible references'
-      ]
+      highlights: ['Markdown documentation', 'Mermaid diagrams', 'SVG assets', 'AI-accessible references']
     },
 
     // Git Integration
@@ -288,12 +278,7 @@ export const featuresData: FeaturesSection = {
       description: 'Full git workflow support including staging, commits, branches, and advanced features.',
       category: 'git-integration',
       icon: { type: 'emoji', value: '🌿' },
-      highlights: [
-        'Stage and commit files',
-        'Branch management',
-        'Interactive diffs',
-        'Commit history'
-      ]
+      highlights: ['Stage and commit files', 'Branch management', 'Interactive diffs', 'Commit history']
     },
     {
       id: 'git-worktrees',
@@ -315,12 +300,7 @@ export const featuresData: FeaturesSection = {
       description: 'Save and manage work in progress with full stash support.',
       category: 'git-integration',
       icon: { type: 'emoji', value: '📦' },
-      highlights: [
-        'Quick stashing',
-        'Named stashes',
-        'Stash browsing',
-        'Apply and pop operations'
-      ]
+      highlights: ['Quick stashing', 'Named stashes', 'Stash browsing', 'Apply and pop operations']
     }
   ]
 }

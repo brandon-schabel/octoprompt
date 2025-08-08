@@ -8,6 +8,7 @@ import { nanoid } from 'nanoid'
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
 import { toast } from 'sonner'
 import { parseAIError, extractProviderName } from '@/components/errors'
+import { useAppSettings } from '@/hooks/use-kv-local-storage'
 
 interface UseAIChatProps {
   chatId: number
@@ -23,6 +24,9 @@ export function useAIChat({ chatId, provider, model, systemMessage, enableChatAu
 
   // Track parsed error for UI display
   const [parsedError, setParsedError] = useState<ReturnType<typeof parseAIError> | null>(null)
+
+  // Get app settings for provider URLs
+  const [appSettings] = useAppSettings()
 
   // Initialize Vercel AI SDK's useChat hook
   const {
@@ -144,6 +148,13 @@ export function useAIChat({ chatId, provider, model, systemMessage, enableChatAu
         }
       }
 
+      // Add provider URLs based on the current provider
+      if (provider === 'ollama' && appSettings.ollamaGlobalUrl) {
+        sdkOptions = { ...sdkOptions, ollamaUrl: appSettings.ollamaGlobalUrl }
+      } else if (provider === 'lmstudio' && appSettings.lmStudioGlobalUrl) {
+        sdkOptions = { ...sdkOptions, lmstudioUrl: appSettings.lmStudioGlobalUrl }
+      }
+
       // 3. Construct the request body EXACTLY matching AiChatStreamRequestSchema
       //    Use the imported type for compile-time checks!
       const requestBody: AiChatStreamRequest = {
@@ -165,7 +176,18 @@ export function useAIChat({ chatId, provider, model, systemMessage, enableChatAu
       await append(messageForSdkState, { body: requestBody })
     },
     // Dependencies: Ensure all values used inside useCallback are listed
-    [append, chatId, provider, model, systemMessage, setInput, setParsedError, enableChatAutoNaming]
+    [
+      append,
+      chatId,
+      provider,
+      model,
+      systemMessage,
+      setInput,
+      setParsedError,
+      enableChatAutoNaming,
+      appSettings.ollamaGlobalUrl,
+      appSettings.lmStudioGlobalUrl
+    ]
   )
 
   // Create a form handler that uses our enhanced `sendMessage`

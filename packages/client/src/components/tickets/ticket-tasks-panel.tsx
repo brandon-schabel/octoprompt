@@ -7,10 +7,10 @@ import {
   useReorderTasks,
   useAutoGenerateTasks
 } from '../../hooks/api/use-tickets-api'
-import { Input } from '@ui'
-import { Button } from '@ui'
+import { Input } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
 import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Circle } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@promptliano/ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { toast } from 'sonner'
 import type { TicketTask } from '@promptliano/schemas'
@@ -175,7 +175,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
       </div>
 
       {/* Tasks List */}
-      <div className='space-y-2 max-h-64 overflow-auto'>
+      <div className='space-y-2 max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800'>
         {isLoading && <p className='text-sm text-muted-foreground'>Loading tasks...</p>}
         {!isLoading && tasks.length === 0 && (
           <TaskEmptyState

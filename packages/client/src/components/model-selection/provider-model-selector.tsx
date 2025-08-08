@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { APIProviders } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 import { PromptlianoCombobox } from '@/components/promptliano/promptliano-combobox'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
+import { useAppSettings } from '@/hooks/use-kv-local-storage'
 
 export interface ProviderModelSelectorProps {
   provider: APIProviders
@@ -35,7 +36,16 @@ export function ProviderModelSelector({
   filterProviders,
   filterModels
 }: ProviderModelSelectorProps) {
-  const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider)
+  // Get app settings for provider URLs
+  const [appSettings] = useAppSettings()
+
+  // Prepare URL options based on provider
+  const urlOptions = {
+    ...(provider === 'ollama' && appSettings.ollamaGlobalUrl ? { ollamaUrl: appSettings.ollamaGlobalUrl } : {}),
+    ...(provider === 'lmstudio' && appSettings.lmStudioGlobalUrl ? { lmstudioUrl: appSettings.lmStudioGlobalUrl } : {})
+  }
+
+  const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider, urlOptions)
 
   // Filter providers if specified
   const availableProviders = useMemo(() => {

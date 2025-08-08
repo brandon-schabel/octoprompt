@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useGlobalMCPManager } from '@/hooks/api/use-mcp-global-api'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
-import { Button } from '@ui'
-import { Alert, AlertDescription } from '@ui'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Alert, AlertDescription } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
 import {
   CheckCircle2,
   XCircle,
@@ -23,7 +23,7 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Editor } from '@monaco-editor/react'
-import { Skeleton } from '@ui'
+import { Skeleton } from '@promptliano/ui'
 import { getEditorUrl } from '@/utils/editor-urls'
 
 interface ToolInfo {

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll, FeatureScreenshot } from '@/components/ui'
+import { GlassCard, HeroButton, CodeBlock, AnimateOnScroll, FeatureScreenshot } from '@/components/ui'
 import { Zap, Check, Brain, Sparkles, Command, ArrowRight } from 'lucide-react'
 
 export const Route = createFileRoute('/integrations/cursor')({
@@ -243,13 +243,13 @@ function CursorIntegrationPage() {
           <div className='text-center'>
             <div className='inline-flex gap-4'>
               <Link to='/integrations/setup'>
-                <CTAButton>
+                <HeroButton>
                   Full Setup Guide
                   <ArrowRight className='w-4 h-4 ml-2' />
-                </CTAButton>
+                </HeroButton>
               </Link>
               <Link to='/integrations/troubleshooting'>
-                <CTAButton variant='ghost'>Troubleshooting</CTAButton>
+                <HeroButton variant='outline'>Troubleshooting</HeroButton>
               </Link>
             </div>
           </div>

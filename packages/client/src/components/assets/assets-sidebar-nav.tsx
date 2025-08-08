@@ -1,6 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@promptliano/ui'
 import { FileText, Building2, Code2, Database, BookOpen, GitBranch, Clock } from 'lucide-react'
 
 export type AssetView =

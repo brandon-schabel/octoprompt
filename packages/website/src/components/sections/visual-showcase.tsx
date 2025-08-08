@@ -1,6 +1,6 @@
 import { ScreenshotGallery } from '@/components/ui'
 import { AnimateOnScroll } from '@/components/ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 
 const showcaseCategories = {
   workflow: {
@@ -126,11 +126,10 @@ export function VisualShowcaseSection() {
       <div className='container mx-auto px-4'>
         <AnimateOnScroll>
           <div className='text-center max-w-3xl mx-auto mb-16'>
-            <h2 className='text-3xl md:text-4xl font-bold mb-4'>
-              See Promptliano in Action
-            </h2>
+            <h2 className='text-3xl md:text-4xl font-bold mb-4'>See Promptliano in Action</h2>
             <p className='text-lg text-muted-foreground'>
-              Explore how Promptliano transforms your development workflow with intelligent context management and AI assistance
+              Explore how Promptliano transforms your development workflow with intelligent context management and AI
+              assistance
             </p>
           </div>
         </AnimateOnScroll>
@@ -147,10 +146,7 @@ export function VisualShowcaseSection() {
 
             {Object.entries(showcaseCategories).map(([key, category]) => (
               <TabsContent key={key} value={key} className='mt-8'>
-                <ScreenshotGallery
-                  screenshots={category.screenshots}
-                  columns={{ mobile: 1, tablet: 2, desktop: 3 }}
-                />
+                <ScreenshotGallery screenshots={category.screenshots} columns={{ mobile: 1, tablet: 2, desktop: 3 }} />
               </TabsContent>
             ))}
           </Tabs>
@@ -158,9 +154,7 @@ export function VisualShowcaseSection() {
 
         <AnimateOnScroll>
           <div className='mt-16 text-center'>
-            <p className='text-muted-foreground mb-6'>
-              Ready to experience these features yourself?
-            </p>
+            <p className='text-muted-foreground mb-6'>Ready to experience these features yourself?</p>
             <div className='flex gap-4 justify-center'>
               <a href='/downloads' className='btn btn-primary'>
                 Download Promptliano

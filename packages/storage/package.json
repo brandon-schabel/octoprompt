@@ -6,7 +6,8 @@
   "scripts": {
     "benchmark": "bun run src/benchmarks/sqlite-performance.ts",
     "test": "NODE_ENV=test bun test",
-    "test:debug": "NODE_ENV=test bun test --timeout 30000"
+    "test:debug": "NODE_ENV=test bun test --timeout 30000",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest"

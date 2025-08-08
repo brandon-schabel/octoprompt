@@ -20,6 +20,7 @@ npx promptliano@latest
 ```
 
 This will:
+
 - Download and install the Promptliano server
 - Configure MCP for your AI editor (Claude, Cursor, etc.)
 - Start the server automatically
@@ -161,7 +162,6 @@ Then, run the executable:
 **Backend:** Bun, Hono, Zod, AI SDK  
 **Frontend:** React, Vite, TanStack Router/Query, shadcn/ui, Tailwind CSS  
 **Documentation:** OpenAPI/Swagger
-
 
 ## Desktop App
 

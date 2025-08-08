@@ -1,4 +1,4 @@
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 type EmptyProjectScreenProps = {
   fileSearch: string
   setFileSearch: (val: string) => void

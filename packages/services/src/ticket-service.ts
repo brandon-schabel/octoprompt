@@ -17,6 +17,7 @@ import { getFullProjectSummary, getCompactProjectSummary } from './utils/project
 import { generateStructuredData } from './gen-ai-services'
 import { fileSuggestionStrategyService, FileSuggestionStrategyService } from './file-suggestion-strategy-service'
 import { z } from 'zod'
+import { listAgents } from './claude-agent-service'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {
@@ -26,7 +27,8 @@ const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this s
       "description": "Optional description here",
       "suggestedFileIds": ["fileId1", "fileId2"],
       "estimatedHours": 4,
-      "tags": ["frontend", "backend"]
+      "tags": ["frontend", "backend"],
+      "suggestedAgentId": "agent-id-here"
     }
   ]
 }`
@@ -38,15 +40,18 @@ Given a ticket's information, create detailed tasks with:
 3. Relevant file IDs from the project that need to be modified
 4. Estimated hours for completion
 5. Relevant tags (e.g., "frontend", "backend", "testing", "documentation", "refactoring", "bugfix")
+6. Suggested agent ID that is best suited for the task
 
 Focus on creating tasks that are:
 - Specific and measurable
 - Achievable within a reasonable timeframe
 - Relevant to the ticket's goals
 - Time-bound with estimates
+- Assigned to the most appropriate specialized agent
 
 Consider the project structure and existing files when suggesting file associations.
 Each task should include which files are relevant to the task.
+Select the most appropriate agent for each task based on the task's requirements and the agent's specialization.
 
 ${validTaskFormatPrompt}
 `
@@ -65,9 +70,17 @@ export async function fetchTaskSuggestionsForTicket(
   userContext: string | undefined
 ): Promise<TaskSuggestions> {
   let projectSummary: string
+  let availableAgents: string
 
   try {
     projectSummary = await getFullProjectSummary(ticket.projectId)
+
+    // Get available agents
+    const agents = await listAgents(process.cwd())
+    availableAgents =
+      agents.length > 0
+        ? agents.map((a) => `- ${a.id}: ${a.name} - ${a.description}`).join('\n')
+        : 'No specialized agents available'
   } catch (error) {
     // Handle case where project doesn't exist or has no files
     if (error instanceof ApiError && error.status === 404) {
@@ -88,8 +101,13 @@ export async function fetchTaskSuggestionsForTicket(
   Break the ticket down into step by step tasks that are clear, actionable, and specific to the project. 
 
   - Each Task should include which files are relevant to the task.
+  - Each Task should have a suggested agent assigned based on the task requirements.
 
   </goal>
+
+  <available_agents>
+  ${availableAgents}
+  </available_agents>
 
   <ticket_title>
   ${ticket.title}
@@ -147,6 +165,8 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
     status: data.status || 'open',
     priority: data.priority || 'normal',
     suggestedFileIds: data.suggestedFileIds || [],
+    suggestedAgentIds: data.suggestedAgentIds || [],
+    suggestedPromptIds: data.suggestedPromptIds || [],
     created: now,
     updated: now
   }
@@ -185,6 +205,8 @@ export async function updateTicket(ticketId: number, data: UpdateTicketBody): Pr
     ...(data.status && { status: data.status }),
     ...(data.priority && { priority: data.priority }),
     ...(data.suggestedFileIds && { suggestedFileIds: data.suggestedFileIds }),
+    ...(data.suggestedAgentIds && { suggestedAgentIds: data.suggestedAgentIds }),
+    ...(data.suggestedPromptIds && { suggestedPromptIds: data.suggestedPromptIds }),
     updated: now
   }
 
@@ -226,6 +248,7 @@ export async function createTask(ticketId: number, data: CreateTaskBody): Promis
     estimatedHours: data.estimatedHours ?? undefined,
     dependencies: data.dependencies ?? [],
     tags: data.tags ?? [],
+    agentId: data.agentId ?? undefined,
     created: now,
     updated: now
   }
@@ -269,6 +292,7 @@ export async function updateTask(ticketId: number, taskId: number, updates: Upda
     ...(updates.estimatedHours !== undefined && { estimatedHours: updates.estimatedHours }),
     ...(updates.dependencies !== undefined && { dependencies: updates.dependencies }),
     ...(updates.tags !== undefined && { tags: updates.tags }),
+    ...(updates.agentId !== undefined && { agentId: updates.agentId }),
     updated: now
   }
 
@@ -384,6 +408,7 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
       estimatedHours: taskSuggestion.estimatedHours,
       dependencies: [],
       tags: taskSuggestion.tags || [],
+      agentId: taskSuggestion.suggestedAgentId || undefined,
       created: now,
       updated: now
     }

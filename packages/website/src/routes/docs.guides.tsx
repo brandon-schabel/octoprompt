@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { CodeBlock, MultiFileCodeBlock } from '@/components/docs'
 import { FeatureScreenshot } from '@/components/ui'
 import { AlertCircle, Lightbulb, Zap, GitBranch } from 'lucide-react'
@@ -26,6 +26,16 @@ function GuidesPage() {
         <p className='text-xl text-muted-foreground'>
           Learn how to make the most of Promptliano with these comprehensive guides and best practices.
         </p>
+
+        <div className='mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg'>
+          <p className='text-sm'>
+            <span className='font-medium'>New:</span> Check out our comprehensive{' '}
+            <a href='/docs/how-to/mcp-best-practices' className='text-primary hover:underline'>
+              Getting the Most Out of Promptliano MCP
+            </a>{' '}
+            guide for detailed workflows and AI prompting strategies.
+          </p>
+        </div>
       </div>
 
       {/* Building Context Efficiently */}
@@ -118,7 +128,7 @@ mcp__promptliano__ticket_manager(
                 code: `// Step 1: Create a ticket with clear overview
 const ticket = await mcp__promptliano__ticket_manager(
   action: "create",
-  projectId: 1753220774680,
+  projectId: 1754111018844,
   data: {
     title: "Add user authentication",
     overview: "Implement JWT-based authentication with login/logout",
@@ -240,7 +250,7 @@ await mcp__promptliano__task_manager(
             code={`// Project-level suggestions (general discovery)
 mcp__promptliano__project_manager(
   action: "suggest_files",
-  projectId: 1753220774680,
+  projectId: 1754111018844,
   data: {
     prompt: "authentication flow",
     limit: 10
@@ -402,7 +412,7 @@ const agents = [
             code={`// 1. Add a worktree for a new feature
 await mcp__promptliano__git_manager(
   action: "worktree_add",
-  projectId: 1753220774680,
+  projectId: 1754111018844,
   data: {
     path: "../promptliano-auth",
     newBranch: "feature/authentication"
@@ -412,13 +422,13 @@ await mcp__promptliano__git_manager(
 // 2. List all worktrees
 const worktrees = await mcp__promptliano__git_manager(
   action: "worktree_list",
-  projectId: 1753220774680
+  projectId: 1754111018844
 )
 
 // 3. Lock a worktree (prevent accidental deletion)
 await mcp__promptliano__git_manager(
   action: "worktree_lock",
-  projectId: 1753220774680,
+  projectId: 1754111018844,
   data: {
     path: "../promptliano-auth",
     reason: "Active development - do not remove"
@@ -428,7 +438,7 @@ await mcp__promptliano__git_manager(
 // 4. Remove worktree when done
 await mcp__promptliano__git_manager(
   action: "worktree_remove",
-  projectId: 1753220774680,
+  projectId: 1754111018844,
   data: {
     path: "../promptliano-auth",
     force: false
@@ -441,9 +451,7 @@ await mcp__promptliano__git_manager(
 
         <div className='mt-6'>
           <h3 className='text-xl font-medium'>Git Stash Management</h3>
-          <p className='text-muted-foreground mb-4'>
-            Temporarily save work in progress with Git stash operations:
-          </p>
+          <p className='text-muted-foreground mb-4'>Temporarily save work in progress with Git stash operations:</p>
           <div className='grid md:grid-cols-2 gap-4'>
             <FeatureScreenshot
               src='/assets/screenshots/git-stash-management.webp'

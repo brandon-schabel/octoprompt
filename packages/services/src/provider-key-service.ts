@@ -3,7 +3,15 @@ import {
   CreateProviderKeyInputSchema,
   type ProviderKey,
   ProviderKeySchema,
-  type UpdateProviderKeyInput
+  type UpdateProviderKeyInput,
+  type TestProviderRequest,
+  type TestProviderResponse,
+  type BatchTestProviderRequest,
+  type BatchTestProviderResponse,
+  type ProviderHealthStatus,
+  type ProviderModel,
+  ProviderStatusEnum,
+  ProviderHealthStatusEnum
 } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 import { z } from '@hono/zod-openapi'
@@ -86,7 +94,7 @@ export function createProviderKeyService() {
 
     allKeys[validatedNewKey.id] = validatedNewKey
     await providerKeyStorage.writeProviderKeys(allKeys)
-    
+
     // Return the key with decrypted value (similar to getKeyById)
     return { ...validatedNewKey, key: data.key }
   }
@@ -244,9 +252,14 @@ export function createProviderKeyService() {
     const validatedUpdatedKey = parseResult.data
     allKeys[id] = validatedUpdatedKey
     await providerKeyStorage.writeProviderKeys(allKeys)
-    
+
     // Return the key with decrypted value (similar to getKeyById)
-    if (validatedUpdatedKey.encrypted && validatedUpdatedKey.iv && validatedUpdatedKey.tag && validatedUpdatedKey.salt) {
+    if (
+      validatedUpdatedKey.encrypted &&
+      validatedUpdatedKey.iv &&
+      validatedUpdatedKey.tag &&
+      validatedUpdatedKey.salt
+    ) {
       try {
         const decryptedKey = await decryptKey({
           encrypted: validatedUpdatedKey.key,
@@ -260,7 +273,7 @@ export function createProviderKeyService() {
         throw new ApiError(500, `Failed to decrypt provider key`, 'PROVIDER_KEY_DECRYPTION_FAILED', { id })
       }
     }
-    
+
     return validatedUpdatedKey
   }
 
@@ -275,13 +288,265 @@ export function createProviderKeyService() {
     return true
   }
 
+  async function testProvider(request: TestProviderRequest): Promise<TestProviderResponse> {
+    const startTime = Date.now()
+    const testedAt = normalizeToUnixMs(new Date())
+
+    try {
+      // Test connection based on provider type
+      const result = await performProviderTest(request)
+      const responseTime = Date.now() - startTime
+
+      return {
+        success: true,
+        provider: request.provider,
+        status: 'connected',
+        models: result.models,
+        responseTime,
+        testedAt
+      }
+    } catch (error) {
+      const responseTime = Date.now() - startTime
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+
+      return {
+        success: false,
+        provider: request.provider,
+        status: 'error',
+        models: [],
+        responseTime,
+        error: errorMessage,
+        testedAt
+      }
+    }
+  }
+
+  async function batchTestProviders(request: BatchTestProviderRequest): Promise<BatchTestProviderResponse> {
+    const startTime = Date.now()
+    let results: TestProviderResponse[]
+
+    if (request.parallel) {
+      // Run tests in parallel
+      results = await Promise.all(request.providers.map(testProvider))
+    } else {
+      // Run tests sequentially
+      results = []
+      for (const providerRequest of request.providers) {
+        const result = await testProvider(providerRequest)
+        results.push(result)
+      }
+    }
+
+    const totalTime = Date.now() - startTime
+
+    // Calculate summary
+    const summary = {
+      connected: results.filter((r) => r.status === 'connected').length,
+      disconnected: results.filter((r) => r.status === 'disconnected').length,
+      error: results.filter((r) => r.status === 'error').length
+    }
+
+    return {
+      results,
+      summary,
+      totalTime
+    }
+  }
+
+  async function getProviderHealthStatus(refresh: boolean = false): Promise<ProviderHealthStatus[]> {
+    // Get all configured provider keys
+    const allKeys = await listKeysUncensored()
+    const providerMap = new Map<string, ProviderKey>()
+
+    // Get the default or first key for each provider
+    for (const key of allKeys) {
+      if (!providerMap.has(key.provider) || key.isDefault) {
+        providerMap.set(key.provider, key)
+      }
+    }
+
+    const healthStatuses: ProviderHealthStatus[] = []
+
+    for (const [provider, key] of providerMap) {
+      try {
+        if (refresh) {
+          // Perform fresh health check
+          const testRequest: TestProviderRequest = {
+            provider,
+            apiKey: key.key,
+            timeout: 5000 // Short timeout for health checks
+          }
+
+          const testResult = await testProvider(testRequest)
+
+          healthStatuses.push({
+            provider,
+            status: testResult.success ? 'healthy' : 'unhealthy',
+            lastChecked: testResult.testedAt,
+            uptime: testResult.success ? 100 : 0, // Simplified uptime calculation
+            averageResponseTime: testResult.responseTime,
+            modelCount: testResult.models.length
+          })
+        } else {
+          // Return cached/estimated health status based on key data
+          healthStatuses.push({
+            provider,
+            status: key.isActive ? 'healthy' : 'unknown',
+            lastChecked: key.lastUsed || key.updated,
+            uptime: key.isActive ? 99.8 : 0, // Estimated uptime
+            averageResponseTime: 1000, // Default estimate
+            modelCount: 0 // Unknown without fresh check
+          })
+        }
+      } catch (error) {
+        // Failed to check this provider
+        healthStatuses.push({
+          provider,
+          status: 'unhealthy',
+          lastChecked: normalizeToUnixMs(new Date()),
+          uptime: 0,
+          averageResponseTime: 0,
+          modelCount: 0
+        })
+      }
+    }
+
+    return healthStatuses
+  }
+
+  /**
+   * Internal helper function to perform the actual provider test
+   */
+  async function performProviderTest(request: TestProviderRequest): Promise<{ models: ProviderModel[] }> {
+    const { provider, apiKey, url, timeout = 10000 } = request
+
+    // Create fetch with timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+    try {
+      let response: Response
+      let models: ProviderModel[] = []
+
+      switch (provider) {
+        case 'openai':
+          if (!apiKey) {
+            throw new ApiError(400, 'API key required for OpenAI provider', 'MISSING_API_KEY')
+          }
+          response = await fetch('https://api.openai.com/v1/models', {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            signal: controller.signal
+          })
+          if (!response.ok) {
+            throw new ApiError(response.status, `OpenAI API error: ${response.statusText}`, 'PROVIDER_API_ERROR')
+          }
+          const openaiData = await response.json()
+          models =
+            openaiData.data?.map((model: any) => ({
+              id: model.id,
+              name: model.id,
+              description: `OpenAI model: ${model.id}`
+            })) || []
+          break
+
+        case 'anthropic':
+          if (!apiKey) {
+            throw new ApiError(400, 'API key required for Anthropic provider', 'MISSING_API_KEY')
+          }
+          // Anthropic doesn't have a direct models endpoint, so we'll test with a simple request
+          response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 1,
+              messages: [{ role: 'user', content: 'test' }]
+            }),
+            signal: controller.signal
+          })
+          // Even if we get a specific error, if we get a 200 or auth-related error, the key is working
+          if (response.ok || response.status === 400) {
+            models = [
+              { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: 'Most intelligent model' },
+              { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', description: 'Fastest model' },
+              { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', description: 'Powerful model for complex tasks' }
+            ]
+          } else if (response.status === 401) {
+            throw new ApiError(401, 'Invalid Anthropic API key', 'INVALID_API_KEY')
+          } else {
+            throw new ApiError(response.status, `Anthropic API error: ${response.statusText}`, 'PROVIDER_API_ERROR')
+          }
+          break
+
+        case 'ollama':
+          const ollamaUrl = url || 'http://localhost:11434'
+          response = await fetch(`${ollamaUrl}/api/tags`, {
+            signal: controller.signal
+          })
+          if (!response.ok) {
+            throw new ApiError(
+              response.status,
+              `Ollama connection error: ${response.statusText}`,
+              'PROVIDER_CONNECTION_ERROR'
+            )
+          }
+          const ollamaData = await response.json()
+          models =
+            ollamaData.models?.map((model: any) => ({
+              id: model.name,
+              name: model.name,
+              description: `Ollama model: ${model.name}`
+            })) || []
+          break
+
+        case 'lmstudio':
+          const lmstudioUrl = url || 'http://localhost:1234'
+          response = await fetch(`${lmstudioUrl}/v1/models`, {
+            signal: controller.signal
+          })
+          if (!response.ok) {
+            throw new ApiError(
+              response.status,
+              `LMStudio connection error: ${response.statusText}`,
+              'PROVIDER_CONNECTION_ERROR'
+            )
+          }
+          const lmstudioData = await response.json()
+          models =
+            lmstudioData.data?.map((model: any) => ({
+              id: model.id,
+              name: model.id,
+              description: `LMStudio model: ${model.id}`
+            })) || []
+          break
+
+        default:
+          throw new ApiError(400, `Unsupported provider: ${provider}`, 'UNSUPPORTED_PROVIDER')
+      }
+
+      return { models }
+    } finally {
+      clearTimeout(timeoutId)
+    }
+  }
+
   return {
     createKey,
     listKeysCensoredKeys,
     listKeysUncensored,
     getKeyById,
     updateKey,
-    deleteKey
+    deleteKey,
+    testProvider,
+    batchTestProviders,
+    getProviderHealthStatus
   }
 }
 

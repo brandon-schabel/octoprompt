@@ -1,6 +1,14 @@
 import { useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Textarea } from '@ui'
-import { Button } from '@ui'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Textarea
+} from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
 
 interface PromptimizerDialogProps {
   open: boolean

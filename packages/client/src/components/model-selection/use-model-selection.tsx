@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect } from 'react'
 import { APIProviders } from '@promptliano/schemas'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
+import { useAppSettings } from '@/hooks/use-kv-local-storage'
 
 export interface UseModelSelectionOptions {
   defaultProvider?: APIProviders
@@ -35,8 +36,17 @@ export function useModelSelection(options: UseModelSelectionOptions = {}): UseMo
     ? useLocalStorage<string>(`${persistenceKey}_model`, defaultModel)
     : useState<string>(defaultModel)
 
+  // Get app settings for provider URLs
+  const [appSettings] = useAppSettings()
+
+  // Prepare URL options based on provider
+  const urlOptions = {
+    ...(provider === 'ollama' && appSettings.ollamaGlobalUrl ? { ollamaUrl: appSettings.ollamaGlobalUrl } : {}),
+    ...(provider === 'lmstudio' && appSettings.lmStudioGlobalUrl ? { lmstudioUrl: appSettings.lmStudioGlobalUrl } : {})
+  }
+
   // Fetch available models for the current provider
-  const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider)
+  const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider, urlOptions)
 
   const availableModels =
     modelsData?.data.map((m) => ({

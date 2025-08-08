@@ -7,8 +7,8 @@
 
 import React, { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Badge } from '@/components/ui/badge'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Badge } from '@promptliano/ui'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { Loader2, WifiOff, Wifi } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { promptlianoClient } from '@/hooks/promptliano-client'

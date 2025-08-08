@@ -1,5 +1,14 @@
 import { useState, useMemo } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Input, Button } from '@ui'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Input,
+  Button
+} from '@promptliano/ui'
 import { AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 

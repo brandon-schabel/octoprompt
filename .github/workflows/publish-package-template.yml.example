@@ -1,0 +1,46 @@
+# Example template for publishing a new package using the reusable workflow
+# Copy this file and customize for your package
+
+name: Publish [PACKAGE_NAME] Package
+
+on:
+  push:
+    tags:
+      - '[PACKAGE_PREFIX]-v*.*.*'  # e.g., 'schemas-v*.*.*' for @promptliano/schemas
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/[PACKAGE_DIR]/**'
+      - '.github/workflows/publish-[PACKAGE_NAME].yml'
+      - '.github/workflows/publish-npm-package.reusable.yml'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g., [PACKAGE_PREFIX]-v1.0.0)'
+        required: true
+        type: string
+
+# Prevent concurrent executions for the same ref
+concurrency:
+  group: publish-[PACKAGE_NAME]-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-[PACKAGE_NAME]:
+    name: Publish @promptliano/[PACKAGE_NAME]
+    uses: ./.github/workflows/publish-npm-package.reusable.yml
+    with:
+      package-path: packages/[PACKAGE_DIR]
+      package-name: '@promptliano/[PACKAGE_NAME]'
+      build-command: 'bun run build'           # Customize if needed
+      test-command: 'bun test'                 # Or 'bun run typecheck' if no tests
+      generate-types: true                     # Set to false if not TypeScript
+      types-command: ''                        # Leave empty if tsup handles it
+      npm-access: 'public'                     # Or 'restricted' for private packages
+      bun-version: 'latest'
+      build-output-dir: 'dist'                 # Customize based on build output
+      build-output-file: 'dist/index.js'       # Main entry point
+      run-tests: true                          # Set to false to skip tests
+      version-tag-prefix: '[PACKAGE_PREFIX]-v' # Must match the tag pattern above
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

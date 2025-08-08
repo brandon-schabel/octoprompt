@@ -94,7 +94,9 @@ export class FileSearchService {
 
     try {
       // Debug: Check if FTS5 tables have any data
-      const ftsCount = this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE project_id = ?').get(projectId) as any
+      const ftsCount = this.db
+        .prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE project_id = ?')
+        .get(projectId) as any
       console.log(`[FileSearchService] FTS5 table has ${ftsCount?.count || 0} entries for project ${projectId}`)
       // Generate cache key
       const cacheKey = this.generateCacheKey(projectId, options)
@@ -321,17 +323,21 @@ export class FileSearchService {
    */
   private async regexSearch(projectId: number, options: SearchOptions): Promise<SearchResult[]> {
     // Get files from FTS table instead of project service
-    const ftsFiles = this.db.prepare(`
+    const ftsFiles = this.db
+      .prepare(
+        `
       SELECT file_id, project_id, path, name, extension, content
       FROM file_search_fts
       WHERE project_id = ?
-    `).all(projectId) as any[]
-    
+    `
+      )
+      .all(projectId) as any[]
+
     if (!ftsFiles || ftsFiles.length === 0) {
       console.warn(`[FileSearchService] No files to search for project ${projectId}`)
       return []
     }
-    
+
     const results: SearchResult[] = []
 
     let regex: RegExp
@@ -339,11 +345,14 @@ export class FileSearchService {
       regex = new RegExp(options.query, options.caseSensitive ? 'g' : 'gi')
     } catch (error) {
       console.error(`[FileSearchService] Invalid regex pattern: ${options.query}`, error)
-      throw new ApiError(400, `Invalid regex pattern: ${error instanceof Error ? error.message : 'Unknown error'}`, 'INVALID_REGEX')
+      throw new ApiError(
+        400,
+        `Invalid regex pattern: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'INVALID_REGEX'
+      )
     }
-    
-    try {
 
+    try {
       for (const ftsFile of ftsFiles) {
         if (options.fileTypes && options.fileTypes.length > 0) {
           if (!options.fileTypes.includes(ftsFile.extension || '')) {
@@ -398,23 +407,26 @@ export class FileSearchService {
     console.log(`[FileSearchService] Semantic search: query="${query}", tokens=`, queryTokens)
 
     // Build FTS5 query with proper escaping and prefix matching
-    const ftsQuery = queryTokens.map((token) => {
-      // Remove special FTS5 characters completely
-      const cleaned = token.replace(/[^\w\s-]/g, '').trim()
-      // Skip empty tokens after cleaning
-      if (!cleaned || cleaned.length < 2) return null
-      // Use prefix matching for better results
-      return `${cleaned}*`
-    }).filter(Boolean).join(' OR ')
-    
+    const ftsQuery = queryTokens
+      .map((token) => {
+        // Remove special FTS5 characters completely
+        const cleaned = token.replace(/[^\w\s-]/g, '').trim()
+        // Skip empty tokens after cleaning
+        if (!cleaned || cleaned.length < 2) return null
+        // Use prefix matching for better results
+        return `${cleaned}*`
+      })
+      .filter(Boolean)
+      .join(' OR ')
+
     // Handle empty query after filtering
     if (!ftsQuery) {
       console.log(`[FileSearchService] Empty FTS5 query after escaping, returning no results`)
       return []
     }
-    
+
     console.log(`[FileSearchService] FTS5 query: ${ftsQuery}`)
-    
+
     // Debug: Test direct FTS5 matching without project filter
     const testMatch = this.db
       .prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE file_search_fts MATCH ?')
@@ -453,7 +465,7 @@ export class FileSearchService {
     for (const result of ftsResults) {
       const fileData = await this.getFileData(result.file_id)
       if (!fileData) continue
-      
+
       // Apply file type filter if specified
       if (options.fileTypes && options.fileTypes.length > 0) {
         if (!options.fileTypes.includes(fileData.extension || '')) {
@@ -464,7 +476,7 @@ export class FileSearchService {
       const ftsScore = Math.abs(result.rank)
       let keywordScore = 0
       let semanticScore = 0
-      
+
       try {
         if (result.keyword_vector) {
           try {
@@ -479,9 +491,10 @@ export class FileSearchService {
         if (result.tf_idf_vector) {
           try {
             // tf_idf_vector is stored as BLOB, need to convert to string first
-            const vectorStr = result.tf_idf_vector instanceof Uint8Array 
-              ? new TextDecoder().decode(result.tf_idf_vector)
-              : result.tf_idf_vector
+            const vectorStr =
+              result.tf_idf_vector instanceof Uint8Array
+                ? new TextDecoder().decode(result.tf_idf_vector)
+                : result.tf_idf_vector
             const vector = JSON.parse(vectorStr)
             if (typeof vector === 'object' && vector !== null) {
               semanticScore = this.calculateSemanticScore(queryTokens, vector)
@@ -513,29 +526,30 @@ export class FileSearchService {
   private async ensureIndexed(projectId: number): Promise<void> {
     try {
       console.log(`[FileSearchService] Ensuring files are indexed for project ${projectId}`)
-      
+
       // First get the actual files for the project
       const files = await getProjectFiles(projectId)
-      
+
       if (!files || files.length === 0) {
         console.warn(`[FileSearchService] No files found for project ${projectId}`)
         return
       }
-      
+
       const stats = await fileIndexingService.getIndexingStats(projectId)
       console.log(`[FileSearchService] Indexing stats:`, stats)
       console.log(`[FileSearchService] Total files in project: ${files.length}`)
-      
+
       // Calculate actual coverage percentage
       const coveragePercentage = files.length > 0 ? (stats.indexedFiles / files.length) * 100 : 0
       console.log(`[FileSearchService] Index coverage: ${coveragePercentage.toFixed(1)}%`)
-      
+
       // Check if we need to index: less than 80% coverage, no indexed files, or stale index (>24h)
-      const needsIndexing = stats.indexedFiles === 0 || 
-                           coveragePercentage < 80 ||
-                           !stats.lastIndexed || 
-                           Date.now() - stats.lastIndexed > 24 * 60 * 60 * 1000
-      
+      const needsIndexing =
+        stats.indexedFiles === 0 ||
+        coveragePercentage < 80 ||
+        !stats.lastIndexed ||
+        Date.now() - stats.lastIndexed > 24 * 60 * 60 * 1000
+
       if (needsIndexing) {
         console.log(`[FileSearchService] Project ${projectId} needs indexing. Reason:`)
         if (stats.indexedFiles === 0) console.log(`  - No files indexed`)
@@ -544,12 +558,14 @@ export class FileSearchService {
         if (stats.lastIndexed && Date.now() - stats.lastIndexed > 24 * 60 * 60 * 1000) {
           console.log(`  - Index is stale (last indexed: ${new Date(stats.lastIndexed).toISOString()})`)
         }
-        
+
         console.log(`[FileSearchService] Indexing ${files.length} files...`)
         const result = await fileIndexingService.indexFiles(files)
         console.log(`[FileSearchService] Indexing complete:`, result)
       } else {
-        console.log(`[FileSearchService] Project ${projectId} already indexed (${stats.indexedFiles}/${files.length} files)`)
+        console.log(
+          `[FileSearchService] Project ${projectId} already indexed (${stats.indexedFiles}/${files.length} files)`
+        )
       }
     } catch (error) {
       console.error(`[FileSearchService] Error ensuring files indexed for project ${projectId}:`, error)
@@ -710,12 +726,16 @@ export class FileSearchService {
   private async getFileData(fileId: string | number): Promise<ProjectFile | null> {
     try {
       // First try to get from FTS table which has basic file info
-      const ftsData = this.db.prepare(`
+      const ftsData = this.db
+        .prepare(
+          `
         SELECT file_id, project_id, path, name, extension, content
         FROM file_search_fts 
         WHERE file_id = ?
-      `).get(String(fileId)) as any
-      
+      `
+        )
+        .get(String(fileId)) as any
+
       if (!ftsData) {
         console.warn(`No file info found in FTS index for file ID: ${fileId}`)
         return null
@@ -736,11 +756,15 @@ export class FileSearchService {
 
       // Fallback: construct basic ProjectFile from FTS data
       console.log(`[FileSearchService] Using FTS data for file ${fileId} (project files not available)`)
-      const metadata = this.db.prepare(`
+      const metadata = this.db
+        .prepare(
+          `
         SELECT file_size, created_at, updated_at 
         FROM file_search_metadata 
         WHERE file_id = ?
-      `).get(String(fileId)) as any
+      `
+        )
+        .get(String(fileId)) as any
 
       return {
         id: ftsData.file_id,
@@ -845,21 +869,21 @@ export class FileSearchService {
     processed = processed.replace(/([a-z])([A-Z])/g, '$1 $2')
     // Split snake_case and kebab-case
     processed = processed.replace(/[_-]/g, ' ')
-    
+
     const tokens = processed
       .toLowerCase()
       .split(/\s+/)
-      .map(token => token.trim())
+      .map((token) => token.trim())
       .filter((token) => token.length > 1) // Allow 2-letter tokens
       .filter((token) => !/^(and|or|not|the|is|at|which|on|in|of|to|for|a|an)$/.test(token))
-    
+
     // Also include original tokens in case they're important
     const originalTokens = query
       .toLowerCase()
       .split(/\s+/)
-      .map(token => token.trim())
+      .map((token) => token.trim())
       .filter((token) => token.length > 1)
-    
+
     // Combine and deduplicate
     return [...new Set([...tokens, ...originalTokens])]
   }
@@ -883,7 +907,7 @@ export class FileSearchService {
    */
   private extractTopKeywords(keywordVector: string | null | undefined): string[] {
     if (!keywordVector) return []
-    
+
     try {
       const keywords = JSON.parse(keywordVector)
       if (Array.isArray(keywords)) {
@@ -917,33 +941,36 @@ export class FileSearchService {
   /**
    * Public diagnostic method to debug search issues
    */
-  async debugSearch(projectId: number, query?: string): Promise<{
+  async debugSearch(
+    projectId: number,
+    query?: string
+  ): Promise<{
     indexStats: any
     ftsContent: any
     sampleSearch?: any
     recommendations: string[]
   }> {
     const recommendations: string[] = []
-    
+
     // Get index stats
     const indexStats = await fileIndexingService.getIndexingStats(projectId)
-    
+
     // Get FTS5 content
     const ftsContent = await this.debugFTS5Contents(projectId)
-    
+
     // Check for common issues
     if (indexStats.indexedFiles === 0) {
       recommendations.push('No files are indexed. Run file sync or force reindex.')
     }
-    
+
     if (ftsContent.ftsCount === 0) {
       recommendations.push('FTS5 table is empty. Check if indexing is completing successfully.')
     }
-    
+
     if (ftsContent.ftsCount !== ftsContent.metadataCount) {
       recommendations.push(`FTS5 and metadata table mismatch: ${ftsContent.ftsCount} vs ${ftsContent.metadataCount}`)
     }
-    
+
     // Try a sample search if query provided
     let sampleSearch
     if (query) {
@@ -957,7 +984,7 @@ export class FileSearchService {
         recommendations.push(`Search failed: ${sampleSearch.error}`)
       }
     }
-    
+
     return {
       indexStats,
       ftsContent,
@@ -977,19 +1004,27 @@ export class FileSearchService {
     sampleMetadataRows: any[]
   }> {
     const ftsCount = (this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts').get() as any).count
-    const projectFTSCount = (this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE project_id = ?').get(projectId) as any).count
-    const metadataCount = (this.db.prepare('SELECT COUNT(*) as count FROM file_search_metadata WHERE project_id = ?').get(projectId) as any).count
-    
-    const sampleFTSRows = this.db.prepare('SELECT file_id, project_id, path, name FROM file_search_fts WHERE project_id = ? LIMIT 5').all(projectId)
-    const sampleMetadataRows = this.db.prepare('SELECT file_id, last_indexed, token_count FROM file_search_metadata WHERE project_id = ? LIMIT 5').all(projectId)
-    
+    const projectFTSCount = (
+      this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE project_id = ?').get(projectId) as any
+    ).count
+    const metadataCount = (
+      this.db.prepare('SELECT COUNT(*) as count FROM file_search_metadata WHERE project_id = ?').get(projectId) as any
+    ).count
+
+    const sampleFTSRows = this.db
+      .prepare('SELECT file_id, project_id, path, name FROM file_search_fts WHERE project_id = ? LIMIT 5')
+      .all(projectId)
+    const sampleMetadataRows = this.db
+      .prepare('SELECT file_id, last_indexed, token_count FROM file_search_metadata WHERE project_id = ? LIMIT 5')
+      .all(projectId)
+
     console.log('[FileSearchService] Debug FTS5 Contents:')
     console.log(`- Total FTS5 rows: ${ftsCount}`)
     console.log(`- Project ${projectId} FTS5 rows: ${projectFTSCount}`)
     console.log(`- Project ${projectId} metadata rows: ${metadataCount}`)
     console.log('- Sample FTS5 rows:', sampleFTSRows)
     console.log('- Sample metadata rows:', sampleMetadataRows)
-    
+
     return {
       ftsCount,
       metadataCount,

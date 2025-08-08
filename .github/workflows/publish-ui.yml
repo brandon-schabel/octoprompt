@@ -1,0 +1,42 @@
+name: Publish UI Package
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Trigger on repo-wide version tags
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/ui/**'
+      - '.github/workflows/publish-ui.yml'
+      - '.github/workflows/publish-npm-package.reusable.yml'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g., v0.8.4)'
+        required: true
+        type: string
+
+# Prevent concurrent executions for the same ref
+concurrency:
+  group: publish-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-ui:
+    name: Publish @promptliano/ui
+    uses: ./.github/workflows/publish-npm-package.reusable.yml
+    with:
+      package-path: packages/ui
+      package-name: '@promptliano/ui'
+      build-command: 'bun run build'
+      test-command: 'bun run typecheck'
+      generate-types: false # We generate types as part of the build
+      npm-access: 'public'
+      bun-version: 'latest'
+      build-output-dir: 'dist'
+      build-output-file: 'dist/index.mjs'
+      run-tests: true
+      version-tag-prefix: 'v'
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

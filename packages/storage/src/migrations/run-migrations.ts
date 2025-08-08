@@ -3,6 +3,18 @@ import { addFTS5SearchMigration } from './002-add-fts5-search'
 import { addMCPTrackingMigration } from './003-mcp-tracking'
 import { addJobQueueMigration } from './004-job-queue'
 import { addClaudeAgentsMigration } from './005-claude-agents'
+import { ticketsTasksColumnsMigration } from './006-tickets-tasks-columns'
+import { ticketsTasksNotNullMigration } from './007-tickets-tasks-not-null'
+import { projectsColumnsMigration } from './008-projects-columns'
+import { providerKeysColumnsMigration } from './009-provider-keys-columns'
+import { promptsColumnsMigration } from './010-prompts-columns'
+import { promptProjectsColumnsMigration } from './011-prompt-projects-columns'
+import { projectFilesColumnsMigration } from './012-project-files-columns'
+import { removeAgentProjectsTableMigration } from './013-remove-agent-projects'
+import { chatTablesColumnsMigration } from './014-chat-tables-columns'
+import { taskQueueSystemMigration } from './015-task-queue-system'
+import { kanbanBoardEnhancementsMigration } from './016-kanban-board-enhancements'
+import { unifiedFlowSystemMigration } from './017-unified-flow-system'
 import type { Database } from 'bun:sqlite'
 
 interface Migration {
@@ -18,7 +30,19 @@ const migrations: Migration[] = [
   addFTS5SearchMigration,
   addMCPTrackingMigration,
   addJobQueueMigration,
-  addClaudeAgentsMigration
+  addClaudeAgentsMigration,
+  ticketsTasksColumnsMigration,
+  ticketsTasksNotNullMigration,
+  projectsColumnsMigration,
+  providerKeysColumnsMigration,
+  promptsColumnsMigration,
+  promptProjectsColumnsMigration,
+  projectFilesColumnsMigration,
+  removeAgentProjectsTableMigration,
+  chatTablesColumnsMigration,
+  taskQueueSystemMigration,
+  kanbanBoardEnhancementsMigration,
+  unifiedFlowSystemMigration
 ]
 
 /**

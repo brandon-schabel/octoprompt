@@ -1,15 +1,16 @@
 import React, { useMemo, useCallback } from 'react'
 import { useGetTicketsWithTasks, useDeleteTicket } from '@/hooks/api/use-tickets-api'
-import { Button } from '@ui'
-import { Input } from '@ui'
-import { Badge } from '@ui'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@promptliano/ui'
 import { Copy, Filter, FileText, Trash2, ExternalLink } from 'lucide-react'
-import { ScrollArea } from '@ui'
+import { ScrollArea } from '@promptliano/ui'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { buildTicketContent } from './utils/ticket-utils'
-import { Progress } from '@ui'
+import { Progress } from '@promptliano/ui'
+import { QueueBadge } from '../queues/queue-badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +20,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from '@ui'
+} from '@promptliano/ui'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { TicketWithTasks } from '@promptliano/schemas'
@@ -262,9 +263,12 @@ export function TicketListPanel({ projectTabId, onSelectTicket, onCreateTicket }
               >
                 <div className='flex items-center justify-between'>
                   <h2 className='font-semibold'>{ticket.ticket.title}</h2>
-                  <Badge variant='secondary'>
-                    {completedTasks}/{totalTasks} tasks
-                  </Badge>
+                  <div className='flex items-center gap-2'>
+                    {ticket.ticket.queueId && <QueueBadge item={ticket.ticket} projectId={projectId} size='sm' />}
+                    <Badge variant='secondary'>
+                      {completedTasks}/{totalTasks} tasks
+                    </Badge>
+                  </div>
                 </div>
                 <div className='mt-1 text-sm text-muted-foreground'>{snippet(ticket.ticket.overview ?? '', 100)}</div>
                 <div className='mt-2 mb-2'>

@@ -47,7 +47,14 @@ export const projectTabStateSchema = z
       .optional()
       .default('')
       .openapi({ description: 'Current search query for files within this project tab.', example: 'userService' }),
-    selectedFiles: idArraySchemaSpec.default([]),
+    selectedFiles: idArraySchemaSpec.default([]), // DEPRECATED: For backward compatibility only
+    selectedFilePaths: z
+      .array(z.string())
+      .default([])
+      .openapi({
+        description: 'Array of file paths for selected files. More stable than IDs which change on file updates.',
+        example: ['src/index.ts', 'src/components/App.tsx']
+      }),
     selectedPrompts: idArraySchemaSpec.default([]),
     userPrompt: z.string().optional().default('').openapi({
       description: 'The current user-entered text in the main prompt input for this tab.',
@@ -113,6 +120,14 @@ export const projectTabStateSchema = z
         description: 'A record of user-defined file groups (bookmarks), mapping group names to arrays of file IDs.',
         example: { 'Auth Files': [1, 2] }
       }),
+    bookmarkedFileGroupsPaths: z
+      .record(z.string(), z.array(z.string()))
+      .optional()
+      .default({})
+      .openapi({
+        description: 'Path-based version of bookmarkedFileGroups. Maps group names to arrays of file paths.',
+        example: { 'Auth Files': ['src/auth/login.ts', 'src/auth/logout.ts'] }
+      }),
     sortOrder: z
       .number()
       .optional()
@@ -156,7 +171,61 @@ export const projectTabStateSchema = z
       .boolean()
       .optional()
       .default(false)
-      .openapi({ description: 'Whether Claude Code integration features are enabled for this project.' })
+      .openapi({ description: 'Whether Claude Code integration features are enabled for this project.' }),
+    autoIncludeClaudeMd: z.boolean().optional().default(false).openapi({
+      description: 'DEPRECATED: Use instructionFileSettings instead. Kept for backward compatibility.',
+      example: true
+    }),
+    instructionFileSettings: z
+      .object({
+        autoIncludeEnabled: z.boolean().default(false).openapi({
+          description: 'Master switch to enable auto-inclusion of instruction files',
+          example: true
+        }),
+        fileTypes: z
+          .array(
+            z.enum([
+              'claude', // CLAUDE.md
+              'agents', // AGENTS.md (general agent file standard)
+              'copilot', // copilot-instructions.md, .github/copilot-instructions.md
+              'cursor', // .cursorrules, .cursor/rules.md
+              'aider', // .aider, .aider.conf.yml
+              'codebase', // codebase-instructions.md, AI_INSTRUCTIONS.md
+              'windsurf', // .windsurf/rules.md, .windsurfrules
+              'continue' // .continue/config.json
+            ])
+          )
+          .default(['claude'])
+          .openapi({
+            description: 'Types of instruction files to auto-include',
+            example: ['claude', 'copilot']
+          }),
+        priority: z
+          .enum(['claude', 'agents', 'copilot', 'cursor', 'aider', 'codebase', 'windsurf', 'continue'])
+          .default('claude')
+          .openapi({
+            description: 'Preferred file type when multiple instruction files exist in the same directory',
+            example: 'claude'
+          }),
+        includeGlobal: z.boolean().default(false).openapi({
+          description: 'Whether to include global instruction files from home directory (e.g., ~/.claude/CLAUDE.md)',
+          example: false
+        }),
+        includeProjectRoot: z.boolean().default(true).openapi({
+          description:
+            'Whether to include instruction files from project root (e.g., /CLAUDE.md, /.github/copilot-instructions.md)',
+          example: true
+        }),
+        includeHierarchy: z.boolean().default(true).openapi({
+          description:
+            'Whether to include instruction files from all parent directories up to the project root when selecting a file',
+          example: true
+        })
+      })
+      .optional()
+      .openapi({
+        description: 'Settings for auto-including AI instruction files when selecting files'
+      })
   })
   .openapi('ProjectTabState', {
     description:
@@ -427,6 +496,7 @@ export const createSafeGlobalState = (): GlobalState => ({
       editPromptId: -1,
       fileSearch: '',
       selectedFiles: [],
+      selectedFilePaths: [],
       selectedPrompts: [],
       userPrompt: '',
       searchByContent: false,
@@ -435,13 +505,23 @@ export const createSafeGlobalState = (): GlobalState => ({
       preferredEditor: 'vscode' as const,
       suggestedFileIds: [],
       bookmarkedFileGroups: {},
+      bookmarkedFileGroupsPaths: {},
       sortOrder: 0,
       ticketSearch: '',
       ticketSort: 'created_desc' as const,
       ticketStatusFilter: 'all' as const,
       promptsPanelCollapsed: true,
       selectedFilesCollapsed: false,
-      claudeCodeEnabled: false
+      claudeCodeEnabled: false,
+      autoIncludeClaudeMd: false,
+      instructionFileSettings: {
+        autoIncludeEnabled: false,
+        fileTypes: ['claude'],
+        priority: 'claude' as const,
+        includeGlobal: false,
+        includeProjectRoot: true,
+        includeHierarchy: true
+      }
     }
   },
   projectActiveTabId: 1,

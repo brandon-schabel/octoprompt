@@ -33,16 +33,16 @@ interface UseScrollToSectionOptions {
 
 /**
  * Hook to automatically scroll to a section based on URL search parameters or direct section ID
- * 
+ *
  * @example
  * ```tsx
  * // With TanStack Router search params
  * const search = Route.useSearch()
  * useScrollToSection({ search })
- * 
+ *
  * // Direct section ID
  * useScrollToSection({ section: 'my-section' })
- * 
+ *
  * // Custom URL param
  * useScrollToSection({
  *   search,
@@ -60,18 +60,18 @@ export function useScrollToSection(options: UseScrollToSectionOptions = {}) {
     behavior = 'smooth',
     block = 'start'
   } = options
-  
+
   // Get section from search params or use direct section
   const urlSection = search?.[paramName]
   const sectionId = directSection || urlSection
 
   useEffect(() => {
     if (!sectionId) return
-    
+
     // Small delay to ensure the component is rendered
     setTimeout(() => {
       let element: HTMLElement | null = null
-      
+
       // Map section IDs to their actual element IDs
       if (sectionId === 'mcp-config') {
         element = document.getElementById('mcp-config-section')
@@ -81,7 +81,7 @@ export function useScrollToSection(options: UseScrollToSectionOptions = {}) {
         // For other sections, use the sectionId directly
         element = document.getElementById(sectionId)
       }
-      
+
       if (element) {
         element.scrollIntoView({ behavior, block })
       }

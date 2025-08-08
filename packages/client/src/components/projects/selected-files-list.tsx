@@ -1,13 +1,13 @@
 import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw, Eye } from 'lucide-react'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { Badge } from '@ui'
+import { Badge } from '@promptliano/ui'
 import { FormatTokenCount } from '../format-token-count'
 import { forwardRef, useRef, useState, useImperativeHandle, KeyboardEvent, useMemo, useCallback } from 'react'
-import { Input } from '@ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
-import { ScrollArea } from '@ui'
+import { Input } from '@promptliano/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuShortcut
-} from '@ui'
+} from '@promptliano/ui'
 import { toast } from 'sonner'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { formatShortcut } from '@/lib/shortcuts'
@@ -45,7 +45,17 @@ export type SelectedFilesListRef = {
 
 export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesListProps>(
   ({ onRemoveFile, onNavigateLeft, className = '', projectTabId }, ref) => {
-    const { undo, redo, canUndo, canRedo, clearSelectedFiles, selectedFiles } = useSelectedFiles({
+    const {
+      undo,
+      redo,
+      canUndo,
+      canRedo,
+      clearSelectedFiles,
+      clearRemovedFiles,
+      selectedFiles,
+      selectedFilePaths,
+      isFileSelectedByPath
+    } = useSelectedFiles({
       tabId: projectTabId
     })
     const projectTab = useProjectTabById(projectTabId)
@@ -146,6 +156,11 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         return f && f.name.toLowerCase().includes(filterText.toLowerCase())
       })
     }, [filterText, displayFiles, projectFileMap])
+
+    // Check if there are any removed files
+    const hasRemovedFiles = useMemo(() => {
+      return selectedFiles.some((id) => !projectFileMap.has(id))
+    }, [selectedFiles, projectFileMap])
 
     // Hotkeys for removing files with r + number
     useHotkeys('r+1', () => selectedFiles[0] && onRemoveFile(selectedFiles[0]))
@@ -324,7 +339,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         </Dialog>
 
         <div className={cn('flex flex-col h-full', className)}>
-          <div className='flex items-center gap-2 mb-2 shrink-0'>
+          <div className='flex items-center gap-2 mb-2 flex-shrink-0'>
             <Input
               placeholder='Filter files'
               value={filterText}
@@ -352,6 +367,18 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   <X className='mr-2 h-4 w-4' />
                   <span>Clear Selected Files</span>
                 </DropdownMenuItem>
+
+                {hasRemovedFiles && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      clearRemovedFiles()
+                      toast.success('Cleared removed files')
+                    }}
+                  >
+                    <X className='mr-2 h-4 w-4' />
+                    <span>Clear Removed Files</span>
+                  </DropdownMenuItem>
+                )}
 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -433,11 +460,26 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
             </DropdownMenu>
           </div>
 
-          <ScrollArea className='flex-1 min-h-0'>
+          <ScrollArea className='flex-1 w-full'>
             <div className='pr-3'>
               {filteredFileIds.map((fileId, index) => {
                 const file = projectFileMap.get(fileId)
-                if (!file) return null
+                if (!file) {
+                  // File no longer exists - show placeholder
+                  return (
+                    <div key={fileId} className='flex items-center gap-2 px-3 py-1.5 text-sm opacity-50 line-through'>
+                      <span className='text-muted-foreground'>File removed (ID: {fileId})</span>
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        onClick={() => onRemoveFile(fileId)}
+                        className='h-6 w-6 ml-auto'
+                      >
+                        <X className='h-3 w-3' />
+                      </Button>
+                    </div>
+                  )
+                }
                 const shortcutNumber = index + 1
                 const showShortcut = shortcutNumber <= 9
 

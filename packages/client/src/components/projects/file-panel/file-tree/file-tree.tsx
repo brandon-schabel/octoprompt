@@ -9,16 +9,27 @@ import React, {
   RefObject,
   useMemo
 } from 'react'
-import { Button } from '@ui'
-import { Checkbox } from '@ui'
+import { Button } from '@promptliano/ui'
+import { Checkbox } from '@promptliano/ui'
 import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy, ClipboardList } from 'lucide-react'
 import clsx from 'clsx'
 import { toast } from 'sonner'
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@ui'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@promptliano/ui'
 
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
 import { buildTsconfigAliasMap, getRecursiveImports } from '@promptliano/shared'
+import { useClaudeMdDetection } from '@/hooks/utility-hooks/use-claude-md-detection'
+import { InfoIcon } from 'lucide-react'
 import {
   toggleFile as toggleFileUtil,
   toggleFolder as toggleFolderUtil,
@@ -34,7 +45,7 @@ import { buildNodeContent, buildNodeSummaries } from '@promptliano/shared'
 
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { EditorType, ProjectFile } from '@promptliano/schemas'
+import { GlobalStateEditorType as EditorType, ProjectFile } from '@promptliano/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import { useProjectGitStatus, useStageFiles, useUnstageFiles, useFileDiff } from '@/hooks/api/use-git-api'
@@ -228,7 +239,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
-  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+  const { selectedFiles, selectedFilePaths, selectFiles, projectFileMap, toggleFilePath, isFileSelectedByPath } =
+    useSelectedFiles()
   const resolveImports = projectTabState?.resolveImports ?? false
   const preferredEditor = projectTabState?.preferredEditor ?? 'vscode'
   const { copyToClipboard } = useCopyClipboard()
@@ -236,6 +248,11 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
 
   const { mutate: stageFiles } = useStageFiles(projectId)
   const { mutate: unstageFiles } = useUnstageFiles(projectId)
+
+  // Get CLAUDE.md detection
+  const projectFiles = Array.from(projectFileMap.values())
+  const { getClaudeMdForDirectory } = useClaudeMdDetection(projectFiles)
+  const autoIncludeClaudeMd = projectTabState?.autoIncludeClaudeMd ?? false
 
   // State for loading diff data
   const [loadingDiff, setLoadingDiff] = useState(false)
@@ -249,20 +266,35 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
 
   const folderIndeterminate = isFolder && isFolderPartiallySelected(item.node, selectedFiles)
 
+  // Check if this folder contains CLAUDE.md
+  const folderHasClaudeMd = useMemo(() => {
+    if (!isFolder) return false
+    const folderPath = item.path
+    const claudeMdResult = getClaudeMdForDirectory(folderPath)
+    return claudeMdResult.hasClaudeMd
+  }, [isFolder, item.path, getClaudeMdForDirectory])
+
   const handleToggleFile = useCallback(
     (fileId: number) => {
-      selectFiles(
-        toggleFileUtil(
-          fileId,
-          selectedFiles,
-          resolveImports,
-          projectFileMap,
-          getRecursiveImports,
-          buildTsconfigAliasMap
+      // Use path-based selection if available
+      const file = projectFileMap.get(fileId)
+      if (file && toggleFilePath) {
+        toggleFilePath(file.path)
+      } else {
+        // Fallback to legacy ID-based selection
+        selectFiles(
+          toggleFileUtil(
+            fileId,
+            selectedFiles,
+            resolveImports,
+            projectFileMap,
+            getRecursiveImports,
+            buildTsconfigAliasMap
+          )
         )
-      )
+      }
     },
-    [selectFiles, resolveImports, projectFileMap, selectedFiles]
+    [selectFiles, resolveImports, projectFileMap, selectedFiles, toggleFilePath]
   )
 
   const handleToggleFolder = useCallback(
@@ -391,7 +423,22 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
               }}
             />
             {isFolder ? (
-              <Folder className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
+              <div className='flex items-center gap-1'>
+                <Folder className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
+                {folderHasClaudeMd && autoIncludeClaudeMd && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <InfoIcon className='h-3 w-3 text-blue-500' />
+                    </TooltipTrigger>
+                    <TooltipContent side='right' className='max-w-xs'>
+                      <p>
+                        This folder contains CLAUDE.md which will be auto-included when selecting files from this
+                        directory
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
             ) : (
               <FileIcon className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
             )}
@@ -834,7 +881,8 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
   const rowRefs = useRef<(HTMLDivElement | null)[]>([])
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const [lastFocusedIndex, setLastFocusedIndex] = useState<number>(-1)
-  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+  const { selectedFiles, selectedFilePaths, selectFiles, projectFileMap, toggleFilePath, isFileSelectedByPath } =
+    useSelectedFiles()
   const [projectTabState] = useActiveProjectTab()
   const projectId = projectTabState?.selectedProjectId
 

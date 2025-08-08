@@ -1,4 +1,4 @@
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { Users, MessageSquare, ArrowRight } from 'lucide-react'
 
 interface DiscordWidgetProps {

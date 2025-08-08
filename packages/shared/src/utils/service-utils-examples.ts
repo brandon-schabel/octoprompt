@@ -77,7 +77,7 @@ class MockStorage {
 
 // Example service using the utilities
 class ExampleProviderKeyService {
-  constructor(private storage: MockStorage) { }
+  constructor(private storage: MockStorage) {}
 
   /**
    * Get a provider key by ID, ensuring it exists and user owns it

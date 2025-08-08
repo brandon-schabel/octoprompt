@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { LazyImage } from '@/components/utils/lazy-image'
-import { GlassCard } from './glass-card'
-import { AnimateOnScroll } from './animation-utils'
+import { GlassCard } from '@/components/ui'
+import { AnimateOnScroll } from '@/components/ui'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Screenshot {
@@ -75,12 +75,8 @@ export function ScreenshotGallery({
                 />
                 <div className='absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity'>
                   <div className='absolute bottom-0 left-0 right-0 p-4 text-white'>
-                    {screenshot.title && (
-                      <h4 className='font-semibold mb-1'>{screenshot.title}</h4>
-                    )}
-                    {screenshot.description && (
-                      <p className='text-sm opacity-90'>{screenshot.description}</p>
-                    )}
+                    {screenshot.title && <h4 className='font-semibold mb-1'>{screenshot.title}</h4>}
+                    {screenshot.description && <p className='text-sm opacity-90'>{screenshot.description}</p>}
                   </div>
                 </div>
               </div>
@@ -128,25 +124,22 @@ export function ScreenshotGallery({
             </button>
           )}
 
-          <div
-            className='max-w-6xl max-h-[90vh] w-full'
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className='max-w-6xl max-h-[90vh] w-full' onClick={(e) => e.stopPropagation()}>
             <LazyImage
-              src={screenshots[selectedIndex].src.startsWith('/') ? screenshots[selectedIndex].src : `/assets/screenshots/${screenshots[selectedIndex].src}`}
+              src={
+                screenshots[selectedIndex].src.startsWith('/')
+                  ? screenshots[selectedIndex].src
+                  : `/assets/screenshots/${screenshots[selectedIndex].src}`
+              }
               alt={screenshots[selectedIndex].alt}
               className='w-full h-full object-contain'
               priority
             />
             {screenshots[selectedIndex].title && (
               <div className='mt-4 text-white text-center'>
-                <h3 className='text-xl font-semibold'>
-                  {screenshots[selectedIndex].title}
-                </h3>
+                <h3 className='text-xl font-semibold'>{screenshots[selectedIndex].title}</h3>
                 {screenshots[selectedIndex].description && (
-                  <p className='text-white/80 mt-2'>
-                    {screenshots[selectedIndex].description}
-                  </p>
+                  <p className='text-white/80 mt-2'>{screenshots[selectedIndex].description}</p>
                 )}
               </div>
             )}

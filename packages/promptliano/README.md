@@ -36,11 +36,13 @@ bun add -g promptliano
 ## Quick Start
 
 1. **Run the interactive setup:**
+
    ```bash
    npx promptliano@latest
    ```
-   
+
    Or if installed globally:
+
    ```bash
    promptliano
    ```
@@ -81,6 +83,7 @@ Options:
 ```
 
 Example:
+
 ```bash
 promptliano setup --editor cursor --project /path/to/my-project
 ```
@@ -99,6 +102,7 @@ Options:
 ```
 
 Example:
+
 ```bash
 promptliano config --editor claude --project ./my-project
 ```
@@ -157,6 +161,7 @@ Options:
 ```
 
 The doctor command checks:
+
 - Node.js and Bun versions
 - Installation integrity
 - Server connectivity
@@ -337,6 +342,7 @@ MIT License - see the [LICENSE](../../LICENSE) file for details.
 ## Acknowledgments
 
 Built with:
+
 - [Commander.js](https://github.com/tj/commander.js/) - CLI framework
 - [Inquirer.js](https://github.com/SBoudrias/Inquirer.js/) - Interactive prompts
 - [Chalk](https://github.com/chalk/chalk) - Terminal styling

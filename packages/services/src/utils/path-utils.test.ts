@@ -36,7 +36,7 @@ describe('path-utils', () => {
     it('should convert paths to POSIX format', () => {
       const windowsPath = 'C:\\Users\\test\\file.txt'
       const posixPath = 'C:/Users/test/file.txt'
-      
+
       // This test will behave differently on Windows vs Unix
       const result = toPosixPath(windowsPath)
       if (process.platform === 'win32') {
@@ -59,7 +59,7 @@ describe('path-utils', () => {
     it('should convert POSIX paths to OS format', () => {
       const posixPath = 'C:/Users/test/file.txt'
       const result = toOSPath(posixPath)
-      
+
       if (process.platform === 'win32') {
         expect(result).toBe('C:\\Users\\test\\file.txt')
       } else {
@@ -70,7 +70,7 @@ describe('path-utils', () => {
     it('should handle relative paths', () => {
       const result1 = toOSPath('../parent/file.txt')
       const result2 = toOSPath('./current/file.txt')
-      
+
       if (process.platform === 'win32') {
         expect(result1).toBe('..\\parent\\file.txt')
         expect(result2).toBe('.\\current\\file.txt')
@@ -175,12 +175,12 @@ describe('path-utils', () => {
     it('should handle agent file paths correctly', () => {
       const projectPath = process.platform === 'win32' ? 'C:\\projects\\myapp' : '/home/user/projects/myapp'
       const agentPath = path.join(projectPath, '.claude', 'agents', 'test-agent.md')
-      
+
       // Normalize for storage
       const normalized = toPosixPath(agentPath)
       expect(normalized).toContain('/')
       expect(normalized).not.toContain('\\\\')
-      
+
       // Convert back for OS operations
       const osPath = toOSPath(normalized)
       if (process.platform === 'win32') {
@@ -193,26 +193,27 @@ describe('path-utils', () => {
     it('should handle relative paths for file storage', () => {
       const projectPath = process.platform === 'win32' ? 'C:\\projects\\myapp' : '/home/user/projects/myapp'
       const filePath = path.join(projectPath, 'src', 'components', 'Button.tsx')
-      
+
       // Create relative path for storage
       const relativePath = relativePosix(projectPath, filePath)
       expect(relativePath).toBe('src/components/Button.tsx')
-      
+
       // Ensure no backslashes in stored path
       expect(relativePath).not.toContain('\\')
     })
 
     it('should handle MCP config paths correctly', () => {
-      const scriptPath = process.platform === 'win32' 
-        ? 'C:\\projects\\promptliano\\packages\\server\\mcp-start.bat'
-        : '/home/user/promptliano/packages/server/mcp-start.sh'
-      
+      const scriptPath =
+        process.platform === 'win32'
+          ? 'C:\\projects\\promptliano\\packages\\server\\mcp-start.bat'
+          : '/home/user/promptliano/packages/server/mcp-start.sh'
+
       // For command execution, use OS path
       const execPath = toOSPath(scriptPath)
       if (process.platform === 'win32') {
         expect(execPath).toMatch(/\\/g)
       }
-      
+
       // For storage/transmission, use POSIX path
       const storagePath = toPosixPath(scriptPath)
       expect(storagePath).toMatch(/\//g)

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll } from '@/components/ui'
+import { GlassCard, HeroButton, CodeBlock, AnimateOnScroll } from '@/components/ui'
 import { Code2, Check, Zap, GitBranch, Search, ArrowRight, AlertCircle } from 'lucide-react'
 
 export const Route = createFileRoute('/integrations/claude-code')({
@@ -222,13 +222,13 @@ function ClaudeCodePage() {
           <div className='text-center'>
             <div className='inline-flex gap-4'>
               <Link to='/integrations/setup'>
-                <CTAButton>
+                <HeroButton>
                   Full Setup Guide
                   <ArrowRight className='w-4 h-4 ml-2' />
-                </CTAButton>
+                </HeroButton>
               </Link>
               <Link to='/integrations/config'>
-                <CTAButton variant='ghost'>Configuration Generator</CTAButton>
+                <HeroButton variant='outline'>Configuration Generator</HeroButton>
               </Link>
             </div>
           </div>

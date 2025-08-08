@@ -15,14 +15,14 @@ export function useMigrateDefaultTab() {
     // Check if there's a defaultTab entry (legacy string key)
     if ('defaultTab' in projectTabs) {
       console.log('Migrating legacy defaultTab to numeric ID system')
-      
+
       // Create a copy without the defaultTab
       const { defaultTab, ...validTabs } = projectTabs
-      
+
       // If there are no other tabs, we'll let the user create their first tab
       // Otherwise, just remove the defaultTab
       setProjectTabs(validTabs)
-      
+
       // Store that we've done the migration
       localStorage.setItem('defaultTabMigrated', 'true')
     }

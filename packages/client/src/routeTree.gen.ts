@@ -10,18 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as PromptsRouteImport } from './routes/prompts'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ProjectSummarizationRouteImport } from './routes/project-summarization'
-import { Route as KeysRouteImport } from './routes/keys'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as QueueDashboardQueueIdRouteImport } from './routes/queue-dashboard.$queueId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProvidersRoute = ProvidersRouteImport.update({
+  id: '/providers',
+  path: '/providers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PromptsRoute = PromptsRouteImport.update({
@@ -37,11 +43,6 @@ const ProjectsRoute = ProjectsRouteImport.update({
 const ProjectSummarizationRoute = ProjectSummarizationRouteImport.update({
   id: '/project-summarization',
   path: '/project-summarization',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KeysRoute = KeysRouteImport.update({
-  id: '/keys',
-  path: '/keys',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HealthRoute = HealthRouteImport.update({
@@ -64,28 +65,35 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const QueueDashboardQueueIdRoute = QueueDashboardQueueIdRouteImport.update({
+  id: '/queue-dashboard/$queueId',
+  path: '/queue-dashboard/$queueId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assets': typeof AssetsRoute
   '/chat': typeof ChatRoute
   '/health': typeof HealthRoute
-  '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
+  '/providers': typeof ProvidersRoute
   '/settings': typeof SettingsRoute
+  '/queue-dashboard/$queueId': typeof QueueDashboardQueueIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assets': typeof AssetsRoute
   '/chat': typeof ChatRoute
   '/health': typeof HealthRoute
-  '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
+  '/providers': typeof ProvidersRoute
   '/settings': typeof SettingsRoute
+  '/queue-dashboard/$queueId': typeof QueueDashboardQueueIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,11 +101,12 @@ export interface FileRoutesById {
   '/assets': typeof AssetsRoute
   '/chat': typeof ChatRoute
   '/health': typeof HealthRoute
-  '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
+  '/providers': typeof ProvidersRoute
   '/settings': typeof SettingsRoute
+  '/queue-dashboard/$queueId': typeof QueueDashboardQueueIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,33 +115,36 @@ export interface FileRouteTypes {
     | '/assets'
     | '/chat'
     | '/health'
-    | '/keys'
     | '/project-summarization'
     | '/projects'
     | '/prompts'
+    | '/providers'
     | '/settings'
+    | '/queue-dashboard/$queueId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/assets'
     | '/chat'
     | '/health'
-    | '/keys'
     | '/project-summarization'
     | '/projects'
     | '/prompts'
+    | '/providers'
     | '/settings'
+    | '/queue-dashboard/$queueId'
   id:
     | '__root__'
     | '/'
     | '/assets'
     | '/chat'
     | '/health'
-    | '/keys'
     | '/project-summarization'
     | '/projects'
     | '/prompts'
+    | '/providers'
     | '/settings'
+    | '/queue-dashboard/$queueId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -140,11 +152,12 @@ export interface RootRouteChildren {
   AssetsRoute: typeof AssetsRoute
   ChatRoute: typeof ChatRoute
   HealthRoute: typeof HealthRoute
-  KeysRoute: typeof KeysRoute
   ProjectSummarizationRoute: typeof ProjectSummarizationRoute
   ProjectsRoute: typeof ProjectsRoute
   PromptsRoute: typeof PromptsRoute
+  ProvidersRoute: typeof ProvidersRoute
   SettingsRoute: typeof SettingsRoute
+  QueueDashboardQueueIdRoute: typeof QueueDashboardQueueIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/providers': {
+      id: '/providers'
+      path: '/providers'
+      fullPath: '/providers'
+      preLoaderRoute: typeof ProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prompts': {
@@ -175,13 +195,6 @@ declare module '@tanstack/react-router' {
       path: '/project-summarization'
       fullPath: '/project-summarization'
       preLoaderRoute: typeof ProjectSummarizationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/keys': {
-      id: '/keys'
-      path: '/keys'
-      fullPath: '/keys'
-      preLoaderRoute: typeof KeysRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/health': {
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/queue-dashboard/$queueId': {
+      id: '/queue-dashboard/$queueId'
+      path: '/queue-dashboard/$queueId'
+      fullPath: '/queue-dashboard/$queueId'
+      preLoaderRoute: typeof QueueDashboardQueueIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -220,11 +240,12 @@ const rootRouteChildren: RootRouteChildren = {
   AssetsRoute: AssetsRoute,
   ChatRoute: ChatRoute,
   HealthRoute: HealthRoute,
-  KeysRoute: KeysRoute,
   ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
   PromptsRoute: PromptsRoute,
+  ProvidersRoute: ProvidersRoute,
   SettingsRoute: SettingsRoute,
+  QueueDashboardQueueIdRoute: QueueDashboardQueueIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

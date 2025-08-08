@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useMemo, useRef } from 'react'
-import { Button } from '@ui'
-import { Input } from '@ui'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
+import { Button } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@promptliano/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@promptliano/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
 import { toast } from 'sonner'
 import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetAllPrompts } from '@/hooks/api/use-prompts-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
@@ -14,9 +14,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem
-} from '@ui'
+} from '@promptliano/ui'
 import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
-import { Badge } from '@ui'
+import { Badge } from '@promptliano/ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { Prompt } from '@promptliano/schemas'

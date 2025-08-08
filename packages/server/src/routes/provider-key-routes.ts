@@ -6,10 +6,16 @@ import {
   ProviderKeyIdParamsSchema,
   ProviderKeyResponseSchema,
   ProviderKeyListResponseSchema,
-  ProviderKey
+  ProviderKey,
+  TestProviderRequestSchema,
+  TestProviderApiResponseSchema,
+  BatchTestProviderRequestSchema,
+  BatchTestProviderApiResponseSchema,
+  ProviderHealthStatusListResponseSchema
 } from '@promptliano/schemas'
 import { providerKeyService } from '@promptliano/services'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
+import { updateProviderSettings } from '@promptliano/services'
 
 const createProviderKeyRoute = createRoute({
   method: 'post',
@@ -143,6 +149,139 @@ const deleteProviderKeyRoute = createRoute({
   }
 })
 
+const testProviderRoute = createRoute({
+  method: 'post',
+  path: '/api/providers/test',
+  tags: ['Provider Testing'],
+  summary: 'Test a single provider connection',
+  description: 'Test the connection to a specific AI provider and retrieve available models',
+  request: {
+    body: {
+      content: { 'application/json': { schema: TestProviderRequestSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: TestProviderApiResponseSchema } },
+      description: 'Provider test completed successfully'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Invalid request parameters'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation Error'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
+const batchTestProviderRoute = createRoute({
+  method: 'post',
+  path: '/api/providers/batch-test',
+  tags: ['Provider Testing'],
+  summary: 'Test multiple providers at once',
+  description: 'Test connections to multiple AI providers in parallel or sequentially',
+  request: {
+    body: {
+      content: { 'application/json': { schema: BatchTestProviderRequestSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: BatchTestProviderApiResponseSchema } },
+      description: 'Batch provider tests completed successfully'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Invalid request parameters'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation Error'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
+const providerHealthRoute = createRoute({
+  method: 'get',
+  path: '/api/providers/health',
+  tags: ['Provider Testing'],
+  summary: 'Get health status of all configured providers',
+  description: 'Retrieve health status information for all configured AI providers',
+  request: {
+    query: z.object({
+      refresh: z
+        .string()
+        .optional()
+        .transform((val) => val === 'true')
+        .pipe(z.boolean().optional())
+        .openapi({
+          param: {
+            name: 'refresh',
+            in: 'query',
+            description: 'Force fresh health check instead of using cached data'
+          },
+          example: 'true'
+        })
+    })
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: ProviderHealthStatusListResponseSchema } },
+      description: 'Provider health status retrieved successfully'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
+// Schema for provider settings update
+const ProviderSettingsSchema = z.object({
+  ollamaUrl: z.string().optional(),
+  lmstudioUrl: z.string().optional()
+})
+
+const updateProviderSettingsRoute = createRoute({
+  method: 'put',
+  path: '/api/providers/settings',
+  tags: ['Provider Settings'],
+  summary: 'Update provider settings (URLs for local providers)',
+  description: 'Update custom URLs for local AI providers like Ollama and LMStudio',
+  request: {
+    body: {
+      content: { 'application/json': { schema: ProviderSettingsSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
+      description: 'Provider settings updated successfully'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation Error'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
 export const providerKeyRoutes = new OpenAPIHono()
   .openapi(createProviderKeyRoute, async (c) => {
     const body = c.req.valid('json')
@@ -176,6 +315,44 @@ export const providerKeyRoutes = new OpenAPIHono()
     await providerKeyService.deleteKey(keyId)
     return c.json(
       { success: true, message: 'Key deleted successfully.' } satisfies z.infer<typeof OperationSuccessResponseSchema>,
+      200
+    )
+  })
+
+  .openapi(testProviderRoute, async (c) => {
+    const body = c.req.valid('json')
+    const testResult = await providerKeyService.testProvider(body)
+    return c.json({ success: true, data: testResult } satisfies z.infer<typeof TestProviderApiResponseSchema>, 200)
+  })
+
+  .openapi(batchTestProviderRoute, async (c) => {
+    const body = c.req.valid('json')
+    const batchResult = await providerKeyService.batchTestProviders(body)
+    return c.json(
+      { success: true, data: batchResult } satisfies z.infer<typeof BatchTestProviderApiResponseSchema>,
+      200
+    )
+  })
+
+  .openapi(providerHealthRoute, async (c) => {
+    const { refresh } = c.req.valid('query')
+    const healthStatuses = await providerKeyService.getProviderHealthStatus(refresh)
+    return c.json(
+      { success: true, data: healthStatuses } satisfies z.infer<typeof ProviderHealthStatusListResponseSchema>,
+      200
+    )
+  })
+
+  .openapi(updateProviderSettingsRoute, async (c) => {
+    const body = c.req.valid('json')
+
+    // Update the provider settings with custom URLs
+    updateProviderSettings(body)
+
+    return c.json(
+      { success: true, message: 'Provider settings updated successfully' } satisfies z.infer<
+        typeof OperationSuccessResponseSchema
+      >,
       200
     )
   })

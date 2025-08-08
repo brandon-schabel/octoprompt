@@ -2,16 +2,15 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { projectsSearchSchema, type ProjectsSearch, type ProjectView } from '@/lib/search-schemas'
 import { useRef, useState, useEffect } from 'react'
-import { Button } from '@ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from '@promptliano/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { useGetProjects, useDeleteProject, useGetProject } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { UserInputPanel, type UserInputPanelRef } from '@/components/projects/user-input-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
-import { DraggableThreeColumnPanel, type PanelConfig } from '@/components/ui/draggable-three-column-panel'
-import { ProjectResponse } from '@promptliano/schemas'
+import { DndDraggableThreeColumnPanel as DraggableThreeColumnPanel, type PanelConfig } from '@promptliano/ui'
 import {
   useActiveProjectTab,
   useGetProjectTabs,
@@ -22,11 +21,11 @@ import {
 } from '@/hooks/use-kv-local-storage'
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
-import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@promptliano/ui'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { AssetsTabWithSidebar } from '@/components/assets/assets-tab-with-sidebar'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
-import { TicketsTabWithSidebar } from '@/components/tickets/tickets-tab-with-sidebar'
+import { FlowTabWithSidebar } from '@/components/flow/flow-tab-with-sidebar'
 import { GitTabWithSidebar } from '@/components/projects/git-tab-with-sidebar'
 import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
 import { ClaudeCodeTabWithSidebar } from '@/components/claude-code'
@@ -50,7 +49,24 @@ export function ProjectsPage() {
 
   // Sync active tab with backend
   useActiveTabSync(selectedProjectId)
-  
+
+  // Handle backward compatibility - redirect tickets/queues to flow
+  useEffect(() => {
+    // Cast to string to handle legacy values that might come from URLs
+    const view = search.activeView as string | undefined
+    if (view === 'tickets' || view === 'queues') {
+      navigate({
+        to: '/projects',
+        search: (prev) => ({
+          ...prev,
+          activeView: 'flow',
+          flowView: view === 'queues' ? 'queues' : 'tickets'
+        }),
+        replace: true
+      })
+    }
+  }, [search.activeView, navigate])
+
   // Clear section parameter after navigation
   useEffect(() => {
     if (search.section) {
@@ -148,7 +164,7 @@ export function ProjectsPage() {
             setHasMigrationNotified(true)
           }
         }
-        
+
         // Redirect to new URL structure
         navigate({
           to: '/projects',
@@ -262,19 +278,19 @@ export function ProjectsPage() {
         </div>
         <div className='flex-none px-4 py-1 border-b dark:border-slate-700 grid grid-cols-3 items-center'>
           <div className='justify-self-start'>
-            <ProjectNavigationMenu 
+            <ProjectNavigationMenu
               currentSearch={search}
               activeView={search.activeView || 'context'}
               onViewChange={(value) => {
                 // Ensure the value is valid before navigating
                 const validValue = value as ProjectView
                 const newSearch: any = { ...search, activeView: validValue }
-                
+
                 // If navigating to manage tab, ensure we have a default manageView
                 if (validValue === 'manage' && !search.manageView) {
                   newSearch.manageView = 'statistics'
                 }
-                
+
                 navigate({
                   to: '/projects',
                   search: newSearch,
@@ -287,19 +303,19 @@ export function ProjectsPage() {
             />
           </div>
           <div className='justify-self-center'>
-            <ProjectNavigationMenu 
+            <ProjectNavigationMenu
               currentSearch={search}
               activeView={search.activeView || 'context'}
               onViewChange={(value) => {
                 // Ensure the value is valid before navigating
                 const validValue = value as ProjectView
                 const newSearch: any = { ...search, activeView: validValue }
-                
+
                 // If navigating to manage tab, ensure we have a default manageView
                 if (validValue === 'manage' && !search.manageView) {
                   newSearch.manageView = 'statistics'
                 }
-                
+
                 navigate({
                   to: '/projects',
                   search: newSearch,
@@ -312,17 +328,10 @@ export function ProjectsPage() {
             />
           </div>
           <div className='justify-self-end'>
-            <ProjectSwitcher
-              currentProject={projectData ?? null}
-              onManageProjects={() => setProjectModalOpen(true)}
-            />
+            <ProjectSwitcher currentProject={projectData ?? null} onManageProjects={() => setProjectModalOpen(true)} />
           </div>
         </div>
-        <Tabs
-          value={search.activeView || 'context'}
-          className='flex-1 flex flex-col min-h-0'
-        >
-
+        <Tabs value={search.activeView || 'context'} className='flex-1 flex flex-col min-h-0'>
           <TabsContent value='context' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             <MainProjectsLayout
               filePanelRef={filePanelRef as React.RefObject<FilePanelRef>}
@@ -330,18 +339,19 @@ export function ProjectsPage() {
             />
           </TabsContent>
 
-          <TabsContent value='tickets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+          <TabsContent value='flow' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData && activeProjectTabId ? (
-              <TicketsTabWithSidebar
+              <FlowTabWithSidebar
                 projectId={selectedProjectId}
                 projectName={projectData.name}
                 projectTabId={activeProjectTabId}
-                ticketView={search.ticketView}
+                flowView={search.flowView || search.ticketView || search.queueView}
                 selectedTicketId={search.selectedTicketId}
-                onTicketViewChange={(view) => {
+                selectedQueueId={search.selectedQueueId}
+                onFlowViewChange={(view) => {
                   navigate({
                     to: '/projects',
-                    search: (prev) => ({ ...prev, ticketView: view }),
+                    search: (prev) => ({ ...prev, flowView: view }),
                     replace: true
                   })
                 }}
@@ -352,9 +362,16 @@ export function ProjectsPage() {
                     replace: true
                   })
                 }}
+                onQueueSelect={(queueId) => {
+                  navigate({
+                    to: '/projects',
+                    search: (prev) => ({ ...prev, selectedQueueId: queueId }),
+                    replace: true
+                  })
+                }}
               />
             ) : (
-              <p className='p-4 md:p-6'>No project selected for tickets.</p>
+              <p className='p-4 md:p-6'>No project selected for Flow.</p>
             )}
           </TabsContent>
 
@@ -417,10 +434,18 @@ export function ProjectsPage() {
                   projectId={selectedProjectId}
                   projectName={projectData.name}
                   claudeCodeView={search.claudeCodeView}
+                  sessionId={search.sessionId}
                   onClaudeCodeViewChange={(view) => {
                     navigate({
                       to: '/projects',
                       search: (prev) => ({ ...prev, claudeCodeView: view }),
+                      replace: true
+                    })
+                  }}
+                  onSessionIdChange={(sessionId) => {
+                    navigate({
+                      to: '/projects',
+                      search: (prev) => ({ ...prev, sessionId }),
                       replace: true
                     })
                   }}

@@ -8,11 +8,11 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator
-} from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+} from '@promptliano/ui'
+import { Popover, PopoverContent, PopoverTrigger } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { Skeleton } from '@promptliano/ui'
 import { GitBranch, Star, Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

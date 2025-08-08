@@ -87,13 +87,9 @@ const randomString = (length = 8) =>
 
 describe('Project Service (File Storage)', () => {
   beforeEach(async () => {
-    // Reset the database manager before each test
-    const { DatabaseManager } = await import('@promptliano/storage')
-    DatabaseManager.reset()
-
-    // Get a fresh instance and clear all data
-    const db = DatabaseManager.getInstance()
-    await db.clearAllTables()
+    // Use test utilities to ensure proper database isolation
+    const { clearAllData } = await import('@promptliano/storage')
+    await clearAllData()
 
     // Reset mock call counts
     mockGenerateStructuredData.mockClear()
@@ -102,10 +98,8 @@ describe('Project Service (File Storage)', () => {
 
   afterEach(async () => {
     // Clean up after each test
-    const { DatabaseManager } = await import('@promptliano/storage')
-    const db = DatabaseManager.getInstance()
-    await db.clearAllTables()
-    DatabaseManager.reset()
+    const { clearAllData } = await import('@promptliano/storage')
+    await clearAllData()
 
     // Reset mocks
     mockGenerateStructuredData.mockClear()
@@ -276,7 +270,19 @@ describe('Project Service (File Storage)', () => {
 
       // Verify file was stored in database
       const files = await getProjectFiles(projectId)
-      expect(files).toContainEqual(fileRecord)
+      // Normalize imports/exports for comparison (null becomes [] after storage)
+      const normalizedFileRecord = {
+        ...fileRecord,
+        imports: fileRecord.imports || [],
+        exports: fileRecord.exports || []
+      }
+      expect(
+        files?.map((f) => ({
+          ...f,
+          imports: f.imports || [],
+          exports: f.exports || []
+        }))
+      ).toContainEqual(normalizedFileRecord)
     })
 
     test('createProjectFileRecord throws if project not found', async () => {
@@ -295,7 +301,18 @@ describe('Project Service (File Storage)', () => {
 
       files = await getProjectFiles(projectId)
       expect(files?.length).toBe(2)
-      expect(files).toEqual(expect.arrayContaining([file1, file2]))
+      // Normalize imports/exports for comparison
+      const normalizedFiles = files?.map((f) => ({
+        ...f,
+        imports: f.imports || [],
+        exports: f.exports || []
+      }))
+      const normalizedExpected = [file1, file2].map((f) => ({
+        ...f,
+        imports: f.imports || [],
+        exports: f.exports || []
+      }))
+      expect(normalizedFiles).toEqual(expect.arrayContaining(normalizedExpected))
 
       const noFilesForThis = await getProjectFiles(999999999999)
       expect(noFilesForThis).toBeNull()
@@ -528,11 +545,11 @@ describe('Project Service (File Storage)', () => {
     test('summarizeFiles processes multiple files', async () => {
       const file1_created = await createProjectFileRecord(
         projectId,
-        'summarize-me.js',
+        'summarize-batch1.js',
         'function hello() { console.log("world"); }'
       )
-      const file2_created = await createProjectFileRecord(projectId, 'another.js', 'let x = 10;')
-      const emptyFile_created = await createProjectFileRecord(projectId, 'empty-too.txt', '')
+      const file2_created = await createProjectFileRecord(projectId, 'summarize-batch2.js', 'let x = 10;')
+      const emptyFile_created = await createProjectFileRecord(projectId, 'empty-batch.txt', '')
 
       const result = await summarizeFiles(projectId, [file1_created.id, file2_created.id, emptyFile_created.id])
       expect(result.included).toBe(2)
@@ -544,13 +561,13 @@ describe('Project Service (File Storage)', () => {
     test('removeSummariesFromFiles clears summaries', async () => {
       const file1_created = await createProjectFileRecord(
         projectId,
-        'summarize-me.js',
+        'remove-summary.js',
         'function hello() { console.log("world"); }'
       )
       await summarizeSingleFile(file1_created) // Use the created file object
       expect(mockGenerateStructuredData).toHaveBeenCalledTimes(1)
 
-      const fileWithNoSummary_created = await createProjectFileRecord(projectId, 'no-summary.txt', 'content')
+      const fileWithNoSummary_created = await createProjectFileRecord(projectId, 'no-summary-test.txt', 'content')
       const nonExistentFileId = 999999999999
 
       const { removedCount, message } = await removeSummariesFromFiles(projectId, [

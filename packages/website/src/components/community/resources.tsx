@@ -1,4 +1,4 @@
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { Download, FileText, Package, Code, ArrowRight, ExternalLink } from 'lucide-react'
 import type { DownloadItem, ResourceItem } from '@/schemas/community.schemas'
 

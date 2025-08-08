@@ -224,7 +224,12 @@ export class FileIndexingService {
 
         if (exists) {
           // Update existing entry with preprocessed content
-          this.updateFTSStmt.run(processedContent, file.summary || '', keywords.map((k) => k.keyword).join(' '), String(file.id))
+          this.updateFTSStmt.run(
+            processedContent,
+            file.summary || '',
+            keywords.map((k) => k.keyword).join(' '),
+            String(file.id)
+          )
         } else {
           // Insert new entry with preprocessed content
           this.insertFTSStmt.run(
@@ -352,7 +357,7 @@ export class FileIndexingService {
     processed = processed.replace(/_/g, ' ')
     // Split kebab-case
     processed = processed.replace(/-/g, ' ')
-    
+
     // Split on word boundaries, keeping alphanumeric and some special chars
     const tokens = processed
       .toLowerCase()

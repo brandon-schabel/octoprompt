@@ -1,5 +1,5 @@
-import { MarkdownRenderer } from './markdown-renderer'
-import { ScrollArea } from './ui/scroll-area'
+import { MarkdownRenderer } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 
 interface MarkdownInlinePreviewProps {

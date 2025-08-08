@@ -9,6 +9,18 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import type { MCPServerConfig, MCPTool, MCPResource } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 
+// JSON-RPC response type
+interface JSONRPCResponse {
+  jsonrpc: string
+  id: number | string
+  result?: any
+  error?: {
+    code: number
+    message: string
+    data?: any
+  }
+}
+
 export interface MCPClientOptions {
   config: MCPServerConfig
   onStateChange?: (state: MCPClientState) => void
@@ -107,7 +119,7 @@ export class MCPClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const result = await response.json()
+      const result = (await response.json()) as JSONRPCResponse
       if (result.error) {
         throw new Error(`MCP Error: ${result.error.message}`)
       }
@@ -188,7 +200,7 @@ export class MCPClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const result = await response.json()
+      const result = (await response.json()) as JSONRPCResponse
       if (result.error) {
         throw new Error(`MCP Error: ${result.error.message}`)
       }
@@ -464,7 +476,7 @@ export class MCPClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const result = await response.json()
+      const result = (await response.json()) as JSONRPCResponse
       if (result.error) {
         throw new Error(`MCP Error: ${result.error.message}`)
       }
@@ -591,7 +603,7 @@ This is a mock response from MCP server '${this.config.name}' (ID: ${this.config
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const result = await response.json()
+      const result = (await response.json()) as JSONRPCResponse
       if (result.error) {
         throw new Error(`MCP Error: ${result.error.message}`)
       }
@@ -671,7 +683,7 @@ This is a mock response from MCP server '${this.config.name}' (ID: ${this.config
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const result = await response.json()
+      const result = (await response.json()) as JSONRPCResponse
       if (result.error) {
         throw new Error(`MCP Error: ${result.error.message}`)
       }

@@ -3,7 +3,11 @@ export * from './src/project-service'
 export * from './src/project-statistics-service'
 export * from './src/prompt-service'
 export * from './src/provider-key-service'
+export * from './src/provider-settings-service'
 export * from './src/ticket-service'
+export * from './src/queue-service'
+export * from './src/flow-service'
+export * from './src/queue-state-machine'
 export * from './src/mcp-service'
 export * from './src/git-service'
 export * from './src/active-tab-service'
@@ -47,3 +51,19 @@ export * from './src/mcp-project-config-service'
 export * from './src/mcp-project-server-manager'
 export * from './src/mcp-global-config-service'
 export * from './src/claude-agent-service'
+export * from './src/claude-command-service'
+// Re-export types from schemas for backward compatibility
+export type {
+  CreateClaudeCommandBody,
+  UpdateClaudeCommandBody,
+  SearchCommandsQuery,
+  CommandGenerationRequest,
+  CreateProjectBody,
+  UpdateProjectBody
+} from '@promptliano/schemas'
+export * from './src/claude-code-mcp-service'
+export * from './src/claude-code-file-reader-service'
+export * from './src/claude-code-import-service'
+export * from './src/claude-hook-service'
+export * from './src/parser-service'
+export * from './src/parsers'

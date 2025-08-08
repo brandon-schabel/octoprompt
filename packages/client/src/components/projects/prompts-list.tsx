@@ -1,5 +1,5 @@
 import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle, useMemo } from 'react'
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy, ChevronRight } from 'lucide-react'
 import {
   AlertDialog,
@@ -10,14 +10,14 @@ import {
   AlertDialogTitle,
   AlertDialogCancel,
   AlertDialogAction
-} from '@ui'
-import { Checkbox } from '@ui'
+} from '@promptliano/ui'
+import { Checkbox } from '@promptliano/ui'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
-import { ScrollArea } from '@ui'
+import { ScrollArea } from '@promptliano/ui'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
 import { useGetProjectPrompts, useDeletePrompt } from '@/hooks/api/use-prompts-api'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@promptliano/ui'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -37,9 +37,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem
-} from '@ui'
+} from '@promptliano/ui'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
-import { Badge } from '@ui'
+import { Badge } from '@promptliano/ui'
 import { PromptlianoTooltip } from '../promptliano/promptliano-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { ProjectFile } from '@promptliano/schemas'
@@ -233,8 +233,14 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         onClose={() => setAllPromptsDialogOpen(false)}
         selectedProjectId={selectedProjectId}
       />
-      <div className={cn('border rounded-lg flex flex-col', isCollapsed ? '' : 'h-full', className)}>
-        <Collapsible open={!isCollapsed} onOpenChange={() => toggleCollapsed()}>
+      <div
+        className={cn(
+          'border rounded-lg flex flex-col',
+          isCollapsed ? 'flex-shrink-0' : 'h-full overflow-hidden',
+          className
+        )}
+      >
+        <Collapsible open={!isCollapsed} onOpenChange={() => toggleCollapsed()} className='h-full flex flex-col'>
           <CollapsibleTrigger asChild>
             <div className='flex-shrink-0 flex flex-row items-center justify-between p-2 border-b hover:bg-muted/50 cursor-pointer transition-colors'>
               <div className='flex items-center gap-2'>
@@ -358,10 +364,10 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
             </div>
           </CollapsibleTrigger>
 
-          <CollapsibleContent className='flex-1 flex flex-col overflow-hidden'>
-            <div className='flex-1 relative overflow-hidden'>
+          <CollapsibleContent className='flex-1 overflow-hidden'>
+            <div className='h-full overflow-hidden'>
               {sortedPrompts.length > 0 ? (
-                <ScrollArea className='h-full'>
+                <ScrollArea className='h-full w-full'>
                   <div className='space-y-2 p-2 w-72 md:w-80 lg:w-full'>
                     {sortedPrompts.map((prompt, index) => (
                       <div
@@ -391,7 +397,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
                             }}
                           />
                           <div className='flex items-center space-x-2 min-w-0'>
-                            <span className='font-medium truncate'>{prompt.name}</span>
+                            <span className='font-medium'>
+                              {prompt.name.length > 35 ? `${prompt.name.substring(0, 32)}...` : prompt.name}
+                            </span>
                             <FormatTokenCount tokenContent={prompt.content ?? ''} />
                           </div>
                         </div>

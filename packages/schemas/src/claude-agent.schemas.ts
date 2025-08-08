@@ -1,5 +1,4 @@
 import { z } from '@hono/zod-openapi'
-import { unixTSSchemaSpec, unixTSOptionalSchemaSpec } from './schema-utils'
 
 // Color enum for agent identification
 export const AgentColorSchema = z.enum(['blue', 'green', 'red', 'yellow', 'purple', 'cyan', 'orange', 'pink']).openapi({
@@ -10,7 +9,10 @@ export const AgentColorSchema = z.enum(['blue', 'green', 'red', 'yellow', 'purpl
 // Main Claude Agent schema
 export const ClaudeAgentSchema = z
   .object({
-    id: unixTSSchemaSpec,
+    id: z.string().openapi({
+      example: 'frontend-expert',
+      description: 'Agent ID (filename without .md extension)'
+    }),
     name: z.string().min(1).openapi({
       example: 'Frontend Expert',
       description: 'Descriptive name for the agent'
@@ -28,11 +30,15 @@ export const ClaudeAgentSchema = z
       example: '# Frontend Expert Agent\n\nSpecialized instructions for frontend development...',
       description: 'Full markdown content of the agent definition'
     }),
-    projectId: unixTSOptionalSchemaSpec.openapi({
+    projectId: z.number().optional().openapi({
       description: 'Optional project association for project-specific agents'
     }),
-    created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec
+    created: z.number().openapi({
+      description: 'Creation timestamp'
+    }),
+    updated: z.number().openapi({
+      description: 'Last update timestamp'
+    })
   })
   .openapi('ClaudeAgent')
 
@@ -56,7 +62,7 @@ export const CreateClaudeAgentBodySchema = z
       example: '# Backend Architect\n\nYou are an expert backend developer...',
       description: 'Initial agent markdown content'
     }),
-    projectId: unixTSOptionalSchemaSpec.openapi({
+    projectId: z.number().optional().openapi({
       description: 'Optional project ID for project-specific agent'
     })
   })
@@ -87,16 +93,6 @@ export const UpdateClaudeAgentBodySchema = z
     message: 'At least one field must be provided for update'
   })
   .openapi('UpdateClaudeAgentBody')
-
-// Agent-Project association schema
-export const ClaudeAgentProjectSchema = z
-  .object({
-    id: unixTSSchemaSpec,
-    agentId: unixTSSchemaSpec,
-    projectId: unixTSSchemaSpec,
-    created: unixTSSchemaSpec
-  })
-  .openapi('ClaudeAgentProject')
 
 // Agent suggestions schema for AI-powered recommendations
 export const AgentSuggestionsSchema = z
@@ -132,7 +128,7 @@ export const AgentSuggestionsSchema = z
 // Request schemas for agent suggestions
 export const SuggestAgentsRequestSchema = z
   .object({
-    projectId: unixTSSchemaSpec.openapi({
+    projectId: z.number().openapi({
       description: 'Project ID to analyze for agent suggestions'
     }),
     userContext: z.string().optional().openapi({
@@ -171,21 +167,18 @@ export const AgentSuggestionsResponseSchema = z
 // Parameter schemas
 export const AgentIdParamsSchema = z
   .object({
-    agentId: unixTSSchemaSpec.openapi({ param: { name: 'agentId', in: 'path' } })
+    agentId: z.string().openapi({
+      param: { name: 'agentId', in: 'path' },
+      example: 'code-reviewer',
+      description: 'Agent ID (filename without .md extension)'
+    })
   })
   .openapi('AgentIdParams')
-
-export const ProjectAndAgentIdParamsSchema = z
-  .object({
-    projectId: unixTSSchemaSpec.openapi({ param: { name: 'projectId', in: 'path' } }),
-    agentId: unixTSSchemaSpec.openapi({ param: { name: 'agentId', in: 'path' } })
-  })
-  .openapi('ProjectAndAgentIdParams')
 
 // Search/filter schemas
 export const SearchAgentsQuerySchema = z
   .object({
-    projectId: unixTSOptionalSchemaSpec.openapi({
+    projectId: z.number().optional().openapi({
       description: 'Filter agents by project association'
     }),
     query: z.string().optional().openapi({
@@ -224,7 +217,10 @@ export const BatchUpdateAgentsBodySchema = z
     updates: z
       .array(
         z.object({
-          agentId: unixTSSchemaSpec,
+          agentId: z.string().openapi({
+            example: 'code-reviewer',
+            description: 'Agent ID (filename without .md extension)'
+          }),
           data: UpdateClaudeAgentBodySchema
         })
       )
@@ -238,9 +234,14 @@ export const BatchUpdateAgentsBodySchema = z
 
 export const BatchDeleteAgentsBodySchema = z
   .object({
-    agentIds: z.array(unixTSSchemaSpec).min(1).max(10).openapi({
-      description: 'Array of agent IDs to delete (max 10)'
-    })
+    agentIds: z
+      .array(z.string())
+      .min(1)
+      .max(10)
+      .openapi({
+        description: 'Array of agent IDs to delete (max 10)',
+        example: ['code-reviewer', 'frontend-expert']
+      })
   })
   .openapi('BatchDeleteAgentsBody')
 
@@ -248,14 +249,12 @@ export const BatchDeleteAgentsBodySchema = z
 export type ClaudeAgent = z.infer<typeof ClaudeAgentSchema>
 export type CreateClaudeAgentBody = z.infer<typeof CreateClaudeAgentBodySchema>
 export type UpdateClaudeAgentBody = z.infer<typeof UpdateClaudeAgentBodySchema>
-export type ClaudeAgentProject = z.infer<typeof ClaudeAgentProjectSchema>
 export type AgentSuggestions = z.infer<typeof AgentSuggestionsSchema>
 export type SuggestAgentsRequest = z.infer<typeof SuggestAgentsRequestSchema>
 export type ClaudeAgentResponse = z.infer<typeof ClaudeAgentResponseSchema>
 export type ClaudeAgentListResponse = z.infer<typeof ClaudeAgentListResponseSchema>
 export type AgentSuggestionsResponse = z.infer<typeof AgentSuggestionsResponseSchema>
 export type AgentIdParams = z.infer<typeof AgentIdParamsSchema>
-export type ProjectAndAgentIdParams = z.infer<typeof ProjectAndAgentIdParamsSchema>
 export type SearchAgentsQuery = z.infer<typeof SearchAgentsQuerySchema>
 export type BatchCreateAgentsBody = z.infer<typeof BatchCreateAgentsBodySchema>
 export type BatchUpdateAgentsBody = z.infer<typeof BatchUpdateAgentsBodySchema>
@@ -282,12 +281,6 @@ export const agentsApiValidation = {
   },
   suggestAgents: {
     body: SuggestAgentsRequestSchema
-  },
-  addToProject: {
-    params: ProjectAndAgentIdParamsSchema
-  },
-  removeFromProject: {
-    params: ProjectAndAgentIdParamsSchema
   },
   batchCreate: {
     body: BatchCreateAgentsBodySchema

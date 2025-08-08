@@ -1,7 +1,15 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@ui'
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@ui'
-import { Input } from '@ui'
-import { Button } from '@ui'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from '@promptliano/ui'
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
 import { Loader2 } from 'lucide-react'
 import { UseFormReturn } from 'react-hook-form'
 import { ExpandableTextarea } from '@/components/expandable-textarea'

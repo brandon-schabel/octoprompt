@@ -7,8 +7,9 @@ export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
   temperature: 0.7,
   topP: 0,
   topK: 0,
-  provider: 'openrouter',
-  model: 'google/gemini-2.5-flash-lite'
+  provider: 'lmstudio',
+  model: 'gpt-oss:20b'
+  // model: 'gemma3:1b'
 }
 
 export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
@@ -25,7 +26,7 @@ export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
 export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
   frequencyPenalty: 0,
   presencePenalty: 0,
-  maxTokens: 50000,
+  maxTokens: 200000,
   temperature: 0.7,
   topP: 0,
   topK: 0,

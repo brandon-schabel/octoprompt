@@ -1,9 +1,9 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Bot, MessageSquare, Clock, Settings, Code, Users } from 'lucide-react'
+import { Button } from '@promptliano/ui'
+import { Bot, MessageSquare, Clock, Settings, Terminal, Network, Zap } from 'lucide-react'
 
-export type ClaudeCodeView = 'agents' | 'sessions' | 'chats' | 'settings'
+export type ClaudeCodeView = 'agents' | 'commands' | 'mcp' | 'sessions' | 'chats' | 'hooks' | 'settings'
 
 interface ClaudeCodeSidebarNavProps {
   activeView: ClaudeCodeView
@@ -21,18 +21,39 @@ export function ClaudeCodeSidebarNav({ activeView, onViewChange, className }: Cl
       enabled: true
     },
     {
+      id: 'commands' as ClaudeCodeView,
+      label: 'Commands',
+      icon: Terminal,
+      description: 'Slash commands',
+      enabled: true
+    },
+    {
+      id: 'mcp' as ClaudeCodeView,
+      label: 'MCP',
+      icon: Network,
+      description: 'MCP configuration',
+      enabled: true
+    },
+    {
       id: 'sessions' as ClaudeCodeView,
       label: 'Sessions',
       icon: Clock,
-      description: 'Active sessions',
-      enabled: false
+      description: 'Chat sessions',
+      enabled: true
     },
     {
       id: 'chats' as ClaudeCodeView,
       label: 'Chats',
       icon: MessageSquare,
-      description: 'Chat history',
-      enabled: false
+      description: 'Chat messages',
+      enabled: true
+    },
+    {
+      id: 'hooks' as ClaudeCodeView,
+      label: 'Hooks',
+      icon: Zap,
+      description: 'Automation hooks',
+      enabled: true
     },
     {
       id: 'settings' as ClaudeCodeView,

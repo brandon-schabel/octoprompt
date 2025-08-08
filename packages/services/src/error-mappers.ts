@@ -38,6 +38,20 @@ export function parseProviderError(error: any, provider: string): ProviderErrorD
     }
   }
 
+  // Handle AI SDK JSON parsing errors
+  if (error?.name === 'AI_NoObjectGeneratedError' || error?.name === 'AI_JSONParseError') {
+    return {
+      code: 'JSON_PARSE_ERROR',
+      message: `Failed to parse AI response: ${error.message}`,
+      metadata: {
+        originalError: error.name,
+        text: error.text,
+        cause: error.cause?.message
+      },
+      retryable: true
+    }
+  }
+
   // Generic error parsing
   return {
     code: error?.code || error?.statusCode || 500,
@@ -96,6 +110,21 @@ export function mapProviderErrorToApiError(error: any, provider: string, operati
       provider,
       originalError: details.message
     })
+  }
+
+  if (details.code === 'JSON_PARSE_ERROR') {
+    return new ApiError(
+      502,
+      `${provider} returned invalid JSON response. Retrying with text generation.`,
+      'PROVIDER_JSON_PARSE_ERROR',
+      {
+        provider,
+        retryable: true,
+        fallbackToText: true,
+        originalError: details.message,
+        metadata: details.metadata
+      }
+    )
   }
 
   if (details.code >= 500 || details.retryable) {

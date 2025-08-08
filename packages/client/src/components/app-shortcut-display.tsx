@@ -1,5 +1,5 @@
 import { formatShortcut, shortCutMap } from '@/lib/shortcuts'
-import { Badge, BadgeProps } from '@ui'
+import { Badge, BadgeProps } from '@promptliano/ui'
 
 export function AppShortcutDisplay({ shortcut }: { shortcut: keyof typeof shortCutMap }) {
   const display = formatShortcut(shortCutMap[shortcut])

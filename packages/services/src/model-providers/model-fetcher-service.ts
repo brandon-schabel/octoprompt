@@ -170,7 +170,7 @@ export type ListModelsOptions = {
 }
 
 export class ModelFetcherService {
-  constructor(private config: ProviderKeysConfig) { }
+  constructor(private config: ProviderKeysConfig) {}
 
   private ensure(key?: string, providerName = 'unknown') {
     if (!key) throw new Error(`${providerName} API key not found in config`)
@@ -340,7 +340,13 @@ export class ModelFetcherService {
   }
 
   async listLMStudioModels({ baseUrl }: { baseUrl: string } = { baseUrl: LMSTUDIO_BASE_URL }): Promise<UnifiedModel[]> {
-    const response = await fetch(`${baseUrl}/models`)
+    // Ensure baseUrl has /v1 for OpenAI compatibility
+    let normalizedUrl = baseUrl
+    if (!normalizedUrl.endsWith('/v1')) {
+      normalizedUrl = normalizedUrl.replace(/\/$/, '') + '/v1'
+    }
+
+    const response = await fetch(`${normalizedUrl}/models`)
     if (!response.ok) {
       const errorText = await response.text()
       throw new Error(`LM Studio error: ${response.statusText} - ${errorText}`)

@@ -1,4 +1,5 @@
 import { serve } from 'bun'
+import type { ServerWebSocket } from 'bun'
 import { join } from 'node:path'
 import { statSync } from 'node:fs'
 import { app } from './src/app'
@@ -8,6 +9,12 @@ import { getServerConfig } from '@promptliano/config'
 import { watchersManager, createCleanupService } from '@promptliano/services'
 import { gitWorktreeHandlers } from '@promptliano/services/src/job-handlers/git-worktree-handlers'
 import { getWebSocketManager } from './src/services/websocket-manager'
+
+interface WebSocketData {
+  clientId: string
+  projectId?: number
+  subscriptions?: Set<string>
+}
 
 const logger = createLogger('Server')
 
@@ -29,7 +36,9 @@ type ServerConfig = {
 
 type Server = ReturnType<typeof serve>
 
-export async function instantiateServer({ port = serverConfig.serverPort }: ServerConfig = {}): Promise<Server> {
+export async function instantiateServer({
+  port = Number(serverConfig.serverPort)
+}: ServerConfig = {}): Promise<Server> {
   logger.info(`Starting server initialization on port ${port}...`)
   const server = serve({
     idleTimeout: 255,
@@ -75,15 +84,15 @@ export async function instantiateServer({ port = serverConfig.serverPort }: Serv
     },
 
     websocket: {
-      async open(ws) {
+      async open(ws: ServerWebSocket<WebSocketData>) {
         const wsManager = getWebSocketManager()
         wsManager.addClient(ws)
       },
-      close(ws) {
+      close(ws: ServerWebSocket<WebSocketData>) {
         const wsManager = getWebSocketManager()
-        wsManager.removeClient((ws.data as any).clientId)
+        wsManager.removeClient(ws.data.clientId)
       },
-      async message(ws, rawMessage) {
+      async message(ws: ServerWebSocket<WebSocketData>, rawMessage: string | Buffer) {
         try {
           const wsManager = getWebSocketManager()
           const message = typeof rawMessage === 'string' ? rawMessage : rawMessage.toString()
@@ -187,7 +196,7 @@ if (import.meta.main) {
     // Start normal HTTP server
     logger.info('Starting server...')
     try {
-      const server = await instantiateServer({ port })
+      const server = await instantiateServer({ port: Number(port) })
       logger.info('Server instantiated successfully')
 
       function handleShutdown() {

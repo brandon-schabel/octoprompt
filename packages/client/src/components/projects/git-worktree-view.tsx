@@ -8,12 +8,12 @@ import {
   usePruneGitWorktrees,
   useGitBranches
 } from '@/hooks/api/use-git-api'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from '@promptliano/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
+import { Skeleton } from '@promptliano/ui'
+import { Badge } from '@promptliano/ui'
+import { ScrollArea } from '@promptliano/ui'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,23 +23,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from '@/components/ui/alert-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+} from '@promptliano/ui'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { Input } from '@promptliano/ui'
+import { Label } from '@promptliano/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 import { FolderTree, Trash2, Plus, Lock, Unlock, Copy, GitBranch, AlertCircle, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { GitWorktree } from '@promptliano/schemas'
 import { toast } from 'sonner'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Checkbox } from '@promptliano/ui'
 import { JobMonitor } from '@/components/jobs/job-monitor'
 
 interface GitWorktreeViewProps {

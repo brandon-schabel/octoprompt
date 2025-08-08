@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { GlassCard, CTAButton, CodeBlock } from '@/components/ui'
+import { GlassCard, CodeBlock } from '@/components/ui'
+import { HeroButton } from '@/components/ui/hero-button'
 import { Download, Copy, Check, Plus, Trash2, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Input, Label, Switch, Button } from '@promptliano/ui'
 
 const ConfigSchema = z.object({
   serverName: z.string().min(1, 'Server name is required'),
@@ -144,51 +146,37 @@ export function ConfigGenerator() {
 
             <div className='space-y-4'>
               <div>
-                <label className='block text-sm font-medium mb-2'>Server Name</label>
+                <Label htmlFor='serverName'>Server Name</Label>
                 <Controller
                   name='serverName'
                   control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type='text'
-                      className='w-full px-4 py-2 bg-background border border-border rounded-lg focus:border-primary focus:outline-none'
-                      placeholder='promptliano'
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} id='serverName' type='text' placeholder='promptliano' />}
                 />
                 {errors.serverName && <p className='text-sm text-red-500 mt-1'>{errors.serverName.message}</p>}
               </div>
 
               <div>
-                <label className='block text-sm font-medium mb-2'>Command</label>
+                <Label htmlFor='command'>Command</Label>
                 <Controller
                   name='command'
                   control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type='text'
-                      className='w-full px-4 py-2 bg-background border border-border rounded-lg focus:border-primary focus:outline-none'
-                      placeholder='promptliano'
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} id='command' type='text' placeholder='promptliano' />}
                 />
                 {errors.command && <p className='text-sm text-red-500 mt-1'>{errors.command.message}</p>}
               </div>
 
               <div>
-                <label className='block text-sm font-medium mb-2'>Arguments</label>
+                <Label htmlFor='args'>Arguments</Label>
                 <Controller
                   name='args'
                   control={control}
                   render={({ field }) => (
-                    <input
+                    <Input
                       {...field}
+                      id='args'
                       value={field.value.join(' ')}
-                      onChange={(e) => field.onChange(e.target.value.split(' '))}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.value.split(' '))}
                       type='text'
-                      className='w-full px-4 py-2 bg-background border border-border rounded-lg focus:border-primary focus:outline-none'
                       placeholder='start --mcp'
                     />
                   )}
@@ -196,18 +184,11 @@ export function ConfigGenerator() {
               </div>
 
               <div>
-                <label className='block text-sm font-medium mb-2'>Working Directory</label>
+                <Label htmlFor='cwd'>Working Directory</Label>
                 <Controller
                   name='cwd'
                   control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type='text'
-                      className='w-full px-4 py-2 bg-background border border-border rounded-lg focus:border-primary focus:outline-none'
-                      placeholder='~'
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} id='cwd' type='text' placeholder='~' />}
                 />
               </div>
             </div>
@@ -218,85 +199,42 @@ export function ConfigGenerator() {
 
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <label className='text-sm font-medium'>Auto Start</label>
+                <Label htmlFor='autoStart'>Auto Start</Label>
                 <Controller
                   name='autoStart'
                   control={control}
                   render={({ field }) => (
-                    <button
-                      type='button'
-                      onClick={() => field.onChange(!field.value)}
-                      className={cn(
-                        'w-12 h-6 rounded-full transition-colors relative',
-                        field.value ? 'bg-primary' : 'bg-border'
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          'w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform',
-                          field.value ? 'translate-x-6' : 'translate-x-0.5'
-                        )}
-                      />
-                    </button>
+                    <Switch id='autoStart' checked={field.value} onCheckedChange={field.onChange} />
                   )}
                 />
               </div>
 
               <div className='flex items-center justify-between'>
-                <label className='text-sm font-medium'>Restart on Failure</label>
+                <Label htmlFor='restartOnFailure'>Restart on Failure</Label>
                 <Controller
                   name='restartOnFailure'
                   control={control}
                   render={({ field }) => (
-                    <button
-                      type='button'
-                      onClick={() => field.onChange(!field.value)}
-                      className={cn(
-                        'w-12 h-6 rounded-full transition-colors relative',
-                        field.value ? 'bg-primary' : 'bg-border'
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          'w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform',
-                          field.value ? 'translate-x-6' : 'translate-x-0.5'
-                        )}
-                      />
-                    </button>
+                    <Switch id='restartOnFailure' checked={field.value} onCheckedChange={field.onChange} />
                   )}
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium mb-2'>Max Restarts</label>
+                <Label htmlFor='maxRestarts'>Max Restarts</Label>
                 <Controller
                   name='maxRestarts'
                   control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type='number'
-                      min='0'
-                      className='w-full px-4 py-2 bg-background border border-border rounded-lg focus:border-primary focus:outline-none'
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} id='maxRestarts' type='number' min='0' />}
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium mb-2'>Timeout (ms)</label>
+                <Label htmlFor='timeout'>Timeout (ms)</Label>
                 <Controller
                   name='timeout'
                   control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type='number'
-                      min='1000'
-                      step='1000'
-                      className='w-full px-4 py-2 bg-background border border-border rounded-lg focus:border-primary focus:outline-none'
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} id='timeout' type='number' min='1000' step='1000' />}
                 />
               </div>
             </div>
@@ -308,38 +246,41 @@ export function ConfigGenerator() {
             <div className='space-y-2'>
               {envPairs.map((pair, index) => (
                 <div key={index} className='flex gap-2'>
-                  <input
+                  <Input
                     type='text'
                     value={pair.key}
-                    onChange={(e) => updateEnvPair(index, 'key', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEnvPair(index, 'key', e.target.value)}
                     placeholder='KEY'
-                    className='flex-1 px-3 py-2 bg-background border border-border rounded-lg focus:border-primary focus:outline-none'
+                    className='flex-1'
                   />
-                  <input
+                  <Input
                     type='text'
                     value={pair.value}
-                    onChange={(e) => updateEnvPair(index, 'value', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEnvPair(index, 'value', e.target.value)}
                     placeholder='VALUE'
-                    className='flex-1 px-3 py-2 bg-background border border-border rounded-lg focus:border-primary focus:outline-none'
+                    className='flex-1'
                   />
-                  <button
+                  <Button
                     type='button'
+                    variant='ghost'
+                    size='sm'
                     onClick={() => removeEnvPair(index)}
-                    className='p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors'
+                    className='text-red-500 hover:bg-red-500/10 hover:text-red-500'
                   >
                     <Trash2 className='w-4 h-4' />
-                  </button>
+                  </Button>
                 </div>
               ))}
 
-              <button
+              <Button
                 type='button'
+                variant='outline'
                 onClick={addEnvPair}
-                className='w-full p-2 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2'
+                className='w-full border-dashed hover:border-primary hover:bg-primary/5'
               >
-                <Plus className='w-4 h-4' />
+                <Plus className='w-4 h-4 mr-2' />
                 Add Environment Variable
-              </button>
+              </Button>
             </div>
           </GlassCard>
 
@@ -349,26 +290,14 @@ export function ConfigGenerator() {
             <div className='space-y-4'>
               {(['tools', 'resources', 'prompts'] as const).map((capability) => (
                 <div key={capability} className='flex items-center justify-between'>
-                  <label className='text-sm font-medium capitalize'>{capability}</label>
+                  <Label htmlFor={`capability-${capability}`} className='capitalize'>
+                    {capability}
+                  </Label>
                   <Controller
                     name={`capabilities.${capability}`}
                     control={control}
                     render={({ field }) => (
-                      <button
-                        type='button'
-                        onClick={() => field.onChange(!field.value)}
-                        className={cn(
-                          'w-12 h-6 rounded-full transition-colors relative',
-                          field.value ? 'bg-primary' : 'bg-border'
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            'w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform',
-                            field.value ? 'translate-x-6' : 'translate-x-0.5'
-                          )}
-                        />
-                      </button>
+                      <Switch id={`capability-${capability}`} checked={field.value} onCheckedChange={field.onChange} />
                     )}
                   />
                 </div>
@@ -376,9 +305,9 @@ export function ConfigGenerator() {
             </div>
           </GlassCard>
 
-          <CTAButton type='submit' className='w-full'>
+          <HeroButton type='submit' className='w-full'>
             Generate Configuration
-          </CTAButton>
+          </HeroButton>
         </div>
 
         {/* Generated Config Preview */}

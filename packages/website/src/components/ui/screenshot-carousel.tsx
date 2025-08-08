@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { LazyImage } from '@/components/utils/lazy-image'
-import { GlassCard } from './glass-card'
+import { GlassCard } from '@/components/ui'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Screenshot {
@@ -77,16 +77,8 @@ export function ScreenshotCarousel({
               />
               {(screenshot.title || screenshot.description) && (
                 <div className='absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6'>
-                  {screenshot.title && (
-                    <h3 className='text-white text-xl font-semibold mb-1'>
-                      {screenshot.title}
-                    </h3>
-                  )}
-                  {screenshot.description && (
-                    <p className='text-white/90 text-sm'>
-                      {screenshot.description}
-                    </p>
-                  )}
+                  {screenshot.title && <h3 className='text-white text-xl font-semibold mb-1'>{screenshot.title}</h3>}
+                  {screenshot.description && <p className='text-white/90 text-sm'>{screenshot.description}</p>}
                 </div>
               )}
             </div>
@@ -120,9 +112,7 @@ export function ScreenshotCarousel({
               key={index}
               className={cn(
                 'h-2 rounded-full transition-all',
-                index === currentIndex
-                  ? 'w-8 bg-primary'
-                  : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                index === currentIndex ? 'w-8 bg-primary' : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50'
               )}
               onClick={() => goToSlide(index)}
             />

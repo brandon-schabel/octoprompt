@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { GlassCard } from './ui/glass-card'
+import { GlassCard } from '@/components/ui'
 
 export function NotFound() {
   return (

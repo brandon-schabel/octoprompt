@@ -1,4 +1,4 @@
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 type NoResultsScreenProps = {
   fileSearch: string
   searchByContent: boolean

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GlassCard, CTAButton, CodeBlock, AnimateOnScroll } from '@/components/ui'
+import { GlassCard, CodeBlock, AnimateOnScroll, CTAButton } from '@/components/ui'
+import { HeroButton } from '@/components/ui/hero-button'
 import { ChevronRight, Check, Copy, Terminal, FileJson, Rocket, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -374,10 +375,10 @@ export function SetupWizard() {
 
                       {isActive && (
                         <div className='mt-4 flex gap-2'>
-                          <CTAButton onClick={() => markStepComplete(step.id)} size='sm'>
+                          <HeroButton onClick={() => markStepComplete(step.id)} size='md'>
                             Mark Complete
                             <ChevronRight className='w-4 h-4 ml-1' />
-                          </CTAButton>
+                          </HeroButton>
                         </div>
                       )}
                     </div>

@@ -1,12 +1,27 @@
 import { useProjectTabField, useUpdateActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 import { useSyncProject, useGetProject } from '@/hooks/api/use-projects-api'
-import { EditorType, EDITOR_OPTIONS } from '@promptliano/schemas'
-import { Button, Input, Slider, Switch, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
+import { GlobalStateEditorType as EditorType, EDITOR_OPTIONS } from '@promptliano/schemas'
+import {
+  Button,
+  Input,
+  Slider,
+  Switch,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Checkbox,
+  Label,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from '@promptliano/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { Copy, RefreshCw, Settings, HelpCircle } from 'lucide-react'
+import { Copy, RefreshCw, Settings, HelpCircle, ChevronDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { MCPStatusIndicator } from './mcp-status-indicator'
 import { AgentFilesManager } from './agent-files-manager'
 import { MCPTroubleshooting } from './mcp-troubleshooting'
@@ -19,19 +34,22 @@ export function ProjectSettingsTab() {
   // Get search params and use the scroll to section hook
   const search = Route.useSearch()
   useScrollToSection({ search })
-  
+
   const updateActiveProjectTab = useUpdateActiveProjectTab()
   const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
   const { data: resolveImports } = useProjectTabField('resolveImports')
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
   const { data: projectId } = useProjectTabField('selectedProjectId')
   const { data: claudeCodeEnabled } = useProjectTabField('claudeCodeEnabled')
+  const { data: autoIncludeClaudeMd } = useProjectTabField('autoIncludeClaudeMd')
+  const { data: instructionFileSettings } = useProjectTabField('instructionFileSettings')
 
   const { data: projectResponse } = useGetProject(projectId!)
   const projectData = projectResponse?.data
   const { copyToClipboard } = useCopyClipboard()
   const [showAgentFiles, setShowAgentFiles] = useState(false)
   const [showTroubleshooting, setShowTroubleshooting] = useState(false)
+  const [showInstructionFileSettings, setShowInstructionFileSettings] = useState(false)
 
   const { isPending: isSyncing, mutate: syncProject } = useSyncProject()
 
@@ -44,11 +62,10 @@ export function ProjectSettingsTab() {
     }
   }, [projectId, syncProject])
 
-
   const setPreferredEditor = (value: EditorType) => {
     updateActiveProjectTab((prev) => ({
       ...prev,
-      preferredEditor: value as EditorType
+      preferredEditor: value
     }))
   }
 
@@ -63,6 +80,29 @@ export function ProjectSettingsTab() {
     updateActiveProjectTab((prev) => ({
       ...prev,
       claudeCodeEnabled: value
+    }))
+  }
+
+  const setAutoIncludeClaudeMd = (value: boolean) => {
+    updateActiveProjectTab((prev) => ({
+      ...prev,
+      autoIncludeClaudeMd: value
+    }))
+  }
+
+  const setInstructionFileSettings = (updater: (prev: any) => any) => {
+    updateActiveProjectTab((prev) => ({
+      ...prev,
+      instructionFileSettings: updater(
+        prev.instructionFileSettings || {
+          autoIncludeEnabled: false,
+          fileTypes: ['claude'],
+          priority: 'claude',
+          includeGlobal: false,
+          includeProjectRoot: true,
+          includeHierarchy: true
+        }
+      )
     }))
   }
 
@@ -146,6 +186,182 @@ export function ProjectSettingsTab() {
               <Switch checked={!!resolveImports} onCheckedChange={setResolveImports} />
             </div>
 
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <div className='space-y-0.5'>
+                  <label className='text-base font-medium'>Auto-Include AI Instruction Files</label>
+                  <p className='text-sm text-muted-foreground'>
+                    Automatically include AI instruction files (CLAUDE.md, copilot-instructions.md, etc.) when selecting
+                    files
+                  </p>
+                </div>
+                <Switch
+                  checked={instructionFileSettings?.autoIncludeEnabled ?? autoIncludeClaudeMd}
+                  onCheckedChange={(value) => {
+                    setInstructionFileSettings((prev) => ({ ...prev, autoIncludeEnabled: value }))
+                    // Also update legacy setting for backward compatibility
+                    if (!instructionFileSettings) {
+                      setAutoIncludeClaudeMd(value)
+                    }
+                  }}
+                />
+              </div>
+
+              {(instructionFileSettings?.autoIncludeEnabled || (!instructionFileSettings && autoIncludeClaudeMd)) && (
+                <Collapsible open={showInstructionFileSettings} onOpenChange={setShowInstructionFileSettings}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant='ghost' size='sm' className='w-full justify-between'>
+                      <span>Configure Instruction File Types</span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${showInstructionFileSettings ? 'rotate-180' : ''}`}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className='space-y-4 pt-4'>
+                    <div className='space-y-2'>
+                      <Label className='text-sm font-medium'>Enabled File Types</Label>
+                      <div className='space-y-2 pl-4'>
+                        {[
+                          { type: 'claude', label: 'Claude (CLAUDE.md)', description: 'Claude AI context files' },
+                          {
+                            type: 'agents',
+                            label: 'Agents (AGENTS.md)',
+                            description: 'General agent instructions standard'
+                          },
+                          {
+                            type: 'copilot',
+                            label: 'GitHub Copilot (copilot-instructions.md)',
+                            description: 'Copilot configuration'
+                          },
+                          { type: 'cursor', label: 'Cursor (.cursorrules)', description: 'Cursor IDE settings' },
+                          { type: 'aider', label: 'Aider (.aider)', description: 'Aider AI assistant config' },
+                          {
+                            type: 'codebase',
+                            label: 'Codebase (codebase-instructions.md)',
+                            description: 'General AI instructions'
+                          },
+                          {
+                            type: 'windsurf',
+                            label: 'Windsurf (.windsurf/rules.md)',
+                            description: 'Windsurf IDE rules'
+                          },
+                          {
+                            type: 'continue',
+                            label: 'Continue (.continue/config.json)',
+                            description: 'Continue extension config'
+                          }
+                        ].map(({ type, label, description }) => (
+                          <div key={type} className='flex items-start space-x-2'>
+                            <Checkbox
+                              id={`file-type-${type}`}
+                              checked={(instructionFileSettings?.fileTypes || ['claude']).includes(type as any)}
+                              onCheckedChange={(checked) => {
+                                setInstructionFileSettings((prev) => {
+                                  const fileTypes = prev.fileTypes || ['claude']
+                                  if (checked) {
+                                    return { ...prev, fileTypes: [...fileTypes, type] }
+                                  } else {
+                                    return { ...prev, fileTypes: fileTypes.filter((t: any) => t !== type) }
+                                  }
+                                })
+                              }}
+                            />
+                            <div className='space-y-0.5'>
+                              <Label htmlFor={`file-type-${type}`} className='text-sm font-normal cursor-pointer'>
+                                {label}
+                              </Label>
+                              <p className='text-xs text-muted-foreground'>{description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <div className='flex items-center justify-between'>
+                        <div className='space-y-0.5'>
+                          <Label className='text-sm font-medium'>Include Full Hierarchy</Label>
+                          <p className='text-xs text-muted-foreground'>
+                            Include instruction files from all parent directories up to the project root
+                          </p>
+                        </div>
+                        <Switch
+                          checked={instructionFileSettings?.includeHierarchy ?? true}
+                          onCheckedChange={(value) => {
+                            setInstructionFileSettings((prev) => ({ ...prev, includeHierarchy: value }))
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label className='text-sm font-medium'>Priority</Label>
+                      <p className='text-xs text-muted-foreground mb-2'>
+                        When multiple instruction files exist in the same directory, use this type
+                      </p>
+                      <Select
+                        value={instructionFileSettings?.priority || 'claude'}
+                        onValueChange={(value) => {
+                          setInstructionFileSettings((prev) => ({ ...prev, priority: value }))
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select priority type' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='claude'>Claude</SelectItem>
+                          <SelectItem value='agents'>Agents</SelectItem>
+                          <SelectItem value='copilot'>GitHub Copilot</SelectItem>
+                          <SelectItem value='cursor'>Cursor</SelectItem>
+                          <SelectItem value='aider'>Aider</SelectItem>
+                          <SelectItem value='codebase'>Codebase</SelectItem>
+                          <SelectItem value='windsurf'>Windsurf</SelectItem>
+                          <SelectItem value='continue'>Continue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className='flex items-center space-x-2'>
+                      <Checkbox
+                        id='include-project-root'
+                        checked={instructionFileSettings?.includeProjectRoot ?? true}
+                        onCheckedChange={(checked) => {
+                          setInstructionFileSettings((prev) => ({ ...prev, includeProjectRoot: !!checked }))
+                        }}
+                      />
+                      <div className='space-y-0.5'>
+                        <Label htmlFor='include-project-root' className='text-sm font-normal cursor-pointer'>
+                          Include Project Root Files
+                        </Label>
+                        <p className='text-xs text-muted-foreground'>
+                          Include instruction files from project root (e.g., /CLAUDE.md,
+                          /.github/copilot-instructions.md)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center space-x-2'>
+                      <Checkbox
+                        id='include-global'
+                        checked={instructionFileSettings?.includeGlobal ?? false}
+                        onCheckedChange={(checked) => {
+                          setInstructionFileSettings((prev) => ({ ...prev, includeGlobal: !!checked }))
+                        }}
+                      />
+                      <div className='space-y-0.5'>
+                        <Label htmlFor='include-global' className='text-sm font-normal cursor-pointer'>
+                          Include Global Instruction Files
+                        </Label>
+                        <p className='text-xs text-muted-foreground'>
+                          Include instruction files from your home directory (e.g., ~/.claude/CLAUDE.md)
+                        </p>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </div>
+
             <div className='space-y-2'>
               <label className='text-base font-medium'>Preferred Editor</label>
               <p className='text-sm text-muted-foreground mb-2'>
@@ -180,7 +396,8 @@ export function ProjectSettingsTab() {
               <div className='space-y-0.5'>
                 <label className='text-base font-medium'>Enable Claude Code</label>
                 <p className='text-sm text-muted-foreground'>
-                  Activate Claude Code tab with agent management, sessions, and chat features. This feature is currently in beta.
+                  Activate Claude Code tab with agent management, sessions, and chat features. This feature is currently
+                  in beta.
                 </p>
               </div>
               <Switch checked={!!claudeCodeEnabled} onCheckedChange={setClaudeCodeEnabled} />
@@ -217,7 +434,7 @@ export function ProjectSettingsTab() {
         {showTroubleshooting && <MCPTroubleshooting />}
 
         {projectId && (
-          <div id="mcp-config-section">
+          <div id='mcp-config-section'>
             <MCPProjectConfigEditor projectId={projectId} />
           </div>
         )}

@@ -1,8 +1,8 @@
 import { Expand, Mic, MicOff, Copy, Wand2 } from 'lucide-react'
-import { Button } from '@ui'
-import { Textarea } from '@ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui'
+import { Button } from '@promptliano/ui'
+import { Textarea } from '@promptliano/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@promptliano/ui'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@promptliano/ui'
 import { useEffect, useState, useRef, forwardRef } from 'react'
 import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from 'sonner'
@@ -106,7 +106,7 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
             }
           }}
           placeholder={placeholderWithShortcut}
-          className={`h-full resize-none pr-[120px] ${className}`}
+          className={`h-full resize-none pr-[80px] ${className}`}
         />
         <div className='absolute right-3 top-2 flex items-center space-x-2 bg-background'>
           <DropdownMenu>
@@ -160,7 +160,7 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
                   }
                 }}
                 placeholder={placeholder}
-                className='h-full resize-none pr-[120px]'
+                className='h-full resize-none pr-[80px]'
               />
               <div className='absolute right-3 top-2 flex items-center space-x-2 bg-background'>
                 <DropdownMenu>

@@ -12,7 +12,7 @@ import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-
 import { CollapsibleSelectedFilesList } from '@/components/projects/collapsible-selected-files-list'
 import { type SelectedFilesListRef } from '@/components/projects/selected-files-list'
 import { useActiveProjectTab, useProjectTabField } from '@/hooks/use-kv-local-storage'
-import { VerticalResizablePanel } from '@ui'
+import { VerticalResizable as VerticalResizablePanel } from '@promptliano/ui'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 export type PromptOverviewPanelRef = {
@@ -42,8 +42,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     return (
       <ErrorBoundary>
-        <div className={cn('flex flex-col h-full overflow-hidden', className)}>
-          <div className='flex-1 flex flex-col min-h-0 p-4 overflow-hidden min-w-0'>
+        <div className={cn('flex flex-col h-full', className)}>
+          <div className='flex-1 flex flex-col p-4 overflow-hidden'>
             {/* Dynamic layout based on collapsed states */}
             {!promptsPanelCollapsed && !selectedFilesCollapsed ? (
               // Both expanded - use resizable panel for manual control
@@ -58,24 +58,24 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     className='h-full w-full'
                   />
                 }
-                initialTopPanelHeight={50}
-                minTopPanelHeight={20}
-                maxTopPanelHeight={80}
+                defaultSize={50}
+                minSize={20}
+                maxSize={80}
                 storageKey='prompts-files-split'
                 className='h-full w-full'
               />
             ) : (
               // At least one collapsed - use flex layout for automatic sizing
-              <div className='flex flex-col gap-4 h-full overflow-hidden'>
+              <div className='flex flex-col gap-4 h-full'>
                 <PromptsList
                   ref={promptsListRef}
                   projectTabId={activeProjectTabId || -1}
-                  className={promptsPanelCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}
+                  className={promptsPanelCollapsed ? 'flex-shrink-0' : 'flex-1 overflow-hidden'}
                 />
                 <CollapsibleSelectedFilesList
                   ref={selectedFilesListRef}
                   projectTabId={activeProjectTabId || -1}
-                  className={selectedFilesCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}
+                  className={selectedFilesCollapsed ? 'flex-shrink-0' : 'flex-1 overflow-hidden'}
                 />
               </div>
             )}

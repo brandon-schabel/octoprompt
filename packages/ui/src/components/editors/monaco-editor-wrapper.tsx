@@ -1,0 +1,81 @@
+import { useEffect, useRef, useState } from 'react'
+
+// Monaco Editor imports
+import Editor from '@monaco-editor/react'
+import type { Monaco } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
+
+export interface MonacoEditorWrapperProps {
+  value: string
+  onChange: (value: string | undefined) => void
+  language?: string
+  height?: string
+  readOnly?: boolean
+  theme?: 'vs-dark' | 'light' | 'vs'
+  onMount?: (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => void
+  onSave?: () => void
+  className?: string
+}
+
+export function MonacoEditorWrapper({
+  value,
+  onChange,
+  language = 'plaintext',
+  height = '100%',
+  readOnly = false,
+  theme = 'vs',
+  onMount,
+  onSave,
+  className
+}: MonacoEditorWrapperProps) {
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+  const [monaco, setMonaco] = useState<Monaco | null>(null)
+
+  const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor, monacoInstance: Monaco) => {
+    editorRef.current = editor
+    setMonaco(monacoInstance)
+
+    // Add Ctrl+S keyboard shortcut for save
+    if (onSave) {
+      editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyS, () => {
+        onSave()
+      })
+    }
+
+    // Add format document shortcut
+    editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyMod.Shift | monacoInstance.KeyCode.KeyF, () => {
+      editor.getAction('editor.action.formatDocument')?.run()
+    })
+
+    onMount?.(editor, monacoInstance)
+  }
+
+  return (
+    <div className={className}>
+      <Editor
+        height={height}
+        language={language}
+        value={value}
+        onChange={onChange}
+        onMount={handleEditorDidMount}
+        theme={theme}
+        options={{
+          readOnly,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          fontSize: 14,
+          lineNumbers: 'on',
+          glyphMargin: false,
+          folding: true,
+          lineDecorationsWidth: 0,
+          lineNumbersMinChars: 3,
+          renderValidationDecorations: 'on',
+          wordWrap: 'on',
+          automaticLayout: true,
+          tabSize: 2,
+          insertSpaces: true
+        }}
+      />
+    </div>
+  )
+}

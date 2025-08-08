@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { SeoMetadata } from '@/schemas/seo.schemas'
-import { GlassCard } from '@/components/ui/glass-card'
+import { GlassCard } from '@/components/ui'
 import { FeatureScreenshot } from '@/components/ui'
-import { 
-  Home, 
-  FolderOpen, 
-  FileText, 
-  GitBranch, 
+import {
+  Home,
+  FolderOpen,
+  FileText,
+  GitBranch,
   MessageSquare,
   TicketIcon,
   Settings,
@@ -22,7 +22,8 @@ export const Route = createFileRoute('/docs/ui-overview')({
     return {
       meta: {
         title: 'UI Overview - Promptliano Documentation',
-        description: "Visual tour of Promptliano's interface. Learn where to find every feature with annotated screenshots.",
+        description:
+          "Visual tour of Promptliano's interface. Learn where to find every feature with annotated screenshots.",
         keywords: ['ui overview', 'interface', 'navigation', 'features', 'screenshots', 'visual guide']
       } as SeoMetadata
     }
@@ -46,7 +47,7 @@ function UIOverviewPage() {
         <p className='text-muted-foreground'>
           The top navigation bar is your primary way to move between different sections of Promptliano.
         </p>
-        
+
         <div className='grid md:grid-cols-2 gap-4'>
           <GlassCard className='p-4'>
             <div className='flex items-center gap-3 mb-3'>
@@ -63,9 +64,7 @@ function UIOverviewPage() {
               <MessageSquare className='h-5 w-5 text-primary' />
               <h3 className='font-medium'>Chat</h3>
             </div>
-            <p className='text-sm text-muted-foreground'>
-              Interactive AI chat with project context awareness.
-            </p>
+            <p className='text-sm text-muted-foreground'>Interactive AI chat with project context awareness.</p>
           </GlassCard>
 
           <GlassCard className='p-4'>
@@ -73,9 +72,7 @@ function UIOverviewPage() {
               <FileText className='h-5 w-5 text-primary' />
               <h3 className='font-medium'>Prompts</h3>
             </div>
-            <p className='text-sm text-muted-foreground'>
-              Your library of reusable prompts and templates.
-            </p>
+            <p className='text-sm text-muted-foreground'>Your library of reusable prompts and templates.</p>
           </GlassCard>
 
           <GlassCard className='p-4'>
@@ -83,9 +80,7 @@ function UIOverviewPage() {
               <Key className='h-5 w-5 text-primary' />
               <h3 className='font-medium'>Keys</h3>
             </div>
-            <p className='text-sm text-muted-foreground'>
-              Manage API keys for different AI providers.
-            </p>
+            <p className='text-sm text-muted-foreground'>Manage API keys for different AI providers.</p>
           </GlassCard>
         </div>
       </section>
@@ -96,7 +91,7 @@ function UIOverviewPage() {
         <p className='text-muted-foreground'>
           The heart of Promptliano - where you build context and work with your codebase.
         </p>
-        
+
         <FeatureScreenshot
           src='/assets/screenshots/project-context-overview.webp'
           alt='Project Overview'
@@ -120,9 +115,7 @@ function UIOverviewPage() {
 
           <GlassCard className='p-6'>
             <h3 className='text-lg font-medium mb-3'>2. File Browser (Left)</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              Navigate your codebase and select files for context.
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>Navigate your codebase and select files for context.</p>
             <ul className='text-sm space-y-1 text-muted-foreground'>
               <li>• Click files to add to context</li>
               <li>• Search with Ctrl/Cmd + K</li>
@@ -132,9 +125,7 @@ function UIOverviewPage() {
 
           <GlassCard className='p-6'>
             <h3 className='text-lg font-medium mb-3'>3. Selected Files (Right)</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              View and manage your context selections.
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>View and manage your context selections.</p>
             <ul className='text-sm space-y-1 text-muted-foreground'>
               <li>• See token counts per file</li>
               <li>• Remove files with X button</li>
@@ -144,9 +135,7 @@ function UIOverviewPage() {
 
           <GlassCard className='p-6'>
             <h3 className='text-lg font-medium mb-3'>4. User Input Area</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              Add instructions or context for your AI interactions.
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>Add instructions or context for your AI interactions.</p>
             <ul className='text-sm space-y-1 text-muted-foreground'>
               <li>• Describe your task</li>
               <li>• Tokens counted in real-time</li>
@@ -156,9 +145,7 @@ function UIOverviewPage() {
 
           <GlassCard className='p-6'>
             <h3 className='text-lg font-medium mb-3'>5. Action Buttons</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              Quick actions for common tasks.
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>Quick actions for common tasks.</p>
             <ul className='text-sm space-y-1 text-muted-foreground'>
               <li>• Copy All - Copy complete context</li>
               <li>• Suggest Files - AI recommendations</li>
@@ -168,9 +155,7 @@ function UIOverviewPage() {
 
           <GlassCard className='p-6'>
             <h3 className='text-lg font-medium mb-3'>6. Token Counter</h3>
-            <p className='text-sm text-muted-foreground mb-3'>
-              Real-time tracking of context size.
-            </p>
+            <p className='text-sm text-muted-foreground mb-3'>Real-time tracking of context size.</p>
             <ul className='text-sm space-y-1 text-muted-foreground'>
               <li>• Updates as you select files</li>
               <li>• Includes all context sources</li>
@@ -183,7 +168,7 @@ function UIOverviewPage() {
       {/* File Actions */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Working with Files</h2>
-        
+
         <div className='space-y-6'>
           <div>
             <h3 className='text-xl font-medium mb-3'>File Selection & Context Building</h3>
@@ -215,7 +200,7 @@ function UIOverviewPage() {
       {/* Ticket Management */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Ticket & Task Management</h2>
-        
+
         <FeatureScreenshot
           src='/assets/screenshots/tickets-overview-with-tasks.webp'
           alt='Tickets Overview'
@@ -260,7 +245,7 @@ function UIOverviewPage() {
       {/* Prompt Library */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Prompt Library</h2>
-        
+
         <FeatureScreenshot
           src='/assets/screenshots/prompt-management-library.webp'
           alt='Prompt Library'
@@ -272,23 +257,17 @@ function UIOverviewPage() {
         <div className='grid md:grid-cols-3 gap-4'>
           <GlassCard className='p-4'>
             <h4 className='font-medium mb-2'>Create Prompts</h4>
-            <p className='text-sm text-muted-foreground'>
-              Click "New Prompt" button to save a new template.
-            </p>
+            <p className='text-sm text-muted-foreground'>Click "New Prompt" button to save a new template.</p>
           </GlassCard>
 
           <GlassCard className='p-4'>
             <h4 className='font-medium mb-2'>Import to Project</h4>
-            <p className='text-sm text-muted-foreground'>
-              Use "Import" button to add prompts to current project.
-            </p>
+            <p className='text-sm text-muted-foreground'>Use "Import" button to add prompts to current project.</p>
           </GlassCard>
 
           <GlassCard className='p-4'>
             <h4 className='font-medium mb-2'>Quick Copy</h4>
-            <p className='text-sm text-muted-foreground'>
-              Click any prompt to copy it instantly to clipboard.
-            </p>
+            <p className='text-sm text-muted-foreground'>Click any prompt to copy it instantly to clipboard.</p>
           </GlassCard>
         </div>
       </section>
@@ -296,13 +275,13 @@ function UIOverviewPage() {
       {/* Keyboard Shortcuts */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Keyboard Shortcuts</h2>
-        
+
         <GlassCard className='p-6'>
           <div className='flex items-center gap-3 mb-4'>
             <Search className='h-5 w-5 text-primary' />
             <h3 className='text-lg font-medium'>Essential Shortcuts</h3>
           </div>
-          
+
           <div className='grid md:grid-cols-2 gap-6'>
             <div>
               <h4 className='font-medium mb-3'>Navigation</h4>
@@ -321,7 +300,7 @@ function UIOverviewPage() {
                 </li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className='font-medium mb-3'>Actions</h4>
               <ul className='space-y-2 text-sm'>
@@ -346,7 +325,7 @@ function UIOverviewPage() {
       {/* Settings & Configuration */}
       <section className='space-y-6'>
         <h2 className='text-3xl font-semibold'>Settings & Configuration</h2>
-        
+
         <FeatureScreenshot
           src='/assets/screenshots/settings-dialog.webp'
           alt='Settings Dialog'
@@ -377,9 +356,7 @@ function UIOverviewPage() {
       {/* Next Steps */}
       <GlassCard className='p-8 bg-primary/5 border-primary/20'>
         <h3 className='text-xl font-semibold mb-3'>Ready to Start Building?</h3>
-        <p className='mb-4 text-muted-foreground'>
-          Now that you know your way around, dive into the how-to guides:
-        </p>
+        <p className='mb-4 text-muted-foreground'>Now that you know your way around, dive into the how-to guides:</p>
         <ul className='space-y-2'>
           <li className='flex items-center gap-2'>
             <span>→</span>

@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import { LazyImage } from '@/components/utils/lazy-image'
-import { GlassCard } from './glass-card'
-import { AnimateOnScroll } from './animation-utils'
+import { GlassCard } from '@/components/ui'
+import { AnimateOnScroll } from '@/components/ui'
 
 interface FeatureScreenshotProps {
   src: string
@@ -39,12 +39,7 @@ export function FeatureScreenshot({
             </div>
           )}
           <GlassCard className='overflow-hidden p-0'>
-            <LazyImage
-              src={screenshotSrc}
-              alt={alt}
-              className={cn('w-full', imageClassName)}
-              priority={priority}
-            />
+            <LazyImage src={screenshotSrc} alt={alt} className={cn('w-full', imageClassName)} priority={priority} />
           </GlassCard>
           {children}
         </div>
@@ -63,12 +58,7 @@ export function FeatureScreenshot({
           {children}
         </div>
         <GlassCard className={cn('overflow-hidden p-0', isLeft && 'lg:order-2')}>
-          <LazyImage
-            src={screenshotSrc}
-            alt={alt}
-            className={cn('w-full', imageClassName)}
-            priority={priority}
-          />
+          <LazyImage src={screenshotSrc} alt={alt} className={cn('w-full', imageClassName)} priority={priority} />
         </GlassCard>
       </div>
     </AnimateOnScroll>

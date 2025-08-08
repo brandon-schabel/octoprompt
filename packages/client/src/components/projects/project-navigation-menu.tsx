@@ -1,7 +1,18 @@
 import React from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from '@ui'
-import { Button } from '@ui'
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarSeparator,
+  MenubarTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import {
   BarChart3,
   FileText,
@@ -12,7 +23,7 @@ import {
   GitBranch,
   FolderOpen,
   Layers,
-  ListTodo,
+  Workflow,
   Circle,
   History,
   Package2,
@@ -21,7 +32,8 @@ import {
   GitPullRequest,
   GitCommit,
   Upload,
-  Sliders
+  Sliders,
+  Copy
 } from 'lucide-react'
 import type { ProjectsSearch, ProjectView } from '@/lib/search-schemas'
 import { cn } from '@/lib/utils'
@@ -29,6 +41,7 @@ import { useActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storag
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { promptlianoClient } from '@/hooks/promptliano-client'
 import { toast } from 'sonner'
+import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 interface ProjectNavigationMenuProps {
   currentSearch: ProjectsSearch
@@ -49,10 +62,12 @@ export function ProjectNavigationMenu({
 }: ProjectNavigationMenuProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const isCompact = useMediaQuery('(max-width: 768px)')
   const [{ summarizationEnabledProjectIds = [] }] = useAppSettings()
   const [activeProjectTabState] = useActiveProjectTab()
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const isSummarizationEnabled = selectedProjectId ? summarizationEnabledProjectIds.includes(selectedProjectId) : false
+  const { copyToClipboard } = useCopyClipboard()
 
   // Check if project has MCP configuration
   const { data: mcpConfigData } = useQuery({
@@ -134,63 +149,62 @@ export function ProjectNavigationMenu({
   if (!showMenus && !showTabs) return null
 
   if (showTabs && !showMenus) {
+    const TabButton = ({ view, icon: Icon, label }: { view: ProjectView; icon: any; label: string }) => {
+      const button = (
+        <Button
+          variant={activeView === view ? 'secondary' : 'ghost'}
+          size='sm'
+          onClick={() => onViewChange(view)}
+          className={cn('h-7 text-sm flex items-center', isCompact ? 'px-2' : 'px-3 gap-1')}
+        >
+          <Icon className='h-3.5 w-3.5' />
+          {!isCompact && label}
+        </Button>
+      )
+
+      if (isCompact) {
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>{button}</TooltipTrigger>
+            <TooltipContent>{label}</TooltipContent>
+          </Tooltip>
+        )
+      }
+
+      return button
+    }
+
     return (
       <div className='flex items-center gap-1 bg-muted rounded-md p-0.5'>
-        <Button
-          variant={activeView === 'context' ? 'secondary' : 'ghost'}
-          size='sm'
-          onClick={() => onViewChange('context')}
-          className='h-7 px-3 text-sm flex items-center gap-1'
-        >
-          <Layers className='h-3.5 w-3.5' />
-          Context
-        </Button>
-        <Button
-          variant={activeView === 'tickets' ? 'secondary' : 'ghost'}
-          size='sm'
-          onClick={() => onViewChange('tickets')}
-          className='h-7 px-3 text-sm flex items-center gap-1'
-        >
-          <ListTodo className='h-3.5 w-3.5' />
-          Tickets
-        </Button>
-        {/* <Button
-          variant={activeView === 'git' ? 'secondary' : 'ghost'}
-          size='sm'
-          onClick={() => onViewChange('git')}
-          className='h-7 px-3 text-sm flex items-center gap-1'
-        >
-          <GitBranch className='h-3.5 w-3.5' />
-          Git
-        </Button> */}
-        <Button
-          variant={activeView === 'manage' ? 'secondary' : 'ghost'}
-          size='sm'
-          onClick={() => onViewChange('manage')}
-          className='h-7 px-3 text-sm flex items-center gap-1'
-        >
-          <Sliders className='h-3.5 w-3.5' />
-          Manage
-        </Button>
-        <Button
-          variant={activeView === 'assets' ? 'secondary' : 'ghost'}
-          size='sm'
-          onClick={() => onViewChange('assets')}
-          className='h-7 px-3 text-sm flex items-center gap-1'
-        >
-          <FolderOpen className='h-3.5 w-3.5' />
-          Assets
-        </Button>
-        {claudeCodeEnabled && (
-          <Button
-            variant={activeView === 'claude-code' ? 'secondary' : 'ghost'}
-            size='sm'
-            onClick={() => onViewChange('claude-code')}
-            className='h-7 px-3 text-sm'
-          >
-            Claude Code
-          </Button>
-        )}
+        <TabButton view='context' icon={Layers} label='Context' />
+        <TabButton view='flow' icon={Workflow} label='Flow' />
+        <TabButton view='manage' icon={Sliders} label='Manage' />
+        <TabButton view='assets' icon={FolderOpen} label='Assets' />
+        {claudeCodeEnabled &&
+          (isCompact ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={activeView === 'claude-code' ? 'secondary' : 'ghost'}
+                  size='sm'
+                  onClick={() => onViewChange('claude-code')}
+                  className='h-7 px-2 text-sm'
+                >
+                  C
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Claude</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              variant={activeView === 'claude-code' ? 'secondary' : 'ghost'}
+              size='sm'
+              onClick={() => onViewChange('claude-code')}
+              className='h-7 px-3 text-sm'
+            >
+              Claude
+            </Button>
+          ))}
       </div>
     )
   }
@@ -247,6 +261,21 @@ export function ProjectNavigationMenu({
             />
           </MenubarItem>
           <MenubarSeparator />
+          <MenubarItem
+            onClick={() => {
+              if (selectedProjectId) {
+                copyToClipboard(selectedProjectId.toString(), {
+                  successMessage: 'Project ID copied to clipboard',
+                  errorMessage: 'Failed to copy project ID'
+                })
+              }
+            }}
+            disabled={!selectedProjectId}
+            className='flex items-center gap-2'
+          >
+            <Copy className='h-4 w-4' />
+            Copy Project ID
+          </MenubarItem>
           <MenubarItem onClick={() => navigateToManageView('project-settings')} className='flex items-center gap-2'>
             <Settings className='h-4 w-4' />
             Settings

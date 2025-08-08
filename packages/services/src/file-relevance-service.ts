@@ -69,7 +69,7 @@ export class FileRelevanceService {
     'once'
   ])
 
-  constructor(private config: RelevanceConfig = DEFAULT_CONFIG) { }
+  constructor(private config: RelevanceConfig = DEFAULT_CONFIG) {}
 
   async scoreFilesForTicket(ticket: Ticket, projectId: number, userContext?: string): Promise<RelevanceScore[]> {
     const text = `${ticket.title} ${ticket.overview} ${userContext || ''}`

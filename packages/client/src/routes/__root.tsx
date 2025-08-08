@@ -3,8 +3,8 @@ import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
 import type { RouterContext } from '../main'
 // Removed: import { AppNavbar } from '@/components/navigation/app-navbar';
 import { AppSidebar } from '@/components/navigation/app-sidebar' // Added
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar' // Added
-import { useState } from 'react'
+import { SidebarProvider, SidebarTrigger } from '@promptliano/ui' // Added
+import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useSidecarServer } from '@/hooks/use-sidecar-server' // Added for Tauri sidecar
 import {
@@ -16,7 +16,7 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut
-} from '@/components/ui/command' // Assuming @ui maps to @/components/ui
+} from '@promptliano/ui' // Assuming @ui maps to @/components/ui
 import { NavigationCommands } from '@/components/navigation/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
@@ -30,9 +30,10 @@ import {
   useGetProjectTabs
 } from '@/hooks/use-kv-local-storage'
 import { MenuIcon } from 'lucide-react' // For a custom trigger example
-import { Button } from '@ui'
+import { Button } from '@promptliano/ui'
 import { useMigrateDefaultTab } from '@/hooks/use-migrate-default-tab'
 import { useMigrateTabViews } from '@/hooks/use-migrate-tab-views'
+import { useSyncProviderSettings } from '@/hooks/use-sync-provider-settings'
 
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
@@ -123,6 +124,14 @@ function GlobalCommandPalette() {
           </CommandItem>
           <CommandItem
             onSelect={() => {
+              navigate({ to: '/providers' })
+              setOpen(false)
+            }}
+          >
+            Manage Providers
+          </CommandItem>
+          <CommandItem
+            onSelect={() => {
               navigate({ to: '/assets' })
               setOpen(false)
             }}
@@ -156,12 +165,23 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   const [activeProjectTabId] = useGetActiveProjectTabId()
+  const navigate = useNavigate()
 
   // Migrate legacy defaultTab to numeric ID system
   useMigrateDefaultTab()
-  
+
   // Migrate old tab views to new Manage sub-view structure
   useMigrateTabViews()
+
+  // Sync provider settings (custom URLs) with server
+  useSyncProviderSettings()
+
+  // Redirect from old /keys route to new /providers route
+  useEffect(() => {
+    if (window.location.pathname === '/keys') {
+      navigate({ to: '/providers', replace: true })
+    }
+  }, [])
 
   // Initialize sidecar server for Tauri builds
   const { isStarting, isReady, error: sidecarError } = useSidecarServer()

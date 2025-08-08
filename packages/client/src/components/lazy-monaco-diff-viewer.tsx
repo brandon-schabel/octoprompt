@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Skeleton } from '@ui'
+import { Skeleton } from '@promptliano/ui'
 import { DiffViewer } from './file-changes/diff-viewer'
 
 // Lazy load Monaco Diff Viewer

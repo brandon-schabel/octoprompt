@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { unixTSSchemaSpec } from './schema-utils'
+import { unixTSSchemaSpec, entityIdSchema } from './schema-utils'
 
 export const AI_API_PROVIDERS = [
   'openai',
@@ -19,7 +19,7 @@ export type APIProviders = z.infer<typeof providerSchema>
 
 export const ProviderKeySchema = z
   .object({
-    id: unixTSSchemaSpec,
+    id: entityIdSchema,
     name: z.string().openapi({ example: 'My OpenAI Key', description: 'User-defined name for the key' }),
     provider: z
       .string()
@@ -32,9 +32,17 @@ export const ProviderKeySchema = z
       .string()
       .openapi({ example: 'sk-xxxxxxxxxxxxxxxxxxxx', description: 'The actual API Key (handle with care)' }),
     encrypted: z.boolean().default(false).openapi({ example: true, description: 'Whether this key is encrypted' }),
-    iv: z.string().optional().openapi({ example: 'base64string', description: 'Initialization vector for encryption' }),
-    tag: z.string().optional().openapi({ example: 'base64string', description: 'Authentication tag for AES-GCM' }),
-    salt: z.string().optional().openapi({ example: 'base64string', description: 'Salt for key derivation' }),
+    iv: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ example: 'base64string', description: 'Initialization vector for encryption' }),
+    tag: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ example: 'base64string', description: 'Authentication tag for AES-GCM' }),
+    salt: z.string().nullable().optional().openapi({ example: 'base64string', description: 'Salt for key derivation' }),
     isDefault: z
       .boolean()
       .default(false)
@@ -116,3 +124,159 @@ export type ProviderKeyIdParams = z.infer<typeof ProviderKeyIdParamsSchema>
 export type ProviderKey = z.infer<typeof ProviderKeySchema>
 
 export type UpdateProviderKeyInput = z.infer<typeof UpdateProviderKeyBodySchema>
+
+// --- Provider Testing Schemas ---
+
+export const ProviderModelSchema = z
+  .object({
+    id: z.string().openapi({ example: 'gpt-4o-mini', description: 'Model identifier' }),
+    name: z.string().openapi({ example: 'GPT-4o Mini', description: 'Human-readable model name' }),
+    description: z
+      .string()
+      .optional()
+      .openapi({ example: 'Fast and efficient GPT-4 model optimized for speed', description: 'Model description' })
+  })
+  .openapi('ProviderModel')
+
+export const ProviderStatusEnum = z.enum(['connected', 'disconnected', 'error']).openapi({
+  description: 'Provider connection status',
+  example: 'connected'
+})
+
+export const TestProviderRequestSchema = z
+  .object({
+    provider: z
+      .string()
+      .min(1)
+      .openapi({ example: 'openai', description: 'Provider identifier to test connection for' }),
+    apiKey: z
+      .string()
+      .optional()
+      .openapi({
+        example: 'sk-xxxxxxxxxxxxxxxxxxxx',
+        description: 'API key for API-based providers (OpenAI, Anthropic)'
+      }),
+    url: z
+      .string()
+      .url()
+      .optional()
+      .openapi({ example: 'http://localhost:11434', description: 'Base URL for local providers (Ollama, LMStudio)' }),
+    timeout: z
+      .number()
+      .int()
+      .positive()
+      .default(10000)
+      .openapi({ example: 10000, description: 'Timeout in milliseconds for the test request' })
+  })
+  .openapi('TestProviderRequest')
+
+export const TestProviderResponseSchema = z
+  .object({
+    success: z.boolean().openapi({ example: true, description: 'Whether the provider test was successful' }),
+    provider: z.string().openapi({ example: 'openai', description: 'Provider identifier that was tested' }),
+    status: ProviderStatusEnum,
+    models: z
+      .array(ProviderModelSchema)
+      .openapi({
+        description: 'Available models from the provider',
+        example: [{ id: 'gpt-4o-mini', name: 'GPT-4o Mini' }]
+      }),
+    responseTime: z.number().nonnegative().openapi({ example: 1250, description: 'Response time in milliseconds' }),
+    error: z
+      .string()
+      .optional()
+      .openapi({ example: 'Invalid API key', description: 'Error message if the test failed' }),
+    testedAt: z.number().openapi({ example: 1716537600000, description: 'Timestamp when the test was performed' })
+  })
+  .openapi('TestProviderResponse')
+
+export const BatchTestProviderRequestSchema = z
+  .object({
+    providers: z
+      .array(TestProviderRequestSchema)
+      .min(1)
+      .openapi({ description: 'Array of provider test requests to execute' }),
+    parallel: z
+      .boolean()
+      .default(true)
+      .openapi({ example: true, description: 'Whether to run tests in parallel or sequentially' })
+  })
+  .openapi('BatchTestProviderRequest')
+
+export const BatchTestSummarySchema = z
+  .object({
+    connected: z
+      .number()
+      .nonnegative()
+      .openapi({ example: 2, description: 'Number of successfully connected providers' }),
+    disconnected: z.number().nonnegative().openapi({ example: 0, description: 'Number of disconnected providers' }),
+    error: z.number().nonnegative().openapi({ example: 1, description: 'Number of providers with errors' })
+  })
+  .openapi('BatchTestSummary')
+
+export const BatchTestProviderResponseSchema = z
+  .object({
+    results: z.array(TestProviderResponseSchema).openapi({ description: 'Array of test results for each provider' }),
+    summary: BatchTestSummarySchema,
+    totalTime: z
+      .number()
+      .nonnegative()
+      .openapi({ example: 3500, description: 'Total time taken for all tests in milliseconds' })
+  })
+  .openapi('BatchTestProviderResponse')
+
+export const ProviderHealthStatusEnum = z.enum(['healthy', 'degraded', 'unhealthy', 'unknown']).openapi({
+  description: 'Provider health status',
+  example: 'healthy'
+})
+
+export const ProviderHealthStatusSchema = z
+  .object({
+    provider: z.string().openapi({ example: 'openai', description: 'Provider identifier' }),
+    status: ProviderHealthStatusEnum,
+    lastChecked: z.number().openapi({ example: 1716537600000, description: 'Timestamp of last health check' }),
+    uptime: z
+      .number()
+      .min(0)
+      .max(100)
+      .openapi({ example: 99.8, description: 'Uptime percentage over the monitoring period' }),
+    averageResponseTime: z
+      .number()
+      .nonnegative()
+      .openapi({ example: 850, description: 'Average response time in milliseconds' }),
+    modelCount: z.number().nonnegative().openapi({ example: 12, description: 'Number of available models' })
+  })
+  .openapi('ProviderHealthStatus')
+
+// Response wrapper schemas for API endpoints
+export const TestProviderApiResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: TestProviderResponseSchema
+  })
+  .openapi('TestProviderApiResponse')
+
+export const BatchTestProviderApiResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: BatchTestProviderResponseSchema
+  })
+  .openapi('BatchTestProviderApiResponse')
+
+export const ProviderHealthStatusListResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.array(ProviderHealthStatusSchema)
+  })
+  .openapi('ProviderHealthStatusListResponse')
+
+// Type exports
+export type ProviderModel = z.infer<typeof ProviderModelSchema>
+export type ProviderStatus = z.infer<typeof ProviderStatusEnum>
+export type TestProviderRequest = z.infer<typeof TestProviderRequestSchema>
+export type TestProviderResponse = z.infer<typeof TestProviderResponseSchema>
+export type BatchTestProviderRequest = z.infer<typeof BatchTestProviderRequestSchema>
+export type BatchTestProviderResponse = z.infer<typeof BatchTestProviderResponseSchema>
+export type BatchTestSummary = z.infer<typeof BatchTestSummarySchema>
+export type ProviderHealthStatus = z.infer<typeof ProviderHealthStatusSchema>
+export type ProviderHealthStatusType = z.infer<typeof ProviderHealthStatusEnum>

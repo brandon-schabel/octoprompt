@@ -1,19 +1,19 @@
-import { homedir, platform } from 'os';
-import { join } from 'path';
+import { homedir, platform } from 'os'
+import { join } from 'path'
 
 export interface EditorConfig {
-  name: string;
-  configPath: string;
-  configKey: string;
+  name: string
+  configPath: string
+  configKey: string
 }
 
 export function getClaudeConfigPath(): string {
   if (platform() === 'darwin') {
-    return join(homedir(), 'Library', 'Application Support', 'Claude', 'mcp-settings.json');
+    return join(homedir(), 'Library', 'Application Support', 'Claude', 'mcp-settings.json')
   } else if (platform() === 'win32') {
-    return join(homedir(), 'AppData', 'Roaming', 'Claude', 'mcp-settings.json');
+    return join(homedir(), 'AppData', 'Roaming', 'Claude', 'mcp-settings.json')
   } else {
-    return join(homedir(), '.config', 'claude', 'mcp-settings.json');
+    return join(homedir(), '.config', 'claude', 'mcp-settings.json')
   }
 }
 
@@ -48,4 +48,4 @@ export const editorConfigs: Record<string, EditorConfig> = {
     configPath: join(homedir(), '.config', 'claude-code', 'mcp-settings.json'),
     configKey: 'mcpServers'
   }
-};
+}
