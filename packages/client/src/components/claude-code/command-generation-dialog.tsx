@@ -183,11 +183,30 @@ export function CommandGenerationDialog({
       clearTimeout(phaseTimeout)
       setGenerationPhase('complete')
 
-      // Cache the generated command
-      cacheCommand(request, result.data)
+      // Extract the command data from the response
+      const generatedCommand = result.data
+
+      // Create a ClaudeCommand object for caching - needs all required fields
+      const commandForCache: ClaudeCommand = {
+        id: Date.now(), // Generate temporary ID for cache
+        projectId: projectId,
+        name: generatedCommand.name,
+        namespace: generatedCommand.namespace,
+        content: generatedCommand.content,
+        frontmatter: generatedCommand.frontmatter,
+        description: generatedCommand.description,
+        created: Date.now(),
+        updated: Date.now(),
+        lastExecuted: null,
+        executionCount: 0,
+        scope: request.scope
+      }
+
+      // Cache the generated command with full ClaudeCommand structure
+      cacheCommand(request, commandForCache)
 
       if (onCommandGenerated) {
-        onCommandGenerated(result.data)
+        onCommandGenerated(generatedCommand)
       }
 
       // Brief delay to show success state

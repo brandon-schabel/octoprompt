@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger
 } from '@promptliano/ui'
 import { DataTable } from '@promptliano/ui'
+import type { ColumnDef } from '@tanstack/react-table'
 import { QueueItem, QueueItemStatus } from '@promptliano/schemas'
 import {
   useGetQueuesWithStats,
@@ -131,11 +132,12 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' }
   }
 
-  const columns = [
+  const columns: ColumnDef<QueueItem>[] = [
     {
       header: 'Status',
       accessorFn: (item: QueueItem) => item.status,
-      cell: (item: QueueItem) => {
+      cell: ({ row }) => {
+        const item = row.original
         // Ensure status has a value, default to 'queued' if undefined
         const status = item.status || 'queued'
         const config = statusConfig[status] || statusConfig.queued
@@ -151,7 +153,8 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     {
       header: 'Task',
       accessorFn: (item: QueueItem) => item.ticketId || item.taskId || item.id,
-      cell: (item: QueueItem) => {
+      cell: ({ row }) => {
+        const item = row.original
         const details = getTaskDetails(item)
         if (!details) {
           return (
@@ -182,16 +185,20 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     {
       header: 'Priority',
       accessorFn: (item: QueueItem) => item.priority,
-      cell: (item: QueueItem) => (
-        <Badge variant='outline' className='text-xs'>
-          Priority {item.priority}
-        </Badge>
-      )
+      cell: ({ row }) => {
+        const item = row.original
+        return (
+          <Badge variant='outline' className='text-xs'>
+            Priority {item.priority}
+          </Badge>
+        )
+      }
     },
     {
       header: 'Agent',
       accessorFn: (item: QueueItem) => item.agentId || 'unassigned',
-      cell: (item: QueueItem) => {
+      cell: ({ row }) => {
+        const item = row.original
         if (!item.agentId) {
           return <span className='text-muted-foreground'>Unassigned</span>
         }
@@ -206,7 +213,8 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     {
       header: 'Time',
       accessorFn: (item: QueueItem) => item.created,
-      cell: (item: QueueItem) => {
+      cell: ({ row }) => {
+        const item = row.original
         if (item.completedAt && item.completedAt > 0) {
           const startTime = item.startedAt && item.startedAt > 0 ? item.startedAt : item.created
           const duration = item.completedAt - startTime
@@ -232,57 +240,60 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     {
       header: 'Actions',
       accessorFn: (item: QueueItem) => item.id,
-      cell: (item: QueueItem) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' size='icon' className='h-8 w-8'>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuItem onClick={() => setSelectedItem(item)}>
-              <ChevronRight className='mr-2 h-4 w-4' />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {item.status === 'queued' && (
-              <>
-                <DropdownMenuItem onClick={() => handleStatusChange(item, 'in_progress')}>
-                  <Play className='mr-2 h-4 w-4' />
-                  Start Processing
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange(item, 'cancelled')}>
-                  <XCircle className='mr-2 h-4 w-4' />
-                  Cancel
-                </DropdownMenuItem>
-              </>
-            )}
-            {item.status === 'in_progress' && (
-              <>
-                <DropdownMenuItem onClick={() => handleStatusChange(item, 'completed')}>
-                  <CheckCircle2 className='mr-2 h-4 w-4' />
-                  Mark Complete
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange(item, 'failed')}>
-                  <XCircle className='mr-2 h-4 w-4' />
-                  Mark Failed
-                </DropdownMenuItem>
-              </>
-            )}
-            {(item.status === 'failed' || item.status === 'cancelled') && (
-              <DropdownMenuItem onClick={() => handleRetry(item)}>
-                <RefreshCw className='mr-2 h-4 w-4' />
-                Retry
+      cell: ({ row }) => {
+        const item = row.original
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='ghost' size='icon' className='h-8 w-8'>
+                <MoreHorizontal className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={() => setSelectedItem(item)}>
+                <ChevronRight className='mr-2 h-4 w-4' />
+                View Details
               </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleDelete(item)} className='text-destructive'>
-              <Trash2 className='mr-2 h-4 w-4' />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+              <DropdownMenuSeparator />
+              {item.status === 'queued' && (
+                <>
+                  <DropdownMenuItem onClick={() => handleStatusChange(item, 'in_progress')}>
+                    <Play className='mr-2 h-4 w-4' />
+                    Start Processing
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange(item, 'cancelled')}>
+                    <XCircle className='mr-2 h-4 w-4' />
+                    Cancel
+                  </DropdownMenuItem>
+                </>
+              )}
+              {item.status === 'in_progress' && (
+                <>
+                  <DropdownMenuItem onClick={() => handleStatusChange(item, 'completed')}>
+                    <CheckCircle2 className='mr-2 h-4 w-4' />
+                    Mark Complete
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange(item, 'failed')}>
+                    <XCircle className='mr-2 h-4 w-4' />
+                    Mark Failed
+                  </DropdownMenuItem>
+                </>
+              )}
+              {(item.status === 'failed' || item.status === 'cancelled') && (
+                <DropdownMenuItem onClick={() => handleRetry(item)}>
+                  <RefreshCw className='mr-2 h-4 w-4' />
+                  Retry
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleDelete(item)} className='text-destructive'>
+                <Trash2 className='mr-2 h-4 w-4' />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      }
     }
   ]
 
