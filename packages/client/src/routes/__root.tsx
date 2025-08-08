@@ -33,6 +33,7 @@ import { MenuIcon } from 'lucide-react' // For a custom trigger example
 import { Button } from '@promptliano/ui'
 import { useMigrateDefaultTab } from '@/hooks/use-migrate-default-tab'
 import { useMigrateTabViews } from '@/hooks/use-migrate-tab-views'
+import { useSyncProviderSettings } from '@/hooks/use-sync-provider-settings'
 
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
@@ -171,6 +172,9 @@ function RootComponent() {
 
   // Migrate old tab views to new Manage sub-view structure
   useMigrateTabViews()
+
+  // Sync provider settings (custom URLs) with server
+  useSyncProviderSettings()
 
   // Redirect from old /keys route to new /providers route
   useEffect(() => {

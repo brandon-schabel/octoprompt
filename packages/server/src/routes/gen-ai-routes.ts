@@ -14,7 +14,13 @@ import {
 } from '@promptliano/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
-import { generateSingleText, generateStructuredData, genTextStream, providerKeyService } from '@promptliano/services' // Import the service instance
+import {
+  generateSingleText,
+  generateStructuredData,
+  genTextStream,
+  providerKeyService,
+  updateProviderSettings
+} from '@promptliano/services' // Import the service instance
 import { APIProviders, ProviderKey } from '@promptliano/schemas'
 import {
   ProviderKeysConfig,
@@ -192,6 +198,47 @@ const postAiGenerateTextRoute = createRoute({
   }
 })
 
+// Schema for updating provider settings
+const UpdateProviderSettingsSchema = z
+  .object({
+    ollamaUrl: z.string().url().optional(),
+    lmstudioUrl: z.string().url().optional()
+  })
+  .openapi('UpdateProviderSettings')
+
+const updateProviderSettingsRoute = createRoute({
+  method: 'post',
+  path: '/api/provider-settings',
+  tags: ['AI'],
+  summary: 'Update provider settings',
+  description: 'Updates custom URLs for local AI providers like Ollama and LMStudio',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: UpdateProviderSettingsSchema }
+      },
+      required: true,
+      description: 'Provider settings to update'
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: OperationSuccessResponseSchema.extend({
+            data: UpdateProviderSettingsSchema
+          })
+        }
+      },
+      description: 'Successfully updated provider settings'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation error'
+    }
+  }
+})
+
 export const genAiRoutes = new OpenAPIHono()
   .openapi(generateStreamRoute, async (c) => {
     const body = c.req.valid('json')
@@ -277,6 +324,14 @@ export const genAiRoutes = new OpenAPIHono()
     const ollamaUrl = c.req.query('ollamaUrl') || OLLAMA_BASE_URL
     const lmstudioUrl = c.req.query('lmstudioUrl') || LMSTUDIO_BASE_URL
 
+    // Update provider settings if custom URLs are provided
+    if (c.req.query('ollamaUrl') || c.req.query('lmstudioUrl')) {
+      const settings: any = {}
+      if (c.req.query('ollamaUrl')) settings.ollamaUrl = ollamaUrl
+      if (c.req.query('lmstudioUrl')) settings.lmstudioUrl = lmstudioUrl
+      updateProviderSettings(settings)
+    }
+
     const listOptions = { ollamaBaseUrl: ollamaUrl, lmstudioBaseUrl: lmstudioUrl }
 
     const models = await modelFetcherService.listModels(provider as APIProviders, listOptions)
@@ -313,4 +368,23 @@ export const genAiRoutes = new OpenAPIHono()
       data: { text: generatedText }
     }
     return c.json(responsePayload, 200)
+  })
+  .openapi(updateProviderSettingsRoute, async (c) => {
+    const body = c.req.valid('json')
+
+    // Update the provider settings
+    const updatedSettings = updateProviderSettings(body)
+
+    // Also update the settings when models are fetched with custom URLs
+    if (body.ollamaUrl || body.lmstudioUrl) {
+      console.log('[GenAI Routes] Provider settings updated:', body)
+    }
+
+    return c.json(
+      {
+        success: true,
+        data: updatedSettings
+      },
+      200
+    )
   })

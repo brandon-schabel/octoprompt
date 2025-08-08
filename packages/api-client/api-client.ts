@@ -1446,6 +1446,14 @@ export class ProviderKeyService extends BaseApiClient {
     })
     return result as DataResponseSchema<ProviderHealthStatus[]>
   }
+
+  async updateProviderSettings(settings: { ollamaUrl?: string; lmstudioUrl?: string }) {
+    const result = await this.request('PUT', '/providers/settings', {
+      body: settings,
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return result
+  }
 }
 
 // Gen AI Service

@@ -47,6 +47,7 @@ import { useAppSettings } from '@/hooks/use-kv-local-storage'
 import { ProviderTestDialog } from './provider-test-dialog'
 import type { ProviderKey } from '@promptliano/schemas'
 import { toast } from 'sonner'
+import { promptlianoClient } from '@/hooks/promptliano-client'
 
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434'
 const DEFAULT_LMSTUDIO_URL = 'http://localhost:1234'
@@ -75,13 +76,45 @@ export function LocalProviderSection({ providers, onEdit, isLoading }: LocalProv
     // The dialog will handle the actual testing
   }
 
-  const handleResetUrl = (provider: 'ollama' | 'lmstudio') => {
+  const handleResetUrl = async (provider: 'ollama' | 'lmstudio') => {
     if (provider === 'ollama') {
       updateAppSettings({ ollamaGlobalUrl: DEFAULT_OLLAMA_URL })
+      // Sync with server
+      await promptlianoClient.keys
+        .updateProviderSettings({
+          ollamaUrl: DEFAULT_OLLAMA_URL
+        })
+        .catch(console.error)
       toast.success('Ollama URL reset to default')
     } else {
       updateAppSettings({ lmStudioGlobalUrl: DEFAULT_LMSTUDIO_URL })
+      // Sync with server
+      await promptlianoClient.keys
+        .updateProviderSettings({
+          lmstudioUrl: DEFAULT_LMSTUDIO_URL
+        })
+        .catch(console.error)
       toast.success('LMStudio URL reset to default')
+    }
+  }
+
+  const handleUrlChange = async (provider: 'ollama' | 'lmstudio', url: string) => {
+    if (provider === 'ollama') {
+      updateAppSettings({ ollamaGlobalUrl: url })
+      // Sync with server
+      await promptlianoClient.keys
+        .updateProviderSettings({
+          ollamaUrl: url
+        })
+        .catch(console.error)
+    } else {
+      updateAppSettings({ lmStudioGlobalUrl: url })
+      // Sync with server
+      await promptlianoClient.keys
+        .updateProviderSettings({
+          lmstudioUrl: url
+        })
+        .catch(console.error)
     }
   }
 
@@ -378,14 +411,14 @@ export function LocalProviderSection({ providers, onEdit, isLoading }: LocalProv
             'ollama',
             ollamaStatus,
             ollamaUrl,
-            (url: string) => updateAppSettings({ ollamaGlobalUrl: url }),
+            (url: string) => handleUrlChange('ollama', url),
             ollamaProvider
           )}
           {renderProviderCard(
             'lmstudio',
             lmstudioStatus,
             lmstudioUrl,
-            (url: string) => updateAppSettings({ lmStudioGlobalUrl: url }),
+            (url: string) => handleUrlChange('lmstudio', url),
             lmstudioProvider
           )}
         </div>

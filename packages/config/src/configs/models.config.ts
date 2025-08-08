@@ -7,9 +7,9 @@ export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
   temperature: 0.7,
   topP: 0,
   topK: 0,
-  provider: 'ollama',
-  // model: 'gpt-oss:20b'
-  model: 'gemma3:1b'
+  provider: 'lmstudio',
+  model: 'gpt-oss:20b'
+  // model: 'gemma3:1b'
 }
 
 export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {

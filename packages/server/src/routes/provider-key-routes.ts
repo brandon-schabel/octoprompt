@@ -15,6 +15,7 @@ import {
 } from '@promptliano/schemas'
 import { providerKeyService } from '@promptliano/services'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
+import { updateProviderSettings } from '@promptliano/services'
 
 const createProviderKeyRoute = createRoute({
   method: 'post',
@@ -247,6 +248,40 @@ const providerHealthRoute = createRoute({
   }
 })
 
+// Schema for provider settings update
+const ProviderSettingsSchema = z.object({
+  ollamaUrl: z.string().optional(),
+  lmstudioUrl: z.string().optional()
+})
+
+const updateProviderSettingsRoute = createRoute({
+  method: 'put',
+  path: '/api/providers/settings',
+  tags: ['Provider Settings'],
+  summary: 'Update provider settings (URLs for local providers)',
+  description: 'Update custom URLs for local AI providers like Ollama and LMStudio',
+  request: {
+    body: {
+      content: { 'application/json': { schema: ProviderSettingsSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
+      description: 'Provider settings updated successfully'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation Error'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
 export const providerKeyRoutes = new OpenAPIHono()
   .openapi(createProviderKeyRoute, async (c) => {
     const body = c.req.valid('json')
@@ -304,6 +339,20 @@ export const providerKeyRoutes = new OpenAPIHono()
     const healthStatuses = await providerKeyService.getProviderHealthStatus(refresh)
     return c.json(
       { success: true, data: healthStatuses } satisfies z.infer<typeof ProviderHealthStatusListResponseSchema>,
+      200
+    )
+  })
+
+  .openapi(updateProviderSettingsRoute, async (c) => {
+    const body = c.req.valid('json')
+
+    // Update the provider settings with custom URLs
+    updateProviderSettings(body)
+
+    return c.json(
+      { success: true, message: 'Provider settings updated successfully' } satisfies z.infer<
+        typeof OperationSuccessResponseSchema
+      >,
       200
     )
   })

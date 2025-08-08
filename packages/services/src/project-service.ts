@@ -23,6 +23,7 @@ import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } f
 import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { generateStructuredData, generateSingleText } from './gen-ai-services'
+import { getProviderUrl } from './provider-settings-service'
 import { getFullProjectSummary, invalidateProjectSummaryCache } from './utils/project-summary-service'
 import { resolvePath } from './utils/path-utils'
 import { fileRelevanceService } from './file-relevance-service'
@@ -844,6 +845,9 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
   const provider = (cfg.provider as APIProviders) || 'openrouter'
   const modelId = cfg.model
 
+  // Add LMStudio URL if provider is lmstudio
+  const options = provider === 'lmstudio' ? { ...cfg, lmstudioUrl: getProviderUrl('lmstudio') } : cfg
+
   if (!modelId) {
     logger.error(`Model not configured for summarize-file task for file ${file.path}.`)
     throw new ApiError(
@@ -861,7 +865,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
       // Try structured data generation first
       const result = await generateStructuredData({
         prompt: fileContent,
-        options: cfg,
+        options: options,
         schema: z.object({
           summary: z.string()
         }),
@@ -932,6 +936,9 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
   const provider = (cfg.provider as APIProviders) || 'openrouter'
   const modelId = cfg.model
 
+  // Add LMStudio URL if provider is lmstudio
+  const options = provider === 'lmstudio' ? { ...cfg, lmstudioUrl: getProviderUrl('lmstudio') } : cfg
+
   if (!modelId) {
     logger.error(`Model not configured for summarize-file task for file ${file.path}.`)
     throw new ApiError(
@@ -949,7 +956,7 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
       // Try structured data generation first
       const result = await generateStructuredData({
         prompt: truncatedContent,
-        options: cfg,
+        options: options,
         schema: z.object({
           summary: z.string()
         }),

@@ -34,6 +34,11 @@ jobs:
       - name: Run shared tests
         run: bun test:shared
 
+      - name: Build UI package
+        run: |
+          cd packages/ui
+          NODE_ENV=production bun run build
+
       - name: Build binaries
         run: bun run build-binaries
 

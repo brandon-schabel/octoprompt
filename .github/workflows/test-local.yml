@@ -1,0 +1,54 @@
+name: Test Local Actions
+on: [push, pull_request]
+
+jobs:
+  test-act-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Hello from Act
+        run: |
+          echo "🎉 Hello from GitHub Actions running locally with act!"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Event: ${{ github.event_name }}"
+
+      - name: Check Docker
+        run: |
+          echo "Docker version:"
+          docker --version || echo "Docker not available"
+
+      - name: Check Node
+        run: |
+          echo "Node version:"
+          node --version || echo "Node not installed"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Check Bun
+        run: |
+          echo "Bun version:"
+          bun --version
+
+      - name: List workspace
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Files in workspace:"
+          ls -la
+
+      - name: Test environment variables
+        env:
+          MY_CUSTOM_VAR: 'Testing act!'
+        run: |
+          echo "Custom variable: $MY_CUSTOM_VAR"
+          echo "GitHub workspace: ${{ github.workspace }}"
+
+      - name: Success message
+        run: |
+          echo "✅ Act is working correctly!"
+          echo "You can now run your GitHub Actions workflows locally."
