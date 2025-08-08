@@ -1,12 +1,21 @@
-name: Test UI Package
+name: Publish UI Package
 
 on:
+  push:
+    tags:
+      - 'v*.*.*' # Trigger on repo-wide version tags
   pull_request:
     branches: [main]
     paths:
       - 'packages/ui/**'
       - '.github/workflows/publish-ui.yml'
+      - '.github/workflows/publish-npm-package.reusable.yml'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g., v0.8.4)'
+        required: true
+        type: string
 
 # Prevent concurrent executions for the same ref
 concurrency:
@@ -14,27 +23,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-ui:
-    name: Test UI Package TypeScript
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 'latest'
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Type check UI package
-        run: |
-          cd packages/ui
-          bun run typecheck
-
-      - name: Verify imports work
-        run: |
-          cd packages/client
-          bun run typecheck
+  publish-ui:
+    name: Publish @promptliano/ui
+    uses: ./.github/workflows/publish-npm-package.reusable.yml
+    with:
+      package-path: packages/ui
+      package-name: '@promptliano/ui'
+      build-command: 'bun run build'
+      test-command: 'bun run typecheck'
+      generate-types: false # We generate types as part of the build
+      npm-access: 'public'
+      bun-version: 'latest'
+      build-output-dir: 'dist'
+      build-output-file: 'dist/index.mjs'
+      run-tests: true
+      version-tag-prefix: 'v'
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

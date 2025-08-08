@@ -19,12 +19,17 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
-  ContextMenuTrigger
+  ContextMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
 } from '@promptliano/ui'
 
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
 import { buildTsconfigAliasMap, getRecursiveImports } from '@promptliano/shared'
+import { useClaudeMdDetection } from '@/hooks/utility-hooks/use-claude-md-detection'
+import { InfoIcon } from 'lucide-react'
 import {
   toggleFile as toggleFileUtil,
   toggleFolder as toggleFolderUtil,
@@ -244,6 +249,11 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const { mutate: stageFiles } = useStageFiles(projectId)
   const { mutate: unstageFiles } = useUnstageFiles(projectId)
 
+  // Get CLAUDE.md detection
+  const projectFiles = Array.from(projectFileMap.values())
+  const { getClaudeMdForDirectory } = useClaudeMdDetection(projectFiles)
+  const autoIncludeClaudeMd = projectTabState?.autoIncludeClaudeMd ?? false
+
   // State for loading diff data
   const [loadingDiff, setLoadingDiff] = useState(false)
   const [loadingOriginal, setLoadingOriginal] = useState(false)
@@ -255,6 +265,14 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
     : selectedFiles.includes(item.node.file?.id ?? -1)
 
   const folderIndeterminate = isFolder && isFolderPartiallySelected(item.node, selectedFiles)
+
+  // Check if this folder contains CLAUDE.md
+  const folderHasClaudeMd = useMemo(() => {
+    if (!isFolder) return false
+    const folderPath = item.path
+    const claudeMdResult = getClaudeMdForDirectory(folderPath)
+    return claudeMdResult.hasClaudeMd
+  }, [isFolder, item.path, getClaudeMdForDirectory])
 
   const handleToggleFile = useCallback(
     (fileId: number) => {
@@ -405,7 +423,22 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
               }}
             />
             {isFolder ? (
-              <Folder className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
+              <div className='flex items-center gap-1'>
+                <Folder className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
+                {folderHasClaudeMd && autoIncludeClaudeMd && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <InfoIcon className='h-3 w-3 text-blue-500' />
+                    </TooltipTrigger>
+                    <TooltipContent side='right' className='max-w-xs'>
+                      <p>
+                        This folder contains CLAUDE.md which will be auto-included when selecting files from this
+                        directory
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
             ) : (
               <FileIcon className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
             )}

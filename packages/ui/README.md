@@ -188,6 +188,24 @@ When adding new components:
 4. Follow shadcn/ui patterns
 5. Test in both client and website contexts
 
+## Publishing
+
+The package is automatically published to npm when a tag is created:
+
+```bash
+# Update version in package.json first
+# Then create and push a tag
+git tag ui-v0.1.0
+git push origin ui-v0.1.0
+```
+
+The GitHub Actions workflow will automatically:
+
+1. Run type checks
+2. Build the package
+3. Generate TypeScript declarations
+4. Publish to npm with proper versioning
+
 ## License
 
 Internal Promptliano package - see root LICENSE file

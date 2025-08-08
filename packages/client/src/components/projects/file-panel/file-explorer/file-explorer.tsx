@@ -94,7 +94,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     },
     [debouncedSetFileSearch]
   )
-  const { selectedFiles, selectFiles } = useSelectedFiles()
+  const { selectedFiles, selectFiles, toggleFilePath } = useSelectedFiles()
 
   // Get git status for the project
   const { data: gitStatus } = useProjectGitStatus(selectedProjectId)
@@ -120,14 +120,10 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
   const toggleFileInSelection = useCallback(
     (file: ProjectFile) => {
-      selectFiles((prev) => {
-        if (prev.includes(file.id)) {
-          return prev.filter((id) => id !== file.id)
-        }
-        return [...prev, file.id]
-      })
+      // Use path-based toggle which includes auto-include logic
+      toggleFilePath(file.path)
     },
-    [selectFiles]
+    [toggleFilePath]
   )
 
   const searchContainerRef = useRef<HTMLDivElement>(null)

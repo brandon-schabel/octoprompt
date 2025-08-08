@@ -104,7 +104,8 @@ async function syncVersions() {
     'services',
     'shared',
     'storage',
-    'config'
+    'config',
+    'ui'
   ]
 
   for (const pkg of packages) {

@@ -82,13 +82,13 @@ class TicketStorage {
       // Convert rows to TicketsStorage
       const ticketsStorage: TicketsStorage = {}
       for (const row of rows) {
-        const ticket: Ticket = {
+        const ticket = {
           id: row.id,
           projectId: row.project_id,
           title: row.title,
-          overview: row.overview || '',
-          status: row.status || 'open',
-          priority: row.priority || 'normal',
+          overview: row.overview,
+          status: row.status,
+          priority: row.priority,
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
           suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
@@ -203,7 +203,7 @@ class TicketStorage {
         return null
       }
 
-      const ticket: Ticket = {
+      const ticket = {
         id: row.id,
         projectId: row.project_id,
         title: row.title,
@@ -264,11 +264,11 @@ class TicketStorage {
       // Convert rows to TicketTasksStorage
       const tasksStorage: TicketTasksStorage = {}
       for (const row of rows) {
-        const task: TicketTask = {
+        const task = {
           id: row.id,
           ticketId: row.ticket_id,
           content: row.content,
-          description: row.description || '',
+          description: row.description,
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'task.suggestedFileIds'),
           done: Boolean(row.done),
           orderIndex: row.order_index,
@@ -485,13 +485,13 @@ class TicketStorage {
       // Convert and validate each ticket
       const validatedTickets: Ticket[] = []
       for (const row of rows) {
-        const ticket: Ticket = {
+        const ticket = {
           id: row.id,
           projectId: row.project_id,
           title: row.title,
-          overview: row.overview || '',
-          status: row.status || 'open',
-          priority: row.priority || 'normal',
+          overview: row.overview,
+          status: row.status,
+          priority: row.priority,
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
           suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
@@ -851,7 +851,7 @@ class TicketStorage {
       const row = query.get(ticketId) as any
       if (!row) return null
 
-      const ticket: Ticket = {
+      const ticket = {
         id: row.id,
         projectId: row.project_id,
         title: row.title,
@@ -1170,13 +1170,13 @@ class TicketStorage {
       // Convert to proper types
       const tickets: Ticket[] = []
       for (const row of ticketRows) {
-        const ticket: Ticket = {
+        const ticket = {
           id: row.id,
           projectId: row.project_id,
           title: row.title,
-          overview: row.overview || '',
-          status: row.status || 'open',
-          priority: row.priority || 'normal',
+          overview: row.overview,
+          status: row.status,
+          priority: row.priority,
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
           suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
@@ -1194,16 +1194,16 @@ class TicketStorage {
           created: row.created_at || Date.now(),
           updated: row.updated_at || Date.now()
         }
-        tickets.push(await validateData(ticket, TicketSchema, `ticket ${ticket.id}`))
+        tickets.push(await validateData(ticket as any, TicketSchema, `ticket ${ticket.id}`))
       }
 
       const tasks: TicketTask[] = []
       for (const row of taskRows) {
-        const task: TicketTask = {
+        const task = {
           id: row.id,
           ticketId: row.ticket_id,
           content: row.content,
-          description: row.description || '',
+          description: row.description,
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'task.suggestedFileIds'),
           done: Boolean(row.done),
           orderIndex: row.order_index,
@@ -1226,7 +1226,7 @@ class TicketStorage {
           created: row.created_at || Date.now(),
           updated: row.updated_at || Date.now()
         }
-        tasks.push(await validateData(task, TicketTaskSchema, `task ${task.id}`))
+        tasks.push(await validateData(task as any, TicketTaskSchema, `task ${task.id}`))
       }
 
       return { tickets, tasks }
@@ -1281,29 +1281,29 @@ class TicketStorage {
       // Convert to proper types (reuse conversion logic from getQueueItems)
       const tickets: Ticket[] = []
       for (const row of ticketRows) {
-        const ticket: Ticket = {
+        const ticket = {
           id: row.id,
           projectId: row.project_id,
           title: row.title,
-          overview: row.overview || '',
-          status: row.status || 'open',
-          priority: row.priority || 'normal',
+          overview: row.overview,
+          status: row.status,
+          priority: row.priority,
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
           suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
           created: row.created_at || Date.now(),
           updated: row.updated_at || Date.now()
         }
-        tickets.push(await validateData(ticket, TicketSchema, `ticket ${ticket.id}`))
+        tickets.push(await validateData(ticket as any, TicketSchema, `ticket ${ticket.id}`))
       }
 
       const tasks: TicketTask[] = []
       for (const row of taskRows) {
-        const task: TicketTask = {
+        const task = {
           id: row.id,
           ticketId: row.ticket_id,
           content: row.content,
-          description: row.description || '',
+          description: row.description,
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'task.suggestedFileIds'),
           done: Boolean(row.done),
           orderIndex: row.order_index,
@@ -1315,7 +1315,7 @@ class TicketStorage {
           created: row.created_at || Date.now(),
           updated: row.updated_at || Date.now()
         }
-        tasks.push(await validateData(task, TicketTaskSchema, `task ${task.id}`))
+        tasks.push(await validateData(task as any, TicketTaskSchema, `task ${task.id}`))
       }
 
       return { tickets, tasks }
@@ -1397,7 +1397,7 @@ class TicketStorage {
 
         if (!ticketsMap.has(ticketId)) {
           // Create ticket object
-          const ticket: Ticket = {
+          const ticket = {
             id: ticketId,
             projectId: row.project_id,
             title: row.ticket_title,
@@ -1423,18 +1423,18 @@ class TicketStorage {
           }
 
           ticketsMap.set(ticketId, {
-            ticket: await validateData(ticket, TicketSchema, `ticket ${ticketId}`),
+            ticket: await validateData(ticket as any, TicketSchema, `ticket ${ticketId}`),
             tasks: []
           })
         }
 
         // Add task if exists (LEFT JOIN may have NULL tasks)
         if (row.task_id) {
-          const task: TicketTask = {
+          const task = {
             id: row.task_id,
             ticketId: ticketId,
             content: row.task_content,
-            description: row.task_description || '',
+            description: row.task_description,
             suggestedFileIds: safeJsonParse(row.task_suggested_file_ids, [], 'task.suggestedFileIds'),
             done: Boolean(row.task_done),
             orderIndex: row.task_order_index,
@@ -1458,7 +1458,7 @@ class TicketStorage {
             updated: row.task_updated_at || Date.now()
           }
 
-          const validatedTask = await validateData(task, TicketTaskSchema, `task ${task.id}`)
+          const validatedTask = await validateData(task as any, TicketTaskSchema, `task ${task.id}`)
           ticketsMap.get(ticketId)!.tasks.push(validatedTask)
         }
       }

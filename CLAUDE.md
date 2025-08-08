@@ -25,15 +25,18 @@ Prod Server: 3579
 Client Dev Server: 1420
 Generally a fullstack feature consists of the follow
 
-- Zod data schemas
-- Data storage and table definitions for SQLite with zod validations
-- Services using the zod schemas as the source of truth
-- Create MCP tools so AIs can use the new service
-- Feature routes with zod + hono openAPI integration
-- Add routes to api-client (IMPORTANT: All API client code should be added to packages/api-client/api-client.ts as a service class extending BaseApiClient, following the pattern of existing services like ChatService, ProjectService, etc. Do NOT create separate client files)
-- Setup data hook using react tanstack query that consume the api-client and add data invalidations where it makes sense (React hooks go in packages/client/src/hooks/api/ and should import promptlianoClient from '@/hooks/promptliano-client')
-- Explorer if there are current components that meet current uses cases, if not add ShadCN components or compose new components based on the foundations of the primitive componets in the repo
-- Integrate components and data hooks into a page to complete the feature
+1. **Zod data schemas** - Define data structure (source of truth)
+2. **Data storage and table definitions** for SQLite with zod validations
+3. **Services** using the zod schemas as the source of truth
+4. **Create MCP tools** so AIs can use the new service
+5. **Feature routes** with zod + hono openAPI integration
+6. **Add routes to api-client** (IMPORTANT: All API client code should be added to packages/api-client/api-client.ts as a service class extending BaseApiClient, following the pattern of existing services like ChatService, ProjectService, etc. Do NOT create separate client files)
+7. **Setup data hooks** using react tanstack query that consume the api-client and add data invalidations where it makes sense (React hooks go in packages/client/src/hooks/api/ and should import promptlianoClient from '@/hooks/promptliano-client')
+8. **Explore existing components** - if current components meet use cases, reuse them; if not add ShadCN components or compose new components based on the foundations of the primitive components in the repo
+9. **Integrate components and data hooks** into a page to complete the feature
+10. **Run lint and typecheck** - Execute `bun run lint` and `bun run typecheck` to ensure code quality and type safety
+11. **Code review (MANDATORY)** - Use `staff-engineer-code-reviewer` agent to review the implementation for quality, best practices, and potential improvements
+12. **Address feedback** - Iterate based on code review feedback until the implementation meets quality standards
 
 ## Database Schema Migration Guidelines
 

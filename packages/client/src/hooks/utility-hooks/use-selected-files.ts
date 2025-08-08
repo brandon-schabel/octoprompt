@@ -8,6 +8,13 @@ import {
 import { useGetProjectFilesWithoutContent, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
 import { buildProjectFileMapWithoutContent, buildProjectFileMap } from '@promptliano/shared'
+import { useClaudeMdDetection } from './use-claude-md-detection'
+import {
+  useInstructionFileDetection,
+  type InstructionFileType,
+  type DetectedInstructionFile
+} from './use-instruction-file-detection'
+import { toast } from 'sonner'
 
 const MAX_HISTORY_SIZE = 50
 const USE_PATH_BASED_SELECTION = true // Feature flag for gradual rollout
@@ -83,6 +90,26 @@ export function useSelectedFiles({
   // Get all project files and build the file map
   const projectId = activeProjectTabState?.selectedProjectId ?? -1
   const projectFileMap = useProjectFileMap(projectId)
+
+  // Get all project files for CLAUDE.md detection
+  const { data: projectFilesData } = useGetProjectFiles(projectId)
+  const projectFiles = projectFilesData?.data ?? []
+
+  // Initialize CLAUDE.md detection (kept for backward compatibility)
+  const { getClaudeMdForFile } = useClaudeMdDetection(projectFiles)
+
+  // Initialize instruction file detection
+  const {
+    getInstructionFilesForFile,
+    getBestInstructionFile,
+    getProjectRootInstructionFiles,
+    getInstructionFilesInHierarchy
+  } = useInstructionFileDetection(projectFiles)
+
+  // Get the auto-include settings
+  const autoIncludeClaudeMd = activeProjectTabState?.autoIncludeClaudeMd ?? false
+  const instructionFileSettings = activeProjectTabState?.instructionFileSettings
+  const shouldAutoInclude = instructionFileSettings?.autoIncludeEnabled ?? autoIncludeClaudeMd // Fall back to old setting
 
   // NEW: Build bidirectional path<->ID mapping
   const { pathToId, idToPath } = useMemo(() => {
@@ -254,12 +281,113 @@ export function useSelectedFiles({
     }
   }
 
-  // NEW: Path-based toggle function
+  // NEW: Path-based toggle function with instruction file auto-inclusion
   const toggleFilePath = (filePath: string) => {
     if (!isInitialized) return
-    const newPaths = selectedFilePaths.includes(filePath)
-      ? selectedFilePaths.filter((p) => p !== filePath)
-      : [...selectedFilePaths, filePath]
+
+    const isSelected = selectedFilePaths.includes(filePath)
+    let newPaths: string[]
+
+    if (isSelected) {
+      // Removing file - just remove it (don't auto-remove instruction files)
+      newPaths = selectedFilePaths.filter((p) => p !== filePath)
+    } else {
+      // Adding file - check for instruction file auto-inclusion
+      newPaths = [...selectedFilePaths, filePath]
+
+      // Auto-include instruction files if enabled
+      if (shouldAutoInclude) {
+        // Use new settings if available, otherwise fall back to CLAUDE.md only
+        if (instructionFileSettings?.autoIncludeEnabled) {
+          const enabledTypes = (instructionFileSettings.fileTypes || ['claude']) as InstructionFileType[]
+          const priority = (instructionFileSettings.priority || 'claude') as InstructionFileType
+
+          const addedFiles: string[] = []
+
+          // Check if we should include the full hierarchy or just the immediate directory
+          const includeHierarchy = instructionFileSettings.includeHierarchy ?? true
+
+          let instructionFilesToAdd: DetectedInstructionFile[] = []
+
+          if (includeHierarchy) {
+            // Get instruction files from the entire hierarchy (from file up to project root)
+            // This will include all CLAUDE.md files in parent directories
+            instructionFilesToAdd = getInstructionFilesInHierarchy(
+              filePath,
+              enabledTypes,
+              priority,
+              instructionFileSettings.includeProjectRoot ?? true,
+              instructionFileSettings.includeGlobal ?? false
+            )
+          } else {
+            // Only get instruction files from the same directory as the selected file
+            const result = getInstructionFilesForFile(filePath, enabledTypes, priority)
+            instructionFilesToAdd = result.instructionFiles
+
+            // Also include project root files if enabled (even without hierarchy)
+            if (instructionFileSettings.includeProjectRoot ?? true) {
+              const rootFiles = getProjectRootInstructionFiles(enabledTypes)
+              instructionFilesToAdd = [...instructionFilesToAdd, ...rootFiles]
+            }
+          }
+
+          // Add all instruction files found
+          for (const instructionFile of instructionFilesToAdd) {
+            if (!newPaths.includes(instructionFile.file.path)) {
+              newPaths.push(instructionFile.file.path)
+
+              // Determine the relative location for better toast messages
+              const fileDir = filePath.substring(0, filePath.lastIndexOf('/'))
+              const instructionDir = instructionFile.file.path.substring(0, instructionFile.file.path.lastIndexOf('/'))
+
+              let location = ''
+              if (instructionDir === fileDir) {
+                location = 'same directory'
+              } else if (instructionDir === '/' || instructionFile.file.path.startsWith('/CLAUDE.md')) {
+                location = 'project root'
+              } else {
+                // Show relative path
+                const relativePath = instructionDir.startsWith(fileDir)
+                  ? instructionDir.substring(fileDir.length + 1)
+                  : instructionDir
+                location = relativePath || 'parent directory'
+              }
+
+              addedFiles.push(`${instructionFile.file.name} (${location})`)
+            }
+          }
+
+          // Show toast notification if files were added
+          if (addedFiles.length > 0) {
+            toast.info('Auto-included instruction files', {
+              description:
+                addedFiles.length > 3
+                  ? `Added ${addedFiles.length} instruction files from hierarchy`
+                  : `Added: ${addedFiles.join(', ')}`,
+              duration: 2000
+            })
+          }
+        } else {
+          // Fall back to old CLAUDE.md behavior for backward compatibility
+          const claudeMdResult = getClaudeMdForFile(filePath)
+          if (claudeMdResult.hasClaudeMd && claudeMdResult.claudeMdFile) {
+            const claudeMdPath = claudeMdResult.claudeMdFile.path
+
+            // Only add if not already selected
+            if (!newPaths.includes(claudeMdPath)) {
+              newPaths.push(claudeMdPath)
+
+              // Show toast notification
+              toast.info('Auto-included CLAUDE.md', {
+                description: `Added context file from ${claudeMdPath.substring(0, claudeMdPath.lastIndexOf('/'))}`,
+                duration: 2000
+              })
+            }
+          }
+        }
+      }
+    }
+
     commitSelectionChange(undefined, newPaths)
   }
 

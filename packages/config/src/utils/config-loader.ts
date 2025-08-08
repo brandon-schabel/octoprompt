@@ -51,7 +51,7 @@ class ConfigLoader {
 
   public loadEnvironmentOverrides(): void {
     // Skip environment overrides in browser
-    if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
+    if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
       return
     }
 

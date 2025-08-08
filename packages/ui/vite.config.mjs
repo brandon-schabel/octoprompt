@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import react from '@vitejs/plugin-react-swc'
-import dts from 'vite-plugin-dts'
 import { libInjectCss } from 'vite-plugin-lib-inject-css'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -11,16 +10,7 @@ export default defineConfig({
   plugins: [
     react(),
     // Injects CSS imports for each component
-    libInjectCss(),
-    // Generate TypeScript declarations
-    dts({
-      include: ['src'],
-      exclude: ['**/*.test.*', '**/*.stories.*'],
-      outDir: 'dist',
-      // Removed rollupTypes as it requires api-extractor configuration
-      insertTypesEntry: true,
-      copyDtsFiles: false
-    })
+    libInjectCss()
   ],
   
   resolve: {

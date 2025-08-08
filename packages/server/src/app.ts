@@ -95,7 +95,7 @@ const generalLimiter = rateLimiter({
   limit: RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: 'draft-6', // Return rate limit info in headers
   keyGenerator: getClientIP,
-  handler: (c, key, rateLimitInfo) => {
+  handler: (c) => {
     return c.json(
       {
         success: false,
@@ -103,9 +103,7 @@ const generalLimiter = rateLimiter({
           message: 'Too many requests. Please try again later.',
           code: 'RATE_LIMIT_EXCEEDED',
           details: {
-            limit: rateLimitInfo.limit,
-            used: rateLimitInfo.used,
-            resetAt: rateLimitInfo.resetTime || Date.now() + 15 * 60 * 1000
+            resetAt: Date.now() + RATE_LIMIT_WINDOW_MS
           }
         }
       } satisfies z.infer<typeof ApiErrorResponseSchema>,
@@ -120,7 +118,7 @@ const aiLimiter = rateLimiter({
   limit: AI_RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: 'draft-6',
   keyGenerator: getClientIP,
-  handler: (c, key, rateLimitInfo) => {
+  handler: (c) => {
     return c.json(
       {
         success: false,
@@ -128,9 +126,7 @@ const aiLimiter = rateLimiter({
           message: 'AI endpoint rate limit exceeded. Please try again later.',
           code: 'AI_RATE_LIMIT_EXCEEDED',
           details: {
-            limit: rateLimitInfo.limit,
-            used: rateLimitInfo.used,
-            resetAt: rateLimitInfo.resetTime || Date.now() + 10 * 60 * 1000
+            resetAt: Date.now() + AI_RATE_LIMIT_WINDOW_MS
           }
         }
       } satisfies z.infer<typeof ApiErrorResponseSchema>,

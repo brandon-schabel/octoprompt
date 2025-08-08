@@ -89,7 +89,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       projectId = args.projectId
     }
 
-    const result = await tool.handler(args || {}, projectId)
+    const result = await tool.handler(args || {}, projectId ?? undefined)
     return {
       content: result.content,
       isError: result.isError
