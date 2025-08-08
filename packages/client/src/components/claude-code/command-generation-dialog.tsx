@@ -189,17 +189,13 @@ export function CommandGenerationDialog({
       // Create a ClaudeCommand object for caching - needs all required fields
       const commandForCache: ClaudeCommand = {
         id: Date.now(), // Generate temporary ID for cache
-        projectId: projectId,
         name: generatedCommand.name,
-        namespace: generatedCommand.namespace,
         content: generatedCommand.content,
-        frontmatter: generatedCommand.frontmatter,
-        description: generatedCommand.description,
         created: Date.now(),
         updated: Date.now(),
-        lastExecuted: null,
-        executionCount: 0,
-        scope: request.scope
+        filePath: '', // Not available from generation, will be set when saved
+        scope: request.scope,
+        frontmatter: generatedCommand.frontmatter || {}
       }
 
       // Cache the generated command with full ClaudeCommand structure
