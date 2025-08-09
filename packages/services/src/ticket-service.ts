@@ -59,7 +59,7 @@ ${validTaskFormatPrompt}
 export function stripTripleBackticks(text: string): string {
   const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/
   const match = text.match(tripleBacktickRegex)
-  if (match) {
+  if (match && match[1]) {
     return match[1].trim()
   }
   return text.trim()
@@ -210,12 +210,62 @@ export async function updateTicket(ticketId: number, data: UpdateTicketBody): Pr
     updated: now
   }
 
-  const success = await ticketStorage.updateTicket(ticketId, updatedTicket)
+  const success = await ticketStorage.replaceTicket(ticketId, updatedTicket)
   if (!success) {
     throw new ApiError(500, `Failed to update ticket ${ticketId}`, 'UPDATE_TICKET_FAILED')
   }
 
   return updatedTicket
+}
+
+export async function completeTicket(ticketId: number): Promise<{ ticket: Ticket; tasks: TicketTask[] }> {
+  // Verify ticket exists
+  const existingTicket = await getTicketById(ticketId)
+
+  // If ticket is in a queue, dequeue it first
+  if (existingTicket.queueId) {
+    await ticketStorage.dequeueTicket(ticketId)
+  }
+
+  // Update ticket status to closed
+  const now = Date.now()
+  const updatedTicket: Ticket = {
+    ...existingTicket,
+    status: 'closed',
+    queueId: undefined, // Clear queue-related fields - use undefined for optional fields
+    queuePosition: undefined,
+    queueStatus: undefined,
+    queuePriority: 0, // Use default value instead of null
+    queuedAt: undefined, // Use undefined for optional timestamp
+    updated: now
+  }
+
+  // Update the ticket
+  const success = await ticketStorage.replaceTicket(ticketId, updatedTicket)
+  if (!success) {
+    throw new ApiError(500, `Failed to complete ticket ${ticketId}`, 'COMPLETE_TICKET_FAILED')
+  }
+
+  // Get all tasks for the ticket
+  const tasks = await getTasks(ticketId)
+
+  // Mark all tasks as done - batch update for better performance
+  const updatedTasks: TicketTask[] = []
+  for (const task of tasks) {
+    if (!task.done) {
+      const updatedTask: TicketTask = {
+        ...task,
+        done: true,
+        updated: now
+      }
+      await ticketStorage.replaceTask(updatedTask)
+      updatedTasks.push(updatedTask)
+    } else {
+      updatedTasks.push(task)
+    }
+  }
+
+  return { ticket: updatedTicket, tasks: updatedTasks }
 }
 
 export async function deleteTicket(ticketId: number): Promise<void> {
@@ -243,6 +293,7 @@ export async function createTask(ticketId: number, data: CreateTaskBody): Promis
     content: data.content,
     description: data.description ?? '',
     suggestedFileIds: data.suggestedFileIds ?? [],
+    suggestedPromptIds: data.suggestedPromptIds ?? [],
     done: false,
     orderIndex: nextIndex,
     estimatedHours: data.estimatedHours ?? undefined,
@@ -296,7 +347,7 @@ export async function updateTask(ticketId: number, taskId: number, updates: Upda
     updated: now
   }
 
-  const success = await ticketStorage.updateTask(taskId, updatedTask)
+  const success = await ticketStorage.replaceTask(taskId, updatedTask)
   if (!success) {
     throw new ApiError(500, `Failed to update task ${taskId}`, 'UPDATE_TASK_FAILED')
   }
@@ -353,7 +404,7 @@ export async function reorderTasks(
       updated: now
     }
 
-    await ticketStorage.updateTask(taskId, updatedTask)
+    await ticketStorage.replaceTask(taskId, updatedTask)
   }
 
   return getTasks(ticketId)
@@ -403,6 +454,7 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
       content: taskSuggestion.title,
       description: taskSuggestion.description || '',
       suggestedFileIds: taskSuggestion.suggestedFileIds || [],
+      suggestedPromptIds: [],
       done: false,
       orderIndex: idx,
       estimatedHours: taskSuggestion.estimatedHours,
@@ -901,7 +953,7 @@ export async function batchMoveTasks(
         orderIndex: maxIndex + 1,
         updated: Date.now()
       }
-      await ticketStorage.updateTask(taskId, updatedTask)
+      await ticketStorage.replaceTask(taskId, updatedTask)
       result.succeeded.push(updatedTask)
       result.successCount++
     } catch (error) {

@@ -36,6 +36,7 @@ import {
   SidebarRail
 } from '@promptliano/ui' // Correct path to your sidebar.tsx
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { ServerStatusIndicator } from '@/components/navigation/server-status-indicator'
 
 const mainNavItems = [
   {
@@ -182,6 +183,9 @@ export function AppSidebar() {
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
+              <SidebarMenuItem className='flex items-center w-full justify-center gap-2 group-data-[collapsible=icon]:hidden'>
+                <ServerStatusIndicator />
+              </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2'>
                 <SidebarMenuButton onClick={() => setOpenProjectListDialog(true)} tooltip='Manage Projects'>
                   <FolderTreeIcon className='h-4 w-4 flex-shrink-0' />

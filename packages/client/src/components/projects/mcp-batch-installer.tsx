@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import { Button } from '@promptliano/ui'
 import { Checkbox } from '@promptliano/ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
@@ -15,13 +15,14 @@ interface MCPBatchInstallerProps {
 }
 
 export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerProps) {
+  const client = useApiClient()
   const [selectedTools, setSelectedTools] = useState<string[]>([])
   const [isInstalling, setIsInstalling] = useState(false)
 
   const { data: detectionData, refetch: refetchDetection } = useQuery({
     queryKey: ['mcp-detection-batch'],
     queryFn: async () => {
-      const result = await promptlianoClient.mcpInstallation.detectTools()
+      const result = await client?.mcpInstallation.detectTools()
       return result.data
     }
   })
@@ -29,14 +30,14 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
   const { data: statusData, refetch: refetchStatus } = useQuery({
     queryKey: ['mcp-installation-status-batch', projectId],
     queryFn: async () => {
-      const result = await promptlianoClient.mcpInstallation.getInstallationStatus(projectId)
+      const result = await client?.mcpInstallation.getInstallationStatus(projectId)
       return result.data
     }
   })
 
   const batchInstallMutation = useMutation({
     mutationFn: async (tools: string[]) => {
-      const response = await promptlianoClient.mcpInstallation.batchInstall(projectId, {
+      const response = await client?.mcpInstallation.batchInstall(projectId, {
         tools,
         debug: false
       })

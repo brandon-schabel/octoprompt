@@ -39,7 +39,7 @@ import type { ProjectsSearch, ProjectView } from '@/lib/search-schemas'
 import { cn } from '@/lib/utils'
 import { useActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import { toast } from 'sonner'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -61,6 +61,7 @@ export function ProjectNavigationMenu({
   showTabs = true
 }: ProjectNavigationMenuProps) {
   const navigate = useNavigate()
+  const client = useApiClient()
   const queryClient = useQueryClient()
   const isCompact = useMediaQuery('(max-width: 768px)')
   const [{ summarizationEnabledProjectIds = [] }] = useAppSettings()
@@ -73,11 +74,11 @@ export function ProjectNavigationMenu({
   const { data: mcpConfigData } = useQuery({
     queryKey: ['mcp-project-config', selectedProjectId],
     queryFn: async () => {
-      if (!selectedProjectId) return null
-      const result = await promptlianoClient.mcpProjectConfig.loadProjectConfig(selectedProjectId)
+      if (!selectedProjectId || !client) return null
+      const result = await client.mcpProjectConfig.loadProjectConfig(selectedProjectId)
       return result.data
     },
-    enabled: !!selectedProjectId
+    enabled: !!selectedProjectId && !!client
   })
 
   const hasProjectMcpConfig = !!mcpConfigData?.config
@@ -86,7 +87,8 @@ export function ProjectNavigationMenu({
   const pullMutation = useMutation({
     mutationFn: async () => {
       if (!selectedProjectId) throw new Error('No project selected')
-      return promptlianoClient.git.pull(selectedProjectId)
+      if (!client) return
+      return client.git.pull(selectedProjectId)
     },
     onSuccess: () => {
       toast.success('Successfully pulled from remote')
@@ -102,7 +104,8 @@ export function ProjectNavigationMenu({
   const pushMutation = useMutation({
     mutationFn: async () => {
       if (!selectedProjectId) throw new Error('No project selected')
-      return promptlianoClient.git.push(selectedProjectId)
+      if (!client) return
+      return client.git.push(selectedProjectId)
     },
     onSuccess: () => {
       toast.success('Successfully pushed to remote')

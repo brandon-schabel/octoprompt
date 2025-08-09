@@ -15,6 +15,7 @@ import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Theme } from '@promptliano/schemas'
 import { useAppSettings } from '@/hooks/use-kv-local-storage'
 import { MCPGlobalConfigEditor } from '@/components/settings/mcp-global-config-editor'
+import { ServerConfiguration } from '@/components/settings/server-configuration'
 import { ArrowRight, Cloud } from 'lucide-react'
 
 type ThemeOption = {
@@ -83,8 +84,9 @@ export function SettingsPage() {
         }}
         className='w-full'
       >
-        <TabsList className='grid w-full grid-cols-2'>
+        <TabsList className='grid w-full grid-cols-3'>
           <TabsTrigger value='general'>General</TabsTrigger>
+          <TabsTrigger value='server'>Server</TabsTrigger>
           <TabsTrigger value='global-mcp'>Global MCP</TabsTrigger>
         </TabsList>
 
@@ -244,6 +246,10 @@ export function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value='server' className='space-y-6'>
+          <ServerConfiguration />
         </TabsContent>
 
         <TabsContent value='global-mcp' className='space-y-6'>

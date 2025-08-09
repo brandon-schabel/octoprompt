@@ -10,6 +10,7 @@ const ALLOWED_FILE_CONFIGS = filesConfig.allowedExtensions
 const DEFAULT_FILE_EXCLUSIONS = filesConfig.defaultExclusions
 const MAX_FILE_SIZE_FOR_SUMMARY = filesConfig.maxFileSizeForSummary
 import { truncateForSummarization } from '@promptliano/shared'
+import { retryOperation } from '../utils/retry-operation'
 import {
   getProjectFiles,
   bulkCreateProjectFiles,
@@ -372,6 +373,7 @@ export async function syncFileSet(
   let filesToUpdate: { fileId: number; data: FileSyncData }[] = []
   let fileIdsToDelete: number[] = []
   let skippedCount = 0
+  let processedCount = 0
 
   const existingDbFiles = await getProjectFiles(project.id) // From project-service
   if (existingDbFiles === null) {
@@ -379,9 +381,19 @@ export async function syncFileSet(
     throw new Error(`Could not retrieve existing files for project ${project.id}`)
   }
 
+  logger.info(
+    `[SYNC] Comparing ${absoluteFilePathsOnDisk.length} disk files with ${existingDbFiles.length} database files`
+  )
   const dbFileMap = new Map<string, ProjectFile>(existingDbFiles.map((f) => [normalizePathForDbUtil(f.path), f]))
 
   for (const absFilePath of absoluteFilePathsOnDisk) {
+    processedCount++
+
+    // Log progress every 100 files for large projects
+    if (processedCount % 100 === 0) {
+      logger.info(`[SYNC PROGRESS] Processed ${processedCount}/${absoluteFilePathsOnDisk.length} files...`)
+    }
+
     const relativePath = relative(absoluteProjectPath, absFilePath)
     const normalizedRelativePath = normalizePathForDbUtil(relativePath)
 
@@ -476,21 +488,52 @@ export async function syncFileSet(
   let createdFiles: ProjectFile[] = []
   let updatedFiles: ProjectFile[] = []
 
+  // Process in chunks to avoid overwhelming the database
+  const CHUNK_SIZE = 100
+
   try {
     if (filesToCreate.length > 0) {
-      logger.verbose(`Creating ${filesToCreate.length} new file records`)
-      createdFiles = await bulkCreateProjectFiles(project.id, filesToCreate)
-      createdCount = createdFiles.length
+      logger.info(`[SYNC] Creating ${filesToCreate.length} new file records in chunks of ${CHUNK_SIZE}`)
+
+      for (let i = 0; i < filesToCreate.length; i += CHUNK_SIZE) {
+        const chunk = filesToCreate.slice(i, Math.min(i + CHUNK_SIZE, filesToCreate.length))
+        logger.verbose(
+          `Creating files ${i + 1}-${Math.min(i + CHUNK_SIZE, filesToCreate.length)} of ${filesToCreate.length}`
+        )
+
+        const chunkResults = await bulkCreateProjectFiles(project.id, chunk)
+        createdFiles.push(...chunkResults)
+        createdCount += chunkResults.length
+      }
     }
+
     if (filesToUpdate.length > 0) {
-      logger.verbose(`Updating ${filesToUpdate.length} existing file records`)
-      updatedFiles = await bulkUpdateProjectFiles(project.id, filesToUpdate)
-      updatedCount = updatedFiles.length
+      logger.info(`[SYNC] Updating ${filesToUpdate.length} existing file records in chunks of ${CHUNK_SIZE}`)
+
+      for (let i = 0; i < filesToUpdate.length; i += CHUNK_SIZE) {
+        const chunk = filesToUpdate.slice(i, Math.min(i + CHUNK_SIZE, filesToUpdate.length))
+        logger.verbose(
+          `Updating files ${i + 1}-${Math.min(i + CHUNK_SIZE, filesToUpdate.length)} of ${filesToUpdate.length}`
+        )
+
+        const chunkResults = await bulkUpdateProjectFiles(project.id, chunk)
+        updatedFiles.push(...chunkResults)
+        updatedCount += chunkResults.length
+      }
     }
+
     if (fileIdsToDelete.length > 0) {
-      logger.verbose(`Deleting ${fileIdsToDelete.length} file records`)
-      const deleteResult = await bulkDeleteProjectFiles(project.id, fileIdsToDelete)
-      deletedCount = deleteResult.deletedCount
+      logger.info(`[SYNC] Deleting ${fileIdsToDelete.length} file records in chunks of ${CHUNK_SIZE}`)
+
+      for (let i = 0; i < fileIdsToDelete.length; i += CHUNK_SIZE) {
+        const chunk = fileIdsToDelete.slice(i, Math.min(i + CHUNK_SIZE, fileIdsToDelete.length))
+        logger.verbose(
+          `Deleting files ${i + 1}-${Math.min(i + CHUNK_SIZE, fileIdsToDelete.length)} of ${fileIdsToDelete.length}`
+        )
+
+        const deleteResult = await bulkDeleteProjectFiles(project.id, chunk)
+        deletedCount += deleteResult.deletedCount
+      }
     }
     logger.info(
       `SyncFileSet results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped: ${skippedCount}`
@@ -539,31 +582,76 @@ export async function syncFileSet(
 export async function syncProject(
   project: Project
 ): Promise<{ created: number; updated: number; deleted: number; skipped: number }> {
-  try {
-    const absoluteProjectPath = resolvePath(project.path)
-    if (!nodeFsExistsSync(absoluteProjectPath) || !statSync(absoluteProjectPath).isDirectory()) {
-      logger.error(`Project path is not a valid directory: ${absoluteProjectPath}`)
-      throw new Error(`Project path is not a valid directory: ${project.path}`)
+  const startTime = Date.now()
+  logger.info(`[SYNC START] Project: ${project.name} (ID: ${project.id})`)
+
+  // Wrap the sync operation in retry logic for resilience
+  return retryOperation(
+    async () => {
+      const absoluteProjectPath = resolvePath(project.path)
+      if (!nodeFsExistsSync(absoluteProjectPath) || !statSync(absoluteProjectPath).isDirectory()) {
+        logger.error(`Project path is not a valid directory: ${absoluteProjectPath}`)
+        throw new Error(`Project path is not a valid directory: ${project.path}`)
+      }
+
+      const ignoreFilter = await loadIgnoreRules(absoluteProjectPath)
+      logger.debug(`Starting full sync for project ${project.name} (${project.id}) at path: ${absoluteProjectPath}`)
+
+      // Log scanning phase
+      logger.info(`[SYNC] Scanning files in ${absoluteProjectPath}...`)
+      const scanStartTime = Date.now()
+
+      const projectFilesOnDisk = getTextFiles(
+        absoluteProjectPath,
+        absoluteProjectPath,
+        ignoreFilter,
+        ALLOWED_FILE_CONFIGS
+      )
+
+      const scanDuration = Date.now() - scanStartTime
+      logger.info(
+        `[SYNC] File scan completed in ${scanDuration}ms. Found ${projectFilesOnDisk.length} files to process`
+      )
+
+      // Process files
+      logger.info(`[SYNC] Processing ${projectFilesOnDisk.length} files...`)
+      const results = await syncFileSet(project, absoluteProjectPath, projectFilesOnDisk, ignoreFilter)
+
+      const totalDuration = Date.now() - startTime
+      logger.info(
+        `[SYNC COMPLETE] Project ${project.id} synced in ${totalDuration}ms - Created: ${results.created}, Updated: ${results.updated}, Deleted: ${results.deleted}, Skipped: ${results.skipped}`
+      )
+
+      return results
+    },
+    {
+      maxAttempts: 3,
+      initialDelay: 2000,
+      maxDelay: 10000,
+      shouldRetry: (error: any, attempt: number) => {
+        // Don't retry on invalid project path errors
+        if (error.message?.includes('not a valid directory')) {
+          return false
+        }
+        // Retry on file system errors, database errors, and network errors
+        const retryableErrors = ['EBUSY', 'ENOENT', 'EACCES', 'SQLITE_BUSY', 'SQLITE_LOCKED', 'ETIMEDOUT', 'ECONNRESET']
+        const shouldRetry = retryableErrors.some((code) => error.code === code || error.message?.includes(code))
+
+        if (shouldRetry) {
+          logger.warn(`[SYNC RETRY] Project ${project.id} sync failed on attempt ${attempt}, will retry...`)
+        }
+
+        return shouldRetry
+      }
     }
-
-    const ignoreFilter = await loadIgnoreRules(absoluteProjectPath)
-    logger.debug(`Starting full sync for project ${project.name} (${project.id}) at path: ${absoluteProjectPath}`)
-
-    const projectFilesOnDisk = getTextFiles(
-      absoluteProjectPath,
-      absoluteProjectPath,
-      ignoreFilter,
-      ALLOWED_FILE_CONFIGS
+  ).catch((error: any) => {
+    const duration = Date.now() - startTime
+    logger.error(
+      `[SYNC FAILED] Project ${project.id} ${project.name} failed after ${duration}ms and all retry attempts`,
+      error
     )
-    logger.verbose(`Found ${projectFilesOnDisk.length} files on disk to potentially sync after applying ignore rules`)
-
-    const results = await syncFileSet(project, absoluteProjectPath, projectFilesOnDisk, ignoreFilter)
-    logger.debug(`Successfully completed sync for project ${project.id}`)
-    return results
-  } catch (error: any) {
-    logger.error(`Failed to sync project ${project.id} ${project.name}`, error)
     throw error
-  }
+  })
 }
 
 /**

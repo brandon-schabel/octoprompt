@@ -4,9 +4,31 @@ import { Badge } from '@promptliano/ui'
 import { Button } from '@promptliano/ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
 import { Checkbox } from '@promptliano/ui'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@promptliano/ui'
 import { cn } from '@/lib/utils'
-import { CalendarDays, Clock, FileText, Hash, Link2, Plus, Edit, ListOrdered, ArrowRight, Copy } from 'lucide-react'
-import { useUpdateTask } from '@/hooks/api/use-tickets-api'
+import {
+  CalendarDays,
+  Clock,
+  FileText,
+  Hash,
+  Link2,
+  Plus,
+  Edit,
+  ListOrdered,
+  ArrowRight,
+  Copy,
+  CheckCircle2
+} from 'lucide-react'
+import { useUpdateTask, useCompleteTicket } from '@/hooks/api/use-tickets-api'
 import { useGetQueue } from '@/hooks/api/use-queue-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { toast } from 'sonner'
@@ -34,7 +56,9 @@ const PRIORITY_COLORS = {
 
 export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDetailViewProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
   const updateTask = useUpdateTask()
+  const completeTicket = useCompleteTicket()
   const navigate = useNavigate()
   const { copyToClipboard } = useCopyClipboard()
 
@@ -99,6 +123,19 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
     })
   }
 
+  const handleCompleteTicket = async () => {
+    if (!ticket) return
+
+    try {
+      await completeTicket.mutateAsync(ticket.ticket.id)
+      toast.success('Ticket completed successfully')
+      setIsCompleteDialogOpen(false)
+      onTicketUpdate?.()
+    } catch (error) {
+      toast.error('Failed to complete ticket')
+    }
+  }
+
   return (
     <div className='h-full overflow-y-auto p-6'>
       <div className='max-w-4xl mx-auto space-y-6'>
@@ -113,6 +150,16 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
               <Copy className='h-4 w-4 mr-2' />
               Copy as Markdown
             </Button>
+            {ticket.ticket.status !== 'closed' && (
+              <Button
+                variant='outline'
+                onClick={() => setIsCompleteDialogOpen(true)}
+                disabled={completeTicket.isPending}
+              >
+                <CheckCircle2 className='h-4 w-4 mr-2' />
+                Complete Ticket
+              </Button>
+            )}
             <Button onClick={() => setIsEditDialogOpen(true)}>
               <Edit className='h-4 w-4 mr-2' />
               Edit Ticket
@@ -335,6 +382,31 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
         ticketWithTasks={ticket}
         projectId={projectId.toString()}
       />
+
+      <AlertDialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Ticket</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to complete this ticket? This will:
+              <ul className='mt-2 ml-4 list-disc space-y-1'>
+                <li>Mark the ticket status as "Closed"</li>
+                <li>Mark all {ticket?.tasks.length || 0} tasks as completed</li>
+                {ticket?.ticket.queueId && <li>Remove the ticket from any active queues</li>}
+              </ul>
+              <div className='mt-3'>
+                This action cannot be undone. You can still edit the ticket after completion if needed.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCompleteTicket} disabled={completeTicket.isPending}>
+              {completeTicket.isPending ? 'Completing...' : 'Complete Ticket'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

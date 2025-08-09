@@ -2,11 +2,12 @@ import { useEffect, useCallback, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useGetActiveProjectTabId, useProjectTabById } from '@/hooks/use-kv-local-storage'
 import { useDebounceCallback } from './use-debounce'
-import { promptlianoClient } from '../promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import type { ProjectTabState } from '@promptliano/schemas'
 
 export function useActiveTabSync(projectId: number | undefined) {
   const [activeTabId] = useGetActiveProjectTabId()
+  const client = useApiClient()
   const queryClient = useQueryClient()
   const previousTabMetadataRef = useRef<string>('')
 
@@ -43,10 +44,11 @@ export function useActiveTabSync(projectId: number | undefined) {
     queryKey: ['activeTab', projectId],
     queryFn: async () => {
       if (!projectId || projectId === -1) return null
-      const response = await promptlianoClient.projects.getActiveTab(projectId)
+      if (!client) return null // Return null instead of undefined
+      const response = await client.projects.getActiveTab(projectId)
       return response.data
     },
-    enabled: !!projectId && projectId !== -1,
+    enabled: !!projectId && projectId !== -1 && !!client,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 30 * 1000, // Poll every 30 seconds
     refetchIntervalInBackground: true
@@ -63,7 +65,8 @@ export function useActiveTabSync(projectId: number | undefined) {
       tabId: number
       tabMetadata?: ReturnType<typeof getTabMetadata>
     }) => {
-      return await promptlianoClient.projects.setActiveTab(projectId, { tabId, tabMetadata })
+      if (!client) return
+      return await client.projects.setActiveTab(projectId, { tabId, tabMetadata })
     },
     onSuccess: () => {
       // Invalidate queries to refresh data
@@ -135,7 +138,8 @@ export function useActiveTabSync(projectId: number | undefined) {
   // Function to clear active tab
   const clearActiveTab = useMutation({
     mutationFn: async (projectId: number) => {
-      return await promptlianoClient.projects.clearActiveTab(projectId)
+      if (!client) return
+      return await client.projects.clearActiveTab(projectId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activeTab', projectId] })

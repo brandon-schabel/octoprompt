@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { promptlianoClient } from '../promptliano-client'
+import { useApiClient } from './use-api-client'
 import type { AiGenerateTextRequest, AiGenerateStructuredRequest } from '@promptliano/schemas'
 import { toast } from 'sonner'
 
@@ -18,8 +18,10 @@ const GEN_AI_KEYS = {
 
 // Simplified hook for generating text
 export const useGenerateText = () => {
+  const client = useApiClient()
+
   return useMutation({
-    mutationFn: (data: AiGenerateTextRequest) => promptlianoClient.genAi.generateText(data),
+    mutationFn: (data: AiGenerateTextRequest) => client!.genAi.generateText(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to generate text')
     }
@@ -28,8 +30,10 @@ export const useGenerateText = () => {
 
 // Hook for generating structured data
 export const useGenerateStructuredData = () => {
+  const client = useApiClient()
+
   return useMutation({
-    mutationFn: (data: AiGenerateStructuredRequest) => promptlianoClient.genAi.generateStructured(data),
+    mutationFn: (data: AiGenerateStructuredRequest) => client!.genAi.generateStructured(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to generate structured data')
     }
@@ -38,8 +42,10 @@ export const useGenerateStructuredData = () => {
 
 // Hook for streaming text generation
 export const useStreamText = () => {
+  const client = useApiClient()
+
   return useMutation({
-    mutationFn: (data: AiGenerateTextRequest) => promptlianoClient.genAi.streamText(data),
+    mutationFn: (data: AiGenerateTextRequest) => client!.genAi.streamText(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to start text stream')
     }
@@ -48,10 +54,13 @@ export const useStreamText = () => {
 
 // Hook for getting available models
 export const useGetModels = (provider: string, options?: { ollamaUrl?: string; lmstudioUrl?: string }) => {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: GEN_AI_KEYS.models(provider, options),
-    queryFn: () => promptlianoClient.genAi.getModels(provider, options),
-    enabled: !!provider,
+    queryFn: () => client.genAi.getModels(provider, options),
+    enabled: !!client && !!provider,
     staleTime: 10 * 60 * 1000 // 10 minutes - models don't change frequently
   })
 }

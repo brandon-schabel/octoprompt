@@ -29,7 +29,7 @@ import {
   useMoveItem,
   useBulkMoveItems
 } from '@/hooks/api/use-flow-api'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import { QueueWithStats } from '@promptliano/schemas'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@promptliano/ui'
 import { Input } from '@promptliano/ui'
@@ -57,6 +57,7 @@ interface DragItem {
 }
 
 export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
+  const client = useApiClient()
   const [activeItem, setActiveItem] = useState<DragItem | null>(null)
   const [isCreateQueueOpen, setIsCreateQueueOpen] = useState(false)
   const [newQueueName, setNewQueueName] = useState('')
@@ -413,7 +414,7 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
   const handlePauseQueue = useCallback(
     async (queue: QueueWithStats) => {
       try {
-        await promptlianoClient.queues.updateQueue(queue.queue.id, { status: 'paused' })
+        await client?.queues.updateQueue(queue.queue.id, { status: 'paused' })
         toast.success('Queue paused')
         refetchQueues()
       } catch (error) {
@@ -426,7 +427,7 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
   const handleResumeQueue = useCallback(
     async (queue: QueueWithStats) => {
       try {
-        await promptlianoClient.queues.updateQueue(queue.queue.id, { status: 'active' })
+        await client?.queues.updateQueue(queue.queue.id, { status: 'active' })
         toast.success('Queue resumed')
         refetchQueues()
       } catch (error) {

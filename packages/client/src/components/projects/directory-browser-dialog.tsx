@@ -105,7 +105,7 @@ export function DirectoryBrowserDialog({ open, onOpenChange, onSelectPath, initi
 
         <div className='space-y-2 sm:space-y-4 flex flex-col h-full overflow-hidden'>
           {/* Breadcrumb navigation */}
-          <div className='flex items-center gap-1 text-sm text-muted-foreground overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700'>
+          <div className='flex items-center gap-1 text-sm text-muted-foreground overflow-x-auto pb-2 min-h-[32px] scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600'>
             <Button variant='ghost' size='sm' onClick={handleGoHome} className='h-7 px-1 sm:px-2 flex-shrink-0'>
               <Home className='h-3 w-3 sm:h-4 sm:w-4' />
             </Button>
@@ -113,14 +113,14 @@ export function DirectoryBrowserDialog({ open, onOpenChange, onSelectPath, initi
               const fullPath = homePath + pathParts.slice(0, index + 1).join('/')
               return (
                 <React.Fragment key={index}>
-                  <ChevronRight className='h-4 w-4' />
+                  <ChevronRight className='h-4 w-4 flex-shrink-0' />
                   <Button
                     variant='ghost'
                     size='sm'
                     onClick={() => navigateToDirectory(fullPath)}
-                    className='h-7 px-1 sm:px-2 min-w-0 max-w-[120px] sm:max-w-none'
+                    className='h-7 px-1 sm:px-2 min-w-0 whitespace-nowrap'
                   >
-                    <span className='truncate'>{part}</span>
+                    <span className='whitespace-nowrap'>{part}</span>
                   </Button>
                 </React.Fragment>
               )

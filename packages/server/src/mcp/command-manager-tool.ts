@@ -107,7 +107,7 @@ export const commandManagerTool: MCPToolDefinition = {
       },
       projectId: {
         type: 'number',
-        description: 'The project ID (required for all actions). Example: 1754111018844'
+        description: 'The project ID (required for all actions). Example: 1754713756748'
       },
       data: {
         type: 'object',
@@ -122,7 +122,7 @@ export const commandManagerTool: MCPToolDefinition = {
     async (args: z.infer<typeof CommandManagerSchema>): Promise<MCPToolResponse> => {
       try {
         const { action, projectId, data } = args
-        const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+        const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
 
         // Get project to validate and get path
         const project = await getProjectById(validProjectId)

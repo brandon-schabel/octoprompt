@@ -313,6 +313,29 @@ export const appSettingsSchema = z
       .optional()
       .default('http://localhost:1234')
       .openapi({ description: 'Base URL for the LM Studio local inference server.', example: 'http://localhost:1234' }), // Default corrected based on common LM Studio port
+    promptlianoServerUrl: z.string().url().optional().default('http://localhost:3147').openapi({
+      description: 'URL of the Promptliano server to connect to. Can be changed to connect to remote servers.',
+      example: 'http://localhost:3147'
+    }),
+    promptlianoServerUrls: z
+      .array(
+        z.object({
+          name: z
+            .string()
+            .openapi({ description: 'Friendly name for this server configuration', example: 'Local Dev' }),
+          url: z.string().url().openapi({ description: 'Server URL', example: 'http://localhost:3147' }),
+          isDefault: z.boolean().optional().openapi({ description: 'Whether this is the default server' })
+        })
+      )
+      .optional()
+      .default([])
+      .openapi({
+        description: 'Saved server configurations for quick switching between different Promptliano servers',
+        example: [
+          { name: 'Local Dev', url: 'http://localhost:3147', isDefault: true },
+          { name: 'Production', url: 'https://api.promptliano.com', isDefault: false }
+        ]
+      }),
     summarizationIgnorePatterns: z
       .array(z.string())
       .optional()
@@ -473,6 +496,8 @@ export const createSafeGlobalState = (): GlobalState => ({
     codeThemeDark: 'atomOneDark',
     ollamaGlobalUrl: 'http://localhost:11434',
     lmStudioGlobalUrl: 'http://localhost:1234',
+    promptlianoServerUrl: 'http://localhost:3147',
+    promptlianoServerUrls: [],
     summarizationIgnorePatterns: [],
     summarizationAllowPatterns: [],
     summarizationEnabledProjectIds: [],

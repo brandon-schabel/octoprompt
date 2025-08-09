@@ -5,6 +5,11 @@
   "type": "module",
   "scripts": {
     "test": "bun test src/ --timeout 5000",
+    "test:unit": "bun test src/**/*.test.ts --timeout 5000",
+    "test:integration": "bun test src/**/*.integration.test.ts --timeout 10000",
+    "test:queue": "bun test src/queue-*.test.ts --timeout 10000",
+    "test:coverage": "bun test src/ --timeout 5000 --coverage",
+    "test:watch": "bun test src/ --watch",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

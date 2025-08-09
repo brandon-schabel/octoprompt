@@ -301,7 +301,11 @@ class TicketStorage {
       return tasksStorage
     } catch (error: any) {
       console.error(`Error reading tasks for ticket ${ticketId} from database:`, error)
-      throw new ApiError(500, `Failed to read tasks for ticket ${ticketId}`, 'DB_READ_ERROR')
+      throw new ApiError(500, `Failed to read tasks for ticket ${ticketId}`, 'DB_READ_ERROR', {
+        ticketId,
+        errorMessage: error?.message || 'Unknown database error',
+        suggestion: 'Verify that the ticket exists and the database is accessible'
+      })
     }
   }
 
@@ -362,7 +366,12 @@ class TicketStorage {
       return validatedTasks
     } catch (error: any) {
       console.error(`Error writing tasks for ticket ${ticketId} to database:`, error)
-      throw new ApiError(500, `Failed to write tasks for ticket ${ticketId}`, 'DB_WRITE_ERROR')
+      throw new ApiError(500, `Failed to write tasks for ticket ${ticketId}`, 'DB_WRITE_ERROR', {
+        ticketId,
+        taskCount: Object.keys(tasks).length,
+        errorMessage: error?.message || 'Unknown database error',
+        suggestion: 'Check if the ticket exists and ensure all task IDs are unique'
+      })
     }
   }
 

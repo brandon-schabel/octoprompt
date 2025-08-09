@@ -495,25 +495,6 @@ export function ProjectsPage() {
 
 export const Route = createFileRoute('/projects')({
   validateSearch: zodValidator(projectsSearchSchema),
-  beforeLoad: async ({ context, search }) => {
-    const { queryClient, promptlianoClient } = context
-
-    // Prefetch projects list if not already cached
-    await queryClient.prefetchQuery({
-      queryKey: ['projects'],
-      queryFn: () => promptlianoClient.projects.listProjects(),
-      staleTime: 5 * 60 * 1000 // 5 minutes
-    })
-
-    // If we have a projectId in search, prefetch that project's data
-    if (search.projectId) {
-      await queryClient.prefetchQuery({
-        queryKey: ['project', search.projectId],
-        queryFn: () => promptlianoClient.projects.getProject(search.projectId!),
-        staleTime: 5 * 60 * 1000
-      })
-    }
-  },
   component: ProjectsPage
 })
 

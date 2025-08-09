@@ -35,7 +35,7 @@ Use when exploring files based on a text prompt:
 ```
 mcp__Promptliano__project_manager(
   action: "suggest_files",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     prompt: "authentication flow",
     limit: 10

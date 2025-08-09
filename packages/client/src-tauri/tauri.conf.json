@@ -19,7 +19,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:3147 http://127.0.0.1:3147 https://localhost:3147 https://127.0.0.1:3147; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+      "csp": "default-src 'self'; connect-src 'self' http: https: ws: wss:; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
     }
   },
   "bundle": {
@@ -33,7 +33,6 @@
       "icons/AppIcon-83.5@2x~ipad.png",
       "icons/AppIcon~ios-marketing.png"
     ],
-    "externalBin": ["binaries/promptliano-server"],
     "macOS": {
       "signingIdentity": null,
       "providerShortName": null,

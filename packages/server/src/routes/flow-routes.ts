@@ -242,7 +242,7 @@ const dequeueTicketRoute = createRoute({
   path: '/api/flow/tickets/{ticketId}/dequeue',
   request: {
     params: z.object({
-      ticketId: entityIdSchema
+      ticketId: z.coerce.number()
     })
   },
   responses: {
@@ -271,7 +271,7 @@ const dequeueTaskRoute = createRoute({
   path: '/api/flow/tasks/{taskId}/dequeue',
   request: {
     params: z.object({
-      taskId: entityIdSchema
+      taskId: z.coerce.number()
     })
   },
   responses: {

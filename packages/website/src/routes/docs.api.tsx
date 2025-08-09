@@ -78,7 +78,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__project_manager(
   action: "overview",
-  projectId: 1754111018844
+  projectId: 1754713756748
 )`}
                   language='typescript'
                 />
@@ -86,7 +86,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`{
   "project": {
-    "id": 1754111018844,
+    "id": 1754713756748,
     "name": "E-Commerce Platform",
     "path": "/Users/dev/projects/ecommerce",
     "currentBranch": "feature/checkout"
@@ -122,7 +122,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__project_manager(
   action: "suggest_files",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     prompt: "authentication components",
     limit: 10
@@ -220,7 +220,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__ticket_manager(
   action: "create",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     title: "Implement user authentication",
     overview: "Add login/logout functionality with JWT tokens",
@@ -234,7 +234,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`{
   "id": 456,
-  "projectId": 1754111018844,
+  "projectId": 1754713756748,
   "title": "Implement user authentication",
   "overview": "Add login/logout functionality with JWT tokens",
   "priority": "high",
@@ -443,7 +443,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__git_manager(
   action: "worktree_add",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     path: "../feature-auth",
     newBranch: "feature/authentication"
@@ -472,7 +472,7 @@ function ApiReferencePage() {
                 <CodeTerminal
                   code={`mcp__promptliano__git_manager(
   action: "worktree_list",
-  projectId: 1754111018844
+  projectId: 1754713756748
 )`}
                   language='typescript'
                 />

@@ -78,12 +78,12 @@ export class QueueStateMachine {
    * Validate and apply a state transition
    * @throws Error if transition is invalid
    */
-  static transition<T extends { queueStatus?: string }>(
+  static transition<T extends { queueStatus?: string | null; updated?: number }>(
     item: T,
     newStatus: QueueStatus,
     options?: { errorMessage?: string; agentId?: string }
   ): T {
-    const currentStatus = (item.queueStatus || 'queued') as QueueStatus
+    const currentStatus = ((item.queueStatus as any) || 'queued') as QueueStatus
 
     if (!this.isValidTransition(currentStatus, newStatus)) {
       const validStates = this.getValidNextStates(currentStatus)
@@ -103,17 +103,11 @@ export class QueueStateMachine {
     // Apply transition hook if exists
     const hookKey = `${currentStatus}->${newStatus}` as keyof typeof TRANSITION_HOOKS
     const hook = TRANSITION_HOOKS[hookKey]
-    if (hook) {
-      hook(updatedItem)
-    }
+    if (hook) hook(updatedItem)
 
     // Apply additional options
-    if (options?.errorMessage && newStatus === 'failed') {
-      updatedItem.queue_error_message = options.errorMessage
-    }
-    if (options?.agentId && newStatus === 'in_progress') {
-      updatedItem.queue_agent_id = options.agentId
-    }
+    if (options?.errorMessage && newStatus === 'failed') updatedItem.queue_error_message = options.errorMessage
+    if (options?.agentId && newStatus === 'in_progress') updatedItem.queue_agent_id = options.agentId
 
     return updatedItem
   }
@@ -201,7 +195,7 @@ export class QueueStateMachine {
   /**
    * Get statistics about queue states
    */
-  static getQueueStatistics(items: Array<{ queueStatus?: string }>): Record<QueueStatus | 'unqueued', number> {
+  static getQueueStatistics(items: Array<{ queueStatus?: string | null }>): Record<QueueStatus | 'unqueued', number> {
     const stats: Record<QueueStatus | 'unqueued', number> = {
       unqueued: 0,
       queued: 0,
@@ -212,7 +206,7 @@ export class QueueStateMachine {
     }
 
     for (const item of items) {
-      const status = (item.queueStatus || 'unqueued') as QueueStatus | 'unqueued'
+      const status = ((item.queueStatus as any) || 'unqueued') as QueueStatus | 'unqueued'
       stats[status] = (stats[status] || 0) + 1
     }
 

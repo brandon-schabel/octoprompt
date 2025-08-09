@@ -84,7 +84,7 @@ function McpBestPracticesGuide() {
               code={`// ALWAYS start your session with this:
 mcp__promptliano__project_manager(
   action: "overview",
-  projectId: 1754111018844
+  projectId: 1754713756748
 )`}
               language='typescript'
             />
@@ -185,7 +185,7 @@ mcp__promptliano__project_manager(
               code={`// Step 1: Create ticket with detailed overview
 mcp__promptliano__ticket_manager(
   action: "create",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     title: "Implement user authentication",
     overview: "Add complete authentication system with JWT tokens, login/logout, password reset, and session management. Should integrate with existing user model and use bcrypt for password hashing.",
@@ -266,7 +266,7 @@ mcp__promptliano__ticket_manager(
                 <CodeBlock
                   code={`mcp__promptliano__project_manager(
   action: "suggest_files",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     prompt: "authentication and user management",
     limit: 15
@@ -724,7 +724,7 @@ mcp__promptliano__ticket_manager(
               code={`// Create a worktree for a new feature
 mcp__promptliano__git_manager(
   action: "worktree_add",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     path: "../feature-auth",
     newBranch: "feature/authentication"
@@ -734,7 +734,7 @@ mcp__promptliano__git_manager(
 // List all worktrees
 mcp__promptliano__git_manager(
   action: "worktree_list",
-  projectId: 1754111018844
+  projectId: 1754713756748
 )`}
               language='typescript'
             />
@@ -749,7 +749,7 @@ mcp__promptliano__git_manager(
               code={`// Create multiple tickets for a large feature
 mcp__promptliano__ticket_manager(
   action: "batch_create",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     tickets: [
       {
@@ -779,12 +779,12 @@ mcp__promptliano__ticket_manager(
             <p className='text-sm text-muted-foreground mb-4'>Example workflow for implementing a complete feature:</p>
             <CodeBlock
               code={`// 1. Get project context
-mcp__promptliano__project_manager(action: "overview", projectId: 1754111018844)
+mcp__promptliano__project_manager(action: "overview", projectId: 1754713756748)
 
 // 2. Create feature ticket
 mcp__promptliano__ticket_manager(
   action: "create",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     title: "Add real-time notifications",
     overview: "Implement WebSocket-based notifications with UI indicators"
@@ -804,7 +804,7 @@ mcp__promptliano__ticket_manager(
 // 5. Check for existing documentation
 mcp__promptliano__prompt_manager(
   action: "suggest_prompts",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: { query: "websocket implementation patterns" }
 )`}
               language='typescript'

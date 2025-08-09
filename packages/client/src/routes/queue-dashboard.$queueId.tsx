@@ -85,34 +85,6 @@ function QueueDashboard() {
 
 export const Route = createFileRoute('/queue-dashboard/$queueId')({
   validateSearch: zodValidator(queueDashboardSearchSchema),
-  beforeLoad: async ({ context, params, search }) => {
-    const { queryClient, promptlianoClient } = context
-    const queueId = Number(params.queueId)
-
-    // Pre-validate that queueId is a valid number
-    if (isNaN(queueId)) {
-      throw new Error('Invalid queue ID provided')
-    }
-
-    // Prefetch queue data
-    await Promise.all([
-      queryClient.prefetchQuery({
-        queryKey: ['queues', 'detail', queueId],
-        queryFn: () => promptlianoClient.queues.getQueue(queueId),
-        staleTime: 30 * 1000 // 30 seconds
-      }),
-      queryClient.prefetchQuery({
-        queryKey: ['queues', 'stats', queueId],
-        queryFn: () => promptlianoClient.queues.getQueueStats(queueId),
-        staleTime: 5 * 1000 // 5 seconds
-      }),
-      queryClient.prefetchQuery({
-        queryKey: ['queues', 'items', queueId],
-        queryFn: () => promptlianoClient.queues.getQueueItems(queueId),
-        staleTime: 5 * 1000 // 5 seconds
-      })
-    ])
-  },
   component: QueueDashboardPage
 })
 

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { promptlianoClient } from '../promptliano-client'
+import { useApiClient } from './use-api-client'
 import type { Job, JobFilter, CreateJob } from '@promptliano/schemas'
 import { toast } from 'sonner'
 import { useEffect } from 'react'
@@ -7,14 +7,17 @@ import { useWebSocket } from '@/hooks/use-websocket'
 
 // Get single job
 export function useJob(jobId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['job', jobId],
     queryFn: async () => {
       if (!jobId) return null
-      const result = await promptlianoClient.jobs.getJob(jobId)
+      const result = await client.jobs.getJob(jobId)
       return result.data
     },
-    enabled: !!jobId,
+    enabled: !!client && !!jobId,
     refetchInterval: (query) => {
       // Poll more frequently for running jobs
       const job = query.state.data
@@ -28,33 +31,43 @@ export function useJob(jobId: number | undefined) {
 
 // Get jobs with filters
 export function useJobs(filter: JobFilter = {}) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['jobs', filter],
+    enabled: !!client,
     queryFn: async () => {
-      return await promptlianoClient.jobs.listJobs(filter)
+      return await client.jobs.listJobs(filter)
     }
   })
 }
 
 // Get project jobs
 export function useProjectJobs(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['jobs', 'project', projectId],
     queryFn: async () => {
       if (!projectId) return []
-      return await promptlianoClient.jobs.getProjectJobs(projectId)
+      return await client.jobs.getProjectJobs(projectId)
     },
-    enabled: !!projectId
+    enabled: !!client && !!projectId
   })
 }
 
 // Cancel job
 export function useCancelJob() {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (jobId: number) => {
-      return await promptlianoClient.jobs.cancelJob(jobId)
+      // Client null check removed - handled by React Query
+      return await client.jobs.cancelJob(jobId)
     },
     onSuccess: (_, jobId) => {
       queryClient.invalidateQueries({ queryKey: ['job', jobId] })
@@ -71,11 +84,14 @@ export function useCancelJob() {
 
 // Retry failed job
 export function useRetryJob() {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (jobId: number) => {
-      return await promptlianoClient.jobs.retryJob(jobId)
+      // Client null check removed - handled by React Query
+      return await client.jobs.retryJob(jobId)
     },
     onSuccess: (newJob) => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] })

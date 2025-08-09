@@ -48,7 +48,7 @@ export const projectManagerTool: MCPToolDefinition = {
       },
       projectId: {
         type: 'number',
-        description: 'The project ID (required for all actions except "list" and "create"). Example: 1754111018844'
+        description: 'The project ID (required for all actions except "list" and "create"). Example: 1754713756748'
       },
       data: {
         type: 'object',
@@ -74,7 +74,7 @@ export const projectManagerTool: MCPToolDefinition = {
           }
 
           case ProjectManagerAction.GET: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const project = await getProjectById(validProjectId)
             const details = `Project: ${project.name}\nPath: ${project.path}\nDescription: ${project.description}\nCreated: ${new Date(project.created).toLocaleString()}\nUpdated: ${new Date(project.updated).toLocaleString()}`
             return {
@@ -269,7 +269,7 @@ Version Info:
           }
 
           case ProjectManagerAction.GET_FILE_CONTENT: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const filePath = validateDataField<string>(data, 'path', 'string', '"src/index.ts" or "README.md"')
 
             const project = await getProjectById(validProjectId)
@@ -324,7 +324,7 @@ Version Info:
           }
 
           case ProjectManagerAction.UPDATE_FILE_CONTENT: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const filePath = validateDataField<string>(data, 'path', 'string', '"src/index.ts"')
             const content = validateDataField<string>(data, 'content', 'string', '"// Updated content"')
 
@@ -355,7 +355,7 @@ Version Info:
           }
 
           case ProjectManagerAction.SUGGEST_FILES: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const prompt = validateDataField<string>(data, 'prompt', 'string', '"authentication flow"')
             const limit = (data?.limit as number) || 10
 
@@ -367,7 +367,7 @@ Version Info:
           }
 
           case ProjectManagerAction.GET_SELECTION_CONTEXT: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
 
             // Get active tab to get selection context
             const activeTab = await getActiveTab(validProjectId)
@@ -452,7 +452,7 @@ Version Info:
           }
 
           case ProjectManagerAction.CREATE_FILE: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const filePath = validateDataField<string>(data, 'path', 'string', '"src/new-file.ts"')
             const content = (data?.content as string) || ''
 
@@ -478,7 +478,7 @@ Version Info:
           }
 
           case ProjectManagerAction.GET_FILE_CONTENT_PARTIAL: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const filePath = validateDataField<string>(data, 'path', 'string', '"src/index.ts"')
             const startLine = data?.startLine as number | undefined
             const endLine = data?.endLine as number | undefined
@@ -523,7 +523,7 @@ Version Info:
           }
 
           case ProjectManagerAction.DELETE_FILE: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const filePath = validateDataField<string>(data, 'path', 'string', '"src/file-to-delete.ts"')
 
             const project = await getProjectById(validProjectId)
@@ -545,7 +545,7 @@ Version Info:
           }
 
           case ProjectManagerAction.GET_FILE_TREE: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const maxDepth = (data?.maxDepth as number) || 10
             const includeHidden = (data?.includeHidden as boolean) || false
             const fileTypes = data?.fileTypes as string[] | undefined
@@ -562,7 +562,7 @@ Version Info:
           }
 
           case ProjectManagerAction.OVERVIEW: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const context = await getProjectOverview(validProjectId)
             return {
               content: [{ type: 'text', text: context }]

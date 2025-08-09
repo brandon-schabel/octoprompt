@@ -7,7 +7,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Ticket, TicketTask } from '@promptliano/schemas'
-import { promptlianoClient } from '../promptliano-client'
+import { useApiClient } from './use-api-client'
 import { commonErrorHandler } from './common-mutation-error-handler'
 import { QUEUE_REFETCH_INTERVAL } from '@/lib/constants'
 
@@ -79,13 +79,16 @@ export function useInvalidateFlow() {
  * Get complete flow data for a project
  */
 export function useGetFlowData(projectId: number, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: FLOW_KEYS.data(projectId),
     queryFn: async () => {
-      const data = await promptlianoClient.flow.getFlowData(projectId)
+      const data = await client.flow.getFlowData(projectId)
       return data as FlowData
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     refetchInterval: QUEUE_REFETCH_INTERVAL,
     staleTime: 1000 // Keep data fresh for 1 second to prevent flicker
   })
@@ -95,13 +98,16 @@ export function useGetFlowData(projectId: number, enabled = true) {
  * Get flow items as a flat list
  */
 export function useGetFlowItems(projectId: number, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: FLOW_KEYS.items(projectId),
     queryFn: async () => {
-      const items = await promptlianoClient.flow.getFlowItems(projectId)
+      const items = await client.flow.getFlowItems(projectId)
       return items as FlowItem[]
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     refetchInterval: QUEUE_REFETCH_INTERVAL
   })
 }
@@ -110,13 +116,16 @@ export function useGetFlowItems(projectId: number, enabled = true) {
  * Get unqueued items for a project
  */
 export function useGetUnqueuedItems(projectId: number, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: FLOW_KEYS.unqueued(projectId),
     queryFn: async () => {
-      const items = await promptlianoClient.flow.getUnqueuedItems(projectId)
+      const items = await client.flow.getUnqueuedItems(projectId)
       return items as { tickets: Ticket[]; tasks: TicketTask[] }
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     refetchInterval: QUEUE_REFETCH_INTERVAL
   })
 }
@@ -127,6 +136,9 @@ export function useGetUnqueuedItems(projectId: number, enabled = true) {
  * Enqueue a ticket to a queue
  */
 export function useEnqueueTicket() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
@@ -141,7 +153,7 @@ export function useEnqueueTicket() {
       priority?: number
       includeTasks?: boolean
     }) => {
-      const result = await promptlianoClient.flow.enqueueTicket(ticketId, { queueId, priority, includeTasks })
+      const result = await client.flow.enqueueTicket(ticketId, { queueId, priority, includeTasks })
       return result as Ticket
     },
     onSuccess: () => {
@@ -155,11 +167,14 @@ export function useEnqueueTicket() {
  * Enqueue a task to a queue
  */
 export function useEnqueueTask() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
     mutationFn: async ({ taskId, queueId, priority = 0 }: { taskId: number; queueId: number; priority?: number }) => {
-      const result = await promptlianoClient.flow.enqueueTask(taskId, { queueId, priority })
+      const result = await client.flow.enqueueTask(taskId, { queueId, priority })
       return result as TicketTask
     },
     onSuccess: () => {
@@ -173,11 +188,14 @@ export function useEnqueueTask() {
  * Dequeue a ticket (remove from queue)
  */
 export function useDequeueTicket() {
+  const client = useApiClient()
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
     mutationFn: async (ticketId: number) => {
-      const result = await promptlianoClient.flow.dequeueTicket(ticketId)
+      // Client null check removed - handled by React Query
+      const result = await client.flow.dequeueTicket(ticketId)
       return result as Ticket
     },
     onSuccess: () => {
@@ -191,11 +209,14 @@ export function useDequeueTicket() {
  * Dequeue a task (remove from queue)
  */
 export function useDequeueTask() {
+  const client = useApiClient()
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
     mutationFn: async (taskId: number) => {
-      const result = await promptlianoClient.flow.dequeueTask(taskId)
+      // Client null check removed - handled by React Query
+      const result = await client.flow.dequeueTask(taskId)
       return result as TicketTask
     },
     onSuccess: () => {
@@ -209,6 +230,9 @@ export function useDequeueTask() {
  * Move an item between queues or to unqueued
  */
 export function useMoveItem() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
@@ -223,7 +247,7 @@ export function useMoveItem() {
       targetQueueId: number | null
       priority?: number
     }) => {
-      const result = await promptlianoClient.flow.moveItem({ itemType, itemId, targetQueueId, priority })
+      const result = await client.flow.moveItem({ itemType, itemId, targetQueueId, priority })
       return result as FlowItem
     },
     onSuccess: () => {
@@ -237,6 +261,9 @@ export function useMoveItem() {
  * Bulk move items
  */
 export function useBulkMoveItems() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
@@ -249,7 +276,7 @@ export function useBulkMoveItems() {
       targetQueueId: number | null
       priority?: number
     }) => {
-      const result = await promptlianoClient.flow.bulkMoveItems({ items, targetQueueId, priority })
+      const result = await client.flow.bulkMoveItems({ items, targetQueueId, priority })
       return result as { success: boolean; movedCount: number }
     },
     onSuccess: () => {
@@ -265,6 +292,9 @@ export function useBulkMoveItems() {
  * Start processing an item
  */
 export function useStartProcessing() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
@@ -277,7 +307,7 @@ export function useStartProcessing() {
       itemId: number
       agentId: string
     }) => {
-      const result = await promptlianoClient.flow.startProcessingItem({ itemType, itemId, agentId })
+      const result = await client.flow.startProcessingItem({ itemType, itemId, agentId })
       return result as { success: boolean }
     },
     onSuccess: () => {
@@ -291,6 +321,9 @@ export function useStartProcessing() {
  * Complete processing an item
  */
 export function useCompleteProcessing() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
@@ -303,7 +336,7 @@ export function useCompleteProcessing() {
       itemId: number
       processingTime?: number
     }) => {
-      const result = await promptlianoClient.flow.completeProcessingItem({ itemType, itemId, processingTime })
+      const result = await client.flow.completeProcessingItem({ itemType, itemId, processingTime })
       return result as { success: boolean }
     },
     onSuccess: () => {
@@ -317,6 +350,9 @@ export function useCompleteProcessing() {
  * Fail processing an item
  */
 export function useFailProcessing() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const { invalidateAll } = useInvalidateFlow()
 
   return useMutation({
@@ -329,7 +365,7 @@ export function useFailProcessing() {
       itemId: number
       errorMessage: string
     }) => {
-      const result = await promptlianoClient.flow.failProcessingItem({ itemType, itemId, errorMessage })
+      const result = await client.flow.failProcessingItem({ itemType, itemId, errorMessage })
       return result as { success: boolean }
     },
     onSuccess: () => {

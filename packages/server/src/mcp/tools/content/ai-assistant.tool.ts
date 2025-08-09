@@ -33,7 +33,7 @@ export const aiAssistantTool: MCPToolDefinition = {
       },
       projectId: {
         type: 'number',
-        description: 'The project ID (required for all actions). Example: 1754111018844'
+        description: 'The project ID (required for all actions). Example: 1754713756748'
       },
       data: {
         type: 'object',

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useAppSettings } from './use-kv-local-storage'
-import { promptlianoClient } from './promptliano-client'
+import { usePromptlianoClient } from '@/context/promptliano-client-context'
 
 /**
  * Hook to synchronize local provider settings (custom URLs) with the server
@@ -9,14 +9,15 @@ import { promptlianoClient } from './promptliano-client'
  */
 export function useSyncProviderSettings() {
   const [appSettings] = useAppSettings()
+  const { client } = usePromptlianoClient()
 
   useEffect(() => {
-    // Only sync if there are custom URLs configured
+    // Only sync if there are custom URLs configured and client is connected
     const hasCustomUrls = appSettings.ollamaGlobalUrl || appSettings.lmStudioGlobalUrl
 
-    if (hasCustomUrls) {
+    if (hasCustomUrls && client) {
       // Sync the provider settings with the server
-      promptlianoClient.keys
+      client.keys
         .updateProviderSettings({
           ollamaUrl: appSettings.ollamaGlobalUrl,
           lmstudioUrl: appSettings.lmStudioGlobalUrl
@@ -27,9 +28,12 @@ export function useSyncProviderSettings() {
             lmstudioUrl: appSettings.lmStudioGlobalUrl
           })
         })
-        .catch((error) => {
-          console.error('[ProviderSettings] Failed to sync provider settings:', error)
+        .catch((error: any) => {
+          // Only log error if it's not a connection issue (client might be disconnected)
+          if (error?.message && !error.message.includes('not connected')) {
+            console.error('[ProviderSettings] Failed to sync provider settings:', error)
+          }
         })
     }
-  }, [appSettings.ollamaGlobalUrl, appSettings.lmStudioGlobalUrl])
+  }, [appSettings.ollamaGlobalUrl, appSettings.lmStudioGlobalUrl, client])
 }

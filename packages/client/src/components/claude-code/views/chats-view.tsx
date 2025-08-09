@@ -37,7 +37,7 @@ import Markdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useMutation } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import { toast } from 'sonner'
 import { useNavigate } from '@tanstack/react-router'
 
@@ -216,6 +216,7 @@ function MessageBubble({ message, isLast, onJumpToMessage, allMessages }: Messag
 }
 
 export function ChatsView({ projectId, projectName, sessionId, onBack }: ChatsViewProps) {
+  const client = useApiClient()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messageRefs = useRef<{ [key: string]: HTMLDivElement }>({})
   const navigate = useNavigate()
@@ -255,7 +256,7 @@ export function ChatsView({ projectId, projectName, sessionId, onBack }: ChatsVi
   const importMutation = useMutation({
     mutationFn: async () => {
       if (!sessionId) throw new Error('No session ID')
-      const response = await promptlianoClient.claudeCode.importSession(projectId, sessionId)
+      const response = await client?.claudeCode.importSession(projectId, sessionId)
       return response.data
     },
     onSuccess: (chat) => {

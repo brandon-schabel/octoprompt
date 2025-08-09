@@ -8,11 +8,11 @@ import {
 } from './schema-utils'
 
 // Queue status enum
-export const QueueStatusEnum = z.enum(['active', 'paused'])
+export const QueueStatusEnum = z.enum(['active', 'paused', 'inactive'])
 export type QueueStatus = z.infer<typeof QueueStatusEnum>
 
 // Queue item status enum
-export const QueueItemStatusEnum = z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled'])
+export const QueueItemStatusEnum = z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled', 'timeout'])
 export type QueueItemStatus = z.infer<typeof QueueItemStatusEnum>
 
 // Task queue schema
@@ -45,6 +45,9 @@ export const QueueItemSchema = z
     actualProcessingTime: z.number().nullable().optional(), // in milliseconds
     agentId: z.string().nullable().optional(),
     errorMessage: z.string().nullable().optional(),
+    retryCount: z.number().default(0).optional(),
+    maxRetries: z.number().default(3).optional(),
+    timeoutAt: z.number().nullable().optional(), // Unix timestamp for timeout
     startedAt: unixTSOptionalSchemaSpec,
     completedAt: unixTSOptionalSchemaSpec,
     created: unixTSSchemaSpec,
@@ -141,6 +144,15 @@ export const GetNextTaskResponseSchema = z
   })
   .openapi('GetNextTaskResponse')
 
+// Standardized batch enqueue result schema
+export const BatchEnqueueResultSchema = z
+  .object({
+    items: z.array(QueueItemSchema), // Successfully enqueued items
+    skipped: z.number().default(0), // Count of skipped duplicates
+    errors: z.array(z.string()).optional() // Optional error messages
+  })
+  .openapi('BatchEnqueueResult')
+
 // Queue with stats schema
 export const QueueWithStatsSchema = z
   .object({
@@ -158,6 +170,7 @@ export type UpdateQueueBody = z.infer<typeof UpdateQueueBodySchema>
 export type EnqueueItemBody = z.infer<typeof EnqueueItemBodySchema>
 export type UpdateQueueItemBody = z.infer<typeof UpdateQueueItemBodySchema>
 export type GetNextTaskResponse = z.infer<typeof GetNextTaskResponseSchema>
+export type BatchEnqueueResult = z.infer<typeof BatchEnqueueResultSchema>
 export type QueueWithStats = z.infer<typeof QueueWithStatsSchema>
 
 // API validation schemas

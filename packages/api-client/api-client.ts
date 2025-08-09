@@ -654,7 +654,8 @@ export class ProjectService extends BaseApiClient {
 
   async syncProject(projectId: number): Promise<boolean> {
     await this.request('POST', `/projects/${projectId}/sync`, {
-      responseSchema: OperationSuccessResponseSchemaZ
+      responseSchema: OperationSuccessResponseSchemaZ,
+      timeout: 300000 // 5 minutes timeout for sync operations
     })
     return true
   }
@@ -678,7 +679,8 @@ export class ProjectService extends BaseApiClient {
   async refreshProject(projectId: number, query?: z.infer<typeof RefreshQuerySchema>) {
     const result = await this.request('POST', `/projects/${projectId}/refresh`, {
       params: query,
-      responseSchema: FileListResponseSchemaZ
+      responseSchema: FileListResponseSchemaZ,
+      timeout: 300000 // 5 minutes timeout for refresh operations
     })
     return result as DataResponseSchema<ProjectFile[]>
   }
@@ -1541,6 +1543,22 @@ export class SystemService extends BaseApiClient {
     })
     return result as BrowseDirectoryResponse
   }
+
+  async healthCheck() {
+    const result = await this.request('GET', '/health', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z
+          .object({
+            status: z.string(),
+            version: z.string().optional(),
+            uptime: z.number().optional()
+          })
+          .optional()
+      })
+    })
+    return result as DataResponseSchema<{ status: string; version?: string; uptime?: number }>
+  }
 }
 
 // MCP Service
@@ -1854,6 +1872,19 @@ export class TicketService extends BaseApiClient {
     return result as DataResponseSchema<Ticket>
   }
 
+  async completeTicket(ticketId: number) {
+    const result = await this.request('POST', `/tickets/${ticketId}/complete`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          ticket: TicketSchema,
+          tasks: z.array(TicketTaskSchema)
+        })
+      })
+    })
+    return result as DataResponseSchema<{ ticket: Ticket; tasks: TicketTask[] }>
+  }
+
   async deleteTicket(ticketId: number): Promise<boolean> {
     await this.request('DELETE', `/tickets/${ticketId}`, {
       responseSchema: OperationSuccessResponseSchemaZ
@@ -1995,10 +2026,10 @@ export class TicketService extends BaseApiClient {
 
 // Queue Service
 export class QueueService extends BaseApiClient {
-  async createQueue(projectId: number, data: CreateQueueBody) {
-    const validatedData = this.validateBody(CreateQueueBodySchema, data)
+  async createQueue(projectId: number, data: Omit<CreateQueueBody, 'projectId'>) {
+    const validatedData = this.validateBody(CreateQueueBodySchema.omit({ projectId: true }), data)
     const result = await this.request('POST', `/projects/${projectId}/queues`, {
-      body: { ...validatedData, projectId },
+      body: validatedData,
       responseSchema: z.object({
         success: z.boolean(),
         data: TaskQueueSchema

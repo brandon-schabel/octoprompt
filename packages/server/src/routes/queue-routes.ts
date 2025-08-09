@@ -24,6 +24,8 @@ import {
   listQueuesByProject,
   updateQueue,
   deleteQueue,
+  pauseQueue,
+  resumeQueue,
   enqueueItem,
   updateQueueItem,
   deleteQueueItem,
@@ -38,7 +40,11 @@ import {
   bulkMoveItems,
   reorderQueueItems,
   getQueueTimeline,
-  getUnqueuedItems
+  getUnqueuedItems,
+  retryFailedItem,
+  retryAllFailedItems,
+  checkAndHandleTimeouts,
+  setItemTimeout
 } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
@@ -56,7 +62,7 @@ const createQueueRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: CreateQueueBodySchema
+          schema: CreateQueueBodySchema.omit({ projectId: true })
         }
       }
     }
@@ -1160,4 +1166,272 @@ queueRoutes.openapi(getUnqueuedItemsRoute, async (c) => {
   const { projectId } = c.req.valid('param')
   const unqueuedItems = await getUnqueuedItems(projectId)
   return c.json({ success: true, data: unqueuedItems })
+})
+
+// Pause queue route
+const pauseQueueRoute = createRoute({
+  method: 'post',
+  path: '/api/queues/:queueId/pause',
+  request: {
+    params: z.object({
+      queueId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      description: 'Queue paused successfully',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: TaskQueueSchema
+          })
+        }
+      }
+    },
+    400: {
+      description: 'Bad request',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Queue not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(pauseQueueRoute, async (c) => {
+  const { queueId } = c.req.valid('param')
+  const queue = await pauseQueue(queueId)
+  return c.json({ success: true, data: queue })
+})
+
+// Resume queue route
+const resumeQueueRoute = createRoute({
+  method: 'post',
+  path: '/api/queues/:queueId/resume',
+  request: {
+    params: z.object({
+      queueId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      description: 'Queue resumed successfully',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: TaskQueueSchema
+          })
+        }
+      }
+    },
+    400: {
+      description: 'Bad request',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Queue not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(resumeQueueRoute, async (c) => {
+  const { queueId } = c.req.valid('param')
+  const queue = await resumeQueue(queueId)
+  return c.json({ success: true, data: queue })
+})
+
+// Retry failed item route
+const retryFailedItemRoute = createRoute({
+  method: 'post',
+  path: '/api/queue-items/:itemId/retry',
+  request: {
+    params: z.object({
+      itemId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      description: 'Item retry initiated',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: QueueItemSchema
+          })
+        }
+      }
+    },
+    400: {
+      description: 'Cannot retry item',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Item not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(retryFailedItemRoute, async (c) => {
+  const { itemId } = c.req.valid('param')
+  const item = await retryFailedItem(itemId)
+  return c.json({ success: true, data: item })
+})
+
+// Retry all failed items route
+const retryAllFailedItemsRoute = createRoute({
+  method: 'post',
+  path: '/api/queues/:queueId/retry-failed',
+  request: {
+    params: z.object({
+      queueId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      description: 'Failed items retry initiated',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              retried: z.number(),
+              failed: z.number()
+            })
+          })
+        }
+      }
+    },
+    404: {
+      description: 'Queue not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(retryAllFailedItemsRoute, async (c) => {
+  const { queueId } = c.req.valid('param')
+  const result = await retryAllFailedItems(queueId)
+  return c.json({ success: true, data: result })
+})
+
+// Check timeouts route
+const checkTimeoutsRoute = createRoute({
+  method: 'post',
+  path: '/api/queues/check-timeouts',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z
+            .object({
+              queueId: z.number().optional()
+            })
+            .optional()
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Timeouts checked',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              timedOut: z.number(),
+              errors: z.number()
+            })
+          })
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(checkTimeoutsRoute, async (c) => {
+  const body = c.req.valid('json')
+  const result = await checkAndHandleTimeouts(body?.queueId)
+  return c.json({ success: true, data: result })
+})
+
+// Set item timeout route
+const setItemTimeoutRoute = createRoute({
+  method: 'post',
+  path: '/api/queue-items/:itemId/timeout',
+  request: {
+    params: z.object({
+      itemId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            timeoutMs: z.number().min(1000).max(3600000) // 1 second to 1 hour
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Timeout set successfully',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: QueueItemSchema
+          })
+        }
+      }
+    },
+    404: {
+      description: 'Item not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(setItemTimeoutRoute, async (c) => {
+  const { itemId } = c.req.valid('param')
+  const { timeoutMs } = c.req.valid('json')
+  const item = await setItemTimeout(itemId, timeoutMs)
+  return c.json({ success: true, data: item })
 })

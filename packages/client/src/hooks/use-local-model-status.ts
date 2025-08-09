@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import { useEffect, useRef } from 'react'
 
 // Default URLs for local model providers
@@ -24,6 +24,7 @@ interface UseLocalModelStatusOptions {
 export function useLocalModelStatus(provider: LocalModelProvider, options: UseLocalModelStatusOptions = {}) {
   const { url, enabled = true, refetchInterval = 5000 } = options
   const previousUrlRef = useRef(url)
+  const client = useApiClient()
 
   const query = useQuery({
     queryKey: ['local-model-status', provider, url || 'default'],
@@ -31,6 +32,16 @@ export function useLocalModelStatus(provider: LocalModelProvider, options: UseLo
       // Use custom URL if provided, otherwise use default
       const testUrl = url || (provider === 'ollama' ? DEFAULT_OLLAMA_URL : DEFAULT_LMSTUDIO_URL)
       console.log(`[${provider}] Testing connection to:`, testUrl)
+
+      // Return disconnected status if client is not available
+      if (!client) {
+        return {
+          connected: false,
+          error: 'Client not connected',
+          lastChecked: new Date(),
+          url: testUrl
+        }
+      }
 
       try {
         // Create a timeout promise
@@ -42,7 +53,7 @@ export function useLocalModelStatus(provider: LocalModelProvider, options: UseLo
         const fetchPromise = (async () => {
           const urlParams = provider === 'ollama' ? { ollamaUrl: testUrl } : { lmstudioUrl: testUrl }
 
-          return await promptlianoClient.genAi.getModels(provider, urlParams)
+          return await client.genAi.getModels(provider, urlParams)
         })()
 
         // Race between timeout and fetch
@@ -74,7 +85,7 @@ export function useLocalModelStatus(provider: LocalModelProvider, options: UseLo
         }
       }
     },
-    enabled: enabled,
+    enabled: enabled && !!client,
     refetchInterval: enabled ? refetchInterval : false,
     staleTime: 2000,
     retry: false
