@@ -515,7 +515,7 @@ export async function suggestFilesForTicket(
 
     // Create summary message with performance info
     const { metadata } = suggestionResponse
-    const performanceInfo = `(${metadata.analyzedFiles} files analyzed in ${metadata.processingTime}ms, ~${Math.round(metadata.tokensSaved || 0).toLocaleString()} tokens saved)`
+    const performanceInfo = `(${metadata.analyzedFiles} files analyzed in ${metadata.processingTime}ms, ~${Math.round((metadata as any).tokensSaved || 0).toLocaleString()} tokens saved)`
 
     return {
       recommendedFileIds: allFileIds,

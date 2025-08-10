@@ -1,6 +1,6 @@
 {
   "name": "@promptliano/shared",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "description": "Shared types and utilities for both client and server",
   "type": "module",
   "main": "index.ts",

@@ -1,6 +1,6 @@
 {
   "name": "promptliano",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "description": "Setup and manage Promptliano - Your AI toolkit for context engineering",
   "bin": {
     "promptliano": "./dist/index.js"

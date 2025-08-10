@@ -112,7 +112,7 @@ describe('Ticket-Task Integration', () => {
       await updateTask(ticket.id, task1.id, {
         queueStatus: 'in_progress'
       })
-      await completeQueueItem('task', task1.id)
+      await completeQueueItem('task', task1.id, ticket.id)
 
       let tasks = await getTasks(ticket.id)
       const completed1 = tasks.find((t) => t.id === task1.id)
@@ -123,7 +123,7 @@ describe('Ticket-Task Integration', () => {
       await updateTask(ticket.id, task2.id, {
         queueStatus: 'in_progress'
       })
-      await completeQueueItem('task', task2.id)
+      await completeQueueItem('task', task2.id, ticket.id)
 
       tasks = await getTasks(ticket.id)
       const completed2 = tasks.find((t) => t.id === task2.id)
@@ -133,7 +133,7 @@ describe('Ticket-Task Integration', () => {
       await updateTask(ticket.id, task3.id, {
         queueStatus: 'in_progress'
       })
-      await completeQueueItem('task', task3.id)
+      await completeQueueItem('task', task3.id, ticket.id)
 
       tasks = await getTasks(ticket.id)
       const completed3 = tasks.find((t) => t.id === task3.id)
@@ -211,7 +211,7 @@ describe('Ticket-Task Integration', () => {
       expect(currentTask?.queueStatus).toBe('in_progress')
 
       // Complete the task
-      await completeQueueItem('task', task.id)
+      await completeQueueItem('task', task.id, childTicket.id)
 
       // Verify task is marked done
       const finalTasks = await getTasks(ticket.id)
@@ -243,10 +243,10 @@ describe('Ticket-Task Integration', () => {
 
       // Complete both tasks
       await updateTask(ticket.id, task1.id, { queueStatus: 'in_progress' })
-      await completeQueueItem('task', task1.id)
+      await completeQueueItem('task', task1.id, ticket.id)
 
       await updateTask(ticket.id, task2.id, { queueStatus: 'in_progress' })
-      await completeQueueItem('task', task2.id)
+      await completeQueueItem('task', task2.id, ticket.id)
 
       // Verify both tasks are done
       const tasks = await getTasks(ticket.id)

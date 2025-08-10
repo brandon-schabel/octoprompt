@@ -4,7 +4,7 @@ import type {
   Ticket,
   TicketTask,
   QueueStatus,
-  QueueItemStatus,
+  ItemQueueStatus as QueueItemStatus,
   CreateQueueBody,
   EnqueueItemBody
 } from '@promptliano/schemas'
@@ -61,9 +61,9 @@ export function createMockTicket(overrides?: Partial<Ticket>): Ticket {
     suggestedPromptIds: [],
     suggestedFileIds: [],
     tasks: [],
-    queue_id: null,
-    queue_status: null,
-    queued_at: null,
+    queueId: undefined,
+    queueStatus: undefined,
+    queuedAt: undefined,
     created: now,
     updated: now,
     ...overrides
@@ -82,12 +82,12 @@ export function createMockTask(ticketId: number, overrides?: Partial<TicketTask>
     suggestedFileIds: [],
     suggestedPromptIds: [],
     estimatedHours: 1,
-    actualHours: null,
+    // actualHours removed from schema; tests can compute externally if needed
     tags: [],
     agentId: null,
-    queue_id: null,
-    queue_status: null,
-    queued_at: null,
+    queueId: undefined,
+    queueStatus: undefined,
+    queuedAt: undefined,
     created: now,
     updated: now,
     ...overrides

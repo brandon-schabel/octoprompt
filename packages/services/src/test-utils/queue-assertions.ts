@@ -1,4 +1,11 @@
-import type { TaskQueue, QueueItem, QueueItemStatus, QueueStats, Ticket, TicketTask } from '@promptliano/schemas'
+import type {
+  TaskQueue,
+  QueueItem,
+  ItemQueueStatus as QueueItemStatus,
+  QueueStats,
+  Ticket,
+  TicketTask
+} from '@promptliano/schemas'
 
 // Queue state validators
 export function assertQueueState(
@@ -157,22 +164,18 @@ export function assertTicketQueueSync(
 ) {
   if (expectedState.isQueued !== undefined) {
     if (expectedState.isQueued) {
-      expect(ticket.queue_id).toBeTruthy()
-      expect(ticket.queue_status).toBeTruthy()
-      expect(ticket.queued_at).toBeTruthy()
+      expect(ticket.queueId).toBeTruthy()
+      expect(ticket.queueStatus).toBeTruthy()
+      expect(ticket.queuedAt).toBeTruthy()
     } else {
-      expect(ticket.queue_id).toBeFalsy()
-      expect(ticket.queue_status).toBeFalsy()
+      expect(ticket.queueId).toBeFalsy()
+      expect(ticket.queueStatus).toBeFalsy()
     }
   }
 
-  if (expectedState.queueId !== undefined) {
-    expect(ticket.queue_id).toBe(expectedState.queueId)
-  }
+  if (expectedState.queueId !== undefined) expect(ticket.queueId).toBe(expectedState.queueId)
 
-  if (expectedState.queueStatus !== undefined) {
-    expect(ticket.queue_status).toBe(expectedState.queueStatus)
-  }
+  if (expectedState.queueStatus !== undefined) expect(ticket.queueStatus).toBe(expectedState.queueStatus)
 }
 
 export function assertTaskQueueSync(
@@ -186,22 +189,18 @@ export function assertTaskQueueSync(
 ) {
   if (expectedState.isQueued !== undefined) {
     if (expectedState.isQueued) {
-      expect(task.queue_id).toBeTruthy()
-      expect(task.queue_status).toBeTruthy()
-      expect(task.queued_at).toBeTruthy()
+      expect(task.queueId).toBeTruthy()
+      expect(task.queueStatus).toBeTruthy()
+      expect(task.queuedAt).toBeTruthy()
     } else {
-      expect(task.queue_id).toBeFalsy()
-      expect(task.queue_status).toBeFalsy()
+      expect(task.queueId).toBeFalsy()
+      expect(task.queueStatus).toBeFalsy()
     }
   }
 
-  if (expectedState.queueId !== undefined) {
-    expect(task.queue_id).toBe(expectedState.queueId)
-  }
+  if (expectedState.queueId !== undefined) expect(task.queueId).toBe(expectedState.queueId)
 
-  if (expectedState.queueStatus !== undefined) {
-    expect(task.queue_status).toBe(expectedState.queueStatus)
-  }
+  if (expectedState.queueStatus !== undefined) expect(task.queueStatus).toBe(expectedState.queueStatus)
 
   if (expectedState.isDone !== undefined) {
     expect(task.done).toBe(expectedState.isDone)
