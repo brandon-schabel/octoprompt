@@ -211,6 +211,14 @@ export class FlowService {
   async dequeueTicket(ticketId: number): Promise<Ticket> {
     await ticketStorage.dequeueTicket(ticketId)
 
+    // Also dequeue all tasks associated with this ticket
+    const tasks = await ticketStorage.readTasks(ticketId)
+    for (const task of Object.values(tasks)) {
+      if (task.queueId !== null) {
+        await ticketStorage.dequeueTask(task.id)
+      }
+    }
+
     const ticket = await ticketStorage.readTicket(ticketId)
     if (!ticket) {
       throw new ApiError(404, `Ticket ${ticketId} not found`, 'NOT_FOUND')
@@ -220,18 +228,8 @@ export class FlowService {
   }
 
   async dequeueTicketWithTasks(ticketId: number): Promise<Ticket> {
-    // Dequeue the ticket
-    const ticket = await this.dequeueTicket(ticketId)
-
-    // Dequeue all its tasks
-    const tasks = await ticketStorage.readTasks(ticketId)
-    for (const task of Object.values(tasks)) {
-      if (task.queueId !== null) {
-        await this.dequeueTask(task.id)
-      }
-    }
-
-    return ticket
+    // dequeueTicket now handles tasks automatically
+    return await this.dequeueTicket(ticketId)
   }
 
   async dequeueTask(taskId: number): Promise<TicketTask> {

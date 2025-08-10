@@ -138,6 +138,9 @@ describe('Queue Workflows', () => {
         name: 'Priority Queue'
       })
 
+      // Verify queue is active
+      expect(queue.status).toBe('active')
+
       // Create tickets with different priorities
       const lowPriority = await createTicket({
         projectId: testProjectId,
@@ -158,18 +161,24 @@ describe('Queue Workflows', () => {
         priority: 'high'
       })
 
-      // Enqueue in random order with queue priorities
+      // Enqueue in random order with queue priorities (lower value = higher priority)
       await enqueueTicket(mediumPriority.id, queue.id, 5)
-      await enqueueTicket(lowPriority.id, queue.id, 1)
-      await enqueueTicket(highPriority.id, queue.id, 10)
+      await enqueueTicket(lowPriority.id, queue.id, 10) // Low priority = high value
+      await enqueueTicket(highPriority.id, queue.id, 1) // High priority = low value
 
       // Should get high priority first
       const first = await getNextTaskFromQueue(queue.id, 'agent-1')
       expect(first.item?.id).toBe(highPriority.id)
 
+      // Complete the first item to allow the next one
+      await completeQueueItem('ticket', highPriority.id)
+
       // Should get medium priority next
       const second = await getNextTaskFromQueue(queue.id, 'agent-2')
       expect(second.item?.id).toBe(mediumPriority.id)
+
+      // Complete the second item to allow the next one
+      await completeQueueItem('ticket', mediumPriority.id)
 
       // Should get low priority last
       const third = await getNextTaskFromQueue(queue.id, 'agent-3')
@@ -205,6 +214,11 @@ describe('Queue Workflows', () => {
       for (let i = 0; i < 3; i++) {
         const next = await getNextTaskFromQueue(queue.id, `agent-${i}`)
         expect(next.item?.id).toBe(tickets[i].id)
+
+        // Complete the item to allow the next one to be processed (maxParallelItems = 1)
+        if (next.item) {
+          await completeQueueItem('ticket', next.item.id)
+        }
       }
     })
   })

@@ -214,13 +214,21 @@ export async function dequeueTicket(ticketId: number): Promise<Ticket> {
       throw new ApiError(404, `Ticket ${ticketId} not found`, 'TICKET_NOT_FOUND')
     }
 
-    // Clear queue fields
+    // Clear queue fields on the ticket
     const updatedTicket = await ticketStorage.updateTicket(ticketId, {
       queueId: null,
       queueStatus: null,
       queuePriority: 0,
       queuedAt: null
     })
+
+    // Also dequeue all tasks associated with this ticket
+    const tasks = await ticketStorage.readTasks(ticketId)
+    const taskList = Object.values(tasks).filter((task) => task.queueId !== null)
+
+    for (const task of taskList) {
+      await ticketStorage.dequeueTask(task.id)
+    }
 
     return updatedTicket
   } catch (error) {
