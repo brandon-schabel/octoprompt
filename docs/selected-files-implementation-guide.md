@@ -7,6 +7,7 @@ This guide provides copy-paste ready code snippets for implementing the path-bas
 ## Step 1: Schema Updates
 
 ### 1.1 Update selected-files.schemas.ts
+
 ```typescript
 import { z } from 'zod'
 import { idSchemaSpec, idArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
@@ -33,11 +34,12 @@ export const migrateSelectedFilesData = (data: any): z.infer<typeof selectedFile
 ```
 
 ### 1.2 Update global-state-schema.ts
+
 ```typescript
 export const projectTabStateSchema = z.object({
   // ... existing fields ...
   selectedFiles: idArraySchemaSpec.default([]), // DEPRECATED: For backward compatibility
-  selectedFilePaths: z.array(z.string()).default([]), // NEW: Primary storage
+  selectedFilePaths: z.array(z.string()).default([]) // NEW: Primary storage
   // ... rest of schema ...
 })
 
@@ -55,6 +57,7 @@ export const migrateProjectTabState = (state: any): ProjectTabState => {
 ## Step 2: Core Hook Implementation
 
 ### 2.1 Updated use-selected-files.ts
+
 ```typescript
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -89,7 +92,7 @@ export function useSelectedFiles({
   const effectiveTabState = tabId
     ? useProjectTabField('selectedFiles', tabId).data
     : activeProjectTabState?.selectedFiles
-  
+
   // NEW: Get paths from state
   const effectivePathState = tabId
     ? useProjectTabField('selectedFilePaths', tabId).data
@@ -102,12 +105,12 @@ export function useSelectedFiles({
   const { pathToId, idToPath } = useMemo(() => {
     const pathToId = new Map<string, number>()
     const idToPath = new Map<number, string>()
-    
+
     for (const [id, file] of projectFileMap) {
       pathToId.set(file.path, id)
       idToPath.set(id, file.path)
     }
-    
+
     return { pathToId, idToPath }
   }, [projectFileMap])
 
@@ -118,8 +121,8 @@ export function useSelectedFiles({
       if (effectiveTabState !== null || effectivePathState !== null) {
         // Convert legacy ID-only state to include paths
         const ids = effectiveTabState || []
-        const paths = effectivePathState || ids.map(id => idToPath.get(id)).filter(Boolean) as string[]
-        
+        const paths = effectivePathState || (ids.map((id) => idToPath.get(id)).filter(Boolean) as string[])
+
         return {
           history: [{ ids, paths }],
           index: 0
@@ -155,12 +158,12 @@ export function useSelectedFiles({
     if (USE_PATH_BASED_SELECTION) {
       // Prefer paths, derive IDs
       if (newPaths && !newIds) {
-        newIds = newPaths.map(path => pathToId.get(path)).filter(Boolean) as number[]
+        newIds = newPaths.map((path) => pathToId.get(path)).filter(Boolean) as number[]
       }
     } else {
       // Legacy: Prefer IDs, derive paths
       if (newIds && !newPaths) {
-        newPaths = newIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
+        newPaths = newIds.map((id) => idToPath.get(id)).filter(Boolean) as string[]
       }
     }
 
@@ -184,7 +187,7 @@ export function useSelectedFiles({
     const { history, index } = undoRedoState
     const truncated = history.slice(0, index + 1)
     truncated.push({ ids: newIds, paths: newPaths })
-    
+
     if (truncated.length > MAX_HISTORY_SIZE) {
       truncated.shift()
     }
@@ -199,7 +202,7 @@ export function useSelectedFiles({
   const toggleFilePath = (filePath: string) => {
     if (!isInitialized) return
     const newPaths = selectedFilePaths.includes(filePath)
-      ? selectedFilePaths.filter(p => p !== filePath)
+      ? selectedFilePaths.filter((p) => p !== filePath)
       : [...selectedFilePaths, filePath]
     commitSelectionChange(undefined, newPaths)
   }
@@ -216,7 +219,7 @@ export function useSelectedFiles({
   // Legacy ID-based operations (keep for compatibility)
   const toggleFile = (fileId: number) => {
     if (!isInitialized) return
-    
+
     if (USE_PATH_BASED_SELECTION) {
       // Convert to path-based operation
       const path = idToPath.get(fileId)
@@ -226,7 +229,7 @@ export function useSelectedFiles({
     } else {
       // Legacy behavior
       const newIds = selectedFiles.includes(fileId)
-        ? selectedFiles.filter(id => id !== fileId)
+        ? selectedFiles.filter((id) => id !== fileId)
         : [...selectedFiles, fileId]
       commitSelectionChange(newIds)
     }
@@ -234,19 +237,15 @@ export function useSelectedFiles({
 
   const selectFiles = (fileIdsOrUpdater: number[] | ((prev: number[]) => number[])) => {
     if (!isInitialized) return
-    
+
     if (USE_PATH_BASED_SELECTION) {
       // Convert to paths
-      const newIds = typeof fileIdsOrUpdater === 'function' 
-        ? fileIdsOrUpdater(selectedFiles) 
-        : fileIdsOrUpdater
-      const newPaths = newIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
+      const newIds = typeof fileIdsOrUpdater === 'function' ? fileIdsOrUpdater(selectedFiles) : fileIdsOrUpdater
+      const newPaths = newIds.map((id) => idToPath.get(id)).filter(Boolean) as string[]
       commitSelectionChange(newIds, newPaths)
     } else {
       // Legacy
-      const newIds = typeof fileIdsOrUpdater === 'function'
-        ? fileIdsOrUpdater(selectedFiles)
-        : fileIdsOrUpdater
+      const newIds = typeof fileIdsOrUpdater === 'function' ? fileIdsOrUpdater(selectedFiles) : fileIdsOrUpdater
       commitSelectionChange(newIds)
     }
   }
@@ -304,13 +303,13 @@ export function useSelectedFiles({
     toggleFile,
     selectFiles,
     isFileSelected: (id: number) => selectedFiles.includes(id),
-    
+
     // Path-based (NEW - preferred)
     selectedFilePaths,
     toggleFilePath,
     selectFilePaths,
     isFileSelectedByPath,
-    
+
     // Shared operations
     projectFileMap,
     pathToId,
@@ -321,18 +320,18 @@ export function useSelectedFiles({
     clearSelectedFiles: () => commitSelectionChange([], []),
     canUndo: undoRedoState !== null && undoRedoState.index > 0,
     canRedo: undoRedoState !== null && undoRedoState.index < undoRedoState.history.length - 1,
-    
+
     // Utilities
     removeSelectedFile: (fileId: number) => {
       if (!isInitialized) return
       if (USE_PATH_BASED_SELECTION) {
         const path = idToPath.get(fileId)
         if (path) {
-          const newPaths = selectedFilePaths.filter(p => p !== path)
+          const newPaths = selectedFilePaths.filter((p) => p !== path)
           commitSelectionChange(undefined, newPaths)
         }
       } else {
-        commitSelectionChange(selectedFiles.filter(id => id !== fileId))
+        commitSelectionChange(selectedFiles.filter((id) => id !== fileId))
       }
     }
   }
@@ -342,21 +341,22 @@ export function useSelectedFiles({
 ## Step 3: Component Updates
 
 ### 3.1 File Tree Component
+
 ```typescript
 // file-tree.tsx
 export function FileTree({ file }: { file: FileNode }) {
-  const { 
-    isFileSelectedByPath, 
-    isFileSelected, 
-    toggleFilePath, 
-    toggleFile 
+  const {
+    isFileSelectedByPath,
+    isFileSelected,
+    toggleFilePath,
+    toggleFile
   } = useSelectedFiles()
-  
+
   // Check selection with path preference
-  const isSelected = USE_PATH_BASED_SELECTION 
-    ? isFileSelectedByPath(file.path) 
+  const isSelected = USE_PATH_BASED_SELECTION
+    ? isFileSelectedByPath(file.path)
     : isFileSelected(file.id)
-  
+
   const handleClick = () => {
     if (USE_PATH_BASED_SELECTION) {
       toggleFilePath(file.path)
@@ -364,9 +364,9 @@ export function FileTree({ file }: { file: FileNode }) {
       toggleFile(file.id)
     }
   }
-  
+
   return (
-    <div 
+    <div
       className={cn('file-node', { selected: isSelected })}
       onClick={handleClick}
     >
@@ -377,16 +377,17 @@ export function FileTree({ file }: { file: FileNode }) {
 ```
 
 ### 3.2 Selected Files List
+
 ```typescript
 // selected-files-list.tsx
 export function SelectedFilesList() {
-  const { 
-    selectedFilePaths, 
-    selectedFiles, 
+  const {
+    selectedFilePaths,
+    selectedFiles,
     projectFileMap,
-    removeSelectedFile 
+    removeSelectedFile
   } = useSelectedFiles()
-  
+
   // Get files with missing file handling
   const displayFiles = useMemo(() => {
     if (USE_PATH_BASED_SELECTION) {
@@ -405,7 +406,7 @@ export function SelectedFilesList() {
         .filter(Boolean)
     }
   }, [selectedFilePaths, selectedFiles, projectFileMap])
-  
+
   return (
     <div className="selected-files-list">
       {displayFiles.length === 0 ? (
@@ -423,7 +424,7 @@ export function SelectedFilesList() {
         </ul>
       )}
       {/* Show warning for missing files */}
-      {USE_PATH_BASED_SELECTION && 
+      {USE_PATH_BASED_SELECTION &&
        selectedFilePaths.length > displayFiles.length && (
         <p className="warning">
           {selectedFilePaths.length - displayFiles.length} selected files no longer exist
@@ -437,13 +438,17 @@ export function SelectedFilesList() {
 ## Step 4: Migration Strategy
 
 ### 4.1 Fresh Start Approach
+
 Since this is a beta application, we're taking a clean break approach:
+
 - New installations will use path-based selection from the start
 - Existing users will start fresh with empty selections
 - The dual-format support ensures smooth transition
 
 ### 4.2 Manual Migration (if needed)
+
 For users who need to preserve selections, they can:
+
 1. Note their selected files before updating
 2. Re-select the same files after updating
 3. The new path-based system will maintain selections going forward
@@ -451,21 +456,19 @@ For users who need to preserve selections, they can:
 ## Step 5: Service Layer Updates
 
 ### 5.1 Add Path-Based Methods to Project Service
+
 ```typescript
 // project-service.ts
-export async function getFilesByPaths(
-  projectId: number, 
-  paths: string[]
-): Promise<ProjectFile[]> {
+export async function getFilesByPaths(projectId: number, paths: string[]): Promise<ProjectFile[]> {
   if (paths.length === 0) return []
-  
+
   const placeholders = paths.map(() => '?').join(',')
   const query = `
     SELECT * FROM project_files 
     WHERE project_id = ? 
     AND path IN (${placeholders})
   `
-  
+
   const files = await db.query(query).all(projectId, ...paths)
   return files
 }
@@ -473,13 +476,13 @@ export async function getFilesByPaths(
 export async function validateFilePaths(
   projectId: number,
   paths: string[]
-): Promise<{ valid: string[], invalid: string[] }> {
+): Promise<{ valid: string[]; invalid: string[] }> {
   const existingFiles = await getFilesByPaths(projectId, paths)
-  const existingPaths = new Set(existingFiles.map(f => f.path))
-  
-  const valid = paths.filter(p => existingPaths.has(p))
-  const invalid = paths.filter(p => !existingPaths.has(p))
-  
+  const existingPaths = new Set(existingFiles.map((f) => f.path))
+
+  const valid = paths.filter((p) => existingPaths.has(p))
+  const invalid = paths.filter((p) => !existingPaths.has(p))
+
   return { valid, invalid }
 }
 ```
@@ -487,46 +490,47 @@ export async function validateFilePaths(
 ## Step 6: Testing
 
 ### 6.1 Unit Tests
+
 ```typescript
 // use-selected-files.test.ts
 describe('useSelectedFiles path-based selection', () => {
   it('should toggle file selection by path', async () => {
     const { result } = renderHook(() => useSelectedFiles())
-    
+
     // Toggle file by path
     act(() => {
       result.current.toggleFilePath('/src/index.ts')
     })
-    
+
     expect(result.current.selectedFilePaths).toContain('/src/index.ts')
     expect(result.current.isFileSelectedByPath('/src/index.ts')).toBe(true)
   })
-  
+
   it('should maintain both IDs and paths in sync', async () => {
     const { result } = renderHook(() => useSelectedFiles())
-    
+
     // Assuming file with ID 123 has path '/src/index.ts'
     act(() => {
       result.current.toggleFile(123)
     })
-    
+
     expect(result.current.selectedFiles).toContain(123)
     expect(result.current.selectedFilePaths).toContain('/src/index.ts')
   })
-  
+
   it('should handle missing files gracefully', async () => {
     const { result } = renderHook(() => useSelectedFiles())
-    
+
     // Select a file that will be deleted
     act(() => {
       result.current.selectFilePaths(['/src/deleted.ts', '/src/exists.ts'])
     })
-    
+
     // After file deletion, only existing file should be in display
     const displayFiles = result.current.selectedFilePaths
-      .map(path => result.current.projectFileMap.get(result.current.pathToId.get(path)))
+      .map((path) => result.current.projectFileMap.get(result.current.pathToId.get(path)))
       .filter(Boolean)
-    
+
     expect(displayFiles).toHaveLength(1)
     expect(displayFiles[0].path).toBe('/src/exists.ts')
   })
@@ -536,6 +540,7 @@ describe('useSelectedFiles path-based selection', () => {
 ## Step 7: Rollout Strategy
 
 ### 7.1 Feature Flag Configuration
+
 ```typescript
 // config/feature-flags.ts
 export const FEATURE_FLAGS = {
@@ -546,9 +551,10 @@ export const FEATURE_FLAGS = {
 ```
 
 ### 7.2 Gradual Rollout
+
 ```typescript
 // Week 1: Deploy with flag off, run migration in background
-// Week 2: Enable for internal users (10%)  
+// Week 2: Enable for internal users (10%)
 // Week 3: Enable for beta users (50%)
 // Week 4: Enable for all users (100%)
 // Week 6: Remove ID-based code

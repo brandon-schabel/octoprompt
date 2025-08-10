@@ -29,7 +29,7 @@ class EntityStorage {
    */
   private safeJsonParse<T>(json: string | null | undefined, fallback: T, context?: string): T {
     if (!json) return fallback
-    
+
     try {
       return JSON.parse(json)
     } catch (error) {
@@ -102,7 +102,11 @@ class EntityStorage {
       for (const [id, entity] of Object.entries(entities)) {
         const validationResult = EntitySchema.safeParse(entity)
         if (!validationResult.success) {
-          throw new ApiError(400, `Invalid entity data for ${id}: ${validationResult.error.message}`, 'VALIDATION_ERROR')
+          throw new ApiError(
+            400,
+            `Invalid entity data for ${id}: ${validationResult.error.message}`,
+            'VALIDATION_ERROR'
+          )
         }
         validatedEntities[id] = validationResult.data
       }
@@ -206,7 +210,7 @@ class EntityStorage {
   async updateEntity(entityId: number, updates: Partial<Entity>): Promise<void> {
     try {
       const database = this.db.getDatabase()
-      
+
       // Build dynamic update query
       const updateFields: string[] = []
       const values: any[] = []
@@ -246,7 +250,7 @@ class EntityStorage {
       `)
 
       const result = query.run(...values)
-      
+
       if (result.changes === 0) {
         throw new ApiError(404, `Entity ${entityId} not found`, 'NOT_FOUND')
       }
@@ -271,7 +275,7 @@ class EntityStorage {
       `)
 
       const result = query.run(entityId)
-      
+
       if (result.changes === 0) {
         throw new ApiError(404, `Entity ${entityId} not found`, 'NOT_FOUND')
       }
@@ -294,7 +298,7 @@ class EntityStorage {
   }): Promise<Entity[]> {
     try {
       const database = this.db.getDatabase()
-      
+
       // Build dynamic WHERE clause
       const conditions: string[] = []
       const params: any[] = []
@@ -327,7 +331,7 @@ class EntityStorage {
 
       const rows = query.all(...params) as any[]
 
-      return rows.map(row => ({
+      return rows.map((row) => ({
         id: row.id,
         parentId: row.parent_id,
         name: row.name,

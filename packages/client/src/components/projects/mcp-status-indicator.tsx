@@ -11,19 +11,22 @@ import { Badge } from '@promptliano/ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { Loader2, WifiOff, Wifi } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 
 interface MCPStatusIndicatorProps {
   projectId: number
 }
 
 export function MCPStatusIndicator({ projectId }: MCPStatusIndicatorProps) {
+  const client = useApiClient()
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['mcp-status', projectId],
     queryFn: async () => {
-      const response = await promptlianoClient.projects.getMCPInstallationStatus(projectId)
+      if (!client) return
+      const response = await client.projects.getMCPInstallationStatus(projectId)
       return response.data
     },
+    enabled: !!client,
     refetchInterval: 30000, // Refresh every 30 seconds
     staleTime: 10000 // Consider data stale after 10 seconds
   })

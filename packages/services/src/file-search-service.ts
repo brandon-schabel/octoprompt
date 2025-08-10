@@ -1,4 +1,4 @@
-import { ProjectFile, Ticket } from '@promptliano/schemas'
+import type { ProjectFile, Ticket } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 import { DatabaseManager } from '@promptliano/storage'
 import type { Database, Statement } from 'bun:sqlite'

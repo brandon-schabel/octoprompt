@@ -1,6 +1,6 @@
 import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle, useMemo } from 'react'
 import { Button } from '@promptliano/ui'
-import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy, ChevronRight } from 'lucide-react'
+import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy, ChevronRight, Upload, Download } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -26,6 +26,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { PromptSchema } from '@promptliano/schemas'
 
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
+import { MarkdownImportDialog } from '../prompts/markdown-import-dialog'
+import { MarkdownExportMenuItem } from '../prompts/markdown-export-button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,6 +124,8 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
 
   /** NEW: state for opening the all-prompts dialog */
   const [allPromptsDialogOpen, setAllPromptsDialogOpen] = useState(false)
+  /** State for markdown import dialog */
+  const [markdownImportDialogOpen, setMarkdownImportDialogOpen] = useState(false)
 
   // Our form for creating/updating
   const promptForm = useForm<z.infer<typeof PromptSchema>>({
@@ -233,6 +237,15 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         onClose={() => setAllPromptsDialogOpen(false)}
         selectedProjectId={selectedProjectId}
       />
+      {/* Markdown Import Dialog */}
+      <MarkdownImportDialog
+        open={markdownImportDialogOpen}
+        onOpenChange={setMarkdownImportDialogOpen}
+        projectId={selectedProjectId}
+        onSuccess={(importedCount) => {
+          toast.success(`Successfully imported ${importedCount} prompt${importedCount > 1 ? 's' : ''}`)
+        }}
+      />
       <div
         className={cn(
           'border rounded-lg flex flex-col',
@@ -309,6 +322,18 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
                       <Eye className='mr-2 h-4 w-4' />
                       <span>Import Prompts</span>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setMarkdownImportDialogOpen(true)}>
+                      <Upload className='mr-2 h-4 w-4' />
+                      <span>Import MD Files</span>
+                    </DropdownMenuItem>
+                    <MarkdownExportMenuItem
+                      projectId={selectedProjectId}
+                      showOptions={true}
+                      onExportComplete={() => {
+                        toast.success('Prompts exported successfully')
+                      }}
+                    />
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={copySelectedPrompts}>
                       <Pencil className='mr-2 h-4 w-4' />

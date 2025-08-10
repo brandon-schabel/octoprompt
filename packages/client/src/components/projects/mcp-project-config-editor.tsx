@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
 import { Button } from '@promptliano/ui'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
@@ -62,6 +62,7 @@ interface ProjectMCPConfig {
 }
 
 export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProps) {
+  const client = useApiClient()
   const queryClient = useQueryClient()
   const [editMode, setEditMode] = useState(false)
   const [jsonError, setJsonError] = useState<string | null>(null)
@@ -73,51 +74,62 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   const { data: projectData } = useQuery({
     queryKey: ['project', projectId],
     queryFn: async () => {
-      const result = await promptlianoClient.projects.getProject(projectId)
+      if (!client) return
+      const result = await client.projects.getProject(projectId)
       return result.data
-    }
+    },
+    enabled: !!client
   })
 
   // Get config locations
   const { data: locationsData, isLoading: isLoadingLocations } = useQuery({
     queryKey: ['mcp-project-config-locations', projectId],
     queryFn: async () => {
-      const result = await promptlianoClient.mcpProjectConfig.getConfigLocations(projectId)
+      if (!client) return
+      const result = await client.mcpProjectConfig.getConfigLocations(projectId)
       return result.data
-    }
+    },
+    enabled: !!client
   })
 
   // Get current project config
   const { data: configData, isLoading: isLoadingConfig } = useQuery({
     queryKey: ['mcp-project-config', projectId],
     queryFn: async () => {
-      const result = await promptlianoClient.mcpProjectConfig.loadProjectConfig(projectId)
+      if (!client) return
+      const result = await client.mcpProjectConfig.loadProjectConfig(projectId)
       return result.data
-    }
+    },
+    enabled: !!client
   })
 
   // Get merged config (with hierarchy)
   const { data: mergedConfigData } = useQuery({
     queryKey: ['mcp-merged-config', projectId],
     queryFn: async () => {
-      const result = await promptlianoClient.mcpProjectConfig.getMergedConfig(projectId)
+      if (!client) return
+      const result = await client.mcpProjectConfig.getMergedConfig(projectId)
       return result.data
-    }
+    },
+    enabled: !!client
   })
 
   // Get expanded config (with variables resolved)
   const { data: expandedConfigData } = useQuery({
     queryKey: ['mcp-expanded-config', projectId],
     queryFn: async () => {
-      const result = await promptlianoClient.mcpProjectConfig.getExpandedConfig(projectId)
+      if (!client) return
+      const result = await client.mcpProjectConfig.getExpandedConfig(projectId)
       return result.data
-    }
+    },
+    enabled: !!client
   })
 
   // Save config mutation
   const saveConfigMutation = useMutation({
     mutationFn: async (config: ProjectMCPConfig) => {
-      await promptlianoClient.mcpProjectConfig.saveProjectConfig(projectId, config)
+      if (!client) return
+      await client.mcpProjectConfig.saveProjectConfig(projectId, config)
     },
     onSuccess: () => {
       toast.success('MCP configuration saved successfully')
@@ -215,13 +227,11 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
   const initializeConfigMutation = useMutation({
     mutationFn: async (location: MCPConfigLocation) => {
       // Get default config for this location
-      const defaultConfigResult = await promptlianoClient.mcpProjectConfig.getDefaultConfigForLocation(
-        projectId,
-        location.path
-      )
+      const defaultConfigResult = await client?.mcpProjectConfig.getDefaultConfigForLocation(projectId, location.path)
 
       // Save it to the specific location
-      await promptlianoClient.mcpProjectConfig.saveProjectConfigToLocation(
+      if (!client || !defaultConfigResult) return
+      await client.mcpProjectConfig.saveProjectConfigToLocation(
         projectId,
         defaultConfigResult.data.config,
         location.path

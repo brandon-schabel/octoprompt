@@ -48,15 +48,15 @@ const downloadOptions: DownloadOption[] = [
     name: 'Bun Bundle',
     icon: <Package className='h-8 w-8' />,
     description: 'Server and UI bundle for Bun runtime',
-    version: 'v0.8.3',
-    filename: 'promptliano-0.8.3-bun-bundle.zip',
+    version: 'v0.9.0',
+    filename: 'promptliano-0.9.0-bun-bundle.zip',
     downloadUrl:
-      'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.3/promptliano-0.8.3-bun-bundle.zip',
+      'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.0/promptliano-0.9.0-bun-bundle.zip',
     requirements: ['Bun runtime installed', 'Node.js compatible system'],
     installSteps: [
       'Install Bun: curl -fsSL https://bun.sh/install | bash',
       'Extract the downloaded zip file',
-      'cd promptliano-0.8.3-bun-bundle',
+      'cd promptliano-0.9.0-bun-bundle',
       'bun run start'
     ]
   },
@@ -65,14 +65,14 @@ const downloadOptions: DownloadOption[] = [
     name: 'macOS (Apple Silicon)',
     icon: <Apple className='h-8 w-8' />,
     description: 'Native binary for M1, M2, M3 and newer Macs',
-    version: 'v0.8.3',
-    filename: 'promptliano-0.8.3-macos-arm64.zip',
+    version: 'v0.9.0',
+    filename: 'promptliano-0.9.0-macos-arm64.zip',
     downloadUrl:
-      'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.3/promptliano-0.8.3-macos-arm64.zip',
+      'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.0/promptliano-0.9.0-macos-arm64.zip',
     requirements: ['macOS 11.0 or later', 'Apple Silicon processor'],
     installSteps: [
       'Extract the downloaded zip file',
-      'cd ~/Downloads/promptliano-v0.8.3',
+      'cd ~/Downloads/promptliano-v0.9.0',
       'Remove quarantine: sudo xattr -r -d com.apple.quarantine ./promptliano',
       'Run: ./promptliano'
     ]
@@ -82,10 +82,10 @@ const downloadOptions: DownloadOption[] = [
     name: 'Windows x64',
     icon: <MonitorSmartphone className='h-8 w-8' />,
     description: 'Native binary for Windows 10/11',
-    version: 'v0.8.3',
-    filename: 'promptliano-0.8.3-windows-x64.zip',
+    version: 'v0.9.0',
+    filename: 'promptliano-0.9.0-windows-x64.zip',
     downloadUrl:
-      'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.3/promptliano-0.8.3-windows-x64.zip',
+      'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.0/promptliano-0.9.0-windows-x64.zip',
     requirements: ['Windows 10 or later', '64-bit processor'],
     installSteps: [
       'Extract the downloaded zip file',
@@ -99,14 +99,14 @@ const downloadOptions: DownloadOption[] = [
     name: 'Linux x64',
     icon: <Terminal className='h-8 w-8' />,
     description: 'Native binary for Linux distributions',
-    version: 'v0.8.3',
-    filename: 'promptliano-0.8.3-linux-x64.zip',
+    version: 'v0.9.0',
+    filename: 'promptliano-0.9.0-linux-x64.zip',
     downloadUrl:
-      'https://github.com/brandon-schabel/promptliano/releases/download/v0.8.3/promptliano-0.8.3-linux-x64.zip',
+      'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.0/promptliano-0.9.0-linux-x64.zip',
     requirements: ['Linux kernel 3.10 or later', '64-bit processor'],
     installSteps: [
       'Extract the downloaded zip file',
-      'cd ~/Downloads/promptliano-v0.8.3',
+      'cd ~/Downloads/promptliano-v0.9.0',
       'Make executable: chmod +x ./promptliano',
       'Run: ./promptliano'
     ]

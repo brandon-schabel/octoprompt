@@ -134,7 +134,7 @@ export const documentationSearchTool: MCPToolDefinition = {
             const articleId = validateDataField<string>(data, 'articleId', 'string', '"mcp-setup-guide"')
             const article = articles.find((a) => a.id === articleId)
             if (!article) {
-              throw createMCPError(MCPErrorCode.NOT_FOUND, `Article not found: ${articleId}`)
+              throw createMCPError(MCPErrorCode.SEARCH_FAILED, `Article not found: ${articleId}`)
             }
             return {
               content: [
@@ -158,7 +158,7 @@ export const documentationSearchTool: MCPToolDefinition = {
             // Find related articles (simplified logic)
             const currentArticle = articles.find((a) => a.id === articleId)
             if (!currentArticle) {
-              throw createMCPError(MCPErrorCode.NOT_FOUND, `Article not found: ${articleId}`)
+              throw createMCPError(MCPErrorCode.SEARCH_FAILED, `Article not found: ${articleId}`)
             }
             const related = articles
               .filter(

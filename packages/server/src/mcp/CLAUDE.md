@@ -160,7 +160,7 @@ handler: createTrackedHandler('my_tool', async (args): Promise<MCPToolResponse> 
     switch (action) {
       case MyToolAction.LIST: {
         // Validate required parameters
-        const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+        const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
 
         // Call service layer
         const items = await listMyItems(validProjectId)

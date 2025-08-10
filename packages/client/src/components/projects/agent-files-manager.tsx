@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import { Button } from '@promptliano/ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
 import { Checkbox } from '@promptliano/ui'
@@ -27,6 +27,7 @@ interface AgentFile {
 }
 
 export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
+  const client = useApiClient()
   const queryClient = useQueryClient()
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
 
@@ -37,29 +38,29 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
   } = useQuery({
     queryKey: ['agent-files', projectId],
     queryFn: async () => {
-      const response = await promptlianoClient.agentFiles.detectFiles(projectId)
-      return response.data
+      const response = await client?.agentFiles.detectFiles(projectId)
+      return response?.data
     }
   })
 
   const { data: statusData } = useQuery({
     queryKey: ['agent-files-status', projectId],
     queryFn: async () => {
-      const response = await promptlianoClient.agentFiles.getStatus(projectId)
-      return response.data
+      const response = await client?.agentFiles.getStatus(projectId)
+      return response?.data
     }
   })
 
   const updateMutation = useMutation({
     mutationFn: async (files?: { path: string; update: boolean }[]) => {
-      const response = await promptlianoClient.agentFiles.updateFile(projectId, {
+      const response = await client?.agentFiles.updateFile(projectId, {
         files
       })
       return response
     },
     onSuccess: (data) => {
       toast.success('Agent files updated', {
-        description: `Successfully updated ${data.data.results.length} files`
+        description: `Successfully updated ${data?.data?.results?.length || 0} files`
       })
       queryClient.invalidateQueries({ queryKey: ['agent-files', projectId] })
       queryClient.invalidateQueries({ queryKey: ['agent-files-status', projectId] })

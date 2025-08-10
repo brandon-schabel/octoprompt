@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { promptlianoClient } from '../promptliano-client'
+import { useApiClient } from './use-api-client'
 
 // Query Keys
 const MCP_GLOBAL_KEYS = {
@@ -13,27 +13,48 @@ const MCP_GLOBAL_KEYS = {
 // --- Query Hooks ---
 
 export function useGetGlobalMCPConfig() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.config(),
-    queryFn: () => promptlianoClient.mcpGlobalConfig.getGlobalConfig(),
+    enabled: !!client,
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.getGlobalConfig()
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2
   })
 }
 
 export function useGetGlobalInstallations() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.installations(),
-    queryFn: () => promptlianoClient.mcpGlobalConfig.getGlobalInstallations(),
+    enabled: !!client,
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.getGlobalInstallations()
+    },
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: true
   })
 }
 
 export function useGetGlobalMCPStatus() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.status(),
-    queryFn: () => promptlianoClient.mcpGlobalConfig.getGlobalStatus(),
+    enabled: !!client,
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.getGlobalStatus()
+    },
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: true
   })
@@ -42,10 +63,15 @@ export function useGetGlobalMCPStatus() {
 // --- Mutation Hooks ---
 
 export function useUpdateGlobalMCPConfig() {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (updates: any) => promptlianoClient.mcpGlobalConfig.updateGlobalConfig(updates),
+    mutationFn: (updates: any) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.updateGlobalConfig(updates)
+    },
     onSuccess: (data) => {
       // Invalidate all MCP global queries
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.all })
@@ -58,11 +84,16 @@ export function useUpdateGlobalMCPConfig() {
 }
 
 export function useInstallGlobalMCP() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { tool: string; serverName?: string; debug?: boolean }) =>
-      promptlianoClient.mcpGlobalConfig.installGlobalMCP(data),
+    mutationFn: (data: { tool: string; serverName?: string; debug?: boolean }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.installGlobalMCP(data)
+    },
     onSuccess: (data) => {
       // Invalidate installations and status
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })
@@ -77,10 +108,16 @@ export function useInstallGlobalMCP() {
 }
 
 export function useUninstallGlobalMCP() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { tool: string }) => promptlianoClient.mcpGlobalConfig.uninstallGlobalMCP(data),
+    mutationFn: (data: { tool: string }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.uninstallGlobalMCP(data)
+    },
     onSuccess: (data) => {
       // Invalidate installations and status
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })

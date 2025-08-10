@@ -41,6 +41,8 @@ export function ProjectSettingsTab() {
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
   const { data: projectId } = useProjectTabField('selectedProjectId')
   const { data: claudeCodeEnabled } = useProjectTabField('claudeCodeEnabled')
+  // const { data: assetsEnabled } = useProjectTabField('assetsEnabled') // TODO: Add to schema when ready
+  const assetsEnabled = false // Temporary default value
   const { data: autoIncludeClaudeMd } = useProjectTabField('autoIncludeClaudeMd')
   const { data: instructionFileSettings } = useProjectTabField('instructionFileSettings')
 
@@ -81,6 +83,11 @@ export function ProjectSettingsTab() {
       ...prev,
       claudeCodeEnabled: value
     }))
+  }
+
+  const setAssetsEnabled = (value: boolean) => {
+    // TODO: Implement when assetsEnabled is added to schema
+    console.log('Assets enabled setting:', value)
   }
 
   const setAutoIncludeClaudeMd = (value: boolean) => {
@@ -401,6 +408,22 @@ export function ProjectSettingsTab() {
                 </p>
               </div>
               <Switch checked={!!claudeCodeEnabled} onCheckedChange={setClaudeCodeEnabled} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Assets (Beta)</CardTitle>
+            <CardDescription>Enable the Assets tab for this project</CardDescription>
+          </CardHeader>
+          <CardContent className='space-y-6'>
+            <div className='flex items-center justify-between'>
+              <div className='space-y-0.5'>
+                <label className='text-base font-medium'>Enable Assets</label>
+                <p className='text-sm text-muted-foreground'>The Assets tab is experimental and subject to change.</p>
+              </div>
+              <Switch checked={!!assetsEnabled} onCheckedChange={setAssetsEnabled} />
             </div>
           </CardContent>
         </Card>

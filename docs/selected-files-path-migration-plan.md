@@ -7,12 +7,14 @@ The current selected files feature uses numeric file IDs to track selections. Wh
 ## Problem Analysis
 
 ### Current Issues
+
 1. **ID Instability**: File IDs change when files are updated (new timestamp-based IDs)
 2. **Broken Selections**: Users lose their file selections after any file modification
 3. **Poor UX**: Users must re-select files repeatedly during development
 4. **State Inconsistency**: Selected file IDs may reference non-existent files
 
 ### Root Cause
+
 - Files use timestamp-based IDs (`id INTEGER PRIMARY KEY`)
 - IDs are regenerated on updates, not preserved
 - Selection system tracks by these unstable IDs
@@ -21,6 +23,7 @@ The current selected files feature uses numeric file IDs to track selections. Wh
 ## Solution Design
 
 ### Path-Based Identification
+
 Use file paths as the stable identifier for selections, with the following approach:
 
 1. **Primary Key**: Use `(projectId, path)` as the natural key
@@ -29,7 +32,9 @@ Use file paths as the stable identifier for selections, with the following appro
 4. **Performance**: Use Maps for O(1) lookups
 
 ### Hybrid Approach (Recommended)
+
 Maintain both systems during transition:
+
 - Store both `selectedFileIds` and `selectedFilePaths`
 - Prefer paths, fall back to IDs
 - Gradually phase out ID-based selection
@@ -39,6 +44,7 @@ Maintain both systems during transition:
 ### Phase 1: Schema Updates
 
 #### 1.1 Update Schemas
+
 ```typescript
 // selected-files.schemas.ts
 export const selectedFilesDataSchema = z.object({
@@ -55,81 +61,84 @@ export const selectedFilesDataSchema = z.object({
 export const projectTabStateSchema = z.object({
   // ... existing fields ...
   selectedFiles: idArraySchemaSpec.default([]), // Keep for compatibility
-  selectedFilePaths: z.array(z.string()).default([]), // NEW
+  selectedFilePaths: z.array(z.string()).default([]) // NEW
   // ... rest of schema ...
 })
 
 // active-tab.schemas.ts
 export const activeTabDataSchema = z.object({
   // ... existing fields ...
-  tabMetadata: z.object({
-    selectedFiles: z.array(z.number()).optional(), // Keep
-    selectedFilePaths: z.array(z.string()).optional(), // NEW
-    // ... rest ...
-  }).optional()
+  tabMetadata: z
+    .object({
+      selectedFiles: z.array(z.number()).optional(), // Keep
+      selectedFilePaths: z.array(z.string()).optional() // NEW
+      // ... rest ...
+    })
+    .optional()
 })
 ```
 
 ### Phase 2: Hook Updates
 
 #### 2.1 Update use-selected-files.ts
+
 ```typescript
 // Add path-based operations alongside ID-based
 export function useSelectedFiles({ tabId = null }: { tabId?: number | null } = {}) {
   // ... existing code ...
-  
+
   // NEW: Track selected paths
   const selectedFilePaths: string[] = undoRedoState?.history[undoRedoState.index]?.paths ?? []
-  
+
   // NEW: Convert between IDs and paths
   const pathToId = new Map<string, number>()
   const idToPath = new Map<number, string>()
-  
+
   // Build bidirectional maps
   for (const [id, file] of projectFileMap) {
     pathToId.set(file.path, id)
     idToPath.set(id, file.path)
   }
-  
+
   // NEW: Path-based operations
   const toggleFilePath = (path: string) => {
     if (!isInitialized) return
-    const newPaths = selectedFilePaths.includes(path) 
-      ? selectedFilePaths.filter(p => p !== path)
+    const newPaths = selectedFilePaths.includes(path)
+      ? selectedFilePaths.filter((p) => p !== path)
       : [...selectedFilePaths, path]
     commitSelectionChange(null, newPaths)
   }
-  
+
   // Update commit function to handle both
   const commitSelectionChange = (newIds: number[] | null, newPaths: string[] | null) => {
     // If only IDs provided, convert to paths
     if (newIds && !newPaths) {
-      newPaths = newIds.map(id => idToPath.get(id)).filter(Boolean) as string[]
+      newPaths = newIds.map((id) => idToPath.get(id)).filter(Boolean) as string[]
     }
     // If only paths provided, convert to IDs for compatibility
     if (newPaths && !newIds) {
-      newIds = newPaths.map(path => pathToId.get(path)).filter(Boolean) as number[]
+      newIds = newPaths.map((path) => pathToId.get(path)).filter(Boolean) as number[]
     }
-    
+
     // Update both in storage
     updateActiveProjectTab({
       selectedFiles: newIds ?? [],
       selectedFilePaths: newPaths ?? []
     })
-    
+
     // Update history with both
     updateUndoRedoState({
       history: [...history, { ids: newIds ?? [], paths: newPaths ?? [] }],
       index: newIndex
     })
   }
-  
+
   return {
     // Existing returns
     selectedFiles,
     selectedFilePaths, // NEW
     toggleFilePath, // NEW
-    isFileSelectedByPath: (path: string) => selectedFilePaths.includes(path), // NEW
+    isFileSelectedByPath: (path: string) => selectedFilePaths.includes(path) // NEW
     // ... rest of returns
   }
 }
@@ -138,12 +147,14 @@ export function useSelectedFiles({ tabId = null }: { tabId?: number | null } = {
 ### Phase 3: Component Updates
 
 #### 3.1 File Selection Components
+
 - `file-tree.tsx` - Update to use paths for selection
 - `file-explorer.tsx` - Convert file clicks to use paths
 - `selected-files-list.tsx` - Display using paths, handle missing files
 - `collapsible-selected-files-list.tsx` - Same updates
 
 #### 3.2 Context Building
+
 - `user-input-panel.tsx` - Update to resolve paths to file content
 - `suggest-files-dialog.tsx` - Return paths instead of IDs
 - `agent-files-manager.tsx` - Work with paths
@@ -151,11 +162,13 @@ export function useSelectedFiles({ tabId = null }: { tabId?: number | null } = {
 ### Phase 4: Service Updates
 
 #### 4.1 File Services
+
 - Add path validation methods
 - Update file suggestion to return paths
 - Ensure file sync preserves paths
 
 #### 4.2 API Updates
+
 - Update endpoints to accept both IDs and paths
 - Add path validation middleware
 - Ensure backward compatibility
@@ -163,35 +176,33 @@ export function useSelectedFiles({ tabId = null }: { tabId?: number | null } = {
 ### Phase 5: Migration Implementation
 
 #### 5.1 Data Migration Script
+
 ```typescript
 // scripts/migrate-selected-files-to-paths.ts
 async function migrateSelectedFilesToPaths() {
   // 1. Get all project tabs with selected files
   const tabs = await getProjectTabs()
-  
+
   for (const tab of tabs) {
     if (tab.selectedFiles?.length > 0) {
       // 2. Convert IDs to paths
       const files = await getFilesByIds(tab.projectId, tab.selectedFiles)
-      const paths = files.map(f => f.path)
-      
+      const paths = files.map((f) => f.path)
+
       // 3. Update tab with paths
       await updateProjectTab(tab.id, {
         selectedFilePaths: paths
       })
     }
   }
-  
+
   // 4. Migrate active tab data
   const activeTabs = await getActiveTabs()
   for (const activeTab of activeTabs) {
     if (activeTab.tabMetadata?.selectedFiles?.length > 0) {
-      const files = await getFilesByIds(
-        activeTab.projectId, 
-        activeTab.tabMetadata.selectedFiles
-      )
-      const paths = files.map(f => f.path)
-      
+      const files = await getFilesByIds(activeTab.projectId, activeTab.tabMetadata.selectedFiles)
+      const paths = files.map((f) => f.path)
+
       await updateActiveTab(activeTab.id, {
         tabMetadata: {
           ...activeTab.tabMetadata,
@@ -206,17 +217,20 @@ async function migrateSelectedFilesToPaths() {
 ### Phase 6: Rollout Plan
 
 #### 6.1 Feature Flags
+
 ```typescript
 const USE_PATH_BASED_SELECTION = true // Toggle for gradual rollout
 ```
 
 #### 6.2 Compatibility Layer
+
 - Read both IDs and paths
 - Write to both fields
 - Prefer paths when available
 - Fall back to IDs if paths missing
 
 #### 6.3 Deprecation Timeline
+
 1. **Week 1-2**: Deploy hybrid system
 2. **Week 3-4**: Monitor for issues
 3. **Week 5-6**: Stop writing to ID fields
@@ -225,6 +239,7 @@ const USE_PATH_BASED_SELECTION = true // Toggle for gradual rollout
 ## Implementation Checklist
 
 ### Database & Schema
+
 - [ ] Update `selected-files.schemas.ts` with `filePaths` field
 - [ ] Update `global-state-schema.ts` with `selectedFilePaths`
 - [ ] Update `active-tab.schemas.ts` with path support
@@ -232,6 +247,7 @@ const USE_PATH_BASED_SELECTION = true // Toggle for gradual rollout
 - [ ] Add indexes for path lookups if needed
 
 ### React Hooks
+
 - [ ] Update `use-selected-files.ts` with path operations
 - [ ] Add path<->ID conversion utilities
 - [ ] Update undo/redo to track paths
@@ -239,6 +255,7 @@ const USE_PATH_BASED_SELECTION = true // Toggle for gradual rollout
 - [ ] Ensure backward compatibility
 
 ### UI Components
+
 - [ ] Update `file-tree.tsx` to use paths
 - [ ] Update `file-explorer.tsx` selection logic
 - [ ] Update `selected-files-list.tsx` display
@@ -247,6 +264,7 @@ const USE_PATH_BASED_SELECTION = true // Toggle for gradual rollout
 - [ ] Update file click handlers
 
 ### Services & API
+
 - [ ] Update file suggestion services
 - [ ] Add path validation endpoints
 - [ ] Update MCP tools for paths
@@ -254,6 +272,7 @@ const USE_PATH_BASED_SELECTION = true // Toggle for gradual rollout
 - [ ] Update file sync to preserve paths
 
 ### Testing
+
 - [ ] Unit tests for path operations
 - [ ] Integration tests for selection
 - [ ] Test migration script
@@ -261,6 +280,7 @@ const USE_PATH_BASED_SELECTION = true // Toggle for gradual rollout
 - [ ] Performance tests with many files
 
 ### Documentation
+
 - [ ] Update API documentation
 - [ ] Update component docs
 - [ ] Add migration guide
@@ -269,6 +289,7 @@ const USE_PATH_BASED_SELECTION = true // Toggle for gradual rollout
 ## Risk Mitigation
 
 ### Potential Issues
+
 1. **Performance**: Path lookups might be slower
    - **Mitigation**: Use Map data structures, add DB indexes
 

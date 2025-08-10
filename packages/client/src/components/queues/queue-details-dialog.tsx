@@ -22,13 +22,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@promptliano/ui'
-import { QueueWithStats, QueueItem, QueueItemStatus } from '@promptliano/schemas'
-import {
-  useGetQueueItems,
-  useUpdateQueueItem,
-  useDeleteQueueItem,
-  useBatchUpdateQueueItems
-} from '@/hooks/api/use-queue-api'
+import { QueueWithStats, QueueItem, ItemQueueStatus } from '@promptliano/schemas'
+import { toast } from 'sonner'
+import { useGetQueueItems } from '@/hooks/api/use-queue-api'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { safeFormatDate, ensureArray, normalizeQueueItem } from '@/utils/queue-item-utils'
@@ -62,7 +58,7 @@ interface QueueItemWithDetails {
 
 interface QueueItemRowProps {
   itemData: QueueItemWithDetails
-  onStatusChange: (itemId: number, status: QueueItemStatus) => void
+  onStatusChange: (itemId: number, status: ItemQueueStatus) => void
   onDelete: (itemId: number) => void
   onRetry: (itemId: number) => void
 }
@@ -76,7 +72,8 @@ function QueueItemRow({ itemData, onStatusChange, onDelete, onRetry }: QueueItem
     in_progress: { icon: Clock, color: 'text-blue-600', bgColor: 'bg-blue-100' },
     completed: { icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-100' },
     failed: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100' },
-    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' }
+    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' },
+    timeout: { icon: Clock, color: 'text-orange-600', bgColor: 'bg-orange-100' }
   }
 
   const config = statusConfig[item.status]
@@ -159,7 +156,7 @@ function QueueItemRow({ itemData, onStatusChange, onDelete, onRetry }: QueueItem
               </DropdownMenuItem>
             </>
           )}
-          {(item.status === 'failed' || item.status === 'cancelled') && (
+          {(item.status === 'failed' || item.status === 'cancelled' || item.status === 'timeout') && (
             <DropdownMenuItem onClick={() => onRetry(item.id)}>
               <RefreshCw className='mr-2 h-4 w-4' />
               Retry
@@ -177,36 +174,31 @@ function QueueItemRow({ itemData, onStatusChange, onDelete, onRetry }: QueueItem
 }
 
 export function QueueDetailsDialog({ queue, open, onOpenChange }: QueueDetailsDialogProps) {
-  const [activeTab, setActiveTab] = useState<QueueItemStatus | 'all'>('all')
+  const [activeTab, setActiveTab] = useState<ItemQueueStatus | 'all'>('all')
   const [itemToDelete, setItemToDelete] = useState<number | null>(null)
 
   // API hooks
   const { data: items, isLoading } = useGetQueueItems(queue.queue.id, activeTab === 'all' ? undefined : activeTab)
-  const updateItemMutation = useUpdateQueueItem()
-  const deleteItemMutation = useDeleteQueueItem()
-  const batchUpdateMutation = useBatchUpdateQueueItems()
+  // Note: Direct queue item operations are no longer supported.
+  // Items are now managed through their parent tickets/tasks via the flow service.
 
-  const handleStatusChange = async (itemId: number, status: QueueItemStatus) => {
-    await updateItemMutation.mutateAsync({
-      itemId,
-      data: { status }
-    })
+  const handleStatusChange = async (itemId: number, status: ItemQueueStatus) => {
+    // Direct queue item status changes are no longer supported
+    // Status should be managed through their parent ticket/task
+    toast.error('Direct item status changes are no longer supported. Please use the ticket/task management interface.')
   }
 
   const handleDelete = async (itemId: number) => {
-    await deleteItemMutation.mutateAsync(itemId)
+    // Direct queue item deletion is no longer supported
+    // Items should be dequeued through their parent ticket/task
+    toast.error('Direct item deletion is no longer supported. Please use the ticket/task management interface.')
     setItemToDelete(null)
   }
 
   const handleRetry = async (itemId: number) => {
-    await updateItemMutation.mutateAsync({
-      itemId,
-      data: {
-        status: 'queued',
-        errorMessage: null,
-        agentId: null
-      }
-    })
+    // Direct queue item retry is no longer supported
+    // Retry should be managed through their parent ticket/task
+    toast.error('Direct item retry is no longer supported. Please use the ticket/task management interface.')
   }
 
   const handleCancelAll = async () => {
@@ -215,12 +207,14 @@ export function QueueDetailsDialog({ queue, open, onOpenChange }: QueueDetailsDi
           .filter((item) => item.queueItem.status === 'queued')
           .map((item) => ({
             itemId: item.queueItem.id,
-            data: { status: 'cancelled' as QueueItemStatus }
+            data: { status: 'cancelled' as ItemQueueStatus }
           }))
       : []
 
     if (itemsToCancel.length > 0) {
-      await batchUpdateMutation.mutateAsync({ updates: itemsToCancel })
+      // Direct batch queue item updates are no longer supported
+      // Status should be managed through their parent tickets/tasks
+      toast.error('Direct batch item updates are no longer supported. Please use the ticket/task management interface.')
     }
   }
 
@@ -230,7 +224,8 @@ export function QueueDetailsDialog({ queue, open, onOpenChange }: QueueDetailsDi
     in_progress: Array.isArray(items) ? items.filter((i) => i.queueItem.status === 'in_progress').length : 0,
     completed: Array.isArray(items) ? items.filter((i) => i.queueItem.status === 'completed').length : 0,
     failed: Array.isArray(items) ? items.filter((i) => i.queueItem.status === 'failed').length : 0,
-    cancelled: Array.isArray(items) ? items.filter((i) => i.queueItem.status === 'cancelled').length : 0
+    cancelled: Array.isArray(items) ? items.filter((i) => i.queueItem.status === 'cancelled').length : 0,
+    timeout: Array.isArray(items) ? items.filter((i) => i.queueItem.status === 'timeout').length : 0
   }
 
   const filteredItems = !Array.isArray(items)
@@ -280,13 +275,14 @@ export function QueueDetailsDialog({ queue, open, onOpenChange }: QueueDetailsDi
           </div>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className='grid grid-cols-6 w-full'>
+            <TabsList className='grid grid-cols-7 w-full'>
               <TabsTrigger value='all'>All ({tabCounts.all})</TabsTrigger>
               <TabsTrigger value='queued'>Queued ({tabCounts.queued})</TabsTrigger>
               <TabsTrigger value='in_progress'>In Progress ({tabCounts.in_progress})</TabsTrigger>
               <TabsTrigger value='completed'>Completed ({tabCounts.completed})</TabsTrigger>
               <TabsTrigger value='failed'>Failed ({tabCounts.failed})</TabsTrigger>
               <TabsTrigger value='cancelled'>Cancelled ({tabCounts.cancelled})</TabsTrigger>
+              <TabsTrigger value='timeout'>Timeout ({tabCounts.timeout})</TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab} className='mt-4'>

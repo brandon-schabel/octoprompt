@@ -32,7 +32,7 @@ import type {
 } from '@promptliano/schemas'
 import { getProjectById } from './project-service'
 import { ApiError } from '@promptliano/shared'
-import path from 'path'
+import * as path from 'path'
 import { retryOperation } from './utils/retry-operation'
 import { createLogger } from './utils/logger'
 
@@ -382,9 +382,9 @@ export async function getBranches(projectId: number): Promise<GitBranch[]> {
         current: branch.current,
         isRemote: false,
         commit: branch.commit,
-        tracking: branch.tracking || null,
-        ahead: branch.ahead || 0,
-        behind: branch.behind || 0
+        tracking: null, // tracking information not available in BranchSummaryBranch
+        ahead: 0, // ahead/behind info not available in BranchSummaryBranch
+        behind: 0
       })
     }
 
@@ -716,19 +716,26 @@ export async function getCommitDiff(projectId: number, commitHash: string): Prom
     ])
 
     return {
-      files: diffSummary.files.map((file) => ({
-        path: file.file,
-        type: file.binary
-          ? 'modified'
-          : file.insertions > 0 && file.deletions === 0
-            ? 'added'
-            : file.insertions === 0 && file.deletions > 0
-              ? 'deleted'
-              : 'modified',
-        additions: file.insertions,
-        deletions: file.deletions,
-        binary: file.binary
-      })),
+      files: diffSummary.files.map((file) => {
+        // Handle both binary and text files
+        const isBinary = 'binary' in file ? file.binary : false
+        const additions = 'insertions' in file ? file.insertions : 0
+        const deletions = 'deletions' in file ? file.deletions : 0
+
+        return {
+          path: file.file,
+          type: isBinary
+            ? 'modified'
+            : additions > 0 && deletions === 0
+              ? 'added'
+              : additions === 0 && deletions > 0
+                ? 'deleted'
+                : 'modified',
+          additions,
+          deletions,
+          binary: isBinary
+        }
+      }),
       additions: diffSummary.insertions,
       deletions: diffSummary.deletions,
       content: diffContent
@@ -883,9 +890,9 @@ export async function pull(
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
 
-    const pullOptions: string[] = []
+    const pullOptions: any = {}
     if (options?.rebase) {
-      pullOptions.push('--rebase')
+      pullOptions['--rebase'] = null
     }
 
     if (branch) {
@@ -920,12 +927,12 @@ export async function push(
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
 
-    const pushOptions: string[] = []
+    const pushOptions: any = {}
     if (options?.force) {
-      pushOptions.push('--force')
+      pushOptions['--force'] = null
     }
     if (options?.setUpstream) {
-      pushOptions.push('--set-upstream')
+      pushOptions['--set-upstream'] = null
     }
 
     if (branch) {
@@ -1339,7 +1346,14 @@ export async function clean(
     }
 
     const result = await git.clean(cleanOptions.join(''))
-    return result.split('\n').filter(Boolean)
+    // Handle both string and CleanSummary results
+    if (typeof result === 'string') {
+      return (result as string).split('\n').filter(Boolean)
+    } else {
+      // For CleanSummary object, combine paths, files, and folders
+      const cleanResult = result as any
+      return [...(cleanResult.paths || []), ...(cleanResult.files || []), ...(cleanResult.folders || [])]
+    }
   } catch (error) {
     if (error instanceof ApiError) throw error
     throw new ApiError(
@@ -1963,7 +1977,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
     const currentBranch = status.current
 
     // Get all branches with verbose info
-    const [localBranches, remoteBranches] = await Promise.all([git.branchLocal('-v'), git.branch(['-r', '-v'])])
+    const [localBranches, remoteBranches] = await Promise.all([git.branchLocal(), git.branch(['-r'])])
 
     // Determine default branch (main or master)
     let defaultBranch = 'main'
@@ -1986,18 +2000,10 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
 
       try {
         // Get the latest commit info for this branch
-        const logResult = await git.log([name, '-1'], {
-          format: {
-            hash: '%H',
-            abbreviatedHash: '%h',
-            subject: '%s',
-            authorName: '%an',
-            authorDate: '%aI'
-          }
-        })
+        const logResult = await git.log([name, '-1'])
 
         latestCommit = logResult.latest
-        authorDate = latestCommit?.authorDate
+        authorDate = latestCommit?.date
       } catch (error) {
         console.error(`Failed to get log for branch ${name}:`, error)
       }
@@ -2025,9 +2031,9 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
           behind = parseInt(behindStr, 10) || 0
           ahead = parseInt(aheadStr, 10) || 0
         } catch (error) {
-          // If comparison fails, use tracking branch info
-          ahead = branch.ahead || 0
-          behind = branch.behind || 0
+          // If comparison fails, fallback to default values
+          ahead = 0
+          behind = 0
         }
       }
 
@@ -2038,13 +2044,13 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
         latestCommit: {
           hash: latestCommit?.hash || branch.commit,
           abbreviatedHash: latestCommit?.abbreviatedHash || branch.commit.substring(0, 8),
-          subject: latestCommit?.subject || '',
-          author: latestCommit?.authorName || '',
+          subject: latestCommit?.message || '',
+          author: latestCommit?.author_name || '',
           relativeTime: authorDate ? getRelativeTime(authorDate) : 'Unknown'
         },
-        tracking: branch.tracking || null,
-        ahead: ahead || branch.ahead || 0,
-        behind: behind || branch.behind || 0,
+        tracking: null, // tracking information not available in BranchSummaryBranch
+        ahead: ahead || 0,
+        behind: behind || 0,
         lastActivity: authorDate
       })
     }
@@ -2058,18 +2064,10 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
 
       try {
         // Get the latest commit info for this branch
-        const logResult = await git.log([name, '-1'], {
-          format: {
-            hash: '%H',
-            abbreviatedHash: '%h',
-            subject: '%s',
-            authorName: '%an',
-            authorDate: '%aI'
-          }
-        })
+        const logResult = await git.log([name, '-1'])
 
         latestCommit = logResult.latest
-        authorDate = latestCommit?.authorDate
+        authorDate = latestCommit?.date
       } catch (error) {
         console.error(`Failed to get log for remote branch ${name}:`, error)
       }
@@ -2093,8 +2091,8 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
           latestCommit: {
             hash: latestCommit?.hash || branch.commit,
             abbreviatedHash: latestCommit?.abbreviatedHash || branch.commit.substring(0, 8),
-            subject: latestCommit?.subject || '',
-            author: latestCommit?.authorName || '',
+            subject: latestCommit?.message || '',
+            author: latestCommit?.author_name || '',
             relativeTime: authorDate ? getRelativeTime(authorDate) : 'Unknown'
           },
           tracking: null,

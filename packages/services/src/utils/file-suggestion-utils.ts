@@ -313,11 +313,11 @@ export class SuggestionMetricsTracker {
     const endTime = Date.now()
     const { tokensSaved } = calculateTokenSavings(files)
 
-    const finalMetrics = {
+    const finalMetrics: any = {
       ...metrics,
       endTime,
       filesAnalyzed,
-      tokensSaved,
+      tokensSaved: tokensSaved ?? 0,
       duration: endTime - metrics.startTime
     }
 

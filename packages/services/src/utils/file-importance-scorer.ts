@@ -102,11 +102,7 @@ export function getFileImportance(file: ProjectFile): FileImportance {
       factors.recency * 0.1
   )
 
-  return {
-    fileId: file.id,
-    score,
-    factors
-  }
+  return { fileId: String(file.id), score, factors }
 }
 
 /**

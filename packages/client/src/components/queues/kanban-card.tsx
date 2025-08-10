@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Card, CardContent } from '@promptliano/ui'
 import { Badge } from '@promptliano/ui'
+import { Button } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
-import { ListTodo, FileText, Clock, AlertCircle, ChevronRight, Inbox } from 'lucide-react'
+import { ListTodo, FileText, Clock, AlertCircle, ChevronRight, Inbox, CheckCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useCompleteQueueItem, useDequeueTask } from '@/hooks/api/use-flow-api'
+import { toast } from 'sonner'
 
 interface KanbanCardProps {
   id: string
@@ -20,6 +24,10 @@ interface KanbanCardProps {
   isNested?: boolean // For tasks that are nested under tickets
   queueName?: string // Queue name for display
   queuePosition?: number | null // Position in queue
+  actualId?: number // The actual ticket or task ID from the database
+  ticketId?: number // The parent ticket ID for tasks
+  onComplete?: () => void // Optional callback after completion
+  onOpenTicket?: (ticketId: number) => void
 }
 
 export function KanbanCard({
@@ -35,8 +43,17 @@ export function KanbanCard({
   completedTaskCount,
   isNested = false,
   queueName,
-  queuePosition
+  queuePosition,
+  actualId,
+  ticketId,
+  onComplete,
+  onOpenTicket
 }: KanbanCardProps) {
+  const [isHovered, setIsHovered] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const completeQueueItemMutation = useCompleteQueueItem()
+  const dequeueTaskMutation = useDequeueTask()
+
   const {
     attributes,
     listeners,
@@ -50,6 +67,39 @@ export function KanbanCard({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isSortableDragging ? 0.5 : 1
+  }
+
+  const handleComplete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+
+    // Prevent completion during drag or if already completing
+    if (isDragging || isSortableDragging || completeQueueItemMutation.isPending) {
+      return
+    }
+
+    if (!actualId) {
+      toast.error('Unable to complete item: missing ID')
+      return
+    }
+
+    try {
+      await completeQueueItemMutation.mutateAsync({
+        itemType: type,
+        itemId: actualId,
+        ticketId: type === 'task' ? ticketId : undefined
+      })
+      if (type === 'task') {
+        try {
+          await dequeueTaskMutation.mutateAsync(actualId)
+        } catch {}
+      }
+      toast.success(`${type === 'ticket' ? 'Ticket' : 'Task'} completed successfully`)
+      onComplete?.()
+    } catch (error) {
+      // Error is already handled by commonErrorHandler in the mutation
+      console.error('Failed to complete item:', error)
+    }
   }
 
   const priorityColors = {
@@ -67,9 +117,16 @@ export function KanbanCard({
         style={!overlay ? style : undefined}
         {...attributes}
         {...listeners}
-        className={cn('touch-none', overlay && 'opacity-100')}
+        className={cn('touch-none relative group', overlay && 'opacity-100')}
         data-item-id={id}
         data-item-type={type}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onDoubleClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          if (!isDragging && !isSortableDragging && actualId) onOpenTicket?.(actualId)
+        }}
       >
         <Card
           className={cn(
@@ -80,10 +137,29 @@ export function KanbanCard({
             priority === 'high' && 'border-orange-300 dark:border-orange-700 bg-orange-50/50 dark:bg-orange-950/20',
             priority === 'low' && 'border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-950/20',
             (!priority || priority === 'normal') &&
-              'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/20'
+              'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/20',
+            completeQueueItemMutation.isPending && 'opacity-50'
           )}
         >
-          <CardContent className='p-4'>
+          <CardContent className='p-4 relative'>
+            {/* Completion button - shows on hover */}
+            {isHovered && !overlay && !isDragging && (
+              <Button
+                size='sm'
+                variant='ghost'
+                className='absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/90 hover:bg-success/20 z-10'
+                onClick={handleComplete}
+                disabled={completeQueueItemMutation.isPending}
+                aria-label={`Mark ${type} "${title}" as complete`}
+                aria-busy={completeQueueItemMutation.isPending}
+                title='Mark as complete'
+              >
+                <CheckCircle
+                  className={cn('h-4 w-4', completeQueueItemMutation.isPending ? 'animate-pulse' : 'text-success')}
+                />
+              </Button>
+            )}
+
             <div className='flex items-start gap-3 mb-3'>
               <div
                 className={cn(
@@ -181,9 +257,11 @@ export function KanbanCard({
       style={!overlay ? style : undefined}
       {...attributes}
       {...listeners}
-      className={cn('touch-none', overlay && 'opacity-100')}
+      className={cn('touch-none relative group', overlay && 'opacity-100')}
       data-item-id={id}
       data-item-type={type}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <Card
         className={cn(
@@ -191,14 +269,49 @@ export function KanbanCard({
           isDragging && 'shadow-lg ring-1 ring-primary scale-[1.02]',
           overlay && 'shadow-xl',
           isNested && 'border-l-4 border-l-primary/40 hover:border-l-primary/60',
-          !isNested && 'border-muted-foreground/20'
+          !isNested && 'border-muted-foreground/20',
+          completeQueueItemMutation.isPending && 'opacity-50'
         )}
       >
-        <CardContent className={cn('p-2.5', isNested && 'pl-3')}>
+        <CardContent className={cn('p-2.5 relative', isNested && 'pl-3')}>
+          {/* Completion button for tasks - shows on hover */}
+          {isHovered && !overlay && !isDragging && (
+            <Button
+              size='sm'
+              variant='ghost'
+              className='absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/90 hover:bg-success/20 z-10'
+              onClick={handleComplete}
+              disabled={completeQueueItemMutation.isPending}
+              aria-label={`Mark task "${title}" as complete`}
+              aria-busy={completeQueueItemMutation.isPending}
+              title='Mark task as complete'
+            >
+              <CheckCircle
+                className={cn('h-3.5 w-3.5', completeQueueItemMutation.isPending ? 'animate-pulse' : 'text-success')}
+              />
+            </Button>
+          )}
+
           <div className='flex items-center gap-2'>
             <div className='flex items-center gap-1.5 shrink-0'>
               {isNested ? (
-                <ChevronRight className='h-3.5 w-3.5 text-primary/60' />
+                <button
+                  className='p-0.5 rounded hover:bg-muted'
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setExpanded((v) => !v)
+                  }}
+                  aria-label='Toggle task details'
+                >
+                  <ChevronRight
+                    className={cn('h-3.5 w-3.5 text-primary/60 transition-transform', expanded && 'rotate-90')}
+                  />
+                </button>
               ) : (
                 <FileText className='h-3.5 w-3.5 text-muted-foreground' />
               )}
@@ -207,6 +320,12 @@ export function KanbanCard({
               <h4 className='text-sm line-clamp-1 font-medium'>{title}</h4>
               {!isNested && ticketTitle && (
                 <p className='text-xs text-muted-foreground mt-0.5 line-clamp-1'>From: {ticketTitle}</p>
+              )}
+              {isNested && expanded && (
+                <div className='mt-1 text-xs text-muted-foreground space-y-1'>
+                  {ticketTitle && <p>From: {ticketTitle}</p>}
+                  {estimatedHours && <p>Est: {estimatedHours}h</p>}
+                </div>
               )}
               {queueName && (
                 <div className='flex items-center gap-1 mt-0.5'>

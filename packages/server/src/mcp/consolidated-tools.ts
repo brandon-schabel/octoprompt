@@ -14,6 +14,7 @@ export {
 export {
   ProjectManagerAction,
   PromptManagerAction,
+  MarkdownPromptManagerAction,
   AgentManagerAction,
   TicketManagerAction,
   TaskManagerAction,

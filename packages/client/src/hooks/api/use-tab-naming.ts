@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { promptlianoClient } from '../promptliano-client'
+import { useApiClient } from './use-api-client'
 import { toast } from 'sonner'
 
 export interface TabNameGenerationRequest {
@@ -9,10 +9,14 @@ export interface TabNameGenerationRequest {
 }
 
 export function useGenerateTabName() {
+  const client = useApiClient()
+
   return useMutation({
     mutationFn: async (params: TabNameGenerationRequest) => {
+      // Client null check removed - handled by React Query
       // Since we're using AI generation, we'll call the gen-ai endpoint directly
-      const response = await promptlianoClient.genAi.generateStructured({
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.genAi.generateStructured({
         schemaKey: 'tabNaming',
         userInput: `Project Name: ${params.projectName}, Selected Files: ${params.selectedFiles?.join(', ') || 'None'}, Context: ${params.context || 'General project work'}`
       })

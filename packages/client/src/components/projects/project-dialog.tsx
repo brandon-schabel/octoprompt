@@ -4,12 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@promptliano/ui'
 import { Input } from '@promptliano/ui'
 import { Label } from '@promptliano/ui'
+import { Progress } from '@promptliano/ui'
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from '@/hooks/api/use-projects-api'
 import { useEffect, useState } from 'react'
 import { CreateProjectRequestBody } from '@promptliano/schemas'
 import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import { DirectoryBrowserDialog } from './directory-browser-dialog'
-import { FolderOpen } from 'lucide-react'
+import { FolderOpen, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 type ProjectDialogProps = {
   open: boolean
@@ -33,6 +35,8 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
 
   // We'll use this state to know when we have a newly created project to sync
   const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<number | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string>('')
   const { mutate: syncProject } = useSyncProject()
 
   useEffect(() => {
@@ -54,8 +58,22 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
   // When newlyCreatedProjectId is set, we sync and then navigate
   useEffect(() => {
     if (newlyCreatedProjectId) {
+      setIsSyncing(true)
+      setSyncMessage('Syncing project files... This may take a few minutes for large projects.')
+
       syncProject(newlyCreatedProjectId, {
         onSuccess: () => {
+          setIsSyncing(false)
+          setSyncMessage('')
+          toast.success('Project synced successfully!')
+          navigate({ to: '/projects' })
+          onOpenChange(false)
+        },
+        onError: (error) => {
+          setIsSyncing(false)
+          setSyncMessage('')
+          toast.error(`Sync failed: ${error.message}. You can retry sync from project settings.`)
+          // Still navigate to projects even if sync fails
           navigate({ to: '/projects' })
           onOpenChange(false)
         }
@@ -158,9 +176,22 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
                 />
               </div>
             </div>
+
+            {/* Show sync progress when syncing */}
+            {isSyncing && (
+              <div className='space-y-3 p-4 bg-muted/50 rounded-lg'>
+                <div className='flex items-center gap-2'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  <span className='text-sm font-medium'>Syncing Project Files</span>
+                </div>
+                <Progress value={undefined} className='h-2' />
+                <p className='text-xs text-muted-foreground'>{syncMessage}</p>
+              </div>
+            )}
+
             <DialogFooter>
-              <Button type='submit' disabled={isCreating || isUpdating}>
-                {projectId ? 'Save Changes' : 'Create Project'}
+              <Button type='submit' disabled={isCreating || isUpdating || isSyncing}>
+                {isSyncing ? 'Syncing...' : projectId ? 'Save Changes' : 'Create Project'}
               </Button>
             </DialogFooter>
           </form>

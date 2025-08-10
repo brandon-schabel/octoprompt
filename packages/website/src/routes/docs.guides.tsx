@@ -128,7 +128,7 @@ mcp__promptliano__ticket_manager(
                 code: `// Step 1: Create a ticket with clear overview
 const ticket = await mcp__promptliano__ticket_manager(
   action: "create",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     title: "Add user authentication",
     overview: "Implement JWT-based authentication with login/logout",
@@ -250,7 +250,7 @@ await mcp__promptliano__task_manager(
             code={`// Project-level suggestions (general discovery)
 mcp__promptliano__project_manager(
   action: "suggest_files",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     prompt: "authentication flow",
     limit: 10
@@ -412,7 +412,7 @@ const agents = [
             code={`// 1. Add a worktree for a new feature
 await mcp__promptliano__git_manager(
   action: "worktree_add",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     path: "../promptliano-auth",
     newBranch: "feature/authentication"
@@ -422,13 +422,13 @@ await mcp__promptliano__git_manager(
 // 2. List all worktrees
 const worktrees = await mcp__promptliano__git_manager(
   action: "worktree_list",
-  projectId: 1754111018844
+  projectId: 1754713756748
 )
 
 // 3. Lock a worktree (prevent accidental deletion)
 await mcp__promptliano__git_manager(
   action: "worktree_lock",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     path: "../promptliano-auth",
     reason: "Active development - do not remove"
@@ -438,7 +438,7 @@ await mcp__promptliano__git_manager(
 // 4. Remove worktree when done
 await mcp__promptliano__git_manager(
   action: "worktree_remove",
-  projectId: 1754111018844,
+  projectId: 1754713756748,
   data: {
     path: "../promptliano-auth",
     force: false

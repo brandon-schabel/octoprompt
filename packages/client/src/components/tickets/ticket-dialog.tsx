@@ -114,6 +114,15 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks, projectId }: Ti
   const maxTitleLength = 100
   const maxOverviewLength = 1000
 
+  // Reset form to initial state
+  const resetForm = () => {
+    setTitle('')
+    setOverview('')
+    setPriority('normal')
+    setStatus('open')
+    setSelectedFileIds([])
+  }
+
   useEffect(() => {
     if (ticketWithTasks) {
       setTitle(ticketWithTasks.ticket.title)
@@ -122,11 +131,7 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks, projectId }: Ti
       setStatus(ticketWithTasks.ticket.status as 'open' | 'in_progress' | 'closed')
       setSelectedFileIds(ticketWithTasks.ticket.suggestedFileIds || [])
     } else {
-      setTitle('')
-      setOverview('')
-      setPriority('normal')
-      setStatus('open')
-      setSelectedFileIds([])
+      resetForm()
     }
   }, [ticketWithTasks])
 
@@ -155,6 +160,8 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks, projectId }: Ti
           status,
           suggestedFileIds: selectedFileIds
         })
+        // Reset form after successful creation
+        resetForm()
       }
       onClose()
     } catch (err) {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from './use-api-client'
 import type {
   CreateProviderKeyBody,
   UpdateProviderKeyBody,
@@ -23,28 +23,45 @@ export const providerKeys = {
 
 // Get all provider keys
 export function useGetProviderKeys() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
   return useQuery({
     queryKey: providerKeys.list(),
-    queryFn: () => promptlianoClient.keys.listKeys(),
+    enabled: !!client,
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.listKeys()
+    },
     staleTime: 5 * 60 * 1000 // 5 minutes
   })
 }
 
 // Get single provider key
 export function useGetProviderKey(keyId: number | null) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
   return useQuery({
     queryKey: providerKeys.detail(keyId!),
-    queryFn: () => promptlianoClient.keys.getKey(keyId!),
-    enabled: !!keyId,
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.getKey(keyId!)
+    },
+    enabled: !!client && !!keyId,
     staleTime: 5 * 60 * 1000
   })
 }
 
 // Get providers health status
 export function useGetProvidersHealth(refresh = false) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
   return useQuery({
     queryKey: providerKeys.health(),
-    queryFn: () => promptlianoClient.keys.getProvidersHealth(refresh),
+    enabled: !!client,
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.getProvidersHealth(refresh)
+    },
     staleTime: refresh ? 0 : 2 * 60 * 1000 // 2 minutes if not refreshing
   })
 }
@@ -52,9 +69,13 @@ export function useGetProvidersHealth(refresh = false) {
 // Create provider key
 export function useCreateProviderKey() {
   const queryClient = useQueryClient()
+  const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: CreateProviderKeyBody) => promptlianoClient.keys.createKey(data),
+    mutationFn: (data: CreateProviderKeyBody) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.createKey(data)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key created successfully')
@@ -68,10 +89,14 @@ export function useCreateProviderKey() {
 // Update provider key
 export function useUpdateProviderKey() {
   const queryClient = useQueryClient()
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
 
   return useMutation({
-    mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) =>
-      promptlianoClient.keys.updateKey(keyId, data),
+    mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.updateKey(keyId, data)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key updated successfully')
@@ -85,9 +110,13 @@ export function useUpdateProviderKey() {
 // Delete provider key
 export function useDeleteProviderKey() {
   const queryClient = useQueryClient()
+  const client = useApiClient()
 
   return useMutation({
-    mutationFn: (keyId: number) => promptlianoClient.keys.deleteKey(keyId),
+    mutationFn: (keyId: number) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.deleteKey(keyId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key deleted successfully')
@@ -101,9 +130,13 @@ export function useDeleteProviderKey() {
 // Test single provider
 export function useTestProvider() {
   const queryClient = useQueryClient()
+  const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: TestProviderRequest) => promptlianoClient.keys.testProvider(data),
+    mutationFn: (data: TestProviderRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.testProvider(data)
+    },
     onSuccess: (response) => {
       if (response.data.success) {
         toast.success(`Provider connected successfully`)
@@ -121,9 +154,13 @@ export function useTestProvider() {
 // Batch test providers
 export function useBatchTestProviders() {
   const queryClient = useQueryClient()
+  const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: BatchTestProviderRequest) => promptlianoClient.keys.batchTestProviders(data),
+    mutationFn: (data: BatchTestProviderRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.batchTestProviders(data)
+    },
     onSuccess: (response) => {
       const results = response.data.results
       const successCount = results.filter((r) => r.success).length

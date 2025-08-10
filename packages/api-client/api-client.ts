@@ -94,6 +94,24 @@ import {
   type UnifiedModel
 } from '@promptliano/schemas'
 
+// Markdown Import/Export imports
+import {
+  MarkdownImportRequestSchema,
+  MarkdownImportResponseSchema,
+  BulkImportResponseSchema,
+  MarkdownExportRequestSchema,
+  MarkdownExportResponseSchema,
+  BatchExportRequestSchema,
+  MarkdownContentValidationSchema,
+  type MarkdownImportRequest,
+  type MarkdownImportResponse,
+  type BulkImportResponse,
+  type MarkdownExportRequest,
+  type MarkdownExportResponse,
+  type BatchExportRequest,
+  type MarkdownContentValidation
+} from '@promptliano/schemas'
+
 // Browse Directory imports
 import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@promptliano/schemas'
 import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@promptliano/schemas'
@@ -207,12 +225,10 @@ import type {
   CreateQueueBody,
   UpdateQueueBody,
   EnqueueItemBody,
-  UpdateQueueItemBody,
   QueueStats,
   QueueWithStats,
   GetNextTaskResponse,
   BatchEnqueueBody,
-  BatchUpdateItemsBody,
   QueueTimeline
 } from '@promptliano/schemas'
 import {
@@ -221,12 +237,10 @@ import {
   CreateQueueBodySchema,
   UpdateQueueBodySchema,
   EnqueueItemBodySchema,
-  UpdateQueueItemBodySchema,
   QueueStatsSchema,
   QueueWithStatsSchema,
   GetNextTaskResponseSchema,
   BatchEnqueueBodySchema,
-  BatchUpdateItemsBodySchema,
   QueueTimelineSchema
 } from '@promptliano/schemas'
 
@@ -373,6 +387,7 @@ class BaseApiClient {
       responseSchema?: z.ZodType<TResponse>
       skipValidation?: boolean
       timeout?: number
+      expectTextResponse?: boolean
     }
   ): Promise<TResponse> {
     // Handle both absolute and relative URLs
@@ -395,10 +410,25 @@ class BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), requestTimeout)
 
     try {
+      // Handle different body types
+      let body: any = undefined
+      let headers = { ...this.headers }
+
+      if (options?.body) {
+        if (options.body instanceof FormData) {
+          // For FormData, don't set Content-Type header (browser sets it with boundary)
+          delete headers['Content-Type']
+          body = options.body
+        } else {
+          // For regular JSON payloads
+          body = JSON.stringify(options.body)
+        }
+      }
+
       const response = await this.customFetch(url.toString(), {
         method,
-        headers: this.headers,
-        body: options?.body ? JSON.stringify(options.body) : undefined,
+        headers,
+        body,
         signal: controller.signal
       })
 
@@ -406,6 +436,11 @@ class BaseApiClient {
 
       const responseText = await response.text()
       let responseData: any
+
+      if (options?.expectTextResponse) {
+        // For text responses (like markdown exports), return the text directly
+        return responseText as TResponse
+      }
 
       try {
         responseData = JSON.parse(responseText)
@@ -654,7 +689,8 @@ export class ProjectService extends BaseApiClient {
 
   async syncProject(projectId: number): Promise<boolean> {
     await this.request('POST', `/projects/${projectId}/sync`, {
-      responseSchema: OperationSuccessResponseSchemaZ
+      responseSchema: OperationSuccessResponseSchemaZ,
+      timeout: 300000 // 5 minutes timeout for sync operations
     })
     return true
   }
@@ -678,7 +714,8 @@ export class ProjectService extends BaseApiClient {
   async refreshProject(projectId: number, query?: z.infer<typeof RefreshQuerySchema>) {
     const result = await this.request('POST', `/projects/${projectId}/refresh`, {
       params: query,
-      responseSchema: FileListResponseSchemaZ
+      responseSchema: FileListResponseSchemaZ,
+      timeout: 300000 // 5 minutes timeout for refresh operations
     })
     return result as DataResponseSchema<ProjectFile[]>
   }
@@ -833,7 +870,7 @@ export class ProjectService extends BaseApiClient {
                 suggestedFileIds: z.array(z.number()).optional(),
                 ticketSearch: z.string().optional(),
                 ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed', 'non_closed']).optional(),
                 // Additional fields from ProjectTabState for complete synchronization
                 searchByContent: z.boolean().optional(),
                 resolveImports: z.boolean().optional(),
@@ -884,7 +921,7 @@ export class ProjectService extends BaseApiClient {
         suggestedFileIds?: number[]
         ticketSearch?: string
         ticketSort?: 'created_asc' | 'created_desc' | 'status' | 'priority'
-        ticketStatusFilter?: 'all' | 'open' | 'in_progress' | 'closed'
+        ticketStatusFilter?: 'all' | 'open' | 'in_progress' | 'closed' | 'non_closed'
         // Additional fields from ProjectTabState for complete synchronization
         searchByContent?: boolean
         resolveImports?: boolean
@@ -936,7 +973,7 @@ export class ProjectService extends BaseApiClient {
               suggestedFileIds: z.array(z.number()).optional(),
               ticketSearch: z.string().optional(),
               ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-              ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+              ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed', 'non_closed']).optional(),
               // Additional fields from ProjectTabState for complete synchronization
               searchByContent: z.boolean().optional(),
               resolveImports: z.boolean().optional(),
@@ -1467,11 +1504,12 @@ export class GenAiService extends BaseApiClient {
     return result as { success: true; data: { text: string } }
   }
 
-  async generateStructured(data: z.infer<typeof AiGenerateStructuredRequestSchema>) {
+  async generateStructured(data: z.infer<typeof AiGenerateStructuredRequestSchema>, options?: { timeout?: number }) {
     const validatedData = this.validateBody(AiGenerateStructuredRequestSchema, data)
     const result = await this.request('POST', '/gen-ai/structured', {
       body: validatedData,
-      responseSchema: AiGenerateStructuredResponseSchema
+      responseSchema: AiGenerateStructuredResponseSchema,
+      timeout: options?.timeout // Pass custom timeout if provided
     })
     return result as { success: true; data: { output: any } }
   }
@@ -1540,6 +1578,22 @@ export class SystemService extends BaseApiClient {
       responseSchema: BrowseDirectoryResponseSchema
     })
     return result as BrowseDirectoryResponse
+  }
+
+  async healthCheck() {
+    const result = await this.request('GET', '/health', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z
+          .object({
+            status: z.string(),
+            version: z.string().optional(),
+            uptime: z.number().optional()
+          })
+          .optional()
+      })
+    })
+    return result as DataResponseSchema<{ status: string; version?: string; uptime?: number }>
   }
 }
 
@@ -1854,6 +1908,19 @@ export class TicketService extends BaseApiClient {
     return result as DataResponseSchema<Ticket>
   }
 
+  async completeTicket(ticketId: number) {
+    const result = await this.request('POST', `/tickets/${ticketId}/complete`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          ticket: TicketSchema,
+          tasks: z.array(TicketTaskSchema)
+        })
+      })
+    })
+    return result as DataResponseSchema<{ ticket: Ticket; tasks: TicketTask[] }>
+  }
+
   async deleteTicket(ticketId: number): Promise<boolean> {
     await this.request('DELETE', `/tickets/${ticketId}`, {
       responseSchema: OperationSuccessResponseSchemaZ
@@ -1995,10 +2062,10 @@ export class TicketService extends BaseApiClient {
 
 // Queue Service
 export class QueueService extends BaseApiClient {
-  async createQueue(projectId: number, data: CreateQueueBody) {
-    const validatedData = this.validateBody(CreateQueueBodySchema, data)
+  async createQueue(projectId: number, data: Omit<CreateQueueBody, 'projectId'>) {
+    const validatedData = this.validateBody(CreateQueueBodySchema.omit({ projectId: true }), data)
     const result = await this.request('POST', `/projects/${projectId}/queues`, {
-      body: { ...validatedData, projectId },
+      body: validatedData,
       responseSchema: z.object({
         success: z.boolean(),
         data: TaskQueueSchema
@@ -2110,39 +2177,7 @@ export class QueueService extends BaseApiClient {
     >
   }
 
-  async updateQueueItem(itemId: number, data: UpdateQueueItemBody) {
-    const validatedData = this.validateBody(UpdateQueueItemBodySchema, data)
-    const result = await this.request('PATCH', `/queue-items/${itemId}`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: QueueItemSchema
-      })
-    })
-    return result as DataResponseSchema<QueueItem>
-  }
-
-  async batchUpdateItems(data: BatchUpdateItemsBody) {
-    const validatedData = this.validateBody(BatchUpdateItemsBodySchema, data)
-    const result = await this.request('PATCH', `/queue-items/batch`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.array(QueueItemSchema)
-      })
-    })
-    return result as DataResponseSchema<QueueItem[]>
-  }
-
-  async deleteQueueItem(itemId: number) {
-    const result = await this.request('DELETE', `/queue-items/${itemId}`, {
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.object({ deleted: z.boolean() })
-      })
-    })
-    return result as DataResponseSchema<{ deleted: boolean }>
-  }
+  // Note: updateQueueItem, batchUpdateItems, and deleteQueueItem removed - queue state now managed directly on tickets/tasks through their queue fields
 
   async getQueueStats(queueId: number) {
     const result = await this.request('GET', `/queues/${queueId}/stats`, {
@@ -2175,27 +2210,7 @@ export class QueueService extends BaseApiClient {
     return result as DataResponseSchema<GetNextTaskResponse>
   }
 
-  async bulkMoveItems(itemIds: number[], targetQueueId: number, positions?: number[]) {
-    const result = await this.request('POST', '/queue-items/bulk-move', {
-      body: { itemIds, targetQueueId, positions },
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.object({ moved: z.boolean() })
-      })
-    })
-    return result as DataResponseSchema<{ moved: boolean }>
-  }
-
-  async reorderQueueItems(queueId: number, itemIds: number[]) {
-    const result = await this.request('POST', '/queue-items/reorder', {
-      body: { queueId, itemIds },
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.object({ reordered: z.boolean() })
-      })
-    })
-    return result as DataResponseSchema<{ reordered: boolean }>
-  }
+  // Note: bulkMoveItems and reorderQueueItems removed - use ticket/task update methods to modify queue fields
 
   async getQueueTimeline(queueId: number) {
     const result = await this.request('GET', `/queues/${queueId}/timeline`, {
@@ -2249,6 +2264,19 @@ export class QueueService extends BaseApiClient {
         ticket_title: string
       }>
     }>
+  }
+
+  async completeQueueItem(itemType: 'ticket' | 'task', itemId: number, ticketId?: number) {
+    const result = await this.request('POST', `/queue/${itemType}/${itemId}/complete`, {
+      body: ticketId ? { ticketId } : {},
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          completed: z.boolean()
+        })
+      })
+    })
+    return result as DataResponseSchema<{ completed: boolean }>
   }
 }
 
@@ -3471,8 +3499,17 @@ export class FlowService extends BaseApiClient {
     return result
   }
 
-  async dequeueTicket(ticketId: number) {
+  async dequeueTicket(ticketId: number, options?: { includeTasks?: boolean }) {
+    const validatedData = options
+      ? this.validateBody(
+          z.object({
+            includeTasks: z.boolean().optional()
+          }),
+          options
+        )
+      : undefined
     const result = await this.request('POST', `/flow/tickets/${ticketId}/dequeue`, {
+      body: validatedData,
       responseSchema: TicketSchema
     })
     return result
@@ -3490,6 +3527,7 @@ export class FlowService extends BaseApiClient {
     itemId: number
     targetQueueId: number | null
     priority?: number
+    includeTasks?: boolean
   }) {
     const result = await this.request('POST', '/flow/move', {
       body: data,
@@ -3507,6 +3545,17 @@ export class FlowService extends BaseApiClient {
         created: z.number(),
         updated: z.number()
       })
+    })
+    return result
+  }
+
+  async reorderQueueItems(data: {
+    queueId: number
+    items: Array<{ itemType: 'ticket' | 'task'; itemId: number; ticketId?: number }>
+  }) {
+    const result = await this.request('POST', '/flow/reorder', {
+      body: data,
+      responseSchema: z.object({ success: z.boolean() })
     })
     return result
   }
@@ -3551,11 +3600,168 @@ export class FlowService extends BaseApiClient {
   }
 }
 
+// Markdown Import/Export Service
+export class MarkdownService extends BaseApiClient {
+  /**
+   * Import markdown files containing prompts
+   */
+  async importMarkdownPrompts(
+    files: File[],
+    options: Partial<MarkdownImportRequest> = {}
+  ): Promise<BulkImportResponse> {
+    const formData = new FormData()
+
+    // Add files to FormData
+    files.forEach((file) => {
+      formData.append('files', file)
+    })
+
+    // Add options to FormData
+    if (options.projectId !== undefined) {
+      formData.append('projectId', String(options.projectId))
+    }
+    if (options.overwriteExisting !== undefined) {
+      formData.append('overwriteExisting', String(options.overwriteExisting))
+    }
+    if (options.validateContent !== undefined) {
+      formData.append('validateContent', String(options.validateContent))
+    }
+
+    const result = await this.request('POST', '/prompts/import-markdown', {
+      body: formData,
+      responseSchema: BulkImportResponseSchema
+    })
+
+    return result as BulkImportResponse
+  }
+
+  /**
+   * Export a single prompt as markdown text
+   */
+  async exportPromptAsMarkdown(promptId: number, options: Partial<MarkdownExportRequest> = {}): Promise<string> {
+    const queryParams = new URLSearchParams({ promptId: String(promptId) })
+
+    // Add optional parameters
+    if (options.includeFrontmatter !== undefined) {
+      queryParams.append('includeFrontmatter', String(options.includeFrontmatter))
+    }
+    if (options.includeCreatedDate !== undefined) {
+      queryParams.append('includeCreatedDate', String(options.includeCreatedDate))
+    }
+    if (options.includeUpdatedDate !== undefined) {
+      queryParams.append('includeUpdatedDate', String(options.includeUpdatedDate))
+    }
+    if (options.includeTags !== undefined) {
+      queryParams.append('includeTags', String(options.includeTags))
+    }
+    if (options.sanitizeContent !== undefined) {
+      queryParams.append('sanitizeContent', String(options.sanitizeContent))
+    }
+
+    const result = await this.request('GET', `/prompts/export-markdown?${queryParams}`, {
+      expectTextResponse: true
+    })
+
+    return result as string
+  }
+
+  /**
+   * Export multiple prompts as markdown
+   */
+  async exportPromptsAsMarkdown(
+    promptIds: number[],
+    options: Partial<BatchExportRequest> = {}
+  ): Promise<MarkdownExportResponse> {
+    const requestData: BatchExportRequest = {
+      promptIds,
+      ...options
+    } as BatchExportRequest
+
+    const validatedData = this.validateBody(BatchExportRequestSchema, requestData)
+
+    const result = await this.request('POST', '/prompts/export-markdown-batch', {
+      body: validatedData,
+      responseSchema: MarkdownExportResponseSchema
+    })
+
+    return result as MarkdownExportResponse
+  }
+
+  /**
+   * Import markdown files for a specific project
+   */
+  async importProjectMarkdownPrompts(
+    projectId: number,
+    files: File[],
+    options: Partial<Omit<MarkdownImportRequest, 'projectId'>> = {}
+  ): Promise<BulkImportResponse> {
+    const importOptions: Partial<MarkdownImportRequest> = {
+      ...options,
+      projectId
+    }
+
+    return this.importMarkdownPrompts(files, importOptions)
+  }
+
+  /**
+   * Export all prompts from a project as markdown
+   */
+  async exportProjectPromptsAsMarkdown(
+    projectId: number,
+    options: Partial<Omit<MarkdownExportRequest, 'projectId'>> = {}
+  ): Promise<MarkdownExportResponse> {
+    const requestData: MarkdownExportRequest = {
+      ...options,
+      projectId
+    } as MarkdownExportRequest
+
+    const validatedData = this.validateBody(MarkdownExportRequestSchema, requestData)
+
+    const result = await this.request('POST', '/prompts/export-project-markdown', {
+      body: validatedData,
+      responseSchema: MarkdownExportResponseSchema
+    })
+
+    return result as MarkdownExportResponse
+  }
+
+  /**
+   * Validate a markdown file before importing
+   */
+  async validateMarkdownFile(file: File): Promise<MarkdownContentValidation> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const result = await this.request('POST', '/prompts/validate-markdown', {
+      body: formData,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: MarkdownContentValidationSchema
+      })
+    })
+
+    return (result as any).data
+  }
+
+  // Helper method for body validation (inherited pattern from other services)
+  protected validateBody<T>(schema: z.ZodType<T>, data: unknown): T {
+    try {
+      return schema.parse(data)
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        throw new PromptlianoError(`Request validation failed: ${e.message}`, undefined, 'VALIDATION_ERROR', e.errors)
+      }
+      throw e
+    }
+  }
+}
+
 // Main Promptliano Client
 export class PromptlianoClient {
   public readonly chats: ChatService
   public readonly projects: ProjectService
   public readonly prompts: PromptService
+  public readonly markdown: MarkdownService
   public readonly agents: ClaudeAgentService
   public readonly commands: CommandService
   public readonly claudeCode: ClaudeCodeService
@@ -3579,6 +3785,7 @@ export class PromptlianoClient {
     this.chats = new ChatService(config)
     this.projects = new ProjectService(config)
     this.prompts = new PromptService(config)
+    this.markdown = new MarkdownService(config)
     this.agents = new ClaudeAgentService(config)
     this.commands = new CommandService(config)
     this.claudeCode = new ClaudeCodeService(config)

@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { getClientInstance } from '@/context/promptliano-client-context'
 
 /**
  * Loader for project data that prefetches using TanStack Query
@@ -13,13 +13,14 @@ export async function projectLoader({
   params: Record<string, any>
 }) {
   const projectId = params.projectId as number
+  const client = getClientInstance()
 
-  if (!projectId) return null
+  if (!projectId || !client) return null
 
   // Prefetch project data
   await context.queryClient.ensureQueryData({
     queryKey: ['project', projectId],
-    queryFn: () => promptlianoClient.projects.getProject(projectId),
+    queryFn: () => client.projects.getProject(projectId),
     staleTime: 5 * 60 * 1000 // 5 minutes
   })
 
@@ -27,12 +28,12 @@ export async function projectLoader({
   await Promise.all([
     context.queryClient.prefetchQuery({
       queryKey: ['projectFiles', projectId],
-      queryFn: () => promptlianoClient.projects.getProjectFiles(projectId),
+      queryFn: () => client.projects.getProjectFiles(projectId),
       staleTime: 2 * 60 * 1000 // 2 minutes
     }),
     context.queryClient.prefetchQuery({
       queryKey: ['projectSummary', projectId],
-      queryFn: () => promptlianoClient.projects.getProjectSummary(projectId),
+      queryFn: () => client.projects.getProjectSummary(projectId),
       staleTime: 10 * 60 * 1000 // 10 minutes
     })
   ])
@@ -53,14 +54,15 @@ export async function ticketsLoader({
   search: { status?: string; priority?: string; offset?: number; limit?: number }
 }) {
   const projectId = params.projectId as number
+  const client = getClientInstance()
 
-  if (!projectId) return null
+  if (!projectId || !client) return null
 
   const { status, priority, offset = 0, limit = 20 } = search
 
   await context.queryClient.ensureQueryData({
     queryKey: ['tickets', projectId, { status, priority, offset, limit }],
-    queryFn: () => promptlianoClient.tickets.listTickets(projectId),
+    queryFn: () => client.tickets.listTickets(projectId),
     staleTime: 30 * 1000 // 30 seconds
   })
 

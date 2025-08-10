@@ -1,6 +1,7 @@
 import matter from 'gray-matter'
 import { marked } from 'marked'
-import { BaseParser, ParserOptions, ParseResult } from './base-parser'
+import { BaseParser } from './base-parser'
+import type { ParserOptions, ParseResult } from './base-parser'
 import { ParseError } from '@promptliano/shared'
 
 export interface MarkdownParserOptions extends ParserOptions {

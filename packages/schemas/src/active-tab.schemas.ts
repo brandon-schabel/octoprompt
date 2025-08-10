@@ -23,7 +23,7 @@ export const activeTabDataSchema = z.object({
       suggestedFileIds: z.array(z.number()).optional(),
       ticketSearch: z.string().optional(),
       ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-      ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+      ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed', 'non_closed']).optional(),
       // Additional fields from ProjectTabState for complete synchronization
       searchByContent: z.boolean().optional(),
       resolveImports: z.boolean().optional(),

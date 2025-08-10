@@ -147,7 +147,7 @@ export const yourToolManagerTool: MCPToolDefinition = {
       },
       projectId: {
         type: 'number',
-        description: 'The project ID (required for: list, create). Example: 1754111018844'
+        description: 'The project ID (required for: list, create). Example: 1754713756748'
       },
       resourceId: {
         type: 'number',
@@ -169,7 +169,7 @@ export const yourToolManagerTool: MCPToolDefinition = {
 
         switch (action) {
           case YourToolManagerAction.LIST: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             // Implementation
           }
 
@@ -248,7 +248,7 @@ Use the shared validation utilities for consistent error handling:
 
 ```typescript
 // Required parameters
-const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
 
 // Data field validation
 const name = validateDataField<string>(data, 'name', 'string', '"Resource Name"')
@@ -940,7 +940,7 @@ export const exampleManagerTool: MCPToolDefinition = {
       },
       projectId: {
         type: 'number',
-        description: 'Project ID (required for: list, create, search). Example: 1754111018844'
+        description: 'Project ID (required for: list, create, search). Example: 1754713756748'
       },
       exampleId: {
         type: 'number',
@@ -962,7 +962,7 @@ export const exampleManagerTool: MCPToolDefinition = {
 
         switch (action) {
           case ExampleManagerAction.LIST: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             // Implementation here
             return {
               content: [{ type: 'text', text: 'List of examples' }]

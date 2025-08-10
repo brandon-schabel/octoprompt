@@ -663,22 +663,5 @@ function ProvidersPage() {
 }
 
 export const Route = createFileRoute('/providers')({
-  beforeLoad: async ({ context }) => {
-    const { queryClient, promptlianoClient } = context
-
-    // Prefetch providers and health data
-    await Promise.all([
-      queryClient.prefetchQuery({
-        queryKey: ['providers', 'list'],
-        queryFn: () => promptlianoClient.keys.listKeys(),
-        staleTime: 5 * 60 * 1000
-      }),
-      queryClient.prefetchQuery({
-        queryKey: ['providers', 'health'],
-        queryFn: () => promptlianoClient.keys.getProvidersHealth(),
-        staleTime: 2 * 60 * 1000
-      })
-    ])
-  },
   component: ProvidersPage
 })

@@ -102,7 +102,8 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
   })
 
   const { copyToClipboard } = useCopyClipboard()
-  const generateMutation = useGenerateStructuredData()
+  // Use extended timeout (3 minutes) for asset generation which can take longer with many tokens
+  const generateMutation = useGenerateStructuredData({ timeout: 180000 })
 
   const assetTypeNames: Record<string, string> = {
     icon: 'Icon',
@@ -364,7 +365,21 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
               </div>
 
               <div className='flex justify-between items-center pt-4'>
-                <span className='text-sm text-muted-foreground'>Estimated tokens: {formatTokenCount(tokenCount)}</span>
+                <div className='flex flex-col gap-1'>
+                  <span className='text-sm text-muted-foreground'>
+                    Estimated tokens: {formatTokenCount(tokenCount)}
+                  </span>
+                  {tokenCount > 1500 && (
+                    <span className='text-xs text-amber-600 dark:text-amber-400'>
+                      ⚠️ Large generation may take 30-60 seconds
+                    </span>
+                  )}
+                  {tokenCount > 2500 && (
+                    <span className='text-xs text-amber-600 dark:text-amber-400'>
+                      Consider simplifying your request for faster generation
+                    </span>
+                  )}
+                </div>
               </div>
             </TabsContent>
 
@@ -429,7 +444,7 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
             {isGenerating ? (
               <>
                 <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                Generating...
+                {tokenCount > 1500 ? 'Generating (this may take a moment)...' : 'Generating...'}
               </>
             ) : (
               <>

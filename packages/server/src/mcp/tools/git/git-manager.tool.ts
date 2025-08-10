@@ -94,7 +94,12 @@ export const gitManagerTool: MCPToolDefinition = {
             const result = await getProjectGitStatus(projectId)
             if (!result.success) {
               return {
-                content: [{ type: 'text', text: `Git error: ${result.error?.message}` }],
+                content: [
+                  {
+                    type: 'text',
+                    text: `Git error: ${'error' in result && result.error ? result.error.message : 'Unknown error'}`
+                  }
+                ],
                 isError: true
               }
             }
@@ -412,7 +417,7 @@ export const gitManagerTool: MCPToolDefinition = {
               .map((commit) => {
                 let commitText = `${commit.abbreviatedHash} - ${commit.subject}\n`
                 commitText += `  Author: ${commit.author.name} <${commit.author.email}>\n`
-                commitText += `  Date: ${commit.author.relativeTime} (${new Date(commit.author.date).toLocaleString()})\n`
+                commitText += `  Date: ${commit.relativeTime} (${new Date(commit.authoredDate).toLocaleString()})\n`
                 if (commit.body) {
                   commitText += `  Body: ${commit.body.split('\n').join('\n  ')}\n`
                 }
@@ -439,9 +444,10 @@ export const gitManagerTool: MCPToolDefinition = {
                 isError: true
               }
             }
-            const { branches, currentBranch, totalCount } = result.data
-            let text = `Current branch: ${currentBranch || 'none'}\n`
-            text += `Total branches: ${totalCount}\n\n`
+            const { branches, current, defaultBranch } = result.data
+            let text = `Current branch: ${current || 'none'}\n`
+            text += `Default branch: ${defaultBranch}\n`
+            text += `Total branches: ${branches.length}\n\n`
             text += branches
               .map((branch) => {
                 const marker = branch.current ? '* ' : '  '
@@ -452,9 +458,9 @@ export const gitManagerTool: MCPToolDefinition = {
                 branchText += `    Latest: ${branch.latestCommit.abbreviatedHash} - ${branch.latestCommit.subject}\n`
                 branchText += `    Author: ${branch.latestCommit.author} (${branch.latestCommit.relativeTime})\n`
                 if (branch.tracking) {
-                  branchText += `    Tracking: ${branch.tracking.remoteName}/${branch.tracking.remoteBranch}\n`
-                  if (branch.tracking.ahead > 0 || branch.tracking.behind > 0) {
-                    branchText += `    Status: ${branch.tracking.ahead} ahead, ${branch.tracking.behind} behind\n`
+                  branchText += `    Tracking: ${branch.tracking}\n`
+                  if (branch.ahead > 0 || branch.behind > 0) {
+                    branchText += `    Status: ${branch.ahead} ahead, ${branch.behind} behind\n`
                   }
                 }
                 return branchText
@@ -473,10 +479,10 @@ export const gitManagerTool: MCPToolDefinition = {
                 isError: true
               }
             }
-            const commit = result.data
+            const { commit, files } = result.data
             let text = `Commit: ${commit.hash}\n`
             text += `Author: ${commit.author.name} <${commit.author.email}>\n`
-            text += `Date: ${new Date(commit.author.date).toLocaleString()} (${commit.author.relativeTime})\n`
+            text += `Date: ${new Date(commit.authoredDate).toLocaleString()} (${commit.relativeTime})\n`
             if (commit.committer && commit.committer.email !== commit.author.email) {
               text += `Committer: ${commit.committer.name} <${commit.committer.email}>\n`
             }
@@ -493,9 +499,9 @@ export const gitManagerTool: MCPToolDefinition = {
             if (commit.refs && commit.refs.length > 0) {
               text += `Refs: ${commit.refs.join(', ')}\n`
             }
-            if (commit.files && commit.files.length > 0) {
+            if (files && files.length > 0) {
               text += '\nFiles:\n'
-              commit.files.forEach((file) => {
+              files.forEach((file) => {
                 text += `  ${file.status}: ${file.path} (+${file.additions} -${file.deletions})`
                 if (file.binary) text += ' [binary]'
                 if (file.oldPath) text += ` (from ${file.oldPath})`
@@ -525,7 +531,7 @@ export const gitManagerTool: MCPToolDefinition = {
                 if (wt.branch) line += ` (${wt.branch})`
                 if (wt.commit) line += ` [${wt.commit.substring(0, 7)}]`
                 if (wt.isLocked) line += ` [locked${wt.lockReason ? `: ${wt.lockReason}` : ''}]`
-                if (wt.isPrunable) line += ' [prunable]'
+                if (wt.prunable) line += ' [prunable]'
                 return line
               })
               .join('\n')

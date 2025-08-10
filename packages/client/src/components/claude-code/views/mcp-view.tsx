@@ -8,7 +8,7 @@ import { CheckCircle2, XCircle, Copy, RefreshCw, Terminal, FileJson, AlertCircle
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@promptliano/ui'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import { toast } from 'sonner'
 
 interface MCPViewProps {
@@ -41,6 +41,7 @@ interface MCPStatusInfo {
 }
 
 export function MCPView({ projectId, projectName }: MCPViewProps) {
+  const client = useApiClient()
   const {
     data: status,
     isLoading,
@@ -49,8 +50,8 @@ export function MCPView({ projectId, projectName }: MCPViewProps) {
   } = useQuery({
     queryKey: ['claude-code-mcp-status', projectId],
     queryFn: async () => {
-      const response = await promptlianoClient.claudeCode.getMCPStatus(projectId)
-      return response.data as MCPStatusInfo
+      const response = await client?.claudeCode.getMCPStatus(projectId)
+      return response?.data as MCPStatusInfo
     },
     refetchInterval: false
   })

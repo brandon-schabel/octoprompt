@@ -1,6 +1,6 @@
 import { describe, test, expect, spyOn, beforeEach, afterEach, Mock, mock } from 'bun:test'
 import * as fileSyncService from './file-sync-service-unified'
-import * as projectService from '@promptliano/services'
+import * as projectService from '../project-service'
 import * as fs from 'node:fs'
 import { join } from 'node:path'
 import ignore, { type Ignore } from 'ignore'

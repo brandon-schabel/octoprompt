@@ -1,9 +1,10 @@
 import React, { useMemo, useCallback } from 'react'
 import { useGetTicketsWithTasks, useDeleteTicket } from '@/hooks/api/use-tickets-api'
+import { useGetQueuesWithStats } from '@/hooks/api/use-queue-api'
 import { Button } from '@promptliano/ui'
 import { Input } from '@promptliano/ui'
 import { Badge } from '@promptliano/ui'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@promptliano/ui'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectSeparator } from '@promptliano/ui'
 import { Copy, Filter, FileText, Trash2, ExternalLink } from 'lucide-react'
 import { ScrollArea } from '@promptliano/ui'
 import { toast } from 'sonner'
@@ -61,7 +62,11 @@ export function TicketListPanel({ projectTabId, onSelectTicket, onCreateTicket }
   // Read from the global tabState
   const ticketSearch = tabState?.ticketSearch ?? ''
   const ticketSort = tabState?.ticketSort ?? 'created_desc'
-  const ticketStatus = tabState?.ticketStatusFilter ?? 'all'
+  const ticketStatus = tabState?.ticketStatusFilter ?? 'non_closed'
+  const ticketQueueFilter = tabState?.ticketQueueFilter ?? 'all'
+
+  // Fetch available queues
+  const { data: queuesData } = useGetQueuesWithStats(projectId)
 
   // Update state handlers
   const setTicketSearch = useCallback(
@@ -89,12 +94,43 @@ export function TicketListPanel({ projectTabId, onSelectTicket, onCreateTicket }
     [projectTabId, updateProjectTabState]
   )
 
+  const setTicketQueueFilter = useCallback(
+    (val: string) => {
+      updateProjectTabState({
+        ticketQueueFilter: val as any
+      })
+    },
+    [projectTabId, updateProjectTabState]
+  )
+
   // Load tickets with their tasks from the server
   const { data, isLoading, error } = useGetTicketsWithTasks(
     Number(projectId),
-    ticketStatus === 'all' ? undefined : ticketStatus
+    ticketStatus === 'all' ? undefined : ticketStatus === 'non_closed' ? undefined : ticketStatus
   )
   const tickets = (data ?? []) as TicketWithTasks[]
+
+  // Apply client-side filtering for status and queue
+  const ticketsFiltered = useMemo(() => {
+    let filtered = tickets
+
+    // Apply status filter
+    if (ticketStatus === 'non_closed') {
+      filtered = filtered.filter((t) => t.ticket.status !== 'closed')
+    }
+
+    // Apply queue filter
+    if (ticketQueueFilter === 'all') {
+      // No queue filtering
+    } else if (ticketQueueFilter === 'unqueued') {
+      filtered = filtered.filter((t) => t.ticket.queueId == null)
+    } else {
+      // It's a specific queue ID
+      filtered = filtered.filter((t) => t.ticket.queueId?.toString() === ticketQueueFilter)
+    }
+
+    return filtered
+  }, [tickets, ticketStatus, ticketQueueFilter])
 
   // Copy all ticket content
   const handleCopyAll = useCallback(async (e: React.MouseEvent, ticket: TicketWithTasks) => {
@@ -113,12 +149,12 @@ export function TicketListPanel({ projectTabId, onSelectTicket, onCreateTicket }
 
   // Filter by text
   const filtered = useMemo(() => {
-    if (!ticketSearch.trim()) return tickets
+    if (!ticketSearch.trim()) return ticketsFiltered
     const lower = ticketSearch.toLowerCase()
-    return tickets.filter((t) => {
+    return ticketsFiltered.filter((t) => {
       return t.ticket.title.toLowerCase().includes(lower) || t.ticket.overview?.toLowerCase().includes(lower)
     })
-  }, [tickets, ticketSearch])
+  }, [ticketsFiltered, ticketSearch])
 
   // Sort based on ticketSort
   const sorted = useMemo(() => {
@@ -214,10 +250,31 @@ export function TicketListPanel({ projectTabId, onSelectTicket, onCreateTicket }
             <SelectValue placeholder='Status Filter' />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value='non_closed'>Non-Closed</SelectItem>
             <SelectItem value='all'>All</SelectItem>
             <SelectItem value='open'>Open</SelectItem>
             <SelectItem value='in_progress'>In Progress</SelectItem>
             <SelectItem value='closed'>Closed</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={ticketQueueFilter} onValueChange={setTicketQueueFilter}>
+          <SelectTrigger className='w-[160px] text-sm'>
+            <SelectValue placeholder='Queue' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>All Tickets</SelectItem>
+            <SelectItem value='unqueued'>Unqueued</SelectItem>
+            {queuesData && queuesData.length > 0 && (
+              <>
+                <SelectSeparator />
+                {queuesData.map((queueWithStats) => (
+                  <SelectItem key={queueWithStats.queue.id} value={queueWithStats.queue.id.toString()}>
+                    {queueWithStats.queue.name}
+                  </SelectItem>
+                ))}
+              </>
+            )}
           </SelectContent>
         </Select>
 
@@ -240,13 +297,16 @@ export function TicketListPanel({ projectTabId, onSelectTicket, onCreateTicket }
         {error && <p className='text-sm text-red-500'>Error loading tickets</p>}
         {!isLoading && !error && sorted.length === 0 && (
           <TicketListEmptyState
-            hasFilters={!!ticketSearch || ticketStatus !== 'all'}
+            hasFilters={
+              !!ticketSearch || (ticketStatus !== 'all' && ticketStatus !== 'non_closed') || ticketQueueFilter !== 'all'
+            }
             onCreateTicket={onCreateTicket || (() => {})}
             filterStatus={ticketStatus}
             searchTerm={ticketSearch}
             onClearFilters={() => {
               setTicketSearch('')
-              setTicketStatusFilter('all')
+              setTicketStatusFilter('non_closed')
+              setTicketQueueFilter('all')
             }}
           />
         )}

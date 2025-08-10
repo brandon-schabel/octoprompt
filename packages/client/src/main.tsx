@@ -4,7 +4,7 @@ import { routeTree } from './routeTree.gen'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from '@promptliano/ui'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { PromptlianoClientProvider } from '@/context/promptliano-client-context'
 
 // Initialize core services
 const queryClient = new QueryClient({
@@ -19,7 +19,6 @@ const queryClient = new QueryClient({
 // Router context interface
 export interface RouterContext {
   queryClient: QueryClient
-  promptlianoClient: typeof promptlianoClient
 }
 
 // Create router instance with context
@@ -27,8 +26,7 @@ const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   context: {
-    queryClient,
-    promptlianoClient: promptlianoClient
+    queryClient
   }
 })
 
@@ -46,8 +44,10 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster position='bottom-right' />
+      <PromptlianoClientProvider>
+        <RouterProvider router={router} />
+        <Toaster position='bottom-right' />
+      </PromptlianoClientProvider>
     </QueryClientProvider>
   )
 }

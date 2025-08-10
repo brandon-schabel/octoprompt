@@ -1,623 +1,189 @@
 # CLAUDE.md
 
-You are an expert at using the Promptliano MCP, the Promptliano MCP will guide you using a method called the "human in the loop" method. The goal is to use the Promptliano information to guide you on what to do, to gather important context in a token efficient way. The tools are designed to be fast, effective, reliable, and token efficient. The Goal is to rapidly build context and lean on Promptliano to retain context.
+Operate only through Promptliano MCP. Keep it high level, structured, and token-efficient.
 
-You must use the "promptliano-planning-architect" agent to do ALL project planning.
+## Golden Path (mandatory)
 
-If the user ever mentions, plans, tasks, or tickets, immediately use the promptliano-planning-architect. You should enter into a planning mode and create tickets in promptliano because each task contains suggsted prompts, files, and agent. The agent context should be inserted, then prompts, files, and then that help guide the AI much better based on the current task. When you are doing a task created in Promptliano, you should load the agent first and then once the agent is loaded, use the agent to load the task prompts, then start from the suggested files to get a better idea of what needs to be done.
+1. Overview → 2) Plan → 3) Queue → 4) Process → 5) Review → 6) Complete
 
-When you are trying to solve a task, bug, problem. Check the available projects prompts, some will show in the overview, but there are prompt tools to retrieve prompts for the project. Its helpful to load relevant prompts into the context.
-
-For full features load into context ./CLAUDE_CODE_PROMPTLIANO_FEATURE_DEVELOPMENT.md, this provides a very detailed guide on how to properly build features in promtliano
-
-- Use the Promptliano MCP Overview tool to understand what the user is currently working on, this will give you insights
-  into their active project id, selected files, recent tickets. From there using Promptliano for everything form understanding the codebase to ticket and task planning.
-- Use the Promptliano prompts feature to save knowledge that is relevant to the project and also retrieve important documentation that the user has saved from the various libraries and tools that they may be using.
-- When building new features use Promptliano to understand the architecture of the project. try to follow the patterns that the project is already using.
-- Before searching the internet for library docs, check to see if the user already has library docs in their Promptliano prompts library
-
-When you are building new UI components and new UI pages, spawn the subagent `promptliano-ui-builder` and load in PROMPTLIANO_UI_REFERENCE.md into the agent context. From here the agent can build very powerful Promptliano UIs with `@promptliano/ui`
-
-## Ports
-
-Dev Server: 3147
-Prod Server: 3579
-Client Dev Server: 1420
-Generally a fullstack feature consists of the follow
-
-1. **Zod data schemas** - Define data structure (source of truth)
-2. **Data storage and table definitions** for SQLite with zod validations
-3. **Services** using the zod schemas as the source of truth
-4. **Create MCP tools** so AIs can use the new service
-5. **Feature routes** with zod + hono openAPI integration
-6. **Add routes to api-client** (IMPORTANT: All API client code should be added to packages/api-client/api-client.ts as a service class extending BaseApiClient, following the pattern of existing services like ChatService, ProjectService, etc. Do NOT create separate client files)
-7. **Setup data hooks** using react tanstack query that consume the api-client and add data invalidations where it makes sense (React hooks go in packages/client/src/hooks/api/ and should import promptlianoClient from '@/hooks/promptliano-client')
-8. **Explore existing components** - if current components meet use cases, reuse them; if not add ShadCN components or compose new components based on the foundations of the primitive components in the repo
-9. **Integrate components and data hooks** into a page to complete the feature
-10. **Run lint and typecheck** - Execute `bun run lint` and `bun run typecheck` to ensure code quality and type safety
-11. **Code review (MANDATORY)** - Use `staff-engineer-code-reviewer` agent to review the implementation for quality, best practices, and potential improvements
-12. **Address feedback** - Iterate based on code review feedback until the implementation meets quality standards
-
-## Database Schema Migration Guidelines
-
-When creating new entities or modifying existing database schemas, follow the migration patterns established in the project. The codebase is transitioning from JSON blob storage to proper SQLite column-based tables for better performance and type safety.
-
-### Migration Documentation
-
-Refer to these documentation files when working with database schemas:
-
-- **`docs/migration-guide-json-to-columns.md`** - Complete guide for migrating from JSON to columns
-- **`docs/entities-migration-analysis.md`** - Analysis of all entities and their proposed schemas
-- **`docs/migration-templates/`** - Ready-to-use migration templates
-- **`docs/migration-best-practices-and-pitfalls.md`** - Best practices and common issues
-
-### Key Migration Principles
-
-1. **Use proper columns instead of JSON blobs** - Direct queries are 10-100x faster
-2. **Store JSON arrays as TEXT with NOT NULL DEFAULT '[]'** - Prevents parsing errors
-3. **Add comprehensive indexes** - Always index foreign keys and query fields
-4. **Use transactions for migrations** - Ensures atomic operations
-5. **Follow the established patterns from tickets/tasks migration** (migrations 006 and 007)
-
-### When Creating New Entities
-
-1. Design the schema with proper columns (avoid storing everything as JSON)
-2. Use the migration templates in `docs/migration-templates/`
-3. Add NOT NULL constraints with appropriate defaults
-4. Create indexes for all foreign keys and commonly queried fields
-5. Implement safe JSON parsing for array/object fields using the `safeJsonParse` helper
-6. Update the storage layer to use direct SQL queries instead of JSON_EXTRACT
-
-### Selected Files Path-Based Migration
-
-The selected files feature has been migrated from ID-based to path-based tracking to solve the issue where file IDs change when files are updated:
-
-- **Migration Plan**: `docs/selected-files-path-migration-plan.md` - Complete migration strategy
-- **Implementation Guide**: `docs/selected-files-implementation-guide.md` - Ready-to-use code examples
-- **Component Analysis**: `docs/selected-files-components-analysis.md` - All affected components
-
-Key points:
-
-- File paths are stable identifiers (unique per project)
-- The system now stores both `selectedFiles` (IDs) and `selectedFilePaths` for compatibility
-- UI components should prefer path-based selection when available
-- Migration maintains backward compatibility during transition
-
-## File Suggestions Feature
-
-The AI file suggestion feature has been optimized to use 60-70% fewer tokens. Three MCP methods are available:
-
-### 1. Project-Level Suggestions (General Discovery)
-
-Use when exploring files based on a text prompt:
+### 1) Overview (start here, every session)
 
 ```
-mcp__Promptliano__project_manager(
-  action: "suggest_files",
-  projectId: 1754111018844,
-  data: {
-    prompt: "authentication flow",
-    limit: 10
-  }
+mcp__promptliano__project_manager(
+  action: "overview",
+  projectId: 1754713756748
 )
 ```
 
-### 2. Ticket-Level Suggestions (Optimized with Strategies)
+Gives project context, selected files, tickets, queues, and pending work.
 
-Use when working on a specific ticket - supports the new optimization strategies:
+#### Next actions after overview
 
-```
-mcp__Promptliano__ticket_manager(
-  action: "suggest_files",
-  ticketId: 456,
-  data: {
-    strategy: "balanced",     // "fast" | "balanced" | "thorough"
-    maxResults: 10,
-    extraUserInput: "focus on authentication components"
-  }
-)
-```
-
-### 3. Task-Level Suggestions
-
-Use when working on a specific task within a ticket:
+- If queues have pending items: process next task
 
 ```
-mcp__Promptliano__task_manager(
-  action: "suggest_files",
-  ticketId: 456,
-  data: {
-    taskId: 789,
-    context: "include related test files"
-  }
-)
-```
-
-### Strategies (Ticket-Level Only)
-
-- **`fast`**: No AI, pure relevance scoring (best for large projects or quick suggestions)
-- **`balanced`**: Pre-filters 50 files, AI refines (default, good for most cases)
-- **`thorough`**: Pre-filters 100 files, high-quality AI model (best for complex tickets)
-
-### When to Use Each Method
-
-- **Project-level**: Initial exploration, understanding codebase structure, finding files by concept
-- **Ticket-level**: Starting work on a ticket, finding all files that need changes
-- **Task-level**: Focused work on a specific task, finding implementation details
-
-### Tips
-
-- Always use file suggestions before manually searching - it saves significant time
-- Add contextual hints (e.g., "include test files", "focus on API routes", "find UI components")
-- The feature automatically considers keywords, file paths, types, recency, and import relationships
-- Ticket-level suggestions include performance metrics showing tokens saved (60-70% reduction)
-
-## Agents Feature
-
-Make strong use of the agents feature, make use of specialized agents to handle task that are relevant to the list of specialized agents. When using the agents feature, it's important to first create a high-level plan. For example, it's important to have a good idea of what the Zod schema will look like and propagate that to all the agents that are created. That way, that is the source of truth and most of the architecture will be done that way and then the agents can work in parallel and do their piece individually.
-
-### Claude Agent Usage Guidelines
-
-You MUST proactively use Claude's built-in agents at appropriate times:
-
-#### After Feature Implementation
-
-- **Always use `staff-engineer-code-reviewer`** after implementing any significant feature or functionality
-- This includes: new components, API endpoints, services, database changes, or any substantial code additions
-- The code reviewer will analyze implementation quality, suggest improvements, and catch potential issues
-
-#### When Refactoring or Simplifying
-
-- **Use `code-modularization-expert`** when:
-  - User asks to refactor code
-  - User asks to simplify files or reduce complexity
-  - You identify duplicate patterns that could be consolidated
-  - Breaking down large files into smaller, more manageable modules
-  - Improving code organization and separation of concerns
-
-#### Other Key Agent Usage
-
-- **Use `frontend-shadcn-expert`** when building React UI components or implementing frontend features
-- **Use `hono-bun-api-architect`** when creating or modifying API endpoints
-- **Use `zod-schema-architect`** when designing data validation schemas
-- **Use `tanstack-router-expert`** when implementing routing logic
-- **Use `vercel-ai-sdk-expert`** when implementing AI features
-- **Use `promptliano-service-architect`** when creating new Promptliano services
-- **Use `promptliano-mcp-tool-creator`** when creating new MCP tools
-- **Use `simple-git-integration-expert`** when implementing Git-related features
-- **Use `markdown-docs-writer`** when creating documentation
-- \*\*Use `sqlite-json-migration-expert` when doing SQLite JSON schema migrations.
-
-### Example Workflow
-
-```
-1. User requests: "Add a new user profile feature"
-2. You implement: schemas, storage, services, API routes, UI components
-3. Automatically use: staff-engineer-code-reviewer to review the implementation
-4. If reviewer suggests modularization: use code-modularization-expert
-5. Result: High-quality, well-reviewed, modular code
-```
-
-### Important Notes
-
-- Don't wait for user to ask for code review - do it proactively
-- Use multiple agents concurrently when appropriate for maximum efficiency
-- Each agent should receive clear context about what was implemented/changed
-
-## Task Queue System
-
-The task queue system allows AI agents to continuously process tickets and tasks in a structured way. It provides multiple queue lanes for parallel processing and ensures tasks are completed with proper validation and review.
-
-### Overview
-
-- **Queue-based Processing**: Tasks and tickets can be added to queues for continuous AI processing
-- **Multiple Lanes**: Support for multiple queue lanes allowing parallel AI agent processing
-- **Priority System**: Tasks are processed based on priority (1-10, lower number = higher priority)
-- **Status Tracking**: Real-time tracking of queued, in-progress, completed, failed, and cancelled items
-- **Agent Assignment**: Automatic assignment of tasks to AI agents with tracking
-
-### MCP Tools for Queue Management
-
-#### 1. Queue Manager Tool (`queue_manager`)
-
-Used for managing queues and enqueuing items:
-
-```
-mcp__promptliano__queue_manager(
-  action: "create_queue",
-  projectId: 1754111018844,
-  data: {
-    name: "Feature Development",
-    description: "Queue for new feature tasks",
-    maxParallelItems: 2
-  }
-)
-
-// Enqueue an entire ticket with all its tasks
-mcp__promptliano__queue_manager(
-  action: "enqueue_ticket",
-  projectId: 1754111018844,
-  data: {
-    queueId: 123,
-    ticketId: 456,
-    priority: 5
-  }
-)
-```
-
-Actions available:
-
-- `create_queue`: Create a new task queue
-- `list_queues`: List all queues for a project
-- `enqueue_item`: Add a single task to the queue
-- `enqueue_ticket`: Add all tasks from a ticket to the queue
-- `get_stats`: Get queue statistics
-- `pause_queue`: Pause processing on a queue
-- `resume_queue`: Resume processing on a queue
-- `delete_queue`: Delete a queue (and all its items)
-
-#### 2. Queue Processor Tool (`queue_processor`)
-
-Used by AI agents to process queue items:
-
-```
-// Get the next task from the queue
 mcp__promptliano__queue_processor(
   action: "get_next_task",
-  data: {
-    queueId: 123,
-    agentId: "frontend-shadcn-expert"
-  }
-)
-
-// Mark task as completed
-mcp__promptliano__queue_processor(
-  action: "complete_task",
-  data: {
-    itemId: 789,
-    completionNotes: "Implemented user profile component with shadcn/ui"
-  }
+  data: { queueId: <queue_id>, agentId: "<agent_id>" }
 )
 ```
 
-Actions available:
-
-- `get_next_task`: Get the next highest priority task from the queue
-- `update_status`: Update the status of a queue item
-- `complete_task`: Mark a task as completed and remove from queue
-- `fail_task`: Mark a task as failed with error details
-- `release_task`: Release a task back to the queue (if agent can't complete it)
-
-### Queue Processing Workflow
-
-1. **Queue Creation**: Create queues for different types of work (features, bugs, refactoring, etc.)
-2. **Task Enqueuing**: Add tickets or individual tasks to queues with appropriate priorities
-3. **Agent Processing**:
-   - Agent calls `get_next_task` to retrieve work
-   - Agent processes the task using appropriate tools and sub-agents
-   - Agent uses `staff-engineer-code-reviewer` to review implementation
-   - Agent calls `complete_task` when done or `fail_task` if unable to complete
-4. **Continuous Loop**: Agent continues calling `get_next_task` until queue is empty
-
-### UI Integration
-
-- **Queues Tab**: Access queues through the "Queues" tab in the project view
-- **Queue Management**: Create, pause, resume, and delete queues
-- **Progress Tracking**: Visual progress bars showing completion status
-- **Statistics View**: Queue statistics appear in the project statistics view
-- **Project Overview**: Active queues with pending tasks are shown in the project overview
-
-### Best Practices
-
-1. **Queue Organization**: Create separate queues for different types of work
-2. **Priority Management**: Use priorities to ensure critical tasks are processed first
-3. **Agent Specialization**: Use agent IDs to assign tasks to specialized agents
-4. **Error Handling**: Always check if tasks have been completed before re-processing
-5. **Queue Monitoring**: Monitor queue statistics to ensure healthy processing
-
-### Example: Processing a Feature Queue
+- If open tickets but no queues: create and enqueue
 
 ```
-// 1. Create a feature development queue
 mcp__promptliano__queue_manager(
   action: "create_queue",
-  projectId: 1754111018844,
-  data: {
-    name: "Feature Queue",
-    description: "New features to implement",
-    maxParallelItems: 1
-  }
+  projectId: 1754713756748,
+  data: { name: "Work", description: "General work", maxParallelItems: 1 }
 )
-
-// 2. Add a ticket to the queue
 mcp__promptliano__queue_manager(
   action: "enqueue_ticket",
-  projectId: 1754111018844,
-  data: {
-    queueId: 123,
-    ticketId: 456,
-    priority: 5
-  }
+  projectId: 1754713756748,
+  data: { queueId: <queue_id>, ticketId: <ticket_id>, priority: 5 }
+)
+```
+
+- If no tickets: plan tickets and tasks via architect
+
+```
+Task(
+  subagent_type: "promptliano-planning-architect",
+  description: "Plan feature",
+  prompt: "Create tickets and tasks with agents, files, prompts, estimates"
+)
+```
+
+- If starting work without a queue: enqueue the current ticket before coding
+
+### 2) Plan (tickets + tasks via architect)
+
+```
+Task(
+  subagent_type: "promptliano-planning-architect",
+  description: "Plan feature",
+  prompt: "Create tickets/tasks with agents, prompts, files, estimates"
+)
+```
+
+Tickets/tasks include suggested files, prompts, and agent assignments.
+
+### 3) Queue (structure all work)
+
+```
+mcp__promptliano__queue_manager(
+  action: "create_queue",
+  projectId: 1754713756748,
+  data: { name: "Feature Dev", description: "Feature work", maxParallelItems: 1 }
 )
 
-// 3. Process tasks (in a loop)
-while (true) {
-  // Get next task
-  const result = mcp__promptliano__queue_processor(
-    action: "get_next_task",
-    data: {
-      queueId: 123,
-      agentId: "my-agent"
-    }
-  )
-
-  if (!result.queueItem) {
-    // No more tasks in queue
-    break
-  }
-
-  // Process the task...
-  // Implementation code here...
-
-  // Mark as completed
-  mcp__promptliano__queue_processor(
-    action: "complete_task",
-    data: {
-      itemId: result.queueItem.id,
-      completionNotes: "Task completed successfully"
-    }
-  )
-}
+mcp__promptliano__queue_manager(
+  action: "enqueue_ticket",
+  projectId: 1754713756748,
+  data: { queueId: 123, ticketId: 456, priority: 5 }
+)
 ```
 
-### Queue Status in Project Overview
+### 4) Process (pull → load context → implement)
 
-When using the project overview MCP tool, queue information is automatically included:
+```
+// get next task
+mcp__promptliano__queue_processor(
+  action: "get_next_task",
+  data: { queueId: 123, agentId: "my-agent" }
+)
 
-- Total number of active queues
-- Number of pending items across all queues
-- Reminder to use `queue_processor` tool when items are pending
+// suggested files (fast/balanced/thorough)
+mcp__promptliano__ticket_manager(
+  action: "suggest_files",
+  ticketId: 456,
+  data: { strategy: "balanced", maxResults: 10 }
+)
 
-This ensures AI agents are always aware of pending work when they check the project overview.
-
-## Validation Requirements for UI Navigation and Search Parameters
-
-All UI navigation state (tabs, subtabs, views, filters) is persisted in URL search parameters and validated using Zod schemas. When adding any new UI navigation elements, you MUST update the corresponding validation schemas.
-
-### Key Principle
-
-Any value that appears in the URL search params must have a corresponding Zod schema validation. This includes:
-
-- Main navigation tabs
-- Sub-navigation tabs within views
-- Filter states
-- View modes
-- Selected item IDs
-- Any other UI state persisted in the URL
-
-### Common Validation Files
-
-- `packages/client/src/lib/search-schemas.ts` - Contains all route search parameter schemas
-- `packages/schemas/` - Contains domain-specific schemas for forms and data
-
-### Required Updates When Adding New UI Navigation
-
-1. **Update the enum schema** for the navigation type in `search-schemas.ts`
-2. **Add the new value to the enum** with a `.catch()` default
-3. **Update the parent search schema** if adding a new navigation category
-4. **Update any switch statements** or conditional rendering that handle the navigation
-5. **Export types** if needed for TypeScript support
-6. **Update navigation components** to handle the new value
-
-### Examples
-
-#### Adding a new subtab to an existing view
-
-```typescript
-// In search-schemas.ts
-export const claudeCodeViewSchema = z
-  .enum(['agents', 'commands', 'sessions', 'chats', 'settings'])
-  .catch('agents')
-  .optional()
+// read/update files via MCP
+mcp__promptliano__project_manager(action: "get_file_content", projectId: 1754713756748, data: { path: "..." })
+mcp__promptliano__project_manager(action: "update_file_content", projectId: 1754713756748, data: { path: "...", content: "..." })
 ```
 
-#### Adding a new main tab with subtabs
+Processing loop: load agent → load task prompts → load suggested files → implement → tests → review → complete.
 
-```typescript
-// Define the new subtab schema
-export const analyticsViewSchema = z.enum(['overview', 'usage', 'performance']).catch('overview').optional()
+### 5) Review (always)
 
-// Add to the main search schema
-export const projectsSearchSchema = tabSearchSchema.merge(projectIdSearchSchema).extend({
-  activeView: projectViewSchema,
-  gitView: gitViewSchema,
-  ticketView: ticketViewSchema,
-  assetView: assetViewSchema,
-  claudeCodeView: claudeCodeViewSchema,
-  analyticsView: analyticsViewSchema // Add here
-  // ... other fields
-})
+```
+Task(
+  subagent_type: "staff-engineer-code-reviewer",
+  description: "Review implementation",
+  prompt: "Review for quality, security, performance"
+)
 ```
 
-### Common Issues and Solutions
+Add additional targeted reviews as needed (API, frontend, types).
 
-- **Tab click redirects to wrong view** → Missing enum value in schema
-- **Navigation state not persisting** → Schema not added to parent search schema
-- **Form validation errors** → Check optional field handling (use `.optional()` and `.catch()`)
-- **TypeScript errors** → Update exported types to match schema changes
-- **Default tab not working** → Ensure `.catch('default-value')` is set correctly
+### 6) Complete (sync status + queues)
 
-### Testing Checklist
-
-- [ ] Direct URL navigation works with new tab value
-- [ ] Tab click updates URL correctly
-- [ ] Refresh maintains selected tab
-- [ ] Invalid URL values fall back to default
-- [ ] TypeScript compilation passes
-
-## Coding Principles
-
-- Write code that is self explanatory where comments are rarely needed.
-- Follow instructions exactly as written. Everything must be very concise but still make sense.
-- Optimize code to use the least amount of tokens possible with great readability.
-- Remove verbose comments, keep comments short and simple, optimize for token efficiency.
-- write modular, functional code. Make sure code is unit testable. Make sure functions are pure and deterministic.
-- Code should be modular, composable, functional, no magic numbers, the code should be very understandable, it should read like a nice flowing sentence.
-- never use dynamic imports unless you have to
-
-Implement These Practices:
-
-- Follow DRY (Don't repeat yourself)
-- Follow KISS (Keep it simple stupid)
-- Follow SRP (Single Responsibility Principle)
-
-## Testing
-
-### Running Tests
-
-The project has comprehensive test coverage across multiple packages. Use these commands to run tests:
-
-```bash
-# Run all tests across all packages
-bun run test:all
-
-# Run tests for individual packages
-bun run test:shared      # Shared utilities (133 tests ✅)
-bun run test:schemas     # Zod schemas (93 tests, 11 failing ❌)
-bun run test:services    # Services layer (multiple failing ❌)
-bun run test:storage     # Storage layer (multiple failing ❌)
-bun run test:api-client  # API client (multiple failing ❌)
-bun run test:config      # Configuration (5 tests ✅)
-bun run test:server      # Server (no tests yet ⚠️)
+```
+mcp__promptliano__queue_processor(
+  action: "complete_task",
+  data: { itemId: 789, completionNotes: "Done" }
+)
 ```
 
-### Current Test Status
+Completing tasks updates ticket/task state and queue stats.
 
-- **Passing**: `shared` (133), `config` (5)
-- **Failing**: `schemas` (11), `services`, `storage`, `api-client`
-- **No tests**: `server`
+## File Suggestions (token-efficient)
 
-See `TEST_AND_TYPE_REPORT.md` for detailed failure information.
+- fast: no AI, instant
+- balanced: filter + AI (default)
+- thorough: maximum AI
 
-## Type Checking
-
-### Running Type Checks
-
-All packages have TypeScript type checking configured. Use these commands:
-
-```bash
-# Run type checks for all packages
-bun run typecheck
-
-# Run type checks for individual packages
-bun run typecheck:server
-bun run typecheck:shared
-bun run typecheck:schemas
-bun run typecheck:services
-bun run typecheck:storage
-bun run typecheck:api-client
-bun run typecheck:config
-bun run typecheck:client
-bun run typecheck:website
+```
+// project-level exploration
+mcp__promptliano__project_manager(
+  action: "suggest_files",
+  projectId: 1754713756748,
+  data: { prompt: "auth", limit: 10 }
+)
 ```
 
-### Type Safety Requirements
+Always prefer suggestions before manual searching.
 
-- All packages must pass type checking before merging
-- Use `tsc --noEmit` to check types without building
-- Fix type errors immediately - don't use `@ts-ignore` unless absolutely necessary
+## Essential Tools (minimal reference)
 
-## Validation
+- project_manager: overview, suggest_files, get_file_content, update_file_content
+- ticket_manager: create, list, suggest_tasks, suggest_files, auto_generate_tasks
+- task_manager: create, list, update, suggest_files, batch_create
+- queue_manager: create_queue, enqueue_ticket, enqueue_item, get_stats, list_queues
+- queue_processor: get_next_task, update_status, complete_task, fail_task, check_queue_status
+- prompt_manager: create, list_by_project, suggest_prompts
+- agent_manager: list, suggest_agents, get
 
-### Comprehensive Validation
+## Rules (non-negotiable)
 
-Use the validation scripts for CI/CD and pre-commit checks:
+- Always start with Overview, then follow the Golden Path.
+- Use planning architect for all planning.
+- Enforce queues for all implementation work.
+- Use MCP file ops for reading/writing; avoid manual edits first.
+- Run specialized review agents before completion.
 
-```bash
-# Run complete validation (tests + type checks + formatting)
-bun run validate
+## Tips
 
-# Run quick validation (type checks + tests only)
-bun run validate:quick
-```
+- Load context in order: agent → prompts → files.
+- Keep changes small, testable, and validated in-loop.
+- Monitor queues: `queue_manager(get_stats)`; retry or release stuck items.
+- Save key patterns as prompts via `prompt_manager`.
 
-The `validate` script runs:
+## Promptliano Feature Development (12 steps)
 
-1. Type checking for all packages
-2. All unit tests
-3. Format checking with Prettier
+Source: `.claude/agents/promptliano-planning-architect.md`. Use `promptliano-planning-architect` to plan tickets/tasks along this flow.
 
-### CI/CD Integration
-
-The `scripts/validate-all.ts` script provides detailed output and exit codes suitable for CI/CD pipelines. It runs validations sequentially and provides a summary report.
-
-## Available Scripts
-
-use bun to run all npm scripts in package.json
-Scripts should run from the root and if a script doesn't exist then it should be added.
-
-### Development Scripts
-
-```bash
-"dev": "bun run scripts/start-dev.ts"                    # Start full dev environment
-"dev:client": "bun run scripts/start-client-dev.ts"      # Start client dev only
-"dev:server": "bun run scripts/start-server-dev.ts"      # Start server dev only
-"dev:website": "bun run scripts/start-website-dev.ts"    # Start website dev
-"stop": "bun run scripts/stop.ts"                        # Stop all dev processes
-```
-
-### Build Scripts
-
-```bash
-"build-binaries": "bun run scripts/build-binaries.ts"
-"build:website": "cd packages/website && bun run build"
-"tauri:build": "bun run build-binaries && cd packages/client && bun run tauri:build"
-"tauri:build:with-sidecar": "bun run build-binaries && bun run prepare-tauri-sidecars && cd packages/client && bun run tauri:build"
-```
-
-### Test Scripts
-
-```bash
-"test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client && bun run test:config"
-"test:shared": "cd packages/shared && bun run test"
-"test:schemas": "cd packages/schemas && bun run test"
-"test:services": "cd packages/services && bun run test"
-"test:storage": "cd packages/storage && bun run test"
-"test:api-client": "cd packages/api-client && bun run test"
-"test:config": "cd packages/config && bun run test"
-"test:server": "cd packages/server && bun run test"
-```
-
-### Type Check Scripts
-
-```bash
-"typecheck": "bun run typecheck:server && bun run typecheck:shared && bun run typecheck:schemas && bun run typecheck:services && bun run typecheck:storage && bun run typecheck:api-client && bun run typecheck:config && bun run typecheck:client && bun run typecheck:website"
-"typecheck:server": "cd packages/server && bun run typecheck"
-"typecheck:shared": "cd packages/shared && bun run typecheck"
-"typecheck:schemas": "cd packages/schemas && bun run typecheck"
-"typecheck:services": "cd packages/services && bun run typecheck"
-"typecheck:storage": "cd packages/storage && bun run typecheck"
-"typecheck:api-client": "cd packages/api-client && bun run typecheck"
-"typecheck:config": "cd packages/config && bun run typecheck"
-"typecheck:client": "cd packages/client && tsc --noEmit"
-"typecheck:website": "cd packages/website && bun run typecheck"
-```
-
-### Validation Scripts
-
-```bash
-"validate": "bun run scripts/validate-all.ts"           # Full validation
-"validate:quick": "bun run typecheck && bun run test:all" # Quick validation
-```
-
-### Other Scripts
-
-```bash
-"format": "prettier --write ."                           # Format all files
-"migrate:sqlite": "bun run scripts/migrate-to-sqlite.ts"
-"migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run"
-"generate-encryption-key": "bun run packages/shared/src/utils/generate-key.ts"
-"migrate:encrypt-keys": "bun run packages/storage/src/migrations/encrypt-provider-keys.ts"
-"sync-version": "bun run scripts/sync-version.ts"
-"update-version": "bun run scripts/update-version.ts"
-```
+1. Design Zod Schemas — Create data models as the single source of truth
+2. Create Storage Layer — Implement SQLite storage with column-based design
+3. Create Database Migration — Design tables with proper indexes
+4. Implement Service Layer — Build business logic with error handling
+5. Create API Routes — Implement Hono endpoints with OpenAPI
+6. Create MCP Tool — Make feature accessible to AI agents
+7. Update API Client — Add type-safe client methods
+8. Create React Hooks — Implement Tanstack Query hooks with invalidations
+9. Build UI Components — Create reusable ShadCN components
+10. Integrate into Pages — Wire up the feature in the UI
+11. Comprehensive Code Review (MANDATORY) — Use staff-engineer-code-reviewer
+12. Address Review Feedback — Fix all issues before completion

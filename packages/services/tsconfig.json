@@ -29,5 +29,6 @@
       "@/services/*": ["./src/*"],
       "@/utils/*": ["./src/utils/*"]
     }
-  }
+  },
+  "exclude": ["src/**/*.test.ts", "src/test-utils/**", "src/test-*.ts", "src/**/*.spec.ts"]
 }

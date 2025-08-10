@@ -5,6 +5,7 @@
 ### 1. Projects (`projects` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface Project {
   id: number
@@ -18,6 +19,7 @@ interface Project {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE projects (
   id INTEGER PRIMARY KEY,
@@ -40,6 +42,7 @@ CREATE INDEX idx_projects_last_opened ON projects(last_opened)
 ### 2. Agents (`agents` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface Agent {
   id: number
@@ -54,6 +57,7 @@ interface Agent {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE agents (
   id INTEGER PRIMARY KEY,
@@ -77,6 +81,7 @@ CREATE INDEX idx_agents_created_at ON agents(created_at)
 ### 3. Project Files (`project_files` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface ProjectFile {
   id: string
@@ -92,6 +97,7 @@ interface ProjectFile {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE project_files (
   id TEXT PRIMARY KEY,
@@ -121,6 +127,7 @@ CREATE INDEX idx_project_files_project_type ON project_files(project_id, type)
 ### 4. Prompts (`prompts` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface Prompt {
   id: number
@@ -134,6 +141,7 @@ interface Prompt {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE prompts (
   id INTEGER PRIMARY KEY,
@@ -157,6 +165,7 @@ CREATE INDEX idx_prompts_created_at ON prompts(created_at)
 ### 5. Prompt Projects (`prompt_projects` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface PromptProject {
   id: string
@@ -167,6 +176,7 @@ interface PromptProject {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE prompt_projects (
   id TEXT PRIMARY KEY,
@@ -189,6 +199,7 @@ CREATE INDEX idx_prompt_projects_project_id ON prompt_projects(project_id)
 ### 6. MCP Server Configs (`mcp_server_configs` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface MCPServerConfig {
   id: string
@@ -203,6 +214,7 @@ interface MCPServerConfig {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE mcp_server_configs (
   id TEXT PRIMARY KEY,
@@ -226,6 +238,7 @@ CREATE INDEX idx_mcp_server_configs_enabled ON mcp_server_configs(enabled)
 ### 7. MCP Server States (`mcp_server_states` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface MCPServerState {
   id: string
@@ -240,6 +253,7 @@ interface MCPServerState {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE mcp_server_states (
   id TEXT PRIMARY KEY,
@@ -265,6 +279,7 @@ CREATE INDEX idx_mcp_server_states_updated_at ON mcp_server_states(updated_at)
 ### 8. MCP Tools (`mcp_tools` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface MCPTool {
   id: string
@@ -278,6 +293,7 @@ interface MCPTool {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE mcp_tools (
   id TEXT PRIMARY KEY,
@@ -302,6 +318,7 @@ CREATE INDEX idx_mcp_tools_created_at ON mcp_tools(created_at)
 ### 9. MCP Resources (`mcp_resources` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface MCPResource {
   id: string
@@ -316,6 +333,7 @@ interface MCPResource {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE mcp_resources (
   id TEXT PRIMARY KEY,
@@ -341,6 +359,7 @@ CREATE INDEX idx_mcp_resources_created_at ON mcp_resources(created_at)
 ### 10. MCP Tool Executions (`mcp_tool_executions` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface MCPToolExecution {
   id: string
@@ -355,6 +374,7 @@ interface MCPToolExecution {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE mcp_tool_executions (
   id TEXT PRIMARY KEY,
@@ -381,6 +401,7 @@ CREATE INDEX idx_mcp_tool_executions_created_at ON mcp_tool_executions(created_a
 ### 11. Selected Files (`selected_files` table)
 
 **Current JSON Structure:**
+
 ```typescript
 interface SelectedFile {
   id: string
@@ -394,6 +415,7 @@ interface SelectedFile {
 ```
 
 **Proposed Column Schema:**
+
 ```sql
 CREATE TABLE selected_files (
   id TEXT PRIMARY KEY,

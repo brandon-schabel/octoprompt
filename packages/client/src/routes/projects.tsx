@@ -34,6 +34,8 @@ import { ManageTabWithSidebar } from '@/components/projects/manage-tab-with-side
 import { ProjectNavigationMenu } from '@/components/projects/project-navigation-menu'
 import { migrateUrlParams, needsUrlMigration, getMigrationMessage } from '@/lib/tab-migration'
 import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
+import { useServerConnection } from '@/hooks/use-server-connection'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -85,7 +87,8 @@ export function ProjectsPage() {
     }
   }, [search.section, navigate])
 
-  const { data: allProjectsData, isLoading: projectsLoading } = useGetProjects()
+  const { data: allProjectsData, isLoading: projectsLoading, isFetching: projectsFetching } = useGetProjects()
+  const { isConnected, isConnecting, hasError } = useServerConnection()
   const [tabs] = useGetProjectTabs()
   const { createProjectTab: createProjectTabFromHook } = useCreateProjectTab()
   const updateActiveProjectTab = useUpdateActiveProjectTab()
@@ -98,6 +101,11 @@ export function ProjectsPage() {
   const [hasInitializedFromUrl, setHasInitializedFromUrl] = useState(false)
 
   const projects = allProjectsData?.data || []
+  const [initDelayDone, setInitDelayDone] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setInitDelayDone(true), 500)
+    return () => clearTimeout(t)
+  }, [])
   // Filter out non-numeric tab IDs (like 'defaultTab')
   const validTabKeys = Object.keys(tabs || {}).filter((key) => !isNaN(Number(key)))
   const tabsLen = validTabKeys.length
@@ -218,19 +226,42 @@ export function ProjectsPage() {
     })
   }
 
+  const preparing =
+    isConnecting ||
+    (!isConnected && !hasError) ||
+    projectsLoading ||
+    projectsFetching ||
+    !hasInitializedFromUrl ||
+    !initDelayDone
+
   let content
-  if (projectsLoading) {
+  if (preparing) {
     content = (
-      <div className='flex items-center justify-center h-full w-full'>
-        <p>Loading projects...</p>
+      <div className='flex flex-col items-center justify-center h-full w-full gap-3 p-6 text-center'>
+        <Loader2 className='h-8 w-8 animate-spin text-foreground' aria-label='Initializing' />
+        <p className='text-foreground font-medium'>Initializing Promptliano…</p>
+        <p className='text-sm text-muted-foreground'>Preparing workspace and checking for existing projects</p>
+      </div>
+    )
+  } else if (!isConnected && hasError) {
+    content = (
+      <div className='flex flex-col items-center justify-center h-full w-full gap-3 p-6 text-center'>
+        <Loader2 className='h-8 w-8 animate-spin text-red-500' aria-label='Server unavailable' />
+        <p className='text-foreground font-medium'>Cannot connect to server</p>
+        <p className='text-sm text-muted-foreground'>Start the Promptliano server or update connection settings</p>
+        <div className='flex gap-2 mt-2'>
+          <Button variant='outline' onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+          <Button onClick={() => navigate({ to: '/settings', search: { tab: 'server' } })}>Open Server Settings</Button>
+        </div>
       </div>
     )
   } else if (projects.length === 0) {
     content = (
       <div className='flex flex-col items-center justify-center h-full w-full p-4 text-center'>
-        <p className='text-lg font-semibold text-foreground mb-2'>
-          To get started, sync your first project to Promptliano.
-        </p>
+        <p className='text-lg font-semibold text-foreground mb-1'>No projects found</p>
+        <p className='text-sm text-muted-foreground'>Create or sync a project to begin</p>
 
         <Tooltip>
           <TooltipTrigger asChild>
@@ -239,7 +270,7 @@ export function ProjectsPage() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Add your first project to get started.</p>
+            <p>Create a new project or link an existing one</p>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -297,7 +328,8 @@ export function ProjectsPage() {
                   replace: true
                 })
               }}
-              claudeCodeEnabled={activeProjectTabState?.claudeCodeEnabled}
+              claudeCodeEnabled={(activeProjectTabState as any)?.claudeCodeEnabled}
+              assetsEnabled={(activeProjectTabState as any)?.assetsEnabled}
               showTabs={false}
               showMenus={true}
             />
@@ -322,7 +354,8 @@ export function ProjectsPage() {
                   replace: true
                 })
               }}
-              claudeCodeEnabled={activeProjectTabState?.claudeCodeEnabled}
+              claudeCodeEnabled={(activeProjectTabState as any)?.claudeCodeEnabled}
+              assetsEnabled={(activeProjectTabState as any)?.assetsEnabled}
               showTabs={true}
               showMenus={false}
             />
@@ -410,21 +443,24 @@ export function ProjectsPage() {
             )}
           </TabsContent>
           <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
-            {selectedProjectId && projectData ? (
-              <AssetsTabWithSidebar
-                projectId={selectedProjectId}
-                projectName={projectData.name}
-                assetView={search.assetView}
-                onAssetViewChange={(view) => {
-                  navigate({
-                    to: '/projects',
-                    search: (prev) => ({ ...prev, assetView: view }),
-                    replace: true
-                  })
-                }}
-              />
+            {(activeProjectTabState as any)?.assetsEnabled ? (
+              selectedProjectId && projectData ? (
+                <AssetsTabWithSidebar
+                  projectId={selectedProjectId}
+                  projectName={projectData.name}
+                  assetView={search.assetView}
+                  onAssetViewChange={(view) => {
+                    navigate({ to: '/projects', search: (prev) => ({ ...prev, assetView: view }), replace: true })
+                  }}
+                />
+              ) : (
+                <p className='p-4 md:p-6'>No project selected for Assets.</p>
+              )
             ) : (
-              <p className='p-4 md:p-6'>No project selected for Assets.</p>
+              <div className='p-6 text-center text-muted-foreground'>
+                <p>Assets is not enabled for this project.</p>
+                <p className='mt-2'>Enable it in the Settings tab to access Assets.</p>
+              </div>
             )}
           </TabsContent>
           <TabsContent value='claude-code' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
@@ -495,25 +531,6 @@ export function ProjectsPage() {
 
 export const Route = createFileRoute('/projects')({
   validateSearch: zodValidator(projectsSearchSchema),
-  beforeLoad: async ({ context, search }) => {
-    const { queryClient, promptlianoClient } = context
-
-    // Prefetch projects list if not already cached
-    await queryClient.prefetchQuery({
-      queryKey: ['projects'],
-      queryFn: () => promptlianoClient.projects.listProjects(),
-      staleTime: 5 * 60 * 1000 // 5 minutes
-    })
-
-    // If we have a projectId in search, prefetch that project's data
-    if (search.projectId) {
-      await queryClient.prefetchQuery({
-        queryKey: ['project', search.projectId],
-        queryFn: () => promptlianoClient.projects.getProject(search.projectId!),
-        staleTime: 5 * 60 * 1000
-      })
-    }
-  },
   component: ProjectsPage
 })
 

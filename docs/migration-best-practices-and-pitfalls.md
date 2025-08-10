@@ -5,9 +5,10 @@
 ### 1. Planning and Analysis
 
 #### Thoroughly Analyze Existing Data
+
 ```typescript
 // Before migration, run analysis queries
-SELECT 
+SELECT
   COUNT(*) as total,
   COUNT(CASE WHEN JSON_EXTRACT(data, '$.field') IS NULL THEN 1 END) as nulls,
   COUNT(DISTINCT JSON_EXTRACT(data, '$.field')) as unique_values
@@ -15,6 +16,7 @@ FROM table_name
 ```
 
 #### Document All Fields
+
 - Create a comprehensive list of all JSON fields
 - Note which fields are optional vs required
 - Identify fields that are always arrays or objects
@@ -23,6 +25,7 @@ FROM table_name
 ### 2. Schema Design
 
 #### Use Appropriate Data Types
+
 ```sql
 -- Good: Use INTEGER for numeric IDs
 id INTEGER PRIMARY KEY
@@ -32,6 +35,7 @@ id TEXT PRIMARY KEY -- Slower comparisons and joins
 ```
 
 #### Handle JSON Arrays Properly
+
 ```sql
 -- Good: NOT NULL with default empty array
 tags TEXT NOT NULL DEFAULT '[]'
@@ -41,11 +45,12 @@ tags TEXT DEFAULT NULL -- Causes parsing errors
 ```
 
 #### Add Comprehensive Constraints
+
 ```sql
 -- Good: Multiple levels of validation
-status TEXT NOT NULL DEFAULT 'active' 
+status TEXT NOT NULL DEFAULT 'active'
   CHECK (status IN ('active', 'inactive', 'archived')),
-priority INTEGER NOT NULL DEFAULT 1 
+priority INTEGER NOT NULL DEFAULT 1
   CHECK (priority BETWEEN 1 AND 5)
 
 -- Bad: No constraints
@@ -56,6 +61,7 @@ priority INTEGER
 ### 3. Migration Implementation
 
 #### Use Transactions
+
 ```typescript
 database.transaction(() => {
   // All migration operations here
@@ -64,14 +70,15 @@ database.transaction(() => {
 ```
 
 #### Validate Data During Migration
+
 ```typescript
 // Production migration with validation
-INSERT INTO table_new 
-SELECT 
+INSERT INTO table_new
+SELECT
   id,
   COALESCE(JSON_EXTRACT(data, '$.name'), 'Unknown'), -- Default for missing
-  CASE 
-    WHEN JSON_EXTRACT(data, '$.status') IN ('active', 'inactive') 
+  CASE
+    WHEN JSON_EXTRACT(data, '$.status') IN ('active', 'inactive')
     THEN JSON_EXTRACT(data, '$.status')
     ELSE 'active' -- Default for invalid
   END
@@ -80,6 +87,7 @@ WHERE JSON_EXTRACT(data, '$.name') IS NOT NULL -- Skip invalid records
 ```
 
 #### Add Migration Version Tracking
+
 ```typescript
 export const migration = {
   version: 8, // Increment for each migration
@@ -92,6 +100,7 @@ export const migration = {
 ### 4. Storage Layer Updates
 
 #### Create Reusable Helpers
+
 ```typescript
 class BaseStorage {
   protected safeJsonParse<T>(json: string | null, fallback: T): T {
@@ -114,6 +123,7 @@ class BaseStorage {
 ```
 
 #### Use Prepared Statements
+
 ```typescript
 // Good: Prepared statement reuse
 private insertStmt = this.db.prepare(`
@@ -127,27 +137,31 @@ const sql = `INSERT INTO table VALUES ('${value1}', '${value2}')`
 ### 5. Index Strategy
 
 #### Index Foreign Keys First
+
 ```sql
 -- Always index foreign keys
 CREATE INDEX idx_tasks_ticket_id ON tasks(ticket_id)
 ```
 
 #### Create Composite Indexes for Common Queries
+
 ```sql
 -- If you often query by project_id AND status
 CREATE INDEX idx_tickets_project_status ON tickets(project_id, status)
 ```
 
 #### Monitor Index Usage
+
 ```sql
 -- SQLite: Check which indexes are being used
-EXPLAIN QUERY PLAN 
+EXPLAIN QUERY PLAN
 SELECT * FROM tickets WHERE project_id = ? AND status = ?
 ```
 
 ### 6. Testing Strategy
 
 #### Test Migration Both Ways
+
 ```typescript
 describe('Migration', () => {
   it('should migrate up successfully', async () => {
@@ -163,6 +177,7 @@ describe('Migration', () => {
 ```
 
 #### Test Edge Cases
+
 ```typescript
 it('should handle null JSON arrays', async () => {
   // Insert record with null array
@@ -182,6 +197,7 @@ it('should handle malformed JSON', async () => {
 ### 1. Data Type Mismatches
 
 #### Pitfall: Boolean Storage
+
 ```typescript
 // JavaScript boolean !== SQLite integer
 done: boolean // JS: true/false
@@ -189,6 +205,7 @@ done INTEGER CHECK (done IN (0, 1)) // SQLite: 0/1
 ```
 
 #### Solution: Explicit Conversion
+
 ```typescript
 // Writing
 insertQuery.run(task.done ? 1 : 0)
@@ -200,12 +217,14 @@ done: Boolean(row.done) // Converts 0/1 to false/true
 ### 2. Null Handling
 
 #### Pitfall: Unexpected Nulls
+
 ```sql
 -- This allows NULL which breaks JSON.parse()
 suggested_files TEXT DEFAULT NULL
 ```
 
 #### Solution: NOT NULL with Defaults
+
 ```sql
 suggested_files TEXT NOT NULL DEFAULT '[]'
 ```
@@ -213,6 +232,7 @@ suggested_files TEXT NOT NULL DEFAULT '[]'
 ### 3. Transaction Boundaries
 
 #### Pitfall: Partial Migrations
+
 ```typescript
 // Bad: No transaction
 db.exec('DROP TABLE old_table')
@@ -220,6 +240,7 @@ db.exec('CREATE TABLE new_table') // Fails here = data loss!
 ```
 
 #### Solution: Atomic Operations
+
 ```typescript
 database.transaction(() => {
   db.exec('CREATE TABLE new_table')
@@ -231,12 +252,14 @@ database.transaction(() => {
 ### 4. Foreign Key Violations
 
 #### Pitfall: Orphaned Records
+
 ```sql
 -- Migration fails due to invalid foreign keys
 FOREIGN KEY (project_id) REFERENCES projects(id)
 ```
 
 #### Solution: Clean Data First
+
 ```sql
 -- Only migrate records with valid references
 INSERT INTO table_new
@@ -249,6 +272,7 @@ WHERE EXISTS (
 ### 5. Performance Issues
 
 #### Pitfall: Missing Indexes After Migration
+
 ```typescript
 // Forgot to recreate indexes = slow queries
 db.exec('ALTER TABLE table_new RENAME TO table')
@@ -256,24 +280,23 @@ db.exec('ALTER TABLE table_new RENAME TO table')
 ```
 
 #### Solution: Index Checklist
+
 ```typescript
-const requiredIndexes = [
-  'idx_table_foreign_key',
-  'idx_table_status',
-  'idx_table_created_at'
-]
+const requiredIndexes = ['idx_table_foreign_key', 'idx_table_status', 'idx_table_created_at']
 // Verify all indexes created
 ```
 
 ### 6. Schema Evolution
 
 #### Pitfall: No Forward Compatibility
+
 ```typescript
 // Rigid schema that can't handle new fields
 const data = JSON.parse(row.metadata) // Fails if new fields added
 ```
 
 #### Solution: Flexible Metadata Fields
+
 ```typescript
 metadata TEXT NOT NULL DEFAULT '{}' // Can store any JSON
 settings TEXT NOT NULL DEFAULT '{}' // Extensible configuration
@@ -282,6 +305,7 @@ settings TEXT NOT NULL DEFAULT '{}' // Extensible configuration
 ### 7. Migration Rollback
 
 #### Pitfall: Irreversible Migrations
+
 ```typescript
 up: (db) => {
   db.exec('DROP TABLE users') // Data permanently lost!
@@ -289,6 +313,7 @@ up: (db) => {
 ```
 
 #### Solution: Always Implement Down()
+
 ```typescript
 down: (db) => {
   // Restore original schema
@@ -299,6 +324,7 @@ down: (db) => {
 ### 8. Query Compatibility
 
 #### Pitfall: Breaking Existing Queries
+
 ```typescript
 // Old: JSON_EXTRACT(data, '$.projectId')
 // New: project_id
@@ -306,6 +332,7 @@ down: (db) => {
 ```
 
 #### Solution: Migration Notice
+
 ```typescript
 // Document all query changes needed
 const BREAKING_CHANGES = {

@@ -60,8 +60,8 @@ export const providerKeyStorage = {
         description: row.description || undefined,
         expiresAt: row.expires_at || undefined,
         lastUsed: row.last_used || undefined,
-        created: row.created_at,
-        updated: row.updated_at
+        created: Number(row.created_at),
+        updated: Number(row.updated_at)
       }
 
       // Validate the result
@@ -286,8 +286,8 @@ export const providerKeyStorage = {
         description: row.description || undefined,
         expiresAt: row.expires_at || undefined,
         lastUsed: row.last_used || undefined,
-        created: row.created_at,
-        updated: row.updated_at
+        created: Number(row.created_at),
+        updated: Number(row.updated_at)
       }
 
       // Validate before adding
@@ -336,8 +336,8 @@ export const providerKeyStorage = {
         description: row.description || undefined,
         expiresAt: row.expires_at || undefined,
         lastUsed: row.last_used || undefined,
-        created: row.created_at,
-        updated: row.updated_at
+        created: Number(row.created_at),
+        updated: Number(row.updated_at)
       }
 
       // Validate before adding
@@ -386,8 +386,8 @@ export const providerKeyStorage = {
         description: row.description || undefined,
         expiresAt: row.expires_at || undefined,
         lastUsed: row.last_used || undefined,
-        created: row.created_at,
-        updated: row.updated_at
+        created: Number(row.created_at),
+        updated: Number(row.updated_at)
       }
 
       // Validate before adding

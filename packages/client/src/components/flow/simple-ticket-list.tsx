@@ -4,12 +4,14 @@ import { Badge } from '@promptliano/ui'
 import { ScrollArea } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 import { CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import { QueueBadge } from '@/components/queues/queue-badge'
 
 interface SimpleTicketListProps {
   tickets: TicketWithTasks[]
   selectedTicket: TicketWithTasks | null
   onSelectTicket: (ticket: TicketWithTasks) => void
   loading?: boolean
+  projectId?: number
 }
 
 const STATUS_COLORS = {
@@ -30,7 +32,13 @@ const STATUS_ICONS = {
   closed: CheckCircle2
 } as const
 
-export function SimpleTicketList({ tickets, selectedTicket, onSelectTicket, loading }: SimpleTicketListProps) {
+export function SimpleTicketList({
+  tickets,
+  selectedTicket,
+  onSelectTicket,
+  loading,
+  projectId
+}: SimpleTicketListProps) {
   if (loading) {
     return (
       <div className='flex items-center justify-center h-full p-8'>
@@ -78,6 +86,7 @@ export function SimpleTicketList({ tickets, selectedTicket, onSelectTicket, load
               {ticket.overview && <p className='text-xs text-muted-foreground line-clamp-2 mb-2'>{ticket.overview}</p>}
 
               <div className='flex items-center gap-2 flex-wrap'>
+                {ticket.queueId && <QueueBadge item={ticket} projectId={projectId} size='sm' clickable={false} />}
                 <Badge variant='secondary' className={cn('text-xs', STATUS_COLORS[ticket.status])}>
                   {ticket.status.replace('_', ' ')}
                 </Badge>

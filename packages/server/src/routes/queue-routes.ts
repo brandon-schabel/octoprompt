@@ -1,20 +1,11 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import {
   TaskQueueSchema,
-  QueueItemSchema,
   QueueStatsSchema,
   QueueWithStatsSchema,
   CreateQueueBodySchema,
   UpdateQueueBodySchema,
-  EnqueueItemBodySchema,
-  UpdateQueueItemBodySchema,
-  BatchEnqueueBodySchema,
-  BatchUpdateItemsBodySchema,
   GetNextTaskResponseSchema,
-  BulkMoveItemsBodySchema,
-  ReorderQueueItemsBodySchema,
-  QueueTimelineSchema,
-  queueApiValidation,
   TicketSchema,
   TicketTaskSchema
 } from '@promptliano/schemas'
@@ -24,21 +15,20 @@ import {
   listQueuesByProject,
   updateQueue,
   deleteQueue,
-  enqueueItem,
-  updateQueueItem,
-  deleteQueueItem,
-  getQueueItems,
-  getQueueItemsWithDetails,
+  pauseQueue,
+  resumeQueue,
+  enqueueTicket,
+  enqueueTask,
+  enqueueTicketWithAllTasks,
+  dequeueTicket,
+  dequeueTask,
+  getNextTaskFromQueue,
   getQueueStats,
   getQueuesWithStats,
-  batchEnqueueItems,
-  batchUpdateQueueItems,
-  enqueueTicketWithAllTasks,
-  getNextTaskFromQueue,
-  bulkMoveItems,
-  reorderQueueItems,
-  getQueueTimeline,
-  getUnqueuedItems
+  getUnqueuedItems,
+  moveItemToQueue,
+  completeQueueItem,
+  failQueueItem
 } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
@@ -56,7 +46,7 @@ const createQueueRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: CreateQueueBodySchema
+          schema: CreateQueueBodySchema.omit({ projectId: true })
         }
       }
     }
@@ -336,82 +326,21 @@ queueRoutes.openapi(deleteQueueRoute, async (c) => {
   return c.json({ success: true, data: { deleted: true } })
 })
 
-// Enqueue item
-const enqueueItemRoute = createRoute({
-  method: 'post',
-  path: '/api/queues/:queueId/items',
-  request: {
-    params: z.object({
-      queueId: z.string().transform((val) => parseInt(val, 10))
-    }),
-    body: {
-      content: {
-        'application/json': {
-          schema: EnqueueItemBodySchema
-        }
-      }
-    }
-  },
-  responses: {
-    200: {
-      description: 'Item enqueued successfully',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.literal(true),
-            data: QueueItemSchema
-          })
-        }
-      }
-    },
-    400: {
-      description: 'Bad request',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    404: {
-      description: 'Not found',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    500: {
-      description: 'Internal server error',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    }
-  }
-})
-
-queueRoutes.openapi(enqueueItemRoute, async (c) => {
-  const { queueId } = c.req.valid('param')
-  const body = c.req.valid('json')
-  const item = await enqueueItem(queueId, body)
-  return c.json({ success: true, data: item })
-})
-
-// Enqueue ticket with all tasks
+// Enqueue ticket
 const enqueueTicketRoute = createRoute({
   method: 'post',
-  path: '/api/queues/:queueId/enqueue-ticket',
+  path: '/api/tickets/:ticketId/enqueue',
   request: {
     params: z.object({
-      queueId: z.string().transform((val) => parseInt(val, 10))
+      ticketId: z.string().transform((val) => parseInt(val, 10))
     }),
     body: {
       content: {
         'application/json': {
           schema: z.object({
-            ticketId: z.number(),
-            priority: z.number().optional()
+            queueId: z.number(),
+            priority: z.number().optional(),
+            includeTasks: z.boolean().optional()
           })
         }
       }
@@ -419,12 +348,12 @@ const enqueueTicketRoute = createRoute({
   },
   responses: {
     200: {
-      description: 'Ticket tasks enqueued successfully',
+      description: 'Ticket enqueued successfully',
       content: {
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.array(QueueItemSchema)
+            data: TicketSchema
           })
         }
       }
@@ -457,36 +386,46 @@ const enqueueTicketRoute = createRoute({
 })
 
 queueRoutes.openapi(enqueueTicketRoute, async (c) => {
-  const { queueId } = c.req.valid('param')
-  const { ticketId, priority } = c.req.valid('json')
-  const items = await enqueueTicketWithAllTasks(queueId, ticketId, priority)
-  return c.json({ success: true, data: items })
+  const { ticketId } = c.req.valid('param')
+  const { queueId, priority, includeTasks } = c.req.valid('json')
+
+  if (includeTasks) {
+    const result = await enqueueTicketWithAllTasks(queueId, ticketId, priority)
+    return c.json({ success: true, data: result.ticket })
+  } else {
+    const ticket = await enqueueTicket(ticketId, queueId, priority || 0)
+    return c.json({ success: true, data: ticket })
+  }
 })
 
-// Batch enqueue items
-const batchEnqueueRoute = createRoute({
+// Enqueue task
+const enqueueTaskRoute = createRoute({
   method: 'post',
-  path: '/api/queues/:queueId/batch-enqueue',
+  path: '/api/tickets/:ticketId/tasks/:taskId/enqueue',
   request: {
     params: z.object({
-      queueId: z.string().transform((val) => parseInt(val, 10))
+      ticketId: z.string().transform((val) => parseInt(val, 10)),
+      taskId: z.string().transform((val) => parseInt(val, 10))
     }),
     body: {
       content: {
         'application/json': {
-          schema: BatchEnqueueBodySchema
+          schema: z.object({
+            queueId: z.number(),
+            priority: z.number().optional()
+          })
         }
       }
     }
   },
   responses: {
     200: {
-      description: 'Items batch enqueued successfully',
+      description: 'Task enqueued successfully',
       content: {
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.array(QueueItemSchema)
+            data: TicketTaskSchema
           })
         }
       }
@@ -518,39 +457,30 @@ const batchEnqueueRoute = createRoute({
   }
 })
 
-queueRoutes.openapi(batchEnqueueRoute, async (c) => {
-  const { queueId } = c.req.valid('param')
-  const { items } = c.req.valid('json')
-  const results = await batchEnqueueItems(queueId, items)
-  return c.json({ success: true, data: results })
+queueRoutes.openapi(enqueueTaskRoute, async (c) => {
+  const { ticketId, taskId } = c.req.valid('param')
+  const { queueId, priority } = c.req.valid('json')
+  const task = await enqueueTask(ticketId, taskId, queueId, priority || 0)
+  return c.json({ success: true, data: task })
 })
 
-// Get queue items
-const getQueueItemsRoute = createRoute({
-  method: 'get',
-  path: '/api/queues/:queueId/items',
+// Dequeue ticket
+const dequeueTicketRoute = createRoute({
+  method: 'post',
+  path: '/api/tickets/:ticketId/dequeue',
   request: {
     params: z.object({
-      queueId: z.string().transform((val) => parseInt(val, 10))
-    }),
-    query: z.object({
-      status: z.string().optional()
+      ticketId: z.string().transform((val) => parseInt(val, 10))
     })
   },
   responses: {
     200: {
-      description: 'List of queue items',
+      description: 'Ticket dequeued successfully',
       content: {
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.array(
-              z.object({
-                queueItem: QueueItemSchema,
-                ticket: TicketSchema.optional(),
-                task: TicketTaskSchema.optional()
-              })
-            )
+            data: TicketSchema
           })
         }
       }
@@ -582,150 +512,30 @@ const getQueueItemsRoute = createRoute({
   }
 })
 
-queueRoutes.openapi(getQueueItemsRoute, async (c) => {
-  const { queueId } = c.req.valid('param')
-  const { status } = c.req.valid('query')
-  const items = await getQueueItemsWithDetails(queueId, status)
-  return c.json({ success: true, data: items })
+queueRoutes.openapi(dequeueTicketRoute, async (c) => {
+  const { ticketId } = c.req.valid('param')
+  const ticket = await dequeueTicket(ticketId)
+  return c.json({ success: true, data: ticket })
 })
 
-// Update queue item
-const updateQueueItemRoute = createRoute({
-  method: 'patch',
-  path: '/api/queue-items/:itemId',
+// Dequeue task
+const dequeueTaskRoute = createRoute({
+  method: 'post',
+  path: '/api/tickets/:ticketId/tasks/:taskId/dequeue',
   request: {
     params: z.object({
-      itemId: z.string().transform((val) => parseInt(val, 10))
-    }),
-    body: {
-      content: {
-        'application/json': {
-          schema: UpdateQueueItemBodySchema
-        }
-      }
-    }
-  },
-  responses: {
-    200: {
-      description: 'Queue item updated successfully',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.literal(true),
-            data: QueueItemSchema
-          })
-        }
-      }
-    },
-    400: {
-      description: 'Bad request',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    404: {
-      description: 'Not found',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    500: {
-      description: 'Internal server error',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    }
-  }
-})
-
-queueRoutes.openapi(updateQueueItemRoute, async (c) => {
-  const { itemId } = c.req.valid('param')
-  const body = c.req.valid('json')
-  const item = await updateQueueItem(itemId, body)
-  return c.json({ success: true, data: item })
-})
-
-// Batch update queue items
-const batchUpdateItemsRoute = createRoute({
-  method: 'patch',
-  path: '/api/queue-items/batch',
-  request: {
-    body: {
-      content: {
-        'application/json': {
-          schema: BatchUpdateItemsBodySchema
-        }
-      }
-    }
-  },
-  responses: {
-    200: {
-      description: 'Items batch updated successfully',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.literal(true),
-            data: z.array(QueueItemSchema)
-          })
-        }
-      }
-    },
-    400: {
-      description: 'Bad request',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    404: {
-      description: 'Not found',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    500: {
-      description: 'Internal server error',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    }
-  }
-})
-
-queueRoutes.openapi(batchUpdateItemsRoute, async (c) => {
-  const { updates } = c.req.valid('json')
-  const results = await batchUpdateQueueItems(updates)
-  return c.json({ success: true, data: results })
-})
-
-// Delete queue item
-const deleteQueueItemRoute = createRoute({
-  method: 'delete',
-  path: '/api/queue-items/:itemId',
-  request: {
-    params: z.object({
-      itemId: z.string().transform((val) => parseInt(val, 10))
+      ticketId: z.string().transform((val) => parseInt(val, 10)),
+      taskId: z.string().transform((val) => parseInt(val, 10))
     })
   },
   responses: {
     200: {
-      description: 'Queue item deleted successfully',
+      description: 'Task dequeued successfully',
       content: {
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.object({ deleted: z.boolean() })
+            data: TicketTaskSchema
           })
         }
       }
@@ -757,10 +567,10 @@ const deleteQueueItemRoute = createRoute({
   }
 })
 
-queueRoutes.openapi(deleteQueueItemRoute, async (c) => {
-  const { itemId } = c.req.valid('param')
-  await deleteQueueItem(itemId)
-  return c.json({ success: true, data: { deleted: true } })
+queueRoutes.openapi(dequeueTaskRoute, async (c) => {
+  const { ticketId, taskId } = c.req.valid('param')
+  const task = await dequeueTask(ticketId, taskId)
+  return c.json({ success: true, data: task })
 })
 
 // Get queue statistics
@@ -935,176 +745,6 @@ queueRoutes.openapi(getNextTaskRoute, async (c) => {
   return c.json({ success: true, data: nextTask })
 })
 
-// Bulk move items between queues
-const bulkMoveItemsRoute = createRoute({
-  method: 'post',
-  path: '/api/queue-items/bulk-move',
-  request: {
-    body: {
-      content: {
-        'application/json': {
-          schema: BulkMoveItemsBodySchema
-        }
-      }
-    }
-  },
-  responses: {
-    200: {
-      description: 'Items moved successfully',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.literal(true),
-            data: z.object({ moved: z.boolean() })
-          })
-        }
-      }
-    },
-    400: {
-      description: 'Bad request',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    404: {
-      description: 'Not found',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    500: {
-      description: 'Internal server error',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    }
-  }
-})
-
-queueRoutes.openapi(bulkMoveItemsRoute, async (c) => {
-  const { itemIds, targetQueueId, positions } = c.req.valid('json')
-  await bulkMoveItems(itemIds, targetQueueId, positions)
-  return c.json({ success: true, data: { moved: true } })
-})
-
-// Reorder items within a queue
-const reorderQueueItemsRoute = createRoute({
-  method: 'post',
-  path: '/api/queue-items/reorder',
-  request: {
-    body: {
-      content: {
-        'application/json': {
-          schema: ReorderQueueItemsBodySchema
-        }
-      }
-    }
-  },
-  responses: {
-    200: {
-      description: 'Items reordered successfully',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.literal(true),
-            data: z.object({ reordered: z.boolean() })
-          })
-        }
-      }
-    },
-    400: {
-      description: 'Bad request',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    404: {
-      description: 'Not found',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    500: {
-      description: 'Internal server error',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    }
-  }
-})
-
-queueRoutes.openapi(reorderQueueItemsRoute, async (c) => {
-  const { queueId, itemIds } = c.req.valid('json')
-  await reorderQueueItems(queueId, itemIds)
-  return c.json({ success: true, data: { reordered: true } })
-})
-
-// Get queue timeline
-const getQueueTimelineRoute = createRoute({
-  method: 'get',
-  path: '/api/queues/:queueId/timeline',
-  request: {
-    params: z.object({
-      queueId: z.string().transform((val) => parseInt(val, 10))
-    })
-  },
-  responses: {
-    200: {
-      description: 'Queue timeline',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.literal(true),
-            data: QueueTimelineSchema
-          })
-        }
-      }
-    },
-    400: {
-      description: 'Bad request',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    404: {
-      description: 'Not found',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    },
-    500: {
-      description: 'Internal server error',
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      }
-    }
-  }
-})
-
-queueRoutes.openapi(getQueueTimelineRoute, async (c) => {
-  const { queueId } = c.req.valid('param')
-  const timeline = await getQueueTimeline(queueId)
-  return c.json({ success: true, data: timeline })
-})
-
 // Get unqueued items
 const getUnqueuedItemsRoute = createRoute({
   method: 'get',
@@ -1122,8 +762,8 @@ const getUnqueuedItemsRoute = createRoute({
           schema: z.object({
             success: z.literal(true),
             data: z.object({
-              tickets: z.array(z.any()),
-              tasks: z.array(z.any())
+              tickets: z.array(TicketSchema),
+              tasks: z.array(TicketTaskSchema)
             })
           })
         }
@@ -1160,4 +800,293 @@ queueRoutes.openapi(getUnqueuedItemsRoute, async (c) => {
   const { projectId } = c.req.valid('param')
   const unqueuedItems = await getUnqueuedItems(projectId)
   return c.json({ success: true, data: unqueuedItems })
+})
+
+// Pause queue route
+const pauseQueueRoute = createRoute({
+  method: 'post',
+  path: '/api/queues/:queueId/pause',
+  request: {
+    params: z.object({
+      queueId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      description: 'Queue paused successfully',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: TaskQueueSchema
+          })
+        }
+      }
+    },
+    400: {
+      description: 'Bad request',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Queue not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(pauseQueueRoute, async (c) => {
+  const { queueId } = c.req.valid('param')
+  const queue = await pauseQueue(queueId)
+  return c.json({ success: true, data: queue })
+})
+
+// Resume queue route
+const resumeQueueRoute = createRoute({
+  method: 'post',
+  path: '/api/queues/:queueId/resume',
+  request: {
+    params: z.object({
+      queueId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      description: 'Queue resumed successfully',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: TaskQueueSchema
+          })
+        }
+      }
+    },
+    400: {
+      description: 'Bad request',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Queue not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(resumeQueueRoute, async (c) => {
+  const { queueId } = c.req.valid('param')
+  const queue = await resumeQueue(queueId)
+  return c.json({ success: true, data: queue })
+})
+
+// Complete queue item
+const completeQueueItemRoute = createRoute({
+  method: 'post',
+  path: '/api/queue/:itemType/:itemId/complete',
+  request: {
+    params: z.object({
+      itemType: z.enum(['ticket', 'task']),
+      itemId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            ticketId: z.number().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Item completed successfully',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ completed: z.boolean() })
+          })
+        }
+      }
+    },
+    400: {
+      description: 'Bad request',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    500: {
+      description: 'Internal server error',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(completeQueueItemRoute, async (c) => {
+  const { itemType, itemId } = c.req.valid('param')
+  const { ticketId } = c.req.valid('json')
+  await completeQueueItem(itemType, itemId, ticketId)
+  return c.json({ success: true, data: { completed: true } })
+})
+
+// Fail queue item
+const failQueueItemRoute = createRoute({
+  method: 'post',
+  path: '/api/queue/:itemType/:itemId/fail',
+  request: {
+    params: z.object({
+      itemType: z.enum(['ticket', 'task']),
+      itemId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            errorMessage: z.string(),
+            ticketId: z.number().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Item marked as failed',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ failed: z.boolean() })
+          })
+        }
+      }
+    },
+    400: {
+      description: 'Bad request',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    500: {
+      description: 'Internal server error',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(failQueueItemRoute, async (c) => {
+  const { itemType, itemId } = c.req.valid('param')
+  const { errorMessage, ticketId } = c.req.valid('json')
+  await failQueueItem(itemType, itemId, errorMessage, ticketId)
+  return c.json({ success: true, data: { failed: true } })
+})
+
+// Move item to queue
+const moveItemToQueueRoute = createRoute({
+  method: 'post',
+  path: '/api/queue/:itemType/:itemId/move',
+  request: {
+    params: z.object({
+      itemType: z.enum(['ticket', 'task']),
+      itemId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            targetQueueId: z.number().nullable(),
+            ticketId: z.number().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Item moved successfully',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ moved: z.boolean() })
+          })
+        }
+      }
+    },
+    400: {
+      description: 'Bad request',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    404: {
+      description: 'Not found',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    },
+    500: {
+      description: 'Internal server error',
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+queueRoutes.openapi(moveItemToQueueRoute, async (c) => {
+  const { itemType, itemId } = c.req.valid('param')
+  const { targetQueueId, ticketId } = c.req.valid('json')
+  await moveItemToQueue(itemType, itemId, targetQueueId, ticketId)
+  return c.json({ success: true, data: { moved: true } })
 })

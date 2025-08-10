@@ -1,9 +1,11 @@
 # Chat Tables Migration Plan
 
 ## Overview
+
 This document outlines the plan to migrate the `chats` and `chat_messages` tables from JSON blob storage to proper SQLite columns, following the established patterns from previous migrations.
 
 ## Current State
+
 - **chats table**: Stores chat metadata as JSON blobs
 - **chat_messages table**: Stores messages as JSON blobs
 - Both tables use `JSON_EXTRACT` for queries which is significantly slower than direct column access
@@ -29,9 +31,11 @@ This document outlines the plan to migrate the `chats` and `chat_messages` table
 ### 📋 Remaining Tasks
 
 #### 1. Update ChatStorage Class
+
 **File**: `/packages/storage/src/chat-storage.ts`
 
 **Changes needed**:
+
 - Remove JSON serialization/deserialization
 - Update all SQL queries to use column-based access
 - Implement `safeJsonParse` for attachments array field
@@ -45,11 +49,12 @@ This document outlines the plan to migrate the `chats` and `chat_messages` table
   - `deleteChatMessage()` - Direct delete
 
 **Key patterns to follow**:
+
 ```typescript
 // Old pattern
 const chats = await db.findByJsonField<Chat>(CHATS_TABLE, '$.projectId', projectId)
 
-// New pattern  
+// New pattern
 const query = database.prepare(`
   SELECT id, title, project_id, created_at, updated_at
   FROM chats
@@ -60,6 +65,7 @@ const rows = query.all(projectId)
 ```
 
 #### 2. Test the Migration
+
 - Run the server to apply migration
 - Verify table structure with SQLite browser
 - Test CRUD operations through API
@@ -67,6 +73,7 @@ const rows = query.all(projectId)
 - Check cascade deletes
 
 #### 3. Update Documentation
+
 - Add migration notes to main migration guide
 - Document any breaking changes
 - Update API documentation if needed
@@ -74,6 +81,7 @@ const rows = query.all(projectId)
 ## Database Schema
 
 ### chats table
+
 ```sql
 CREATE TABLE chats (
   id INTEGER PRIMARY KEY,
@@ -86,6 +94,7 @@ CREATE TABLE chats (
 ```
 
 ### chat_messages table
+
 ```sql
 CREATE TABLE chat_messages (
   id INTEGER PRIMARY KEY,
@@ -101,6 +110,7 @@ CREATE TABLE chat_messages (
 ```
 
 ### Indexes
+
 ```sql
 -- chats indexes
 CREATE INDEX idx_chats_project_id ON chats(project_id)
@@ -115,12 +125,14 @@ CREATE INDEX idx_chat_messages_chat_id_created_at ON chat_messages(chat_id, crea
 ```
 
 ## Performance Benefits
+
 - Query performance: 10-50x faster for simple queries
 - Join operations: 50-100x faster with proper indexes
 - Better concurrent access
 - Reduced storage overhead
 
 ## Testing Checklist
+
 - [ ] Migration runs successfully
 - [ ] All CRUD operations work
 - [ ] Foreign key constraints enforced
@@ -130,7 +142,9 @@ CREATE INDEX idx_chat_messages_chat_id_created_at ON chat_messages(chat_id, crea
 - [ ] No TypeScript errors
 
 ## Next Steps
+
 After completing this migration:
+
 1. Consider migrating remaining JSON tables:
    - mcp_server_configs
    - mcp_server_states

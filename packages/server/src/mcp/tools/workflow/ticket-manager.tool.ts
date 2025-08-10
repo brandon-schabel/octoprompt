@@ -24,10 +24,9 @@ import {
   searchTickets,
   batchCreateTickets,
   batchUpdateTickets,
-  batchDeleteTickets,
-  CreateTicketBody,
-  UpdateTicketBody
+  batchDeleteTickets
 } from '@promptliano/services'
+import type { CreateTicketBody, UpdateTicketBody } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 
 export const ticketManagerTool: MCPToolDefinition = {
@@ -44,7 +43,7 @@ export const ticketManagerTool: MCPToolDefinition = {
       },
       projectId: {
         type: 'number',
-        description: 'The project ID (required for: list, create, list_with_task_count). Example: 1754111018844'
+        description: 'The project ID (required for: list, create, list_with_task_count). Example: 1754713756748'
       },
       data: {
         type: 'object',
@@ -62,7 +61,7 @@ export const ticketManagerTool: MCPToolDefinition = {
 
         switch (action) {
           case TicketManagerAction.LIST: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const status = data?.status as string | undefined
             const tickets = await listTicketsByProject(validProjectId, status)
             const ticketList = tickets
@@ -95,7 +94,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           }
 
           case TicketManagerAction.CREATE: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
 
             // Validate required fields FIRST
             const title = validateDataField<string>(data, 'title', 'string', '"Fix login bug"')
@@ -143,7 +142,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           }
 
           case TicketManagerAction.LIST_WITH_TASK_COUNT: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const status = data?.status as string | undefined
             const tickets = await listTicketsWithTaskCount(validProjectId, status)
             const ticketList = tickets
@@ -179,7 +178,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               if (error instanceof ApiError) {
                 if (error.status === 404) {
                   throw createMCPError(
-                    MCPErrorCode.RESOURCE_NOT_FOUND,
+                    MCPErrorCode.TICKET_NOT_FOUND,
                     error.message || `Ticket ${ticketId} not found or project has no files`,
                     {
                       ticketId,
@@ -218,7 +217,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               if (error instanceof ApiError) {
                 if (error.status === 404) {
                   throw createMCPError(
-                    MCPErrorCode.RESOURCE_NOT_FOUND,
+                    MCPErrorCode.TICKET_NOT_FOUND,
                     error.message || `Ticket ${ticketId} not found or project has no files`,
                     {
                       ticketId,
@@ -240,7 +239,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           }
 
           case TicketManagerAction.SEARCH: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const searchOptions = data || {}
 
             try {
@@ -272,7 +271,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           }
 
           case TicketManagerAction.BATCH_CREATE: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const tickets = validateDataField<any[]>(data, 'tickets', 'array', '[{title: "Task 1"}, {title: "Task 2"}]')
 
             if (tickets.length > 100) {

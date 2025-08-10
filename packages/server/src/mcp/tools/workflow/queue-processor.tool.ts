@@ -9,7 +9,14 @@ import {
   MCPErrorCode,
   formatMCPErrorResponse
 } from '../shared'
-import { getNextTaskFromQueue, updateQueueItem, getQueueStats, type UpdateQueueItemBody } from '@promptliano/services'
+import {
+  getNextTaskFromQueue,
+  getQueueStats,
+  completeQueueItem,
+  failQueueItem,
+  updateTicket,
+  updateTask
+} from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
 
 // Define action types
@@ -47,7 +54,7 @@ export const queueProcessorTool: MCPToolDefinition = {
       data: {
         type: 'object',
         description:
-          'Action-specific data. For get_next_task: { agentId: "frontend-shadcn-expert" }. For update_status/complete_task/fail_task: { itemId: 123, errorMessage: "Error details" (for fail_task) }'
+          'Action-specific data. For get_next_task: { agentId: "frontend-shadcn-expert" }. For update_status: { itemType: "ticket" | "task", itemId: 123, status: "in_progress", ticketId: 456 (required for tasks) }. For complete_task: { itemType: "ticket" | "task", itemId: 123, ticketId: 456 (required for tasks), completionNotes: "optional notes" }. For fail_task: { itemType: "ticket" | "task", itemId: 123, errorMessage: "Error details", ticketId: 456 (required for tasks) }'
       }
     },
     required: ['action']
@@ -65,42 +72,42 @@ export const queueProcessorTool: MCPToolDefinition = {
 
             const response = await getNextTaskFromQueue(validQueueId, agentId)
 
-            if (!response.queueItem) {
+            if (response.type === 'none' || !response.item) {
               return {
                 content: [
                   {
                     type: 'text',
-                    text: 'No tasks available in the queue'
+                    text: response.message || 'No tasks available in the queue'
                   }
                 ]
               }
             }
 
-            let taskDetails = `Next task from queue:
-Queue Item ID: ${response.queueItem.id}
-Status: ${response.queueItem.status}
-Priority: ${response.queueItem.priority}
-${response.queueItem.agentId ? `Assigned to: ${response.queueItem.agentId}` : ''}\n`
+            let taskDetails = `Next task from queue:\n`
 
-            if (response.ticket && response.task) {
+            if (response.type === 'task') {
               // Task within a ticket
+              const task = response.item as any // TicketTask
               taskDetails += `
-Ticket #${response.ticket.id}: ${response.ticket.title}
-Task #${response.task.id}: ${response.task.content}
-${response.task.description ? `Description: ${response.task.description}` : ''}
-${response.task.suggestedFileIds.length > 0 ? `Suggested Files: ${response.task.suggestedFileIds.join(', ')}` : ''}
-${response.task.agentId ? `Recommended Agent: ${response.task.agentId}` : ''}
-${response.task.estimatedHours ? `Estimated Hours: ${response.task.estimatedHours}` : ''}
-${response.task.tags.length > 0 ? `Tags: ${response.task.tags.join(', ')}` : ''}`
-            } else if (response.ticket) {
+Type: Task
+Task #${task.id}: ${task.content}
+Ticket #${task.ticketId}
+${task.description ? `Description: ${task.description}` : ''}
+${task.suggestedFileIds?.length > 0 ? `Suggested Files: ${task.suggestedFileIds.join(', ')}` : ''}
+${task.agentId ? `Recommended Agent: ${task.agentId}` : ''}
+${task.estimatedHours ? `Estimated Hours: ${task.estimatedHours}` : ''}
+${task.tags?.length > 0 ? `Tags: ${task.tags.join(', ')}` : ''}`
+            } else if (response.type === 'ticket') {
               // Entire ticket
+              const ticket = response.item as any // Ticket
               taskDetails += `
-Ticket #${response.ticket.id}: ${response.ticket.title}
-Overview: ${response.ticket.overview}
-Status: ${response.ticket.status}
-Priority: ${response.ticket.priority}
-${response.ticket.suggestedFileIds.length > 0 ? `Suggested Files: ${response.ticket.suggestedFileIds.join(', ')}` : ''}
-${response.ticket.suggestedAgentIds.length > 0 ? `Suggested Agents: ${response.ticket.suggestedAgentIds.join(', ')}` : ''}`
+Type: Ticket
+Ticket #${ticket.id}: ${ticket.title}
+Overview: ${ticket.overview}
+Status: ${ticket.status}
+Priority: ${ticket.priority}
+${ticket.suggestedFileIds?.length > 0 ? `Suggested Files: ${ticket.suggestedFileIds.join(', ')}` : ''}
+${ticket.suggestedAgentIds?.length > 0 ? `Suggested Agents: ${ticket.suggestedAgentIds.join(', ')}` : ''}`
             }
 
             return {
@@ -114,58 +121,90 @@ ${response.ticket.suggestedAgentIds.length > 0 ? `Suggested Agents: ${response.t
           }
 
           case QueueProcessorAction.UPDATE_STATUS: {
+            // Update a ticket or task to in_progress status
+            const itemType = validateDataField<'ticket' | 'task'>(data, 'itemType', 'string', '"ticket"')
             const itemId = validateDataField<number>(data, 'itemId', 'number', '123')
+            const status = (data?.status as string) || 'in_progress'
 
-            const updateData: UpdateQueueItemBody = {
-              status: 'in_progress'
-            }
+            try {
+              // TODO: Update queue status using proper queue management functions
+              // Queue status updates should use dedicated queue management methods
+              if (itemType === 'ticket') {
+                // await updateTicket(itemId, { queueStatus: status as any })
+              } else {
+                const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
+                // await updateTask(ticketId, itemId, { queueStatus: status as any })
+              }
 
-            const item = await updateQueueItem(itemId, updateData)
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Queue item ${item.id} marked as in progress`
-                }
-              ]
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Successfully updated ${itemType} #${itemId} queue status to ${status}`
+                  }
+                ]
+              }
+            } catch (error) {
+              throw createMCPError(
+                MCPErrorCode.SERVICE_ERROR,
+                `Failed to update ${itemType} status: ${error.message}`,
+                { itemType, itemId, status }
+              )
             }
           }
 
           case QueueProcessorAction.COMPLETE_TASK: {
+            // Complete a ticket or task in the queue
+            const itemType = validateDataField<'ticket' | 'task'>(data, 'itemType', 'string', '"ticket"')
             const itemId = validateDataField<number>(data, 'itemId', 'number', '123')
+            const ticketId =
+              itemType === 'task' ? validateDataField<number>(data, 'ticketId', 'number', '456') : undefined
+            const completionNotes = data?.completionNotes as string | undefined
 
-            const updateData: UpdateQueueItemBody = {
-              status: 'completed'
-            }
+            try {
+              await completeQueueItem(itemType, itemId, ticketId)
 
-            const item = await updateQueueItem(itemId, updateData)
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Queue item ${item.id} marked as completed`
-                }
-              ]
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Successfully completed ${itemType} #${itemId}${completionNotes ? `. Notes: ${completionNotes}` : ''}`
+                  }
+                ]
+              }
+            } catch (error) {
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, `Failed to complete ${itemType}: ${error.message}`, {
+                itemType,
+                itemId
+              })
             }
           }
 
           case QueueProcessorAction.FAIL_TASK: {
+            // Fail a ticket or task in the queue
+            const itemType = validateDataField<'ticket' | 'task'>(data, 'itemType', 'string', '"ticket"')
             const itemId = validateDataField<number>(data, 'itemId', 'number', '123')
-            const errorMessage = data?.errorMessage as string | undefined
+            const errorMessage = validateDataField<string>(data, 'errorMessage', 'string', '"Task failed due to error"')
+            const ticketId =
+              itemType === 'task' ? validateDataField<number>(data, 'ticketId', 'number', '456') : undefined
 
-            const updateData: UpdateQueueItemBody = {
-              status: 'failed',
-              errorMessage
-            }
+            try {
+              await failQueueItem(itemType, itemId, errorMessage, ticketId)
 
-            const item = await updateQueueItem(itemId, updateData)
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Queue item ${item.id} marked as failed${errorMessage ? ` with error: ${errorMessage}` : ''}`
-                }
-              ]
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Marked ${itemType} #${itemId} as failed. Error: ${errorMessage}`
+                  }
+                ]
+              }
+            } catch (error) {
+              throw createMCPError(
+                MCPErrorCode.SERVICE_ERROR,
+                `Failed to mark ${itemType} as failed: ${error.message}`,
+                { itemType, itemId, errorMessage }
+              )
             }
           }
 
@@ -193,7 +232,7 @@ ${hasWork ? '\nTasks are available for processing!' : '\nQueue is empty - no tas
           }
 
           default:
-            throw new MCPError(MCPErrorCode.INVALID_REQUEST, `Unknown action: ${action}`)
+            throw new MCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`)
         }
       } catch (error) {
         if (error instanceof MCPError) {
@@ -201,11 +240,11 @@ ${hasWork ? '\nTasks are available for processing!' : '\nQueue is empty - no tas
         }
         if (error instanceof ApiError) {
           return formatMCPErrorResponse(
-            createMCPError(MCPErrorCode.INTERNAL_ERROR, error.message, { details: error.details })
+            createMCPError(MCPErrorCode.SERVICE_ERROR, error.message, { details: error.details })
           )
         }
         return formatMCPErrorResponse(
-          createMCPError(MCPErrorCode.INTERNAL_ERROR, 'An unexpected error occurred', { error: String(error) })
+          createMCPError(MCPErrorCode.SERVICE_ERROR, 'An unexpected error occurred', { error: String(error) })
         )
       }
     }

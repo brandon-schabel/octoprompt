@@ -7,18 +7,21 @@ You've successfully transitioned the tickets and tasks entities from JSON blob s
 ## What Was Done
 
 ### 1. Tickets Migration (Migration #6)
+
 - Converted `tickets` table from JSON blob to column-based storage
 - Added proper columns: `id`, `project_id`, `title`, `overview`, `status`, `priority`
 - JSON arrays stored as TEXT: `suggested_file_ids`, `suggested_agent_ids`, `suggested_prompt_ids`
 - Added comprehensive indexes for performance
 
 ### 2. Tasks Migration (Migration #6)
+
 - Converted `ticket_tasks` table to column-based storage
 - Added foreign key relationship to tickets table
 - Proper columns for all task properties
 - Maintained referential integrity with CASCADE deletes
 
 ### 3. NOT NULL Constraints (Migration #7)
+
 - Added NOT NULL constraints to all JSON array fields
 - Ensured data integrity with DEFAULT '[]' for arrays
 - Prevented null parsing errors in application code
@@ -26,6 +29,7 @@ You've successfully transitioned the tickets and tasks entities from JSON blob s
 ## Key Patterns Established
 
 ### Storage Layer Pattern
+
 ```typescript
 // Direct SQL queries instead of JSON_EXTRACT
 const query = database.prepare(`
@@ -39,6 +43,7 @@ tags: safeJsonParse(row.tags, [], 'entity.tags')
 ```
 
 ### Migration Pattern
+
 ```typescript
 // Clean break for beta (data loss)
 DROP TABLE IF EXISTS old_table
@@ -73,11 +78,13 @@ INSERT INTO new_table SELECT ... FROM old_table
 ## Remaining Work
 
 ### High Priority Entities
+
 1. **projects** - Core entity, used everywhere
 2. **project_files** - Critical for file search/management
 3. **selected_files** - Important for UI state
 
 ### Medium Priority Entities
+
 4. **agents** - AI agent configurations
 5. **prompts** - Prompt templates
 6. **mcp_server_configs** - Server configurations
@@ -85,6 +92,7 @@ INSERT INTO new_table SELECT ... FROM old_table
 8. **mcp_tool_executions** - Execution history
 
 ### Low Priority Entities
+
 9. **prompt_projects** - Simple junction table
 10. **mcp_tools** - Tool definitions
 11. **mcp_resources** - Resource definitions
@@ -104,6 +112,7 @@ INSERT INTO new_table SELECT ... FROM old_table
 ## Performance Gains Observed
 
 Based on the tickets/tasks migration:
+
 - Simple queries: 10-50x faster
 - Complex filtered queries: 50-100x faster
 - Joins between tickets and tasks: Near instant

@@ -88,7 +88,10 @@ export const assetsSearchSchema = z.object({
 })
 
 // Settings page search schema
-export const settingsTabSchema = z.enum(['general', 'local-providers', 'global-mcp']).catch('general').optional()
+export const settingsTabSchema = z
+  .enum(['general', 'server', 'local-providers', 'global-mcp'])
+  .catch('general')
+  .optional()
 
 export const settingsSearchSchema = z.object({
   tab: settingsTabSchema

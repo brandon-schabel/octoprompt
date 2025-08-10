@@ -98,7 +98,7 @@ When planning a **complete new feature** (not partial features or refactoring), 
 Read CLAUDE_CODE_PROMPTLIANO_FEATURE_DEVELOPMENT.md
 ```
 
-### The 12 Steps for Full Feature Development:
+### The 12 Steps for Full Feature Development
 
 1. **Design Zod Schemas** - Create data models as the single source of truth
 2. **Create Storage Layer** - Implement SQLite storage with column-based design

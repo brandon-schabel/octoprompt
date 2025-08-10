@@ -41,6 +41,7 @@ export * from './src/claude-code.schemas'
 export * from './src/claude-hook.schemas'
 export * from './src/parser-config.schemas'
 export * from './src/queue.schemas'
+export * from './src/markdown-import-export.schemas'
 
 // export constants
 export * from './src/constants/models-temp-not-allowed'

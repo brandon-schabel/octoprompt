@@ -974,13 +974,13 @@ Use MCP tools for rapid development:
 
 ```bash
 # Get project overview
-mcp__promptliano__project_manager(action: "overview", projectId: 1754111018844)
+mcp__promptliano__project_manager(action: "overview", projectId: 1754713756748)
 
 # Suggest files for a feature
-mcp__promptliano__project_manager(action: "suggest_files", projectId: 1754111018844, data: { prompt: "authentication" })
+mcp__promptliano__project_manager(action: "suggest_files", projectId: 1754713756748, data: { prompt: "authentication" })
 
 # Create tickets and tasks
-mcp__promptliano__ticket_manager(action: "create", projectId: 1754111018844, data: { title: "Implement user profiles" })
+mcp__promptliano__ticket_manager(action: "create", projectId: 1754713756748, data: { title: "Implement user profiles" })
 ```
 
 ## Testing and Quality Assurance

@@ -120,6 +120,10 @@ export class ClaudeHookStorageSimple {
     }
 
     const matcherGroup = matchers[matcherIndex]
+    if (!matcherGroup) {
+      return null
+    }
+
     const firstHook = matcherGroup.hooks[0]
 
     if (!firstHook) {
@@ -159,7 +163,8 @@ export class ClaudeHookStorageSimple {
         {
           type: 'command' as const,
           command,
-          ...(timeout !== undefined && { timeout })
+          run_in_background: false,
+          timeout: timeout ?? 60
         }
       ]
     }
@@ -197,6 +202,10 @@ export class ClaudeHookStorageSimple {
     }
 
     const matcherGroup = matchers[matcherIndex]
+    if (!matcherGroup) {
+      return null
+    }
+
     const firstHook = matcherGroup.hooks[0]
 
     if (!firstHook) {
@@ -216,7 +225,7 @@ export class ClaudeHookStorageSimple {
     if (updates.timeout !== undefined) {
       firstHook.timeout = updates.timeout
     } else if (updates.timeout === null) {
-      delete firstHook.timeout
+      firstHook.timeout = 60 // Use default timeout
     }
 
     await this.writeSettings(projectPath, settings)

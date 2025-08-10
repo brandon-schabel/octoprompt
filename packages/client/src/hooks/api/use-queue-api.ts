@@ -5,14 +5,12 @@ import {
   CreateQueueBody,
   UpdateQueueBody,
   EnqueueItemBody,
-  UpdateQueueItemBody,
   QueueStats,
   QueueWithStats,
   GetNextTaskResponse,
-  BatchEnqueueBody,
-  BatchUpdateItemsBody
+  BatchEnqueueBody
 } from '@promptliano/schemas'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from './use-api-client'
 import { DataResponseSchema } from '@promptliano/api-client'
 import { toast } from 'sonner'
 
@@ -34,36 +32,44 @@ export const queueKeys = {
 // Hooks for queues
 
 export function useGetQueues(projectId: number) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: queueKeys.list(projectId),
     queryFn: async () => {
-      const response = await promptlianoClient.queues.listQueues(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.listQueues(projectId)
       return response.data
     },
-    enabled: !!projectId
+    enabled: !!client && !!projectId
   })
 }
 
 export function useGetQueue(queueId: number) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: queueKeys.detail(queueId),
     queryFn: async () => {
-      const response = await promptlianoClient.queues.getQueue(queueId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.getQueue(queueId)
       return response.data
     },
-    enabled: !!queueId
+    enabled: !!client && !!queueId
   })
 }
 
 export function useCreateQueue(projectId: number) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (data: Omit<CreateQueueBody, 'projectId'>) => {
-      const response = await promptlianoClient.queues.createQueue(projectId, {
-        ...data,
-        projectId
-      })
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.createQueue(projectId, data)
       return response.data
     },
     onSuccess: (data) => {
@@ -78,11 +84,14 @@ export function useCreateQueue(projectId: number) {
 }
 
 export function useUpdateQueue(queueId: number) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (data: UpdateQueueBody) => {
-      const response = await promptlianoClient.queues.updateQueue(queueId, data)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.updateQueue(queueId, data)
       return response.data
     },
     onSuccess: (data) => {
@@ -98,11 +107,15 @@ export function useUpdateQueue(queueId: number) {
 }
 
 export function useDeleteQueue() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ queueId, projectId }: { queueId: number; projectId: number }) => {
-      const response = await promptlianoClient.queues.deleteQueue(queueId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.deleteQueue(queueId)
       return { ...response.data, projectId }
     },
     onSuccess: (_, variables) => {
@@ -119,22 +132,29 @@ export function useDeleteQueue() {
 // Hooks for queue items
 
 export function useGetQueueItems(queueId: number, status?: string) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: queueKeys.itemList(queueId, status),
     queryFn: async () => {
-      const response = await promptlianoClient.queues.getQueueItems(queueId, status)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.getQueueItems(queueId, status)
       return response.data
     },
-    enabled: !!queueId
+    enabled: !!client && !!queueId
   })
 }
 
 export function useEnqueueItem(queueId: number) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (data: EnqueueItemBody) => {
-      const response = await promptlianoClient.queues.enqueueItem(queueId, data)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.enqueueItem(queueId, data)
       return response.data
     },
     onSuccess: () => {
@@ -149,11 +169,15 @@ export function useEnqueueItem(queueId: number) {
 }
 
 export function useEnqueueTicket(queueId: number) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ ticketId, priority }: { ticketId: number; priority?: number }) => {
-      const response = await promptlianoClient.queues.enqueueTicket(queueId, ticketId, priority)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.enqueueTicket(queueId, ticketId, priority)
       return response.data
     },
     onSuccess: (data) => {
@@ -168,11 +192,14 @@ export function useEnqueueTicket(queueId: number) {
 }
 
 export function useBatchEnqueueItems(queueId: number) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (data: BatchEnqueueBody) => {
-      const response = await promptlianoClient.queues.batchEnqueue(queueId, data)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.batchEnqueue(queueId, data)
       return response.data
     },
     onSuccess: (data) => {
@@ -186,88 +213,58 @@ export function useBatchEnqueueItems(queueId: number) {
   })
 }
 
+// DEPRECATED: useUpdateQueueItem - Queue items are now managed through their parent tickets/tasks
+// Use ticket/task update methods instead to modify queue fields
 export function useUpdateQueueItem() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({ itemId, data }: { itemId: number; data: UpdateQueueItemBody }) => {
-      const response = await promptlianoClient.queues.updateQueueItem(itemId, data)
-      return response.data
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queueKeys.items() })
-      queryClient.invalidateQueries({ queryKey: queueKeys.stats() })
-      toast.success('Queue item updated successfully')
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update queue item')
-    }
-  })
-}
-
-export function useBatchUpdateQueueItems() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (data: BatchUpdateItemsBody) => {
-      const response = await promptlianoClient.queues.batchUpdateItems(data)
-      return response.data
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queueKeys.items() })
-      queryClient.invalidateQueries({ queryKey: queueKeys.stats() })
-      toast.success(`${data.length} items updated successfully`)
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to batch update items')
-    }
-  })
-}
-
-export function useDeleteQueueItem() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (itemId: number) => {
-      const response = await promptlianoClient.queues.deleteQueueItem(itemId)
-      return response.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queueKeys.items() })
-      queryClient.invalidateQueries({ queryKey: queueKeys.stats() })
-      queryClient.invalidateQueries({ queryKey: ['unqueued-items'] })
-      toast.success('Queue item deleted successfully')
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete queue item')
-    }
-  })
-}
-
-// Hook to clear all items from a queue
-export function useClearQueue(queueId: number) {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: async () => {
-      // Get all items in the queue
-      const itemsResponse = await promptlianoClient.queues.getQueueItems(queueId)
-      const items = itemsResponse.data
-
-      // Delete each item
-      const deletePromises = items.map((item) => promptlianoClient.queues.deleteQueueItem(item.queueItem.id))
-
-      await Promise.all(deletePromises)
-      return { clearedCount: items.length }
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queueKeys.items() })
-      queryClient.invalidateQueries({ queryKey: queueKeys.stats() })
-      queryClient.invalidateQueries({ queryKey: ['unqueued-items'] })
-      toast.success(`Cleared ${data.clearedCount} items from queue`)
+      throw new Error('Queue item updates are no longer supported. Use ticket/task update methods instead.')
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to clear queue')
+      toast.error('Queue item updates are no longer supported. Use ticket/task update methods instead.')
+    }
+  })
+}
+
+// DEPRECATED: useBatchUpdateQueueItems - Queue items are now managed through their parent tickets/tasks
+// Use ticket/task batch update methods instead
+export function useBatchUpdateQueueItems() {
+  return useMutation({
+    mutationFn: async () => {
+      throw new Error('Batch queue item updates are no longer supported. Use ticket/task batch update methods instead.')
+    },
+    onError: (error: any) => {
+      toast.error('Batch queue item updates are no longer supported. Use ticket/task batch update methods instead.')
+    }
+  })
+}
+
+// DEPRECATED: useDeleteQueueItem - Queue items are now managed through their parent tickets/tasks
+// Use flow service dequeue methods instead
+export function useDeleteQueueItem() {
+  return useMutation({
+    mutationFn: async () => {
+      throw new Error('Queue item deletion is no longer supported. Use flow service dequeue methods instead.')
+    },
+    onError: (error: any) => {
+      toast.error('Queue item deletion is no longer supported. Use flow service dequeue methods instead.')
+    }
+  })
+}
+
+// DEPRECATED: useClearQueue - Queue items are now managed through their parent tickets/tasks
+// Use flow service dequeue methods for individual items instead
+export function useClearQueue(queueId: number) {
+  return useMutation({
+    mutationFn: async () => {
+      throw new Error(
+        'Queue clearing is no longer supported. Use flow service dequeue methods for individual items instead.'
+      )
+    },
+    onError: (error: any) => {
+      toast.error(
+        'Queue clearing is no longer supported. Use flow service dequeue methods for individual items instead.'
+      )
     }
   })
 }
@@ -275,37 +272,49 @@ export function useClearQueue(queueId: number) {
 // Hooks for queue statistics
 
 export function useGetQueueStats(queueId: number) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: queueKeys.stat(queueId),
     queryFn: async () => {
-      const response = await promptlianoClient.queues.getQueueStats(queueId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.getQueueStats(queueId)
       return response.data
     },
-    enabled: !!queueId,
+    enabled: !!client && !!queueId,
     refetchInterval: 5000 // Auto-refresh every 5 seconds
   })
 }
 
 export function useGetQueuesWithStats(projectId: number) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: queueKeys.allStats(projectId),
     queryFn: async () => {
-      const response = await promptlianoClient.queues.getQueuesWithStats(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.getQueuesWithStats(projectId)
       return response.data
     },
-    enabled: !!projectId,
+    enabled: !!client && !!projectId,
     refetchInterval: 5000 // Auto-refresh every 5 seconds
   })
 }
 
 export function useGetQueueWithStats(queueId: number, options?: { enabled?: boolean }) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: [...queueKeys.detail(queueId), 'with-stats'],
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       // Get queue details
-      const queueResponse = await promptlianoClient.queues.getQueue(queueId)
+      const queueResponse = await client.queues.getQueue(queueId)
       // Get queue stats
-      const statsResponse = await promptlianoClient.queues.getQueueStats(queueId)
+      const statsResponse = await client.queues.getQueueStats(queueId)
 
       const result: QueueWithStats = {
         queue: queueResponse.data,
@@ -314,7 +323,7 @@ export function useGetQueueWithStats(queueId: number, options?: { enabled?: bool
 
       return result
     },
-    enabled: options?.enabled !== false && !!queueId,
+    enabled: !!client && options?.enabled !== false && !!queueId,
     refetchInterval: 5000 // Auto-refresh every 5 seconds
   })
 }
@@ -322,11 +331,15 @@ export function useGetQueueWithStats(queueId: number, options?: { enabled?: bool
 // Hook for agents to get next task
 
 export function useGetNextTask() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ queueId, agentId }: { queueId: number; agentId?: string }) => {
-      const response = await promptlianoClient.queues.getNextTask(queueId, agentId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.getNextTask(queueId, agentId)
       return response.data
     },
     onSuccess: (data, variables) => {
@@ -341,27 +354,27 @@ export function useGetNextTask() {
   })
 }
 
-// Bulk move items
+// Bulk move items - now uses FlowService
 export function useBulkMoveItems() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({
-      itemIds,
-      targetQueueId,
-      positions
-    }: {
-      itemIds: number[]
-      targetQueueId: number
-      positions?: number[]
-    }) => {
-      const response = await promptlianoClient.queues.bulkMoveItems(itemIds, targetQueueId, positions)
-      return response.data
+    mutationFn: async ({ itemIds, targetQueueId }: { itemIds: number[]; targetQueueId: number | null }) => {
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.flow.bulkMoveItems({
+        items: itemIds.map((id) => ({ itemType: 'task' as const, itemId: id })),
+        targetQueueId
+      })
+      return response
     },
     onSuccess: (_, variables) => {
       // Invalidate all queue-related queries
       queryClient.invalidateQueries({ queryKey: queueKeys.all })
       queryClient.invalidateQueries({ queryKey: ['unqueued-items'] })
+      queryClient.invalidateQueries({ queryKey: ['flow'] })
       toast.success('Items moved successfully')
     },
     onError: (error) => {
@@ -371,18 +384,26 @@ export function useBulkMoveItems() {
   })
 }
 
-// Reorder queue items
+// Reorder queue items - now uses FlowService
 export function useReorderQueueItems() {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ queueId, itemIds }: { queueId: number; itemIds: number[] }) => {
-      const response = await promptlianoClient.queues.reorderQueueItems(queueId, itemIds)
-      return response.data
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.flow.reorderQueueItems({
+        queueId,
+        items: itemIds.map((id, index) => ({ itemType: 'task' as const, itemId: id, ticketId: undefined }))
+      })
+      return response
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queueKeys.detail(variables.queueId) })
       queryClient.invalidateQueries({ queryKey: queueKeys.itemList(variables.queueId) })
+      queryClient.invalidateQueries({ queryKey: ['flow'] })
       toast.success('Items reordered successfully')
     },
     onError: (error) => {
@@ -394,25 +415,33 @@ export function useReorderQueueItems() {
 
 // Get queue timeline
 export function useGetQueueTimeline(queueId: number) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: [...queueKeys.detail(queueId), 'timeline'],
     queryFn: async () => {
-      const response = await promptlianoClient.queues.getQueueTimeline(queueId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.getQueueTimeline(queueId)
       return response.data
     },
-    enabled: !!queueId
+    enabled: !!client && !!queueId
   })
 }
 
 // Get unqueued items
 export function useGetUnqueuedItems(projectId: number) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['unqueued-items', projectId],
     queryFn: async () => {
-      const response = await promptlianoClient.queues.getUnqueuedItems(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.queues.getUnqueuedItems(projectId)
       return response.data
     },
-    enabled: !!projectId,
+    enabled: !!client && !!projectId,
     refetchInterval: 10000 // Refetch every 10 seconds
   })
 }

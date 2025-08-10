@@ -27,7 +27,7 @@ async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: s
   const validationResult = await schema.safeParseAsync(data)
   if (!validationResult.success) {
     console.error(`Zod validation failed for ${context}:`, validationResult.error.errors)
-    throw new ApiError(400, `Validation failed for ${context}`, validationResult.error.errors)
+    throw new ApiError(400, `Validation failed for ${context}`, JSON.stringify(validationResult.error.errors))
   }
   return validationResult.data
 }
@@ -79,12 +79,12 @@ class ChatStorage {
           id: row.id,
           title: row.title,
           projectId: row.project_id || undefined,
-          created: row.created_at,
-          updated: row.updated_at
+          created: Number(row.created_at),
+          updated: Number(row.updated_at)
         }
 
         // Validate each chat
-        const validatedChat = await validateData(chat, ChatSchema, `chat ${chat.id}`)
+        const validatedChat = (await validateData(chat, ChatSchema, `chat ${chat.id}`)) as Chat
         chats[String(validatedChat.id)] = validatedChat
       }
 
@@ -102,7 +102,7 @@ class ChatStorage {
       const database = db.getDatabase()
 
       // Validate the entire storage structure
-      const validatedChats = await validateData(chats, ChatsStorageSchema, 'chats storage')
+      const validatedChats = (await validateData(chats, ChatsStorageSchema, 'chats storage')) as ChatsStorage
 
       // Clear and write all chats atomically
       database.transaction(() => {
@@ -156,7 +156,7 @@ class ChatStorage {
       }
 
       // Validate the chat data
-      return await validateData(chat, ChatSchema, `chat ${chatId}`)
+      return (await validateData(chat, ChatSchema, `chat ${chatId}`)) as Chat
     } catch (error: any) {
       console.error(`Error reading chat ${chatId} from database:`, error)
       throw new ApiError(500, `Failed to read chat ${chatId}`, error)
@@ -190,16 +190,16 @@ class ChatStorage {
           content: row.content,
           type: row.type || undefined,
           attachments: safeJsonParse(row.attachments, [], 'message.attachments'),
-          created: row.created_at,
-          updated: row.updated_at
+          created: Number(row.created_at),
+          updated: Number(row.updated_at)
         }
 
         // Validate each message
-        const validatedMessage = await validateData(
+        const validatedMessage = (await validateData(
           message,
           ChatMessageSchema,
           `message ${message.id} in chat ${chatId}`
-        )
+        )) as ChatMessage
         messagesStorage[String(validatedMessage.id)] = validatedMessage
       }
 
@@ -217,7 +217,11 @@ class ChatStorage {
       const database = db.getDatabase()
 
       // Validate the messages storage structure
-      const validatedMessages = await validateData(messages, ChatMessagesStorageSchema, `messages for chat ${chatId}`)
+      const validatedMessages = (await validateData(
+        messages,
+        ChatMessagesStorageSchema,
+        `messages for chat ${chatId}`
+      )) as ChatMessagesStorage
 
       // Use raw database transaction for atomic updates
       database.transaction(() => {
@@ -312,10 +316,10 @@ class ChatStorage {
           id: row.id,
           title: row.title,
           projectId: row.project_id || undefined,
-          created: row.created_at,
-          updated: row.updated_at
+          created: Number(row.created_at),
+          updated: Number(row.updated_at)
         }
-        const validated = await validateData(chat, ChatSchema, `chat ${chat.id}`)
+        const validated = (await validateData(chat, ChatSchema, `chat ${chat.id}`)) as Chat
         validatedChats.push(validated)
       }
 
@@ -377,7 +381,7 @@ class ChatStorage {
       }
 
       // Validate the message data
-      return await validateData(message, ChatMessageSchema, `message ${messageId}`)
+      return (await validateData(message, ChatMessageSchema, `message ${messageId}`)) as ChatMessage
     } catch (error: any) {
       console.error(`Error reading message ${messageId} from database:`, error)
       throw new ApiError(500, `Failed to read message ${messageId}`, error)
@@ -391,7 +395,7 @@ class ChatStorage {
       const database = db.getDatabase()
 
       // Validate the message
-      const validatedMessage = await validateData(message, ChatMessageSchema, `message ${message.id}`)
+      const validatedMessage = (await validateData(message, ChatMessageSchema, `message ${message.id}`)) as ChatMessage
 
       // Insert the message
       const insertQuery = database.prepare(`
@@ -425,7 +429,7 @@ class ChatStorage {
       const database = db.getDatabase()
 
       // Validate the message
-      const validatedMessage = await validateData(message, ChatMessageSchema, `message ${messageId}`)
+      const validatedMessage = (await validateData(message, ChatMessageSchema, `message ${messageId}`)) as ChatMessage
 
       // Update the message
       const updateQuery = database.prepare(`

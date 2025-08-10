@@ -30,7 +30,7 @@ async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: s
  */
 function safeJsonParse<T>(json: string | null | undefined, fallback: T, context?: string): T {
   if (!json) return fallback
-  
+
   try {
     return JSON.parse(json)
   } catch (error) {
@@ -62,8 +62,8 @@ export const projectStorage = {
           name: row.name,
           description: row.description,
           path: row.path,
-          created: row.created_at,
-          updated: row.updated_at
+          created: Number(row.created_at),
+          updated: Number(row.updated_at)
         }
 
         // Validate each project before adding
@@ -98,14 +98,7 @@ export const projectStorage = {
         `)
 
         for (const [id, project] of Object.entries(validatedProjects)) {
-          insertQuery.run(
-            project.id,
-            project.name,
-            project.description,
-            project.path,
-            project.created,
-            project.updated
-          )
+          insertQuery.run(project.id, project.name, project.description, project.path, project.created, project.updated)
         }
       })()
 
@@ -154,8 +147,8 @@ export const projectStorage = {
           checksum: row.checksum,
           imports: safeJsonParse(row.imports, null, 'file.imports'),
           exports: safeJsonParse(row.exports, null, 'file.exports'),
-          created: row.created_at,
-          updated: row.updated_at
+          created: Number(row.created_at),
+          updated: Number(row.updated_at)
         }
 
         // Validate each file before adding
@@ -257,9 +250,9 @@ export const projectStorage = {
         FROM project_files
         WHERE id = ? AND project_id = ?
       `)
-      
+
       const row = getQuery.get(fileId, projectId) as any
-      
+
       if (!row) {
         throw new ApiError(404, `File not found: ${fileId} in project ${projectId}`, 'FILE_NOT_FOUND')
       }
@@ -279,8 +272,8 @@ export const projectStorage = {
         checksum: row.checksum,
         imports: safeJsonParse(row.imports, null, 'file.imports'),
         exports: safeJsonParse(row.exports, null, 'file.exports'),
-        created: row.created_at,
-        updated: row.updated_at
+        created: Number(row.created_at),
+        updated: Number(row.updated_at)
       }
 
       // Update the file
@@ -342,9 +335,9 @@ export const projectStorage = {
         FROM project_files
         WHERE id = ? AND project_id = ?
       `)
-      
+
       const row = query.get(fileId, projectId) as any
-      
+
       if (!row) {
         return undefined
       }
@@ -363,8 +356,8 @@ export const projectStorage = {
         checksum: row.checksum,
         imports: safeJsonParse(row.imports, null, 'file.imports'),
         exports: safeJsonParse(row.exports, null, 'file.exports'),
-        created: row.created_at,
-        updated: row.updated_at
+        created: Number(row.created_at),
+        updated: Number(row.updated_at)
       }
 
       // Validate before returning
@@ -388,7 +381,7 @@ export const projectStorage = {
       database.transaction(() => {
         // Delete all files for this project
         database.prepare(`DELETE FROM project_files WHERE project_id = ?`).run(projectId)
-        
+
         // Delete the project itself
         database.prepare(`DELETE FROM projects WHERE id = ?`).run(projectId)
       })()
@@ -432,8 +425,8 @@ export const projectStorage = {
           checksum: row.checksum,
           imports: safeJsonParse(row.imports, null, 'file.imports'),
           exports: safeJsonParse(row.exports, null, 'file.exports'),
-          created: row.created_at,
-          updated: row.updated_at
+          created: Number(row.created_at),
+          updated: Number(row.updated_at)
         }
 
         // Validate before adding

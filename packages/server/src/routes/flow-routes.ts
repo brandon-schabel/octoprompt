@@ -242,7 +242,13 @@ const dequeueTicketRoute = createRoute({
   path: '/api/flow/tickets/{ticketId}/dequeue',
   request: {
     params: z.object({
-      ticketId: entityIdSchema
+      ticketId: z.coerce.number()
+    }),
+    query: z.object({
+      includeTasks: z
+        .string()
+        .optional()
+        .transform((val) => val === 'true')
     })
   },
   responses: {
@@ -261,8 +267,15 @@ const dequeueTicketRoute = createRoute({
 
 app.openapi(dequeueTicketRoute, async (c) => {
   const { ticketId } = c.req.valid('param')
-  const ticket = await flowService.dequeueTicket(ticketId)
-  return c.json(ticket)
+  const { includeTasks = false } = c.req.valid('query')
+
+  if (includeTasks) {
+    const ticket = await flowService.dequeueTicketWithTasks(ticketId)
+    return c.json(ticket)
+  } else {
+    const ticket = await flowService.dequeueTicket(ticketId)
+    return c.json(ticket)
+  }
 })
 
 // Dequeue a task
@@ -271,7 +284,7 @@ const dequeueTaskRoute = createRoute({
   path: '/api/flow/tasks/{taskId}/dequeue',
   request: {
     params: z.object({
-      taskId: entityIdSchema
+      taskId: z.coerce.number()
     })
   },
   responses: {
@@ -306,7 +319,8 @@ const moveItemRoute = createRoute({
             itemType: z.enum(['ticket', 'task']),
             itemId: z.coerce.number(),
             targetQueueId: z.coerce.number().nullable(),
-            priority: z.number().default(0)
+            priority: z.number().default(0),
+            includeTasks: z.boolean().default(false)
           })
         }
       }
@@ -327,9 +341,47 @@ const moveItemRoute = createRoute({
 })
 
 app.openapi(moveItemRoute, async (c) => {
-  const { itemType, itemId, targetQueueId, priority } = c.req.valid('json')
-  const item = await flowService.moveItem(itemType, itemId, targetQueueId, priority)
+  const { itemType, itemId, targetQueueId, priority, includeTasks } = c.req.valid('json')
+  const item = await flowService.moveItem(itemType, itemId, targetQueueId, priority, includeTasks)
   return c.json(item)
+})
+
+// Reorder items within a queue
+const reorderRoute = createRoute({
+  method: 'post',
+  path: '/api/flow/reorder',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            queueId: z.coerce.number(),
+            items: z.array(
+              z.object({
+                itemType: z.enum(['ticket', 'task']),
+                itemId: z.coerce.number(),
+                ticketId: z.coerce.number().optional()
+              })
+            )
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: z.object({ success: z.boolean() }) } },
+      description: 'Reordered successfully'
+    }
+  },
+  tags: ['Flow'],
+  summary: 'Persist new order for items in a queue'
+})
+
+app.openapi(reorderRoute, async (c) => {
+  const { queueId, items } = c.req.valid('json')
+  await flowService.reorderWithinQueue(queueId, items)
+  return c.json({ success: true })
 })
 
 // === Processing Operations ===

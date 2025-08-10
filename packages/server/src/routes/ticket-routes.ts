@@ -6,6 +6,7 @@ import {
   getTicketById,
   updateTicket,
   deleteTicket,
+  completeTicket,
   linkFilesToTicket,
   suggestTasksForTicket,
   listTicketsByProject,
@@ -240,6 +241,34 @@ const updateTicketRoute = createRoute({
     200: {
       content: { 'application/json': { schema: TicketResponseSchema } },
       description: 'Ticket updated successfully'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const completeTicketRoute = createRoute({
+  method: 'post',
+  path: '/api/tickets/{ticketId}/complete',
+  tags: ['Tickets'],
+  summary: 'Complete a ticket and mark all tasks as done',
+  request: {
+    params: TicketIdParamsSchema
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              ticket: TicketSchema,
+              tasks: z.array(TicketTaskSchema)
+            })
+          })
+        }
+      },
+      description: 'Ticket completed successfully'
     },
     404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
@@ -540,6 +569,23 @@ export const ticketRoutes = new OpenAPIHono()
     const updatedTicket = await updateTicket(parseNumericId(ticketId), body)
     const formattedTicket = formatTicketData(updatedTicket)
     const payload: z.infer<typeof TicketResponseSchema> = { success: true, data: formattedTicket }
+    return c.json(payload, 200)
+  })
+  .openapi(completeTicketRoute, async (c) => {
+    const { ticketId } = c.req.valid('param')
+    const result = await completeTicket(parseNumericId(ticketId))
+
+    // Format the ticket and tasks
+    const formattedTicket = formatTicketData(result.ticket)
+    const formattedTasks = result.tasks.map(formatTaskData)
+
+    const payload = {
+      success: true as const,
+      data: {
+        ticket: formattedTicket,
+        tasks: formattedTasks
+      }
+    }
     return c.json(payload, 200)
   })
   .openapi(deleteTicketRoute, async (c) => {

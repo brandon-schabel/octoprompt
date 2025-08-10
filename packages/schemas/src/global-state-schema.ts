@@ -144,10 +144,15 @@ export const projectTabStateSchema = z
       .default('created_desc')
       .openapi({ description: 'Sort order for tickets display.' }),
     ticketStatusFilter: z
-      .enum(['all', 'open', 'in_progress', 'closed'])
+      .enum(['all', 'open', 'in_progress', 'closed', 'non_closed'])
+      .optional()
+      .default('non_closed')
+      .openapi({ description: 'Status filter for tickets display.' }),
+    ticketQueueFilter: z
+      .string()
       .optional()
       .default('all')
-      .openapi({ description: 'Status filter for tickets display.' }),
+      .openapi({ description: 'Queue filter for tickets display. Can be "all", "unqueued", or a queue ID.' }),
     promptsPanelCollapsed: z
       .boolean()
       .optional()
@@ -313,6 +318,29 @@ export const appSettingsSchema = z
       .optional()
       .default('http://localhost:1234')
       .openapi({ description: 'Base URL for the LM Studio local inference server.', example: 'http://localhost:1234' }), // Default corrected based on common LM Studio port
+    promptlianoServerUrl: z.string().url().optional().default('http://localhost:3147').openapi({
+      description: 'URL of the Promptliano server to connect to. Can be changed to connect to remote servers.',
+      example: 'http://localhost:3147'
+    }),
+    promptlianoServerUrls: z
+      .array(
+        z.object({
+          name: z
+            .string()
+            .openapi({ description: 'Friendly name for this server configuration', example: 'Local Dev' }),
+          url: z.string().url().openapi({ description: 'Server URL', example: 'http://localhost:3147' }),
+          isDefault: z.boolean().optional().openapi({ description: 'Whether this is the default server' })
+        })
+      )
+      .optional()
+      .default([])
+      .openapi({
+        description: 'Saved server configurations for quick switching between different Promptliano servers',
+        example: [
+          { name: 'Local Dev', url: 'http://localhost:3147', isDefault: true },
+          { name: 'Production', url: 'https://api.promptliano.com', isDefault: false }
+        ]
+      }),
     summarizationIgnorePatterns: z
       .array(z.string())
       .optional()
@@ -473,6 +501,8 @@ export const createSafeGlobalState = (): GlobalState => ({
     codeThemeDark: 'atomOneDark',
     ollamaGlobalUrl: 'http://localhost:11434',
     lmStudioGlobalUrl: 'http://localhost:1234',
+    promptlianoServerUrl: 'http://localhost:3147',
+    promptlianoServerUrls: [],
     summarizationIgnorePatterns: [],
     summarizationAllowPatterns: [],
     summarizationEnabledProjectIds: [],
@@ -509,7 +539,8 @@ export const createSafeGlobalState = (): GlobalState => ({
       sortOrder: 0,
       ticketSearch: '',
       ticketSort: 'created_desc' as const,
-      ticketStatusFilter: 'all' as const,
+      ticketStatusFilter: 'non_closed' as const,
+      ticketQueueFilter: 'all' as const,
       promptsPanelCollapsed: true,
       selectedFilesCollapsed: false,
       claudeCodeEnabled: false,

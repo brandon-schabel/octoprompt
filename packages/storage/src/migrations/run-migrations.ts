@@ -15,6 +15,12 @@ import { chatTablesColumnsMigration } from './014-chat-tables-columns'
 import { taskQueueSystemMigration } from './015-task-queue-system'
 import { kanbanBoardEnhancementsMigration } from './016-kanban-board-enhancements'
 import { unifiedFlowSystemMigration } from './017-unified-flow-system'
+import { queueImprovementsMigration } from './018-queue-improvements'
+import { queueActualProcessingTimeMigration } from './019-queue-actual-processing-time'
+import { queuePerformanceIndexesMigration } from './020-queue-performance-indexes'
+import { fixQueueStatusValuesMigration } from './021-fix-queue-status-values'
+import { fixPriorityOrderingMigration } from './022-fix-priority-ordering'
+import { dropQueueItemsTableMigration } from './023-drop-queue-items-table'
 import type { Database } from 'bun:sqlite'
 
 interface Migration {
@@ -42,7 +48,13 @@ const migrations: Migration[] = [
   chatTablesColumnsMigration,
   taskQueueSystemMigration,
   kanbanBoardEnhancementsMigration,
-  unifiedFlowSystemMigration
+  unifiedFlowSystemMigration,
+  queueImprovementsMigration,
+  queueActualProcessingTimeMigration,
+  queuePerformanceIndexesMigration,
+  fixQueueStatusValuesMigration,
+  fixPriorityOrderingMigration,
+  dropQueueItemsTableMigration
 ]
 
 /**

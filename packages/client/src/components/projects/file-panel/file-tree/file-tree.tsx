@@ -48,7 +48,8 @@ import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { GlobalStateEditorType as EditorType, ProjectFile } from '@promptliano/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
-import { useProjectGitStatus, useStageFiles, useUnstageFiles, useFileDiff } from '@/hooks/api/use-git-api'
+import { useProjectGitStatus, useStageFiles, useUnstageFiles } from '@/hooks/api/use-git-api'
+import { useApiClient } from '@/hooks/api/use-api-client'
 import type { GitFileStatus, GitStatus } from '@promptliano/schemas'
 import { GitBranch, Plus, Minus, History, GitCompare } from 'lucide-react'
 
@@ -248,6 +249,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
 
   const { mutate: stageFiles } = useStageFiles(projectId)
   const { mutate: unstageFiles } = useUnstageFiles(projectId)
+  const client = useApiClient()
 
   // Get CLAUDE.md detection
   const projectFiles = Array.from(projectFileMap.values())
@@ -701,23 +703,26 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 if (!item.node.file?.path) return
                 setLoadingOriginal(true)
                 try {
-                  // Use the API client directly to fetch the diff
-                  const { promptlianoClient: apiClient } = await import('@/hooks/promptliano-client')
-                  const response = await apiClient.git.getFileDiff(projectId, item.node.file.path, { staged: false })
-
+                  // Use the promptlianoClient directly to fetch the diff
+                  if (!client) {
+                    toast.error('API client not initialized')
+                    setLoadingOriginal(false)
+                    return
+                  }
+                  const response = await client.git.getFileDiff(projectId, item.node.file.path, { staged: false })
                   if (response.success && response.data?.diff) {
                     const { original } = parseDiff(response.data.diff)
-                    await copyToClipboard(original, {
+                    copyToClipboard(original, {
                       successMessage: 'Previous version copied to clipboard',
                       errorMessage: 'Failed to copy previous version'
                     })
                   } else {
                     toast.error('Failed to fetch file diff')
                   }
+                  setLoadingOriginal(false)
                 } catch (error) {
                   console.error('Failed to copy previous version:', error)
                   toast.error('Failed to copy previous version')
-                } finally {
                   setLoadingOriginal(false)
                 }
               }}
@@ -731,22 +736,25 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 if (!item.node.file?.path) return
                 setLoadingDiff(true)
                 try {
-                  // Use the API client directly to fetch the diff
-                  const { promptlianoClient: apiClient } = await import('@/hooks/promptliano-client')
-                  const response = await apiClient.git.getFileDiff(projectId, item.node.file.path, { staged: false })
-
+                  // Use the promptlianoClient directly to fetch the diff
+                  if (!client) {
+                    toast.error('API client not initialized')
+                    setLoadingDiff(false)
+                    return
+                  }
+                  const response = await client.git.getFileDiff(projectId, item.node.file.path, { staged: false })
                   if (response.success && response.data?.diff) {
-                    await copyToClipboard(response.data.diff, {
+                    copyToClipboard(response.data.diff, {
                       successMessage: 'Diff copied to clipboard',
                       errorMessage: 'Failed to copy diff'
                     })
                   } else {
                     toast.error('Failed to fetch file diff')
                   }
+                  setLoadingDiff(false)
                 } catch (error) {
                   console.error('Failed to copy diff:', error)
                   toast.error('Failed to copy diff')
-                } finally {
                   setLoadingDiff(false)
                 }
               }}

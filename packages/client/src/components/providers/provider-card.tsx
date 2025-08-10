@@ -39,11 +39,15 @@ import {
   Sparkles,
   TrendingUp,
   AlertCircle,
-  Database
+  Database,
+  Cpu
 } from 'lucide-react'
 import type { ProviderKey, ProviderHealthStatus } from '@promptliano/schemas'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
+import { useGetModels } from '@/hooks/api/use-gen-ai-api'
+import { ModelListPopover } from './model-list-popover'
+import { copyToClipboard } from '@/utils/clipboard'
 
 interface ProviderCardProps {
   provider: ProviderKey
@@ -76,9 +80,11 @@ export function ProviderCard({
   const isConnected = health?.status === 'healthy'
   const isLocal = meta?.isLocal
 
+  // Fetch models for the provider
+  const { data: modelsResponse, isLoading: modelsLoading } = useGetModels(provider.provider, {})
+
   const handleCopyKey = () => {
-    navigator.clipboard.writeText(provider.key)
-    toast.success('API key copied to clipboard')
+    copyToClipboard(provider.key, 'API key copied to clipboard')
   }
 
   const getStatusColor = () => {
@@ -247,10 +253,23 @@ export function ProviderCard({
           {/* Stats Grid */}
           {isConnected && (
             <div className='grid grid-cols-3 gap-2 animate-in fade-in duration-300'>
-              <div className='p-2 rounded-lg bg-muted/50 backdrop-blur'>
-                <p className='text-xs text-muted-foreground mb-1'>Models</p>
-                <p className='text-sm font-bold'>{health?.modelCount || '--'}</p>
-              </div>
+              <ModelListPopover
+                models={modelsResponse?.data || []}
+                isLoading={modelsLoading}
+                providerName={meta?.name || provider.provider}
+                isConnected={isConnected}
+              >
+                <button className='p-2 rounded-lg bg-muted/50 backdrop-blur cursor-pointer hover:bg-muted/70 transition-colors w-full text-left'>
+                  <p className='text-xs text-muted-foreground mb-1'>Models</p>
+                  <p className='text-sm font-bold'>
+                    {modelsLoading ? (
+                      <Loader2 className='h-3 w-3 animate-spin' />
+                    ) : (
+                      modelsResponse?.data?.length || health?.modelCount || '--'
+                    )}
+                  </p>
+                </button>
+              </ModelListPopover>
               <div className='p-2 rounded-lg bg-muted/50 backdrop-blur'>
                 <p className='text-xs text-muted-foreground mb-1'>Response</p>
                 <p className='text-sm font-bold'>

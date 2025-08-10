@@ -104,8 +104,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message || undefined,
           estimatedProcessingTime: row.estimated_processing_time || undefined,
           actualProcessingTime: row.actual_processing_time || undefined,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
 
         // Validate the ticket
@@ -225,8 +225,8 @@ class TicketStorage {
         queueErrorMessage: row.queue_error_message || undefined,
         estimatedProcessingTime: row.estimated_processing_time || undefined,
         actualProcessingTime: row.actual_processing_time || undefined,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
+        created: Number(row.created_at) || Date.now(),
+        updated: Number(row.updated_at) || Date.now()
       }
 
       // Validate the ticket data
@@ -289,8 +289,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message || undefined,
           estimatedProcessingTime: row.estimated_processing_time || undefined,
           actualProcessingTime: row.actual_processing_time || undefined,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
 
         // Validate each task
@@ -301,7 +301,11 @@ class TicketStorage {
       return tasksStorage
     } catch (error: any) {
       console.error(`Error reading tasks for ticket ${ticketId} from database:`, error)
-      throw new ApiError(500, `Failed to read tasks for ticket ${ticketId}`, 'DB_READ_ERROR')
+      throw new ApiError(500, `Failed to read tasks for ticket ${ticketId}`, 'DB_READ_ERROR', {
+        ticketId,
+        errorMessage: error?.message || 'Unknown database error',
+        suggestion: 'Verify that the ticket exists and the database is accessible'
+      })
     }
   }
 
@@ -362,7 +366,12 @@ class TicketStorage {
       return validatedTasks
     } catch (error: any) {
       console.error(`Error writing tasks for ticket ${ticketId} to database:`, error)
-      throw new ApiError(500, `Failed to write tasks for ticket ${ticketId}`, 'DB_WRITE_ERROR')
+      throw new ApiError(500, `Failed to write tasks for ticket ${ticketId}`, 'DB_WRITE_ERROR', {
+        ticketId,
+        taskCount: Object.keys(tasks).length,
+        errorMessage: error?.message || 'Unknown database error',
+        suggestion: 'Check if the ticket exists and ensure all task IDs are unique'
+      })
     }
   }
 
@@ -495,8 +504,8 @@ class TicketStorage {
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
           suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         const validated = await validateData(ticket, TicketSchema, `ticket ${ticket.id}`)
         validatedTickets.push(validated)
@@ -578,8 +587,8 @@ class TicketStorage {
         queueErrorMessage: row.queue_error_message || undefined,
         estimatedProcessingTime: row.estimated_processing_time || undefined,
         actualProcessingTime: row.actual_processing_time || undefined,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
+        created: Number(row.created_at) || Date.now(),
+        updated: Number(row.updated_at) || Date.now()
       }
 
       // Validate the task data
@@ -873,8 +882,8 @@ class TicketStorage {
         queueErrorMessage: row.queue_error_message || undefined,
         estimatedProcessingTime: row.estimated_processing_time || undefined,
         actualProcessingTime: row.actual_processing_time || undefined,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
+        created: Number(row.created_at) || Date.now(),
+        updated: Number(row.updated_at) || Date.now()
       }
 
       return await validateData(ticket, TicketSchema, `ticket ${ticket.id}`)
@@ -885,30 +894,56 @@ class TicketStorage {
   }
 
   /** Update specific fields of a ticket (for queue integration). */
-  async updateTicket(
-    ticketId: number,
-    updates: { queue_id?: number | null; queue_status?: string; queued_at?: number }
-  ): Promise<boolean> {
+  async updateTicket(ticketId: number, updates: any): Promise<Ticket> {
     try {
       const db = this.getDb()
       const database = db.getDatabase()
       const now = Date.now()
 
-      // Build dynamic update query
+      // Build dynamic update query - handle both camelCase and snake_case
       const updateFields: string[] = ['updated_at = ?']
       const updateValues: any[] = [now]
 
-      if (updates.queue_id !== undefined) {
+      // Map camelCase to snake_case for database columns
+      if (updates.queueId !== undefined || updates.queue_id !== undefined) {
         updateFields.push('queue_id = ?')
-        updateValues.push(updates.queue_id)
+        updateValues.push(updates.queueId ?? updates.queue_id)
       }
-      if (updates.queue_status !== undefined) {
+      if (updates.queueStatus !== undefined || updates.queue_status !== undefined) {
         updateFields.push('queue_status = ?')
-        updateValues.push(updates.queue_status)
+        updateValues.push(updates.queueStatus ?? updates.queue_status)
       }
-      if (updates.queued_at !== undefined) {
+      if (updates.queuePosition !== undefined || updates.queue_position !== undefined) {
+        updateFields.push('queue_position = ?')
+        updateValues.push(updates.queuePosition ?? updates.queue_position)
+      }
+      if (updates.queuePriority !== undefined || updates.queue_priority !== undefined) {
+        updateFields.push('queue_priority = ?')
+        updateValues.push(updates.queuePriority ?? updates.queue_priority)
+      }
+      if (updates.queuedAt !== undefined || updates.queued_at !== undefined) {
         updateFields.push('queued_at = ?')
-        updateValues.push(updates.queued_at)
+        updateValues.push(updates.queuedAt ?? updates.queued_at)
+      }
+      if (updates.queueStartedAt !== undefined || updates.queue_started_at !== undefined) {
+        updateFields.push('queue_started_at = ?')
+        updateValues.push(updates.queueStartedAt ?? updates.queue_started_at)
+      }
+      if (updates.queueCompletedAt !== undefined || updates.queue_completed_at !== undefined) {
+        updateFields.push('queue_completed_at = ?')
+        updateValues.push(updates.queueCompletedAt ?? updates.queue_completed_at)
+      }
+      if (updates.queueAgentId !== undefined || updates.queue_agent_id !== undefined) {
+        updateFields.push('queue_agent_id = ?')
+        updateValues.push(updates.queueAgentId ?? updates.queue_agent_id)
+      }
+      if (updates.queueErrorMessage !== undefined || updates.queue_error_message !== undefined) {
+        updateFields.push('queue_error_message = ?')
+        updateValues.push(updates.queueErrorMessage ?? updates.queue_error_message)
+      }
+      if (updates.actualProcessingTime !== undefined || updates.actual_processing_time !== undefined) {
+        updateFields.push('actual_processing_time = ?')
+        updateValues.push(updates.actualProcessingTime ?? updates.actual_processing_time)
       }
 
       updateValues.push(ticketId)
@@ -920,7 +955,13 @@ class TicketStorage {
       `)
 
       const result = updateQuery.run(...updateValues)
-      return result.changes > 0
+
+      // Return the updated ticket
+      const updatedTicket = await this.readTicket(ticketId)
+      if (!updatedTicket) {
+        throw new ApiError(404, `Ticket ${ticketId} not found after update`, 'TICKET_NOT_FOUND')
+      }
+      return updatedTicket
     } catch (error: any) {
       console.error(`Error updating ticket ${ticketId}:`, error)
       throw new ApiError(500, `Failed to update ticket ${ticketId}`, 'DB_WRITE_ERROR')
@@ -939,31 +980,56 @@ class TicketStorage {
   }
 
   /** Update specific fields of a task (for queue integration). */
-  async updateTask(
-    ticketId: number,
-    taskId: number,
-    updates: { queue_id?: number | null; queue_status?: string; queued_at?: number; done?: boolean }
-  ): Promise<boolean> {
+  async updateTask(ticketId: number, taskId: number, updates: any): Promise<TicketTask> {
     try {
       const db = this.getDb()
       const database = db.getDatabase()
       const now = Date.now()
 
-      // Build dynamic update query
+      // Build dynamic update query - handle both camelCase and snake_case
       const updateFields: string[] = ['updated_at = ?']
       const updateValues: any[] = [now]
 
-      if (updates.queue_id !== undefined) {
+      // Map camelCase to snake_case for database columns
+      if (updates.queueId !== undefined || updates.queue_id !== undefined) {
         updateFields.push('queue_id = ?')
-        updateValues.push(updates.queue_id)
+        updateValues.push(updates.queueId ?? updates.queue_id)
       }
-      if (updates.queue_status !== undefined) {
+      if (updates.queueStatus !== undefined || updates.queue_status !== undefined) {
         updateFields.push('queue_status = ?')
-        updateValues.push(updates.queue_status)
+        updateValues.push(updates.queueStatus ?? updates.queue_status)
       }
-      if (updates.queued_at !== undefined) {
+      if (updates.queuePosition !== undefined || updates.queue_position !== undefined) {
+        updateFields.push('queue_position = ?')
+        updateValues.push(updates.queuePosition ?? updates.queue_position)
+      }
+      if (updates.queuePriority !== undefined || updates.queue_priority !== undefined) {
+        updateFields.push('queue_priority = ?')
+        updateValues.push(updates.queuePriority ?? updates.queue_priority)
+      }
+      if (updates.queuedAt !== undefined || updates.queued_at !== undefined) {
         updateFields.push('queued_at = ?')
-        updateValues.push(updates.queued_at)
+        updateValues.push(updates.queuedAt ?? updates.queued_at)
+      }
+      if (updates.queueStartedAt !== undefined || updates.queue_started_at !== undefined) {
+        updateFields.push('queue_started_at = ?')
+        updateValues.push(updates.queueStartedAt ?? updates.queue_started_at)
+      }
+      if (updates.queueCompletedAt !== undefined || updates.queue_completed_at !== undefined) {
+        updateFields.push('queue_completed_at = ?')
+        updateValues.push(updates.queueCompletedAt ?? updates.queue_completed_at)
+      }
+      if (updates.queueAgentId !== undefined || updates.queue_agent_id !== undefined) {
+        updateFields.push('queue_agent_id = ?')
+        updateValues.push(updates.queueAgentId ?? updates.queue_agent_id)
+      }
+      if (updates.queueErrorMessage !== undefined || updates.queue_error_message !== undefined) {
+        updateFields.push('queue_error_message = ?')
+        updateValues.push(updates.queueErrorMessage ?? updates.queue_error_message)
+      }
+      if (updates.actualProcessingTime !== undefined || updates.actual_processing_time !== undefined) {
+        updateFields.push('actual_processing_time = ?')
+        updateValues.push(updates.actualProcessingTime ?? updates.actual_processing_time)
       }
       if (updates.done !== undefined) {
         updateFields.push('done = ?')
@@ -979,7 +1045,13 @@ class TicketStorage {
       `)
 
       const result = updateQuery.run(...updateValues)
-      return result.changes > 0
+
+      // Return the updated task
+      const updatedTask = await this.getTaskById(taskId)
+      if (!updatedTask) {
+        throw new ApiError(404, `Task ${taskId} not found after update`, 'TASK_NOT_FOUND')
+      }
+      return updatedTask
     } catch (error: any) {
       console.error(`Error updating task ${taskId}:`, error)
       throw new ApiError(500, `Failed to update task ${taskId}`, 'DB_WRITE_ERROR')
@@ -1191,8 +1263,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message,
           estimatedProcessingTime: row.estimated_processing_time,
           actualProcessingTime: row.actual_processing_time,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         tickets.push(await validateData(ticket as any, TicketSchema, `ticket ${ticket.id}`))
       }
@@ -1223,8 +1295,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message,
           estimatedProcessingTime: row.estimated_processing_time,
           actualProcessingTime: row.actual_processing_time,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         tasks.push(await validateData(task as any, TicketTaskSchema, `task ${task.id}`))
       }
@@ -1291,8 +1363,8 @@ class TicketStorage {
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
           suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         tickets.push(await validateData(ticket as any, TicketSchema, `ticket ${ticket.id}`))
       }
@@ -1312,8 +1384,8 @@ class TicketStorage {
           tags: safeJsonParse(row.tags, [], 'task.tags'),
           agentId: row.agent_id,
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         tasks.push(await validateData(task as any, TicketTaskSchema, `task ${task.id}`))
       }

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { promptlianoClient } from '@/hooks/promptliano-client'
+import { useApiClient } from './use-api-client'
 import type {
   CreateHookConfigBody,
   UpdateHookConfigBody,
@@ -15,13 +15,17 @@ const QUERY_KEY_PREFIX = 'claude-hooks'
  * Hook to list all hooks for a project
  */
 export function useGetProjectHooks(projectPath: string) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: [QUERY_KEY_PREFIX, projectPath],
     queryFn: async () => {
-      const response = await promptlianoClient.claudeHooks.list(projectPath)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeHooks.list(projectPath)
       return response.data
     },
-    enabled: !!projectPath
+    enabled: !!client && !!projectPath
   })
 }
 
@@ -29,13 +33,17 @@ export function useGetProjectHooks(projectPath: string) {
  * Hook to get a specific hook
  */
 export function useGetHook(projectPath: string, eventName: HookEvent, matcherIndex: number) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: [QUERY_KEY_PREFIX, projectPath, eventName, matcherIndex],
     queryFn: async () => {
-      const response = await promptlianoClient.claudeHooks.get(projectPath, eventName, matcherIndex)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeHooks.get(projectPath, eventName, matcherIndex)
       return response.data
     },
-    enabled: !!projectPath && !!eventName && matcherIndex >= 0
+    enabled: !!client && !!projectPath && !!eventName && matcherIndex >= 0
   })
 }
 
@@ -43,11 +51,14 @@ export function useGetHook(projectPath: string, eventName: HookEvent, matcherInd
  * Hook to create a new hook
  */
 export function useCreateHook(projectPath: string) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (data: CreateHookConfigBody) => {
-      const response = await promptlianoClient.claudeHooks.create(projectPath, data)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeHooks.create(projectPath, data)
       return response.data
     },
     onSuccess: () => {
@@ -64,6 +75,9 @@ export function useCreateHook(projectPath: string) {
  * Hook to update an existing hook
  */
 export function useUpdateHook(projectPath: string) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -76,7 +90,8 @@ export function useUpdateHook(projectPath: string) {
       matcherIndex: number
       data: UpdateHookConfigBody
     }) => {
-      const response = await promptlianoClient.claudeHooks.update(projectPath, eventName, matcherIndex, data)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeHooks.update(projectPath, eventName, matcherIndex, data)
       return response.data
     },
     onSuccess: () => {
@@ -93,11 +108,16 @@ export function useUpdateHook(projectPath: string) {
  * Hook to delete a hook
  */
 export function useDeleteHook(projectPath: string) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ eventName, matcherIndex }: { eventName: HookEvent; matcherIndex: number }) =>
-      promptlianoClient.claudeHooks.delete(projectPath, eventName, matcherIndex),
+    mutationFn: ({ eventName, matcherIndex }: { eventName: HookEvent; matcherIndex: number }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.claudeHooks.delete(projectPath, eventName, matcherIndex)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY_PREFIX, projectPath] })
       toast.success('Hook deleted successfully')
@@ -112,9 +132,12 @@ export function useDeleteHook(projectPath: string) {
  * Hook to generate a hook from natural language
  */
 export function useGenerateHook(projectPath: string) {
+  const client = useApiClient()
+
   return useMutation({
     mutationFn: async (data: HookGenerationRequest) => {
-      const response = await promptlianoClient.claudeHooks.generate(projectPath, data)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeHooks.generate(projectPath, data)
       return response.data
     },
     onError: (error: any) => {
@@ -127,9 +150,12 @@ export function useGenerateHook(projectPath: string) {
  * Hook to test a hook configuration
  */
 export function useTestHook(projectPath: string) {
+  const client = useApiClient()
+
   return useMutation({
     mutationFn: async (data: HookTestRequest) => {
-      const response = await promptlianoClient.claudeHooks.test(projectPath, data)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeHooks.test(projectPath, data)
       return response.data
     },
     onError: (error: any) => {
@@ -142,12 +168,16 @@ export function useTestHook(projectPath: string) {
  * Hook to search hooks
  */
 export function useSearchHooks(projectPath: string, query: string) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: [QUERY_KEY_PREFIX, projectPath, 'search', query],
     queryFn: async () => {
-      const response = await promptlianoClient.claudeHooks.search(projectPath, query)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeHooks.search(projectPath, query)
       return response.data
     },
-    enabled: !!projectPath && !!query && query.length > 0
+    enabled: !!client && !!projectPath && !!query && query.length > 0
   })
 }

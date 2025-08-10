@@ -1,15 +1,10 @@
-// Queue service layer with business logic
+// Queue service layer - simplified to use Flow system only
 import type {
   TaskQueue,
-  QueueItem,
   CreateQueueBody,
   UpdateQueueBody,
-  EnqueueItemBody,
-  UpdateQueueItemBody,
   QueueStats,
   QueueWithStats,
-  GetNextTaskResponse,
-  QueueTimeline,
   Ticket,
   TicketTask
 } from '@promptliano/schemas'
@@ -30,7 +25,8 @@ export async function createQueue(data: CreateQueueBody): Promise<TaskQueue> {
       name: data.name,
       description: data.description || '',
       status: 'active',
-      maxParallelItems: data.maxParallelItems || 1
+      maxParallelItems: data.maxParallelItems || 1,
+      totalCompletedItems: 0
     })
 
     return queue
@@ -68,271 +64,322 @@ export async function deleteQueue(queueId: number): Promise<void> {
   }
 }
 
-// === Queue Items Management ===
-
-export async function enqueueItem(queueId: number, data: EnqueueItemBody): Promise<QueueItem> {
+export async function pauseQueue(queueId: number): Promise<TaskQueue> {
   try {
     // Verify queue exists
     const queue = await getQueueById(queueId)
 
-    // Verify ticket or task exists
-    if (data.ticketId) {
-      const ticket = await ticketStorage.readTicket(data.ticketId)
-      if (!ticket) {
-        throw new ApiError(404, `Ticket ${data.ticketId} not found`, 'TICKET_NOT_FOUND')
-      }
-
-      // Update ticket queue status
-      await ticketStorage.updateTicket(data.ticketId, {
-        queue_id: queueId,
-        queue_status: 'queued',
-        queued_at: Date.now()
-      })
-    } else if (data.taskId) {
-      // Get ticket ID for the task
-      const allTickets = await ticketStorage.readTickets(queue.projectId)
-      let ticketId: number | null = null
-      let foundTask = false
-
-      for (const [_, ticket] of Object.entries(allTickets)) {
-        const tasks = await ticketStorage.readTasks(ticket.id)
-        if (tasks[String(data.taskId)]) {
-          ticketId = ticket.id
-          foundTask = true
-          break
-        }
-      }
-
-      if (!foundTask) {
-        throw new ApiError(404, `Task ${data.taskId} not found`, 'TASK_NOT_FOUND')
-      }
-
-      // Update task queue status
-      if (ticketId) {
-        await ticketStorage.updateTask(ticketId, data.taskId, {
-          queue_id: queueId,
-          queue_status: 'queued',
-          queued_at: Date.now()
-        })
-      }
+    if (queue.status === 'paused') {
+      throw new ApiError(400, `Queue ${queueId} is already paused`, 'QUEUE_ALREADY_PAUSED')
     }
 
-    const queueItem = await queueStorage.createQueueItem({
-      queueId,
-      ticketId: data.ticketId || null,
-      taskId: data.taskId || null,
-      status: 'queued',
-      priority: data.priority || 0,
-      agentId: data.agentId || null,
-      errorMessage: null,
-      startedAt: null,
-      completedAt: null
-    })
-
-    return queueItem
+    // Update queue status to paused
+    return await queueStorage.updateQueue(queueId, { status: 'paused' })
   } catch (error) {
     if (error instanceof ApiError) throw error
-    console.error('Error enqueuing item:', error)
-    throw new ApiError(500, 'Failed to enqueue item', 'ENQUEUE_ERROR', { error })
+    console.error('Error pausing queue:', error)
+    throw new ApiError(500, 'Failed to pause queue', 'QUEUE_PAUSE_ERROR', { error })
   }
 }
 
-export async function updateQueueItem(itemId: number, updates: UpdateQueueItemBody): Promise<QueueItem> {
-  const item = await queueStorage.readQueueItem(itemId)
-  if (!item) {
-    throw new ApiError(404, `Queue item ${itemId} not found`, 'QUEUE_ITEM_NOT_FOUND')
-  }
+export async function resumeQueue(queueId: number): Promise<TaskQueue> {
+  try {
+    // Verify queue exists
+    const queue = await getQueueById(queueId)
 
-  // Update ticket/task status if item status changes
-  if (updates.status && updates.status !== item.status) {
-    const queue = await getQueueById(item.queueId)
-
-    if (item.ticketId) {
-      let ticketQueueStatus: string
-      switch (updates.status) {
-        case 'in_progress':
-          ticketQueueStatus = 'processing'
-          break
-        case 'completed':
-        case 'failed':
-        case 'cancelled':
-          ticketQueueStatus = 'completed'
-          break
-        default:
-          ticketQueueStatus = 'queued'
-      }
-
-      await ticketStorage.updateTicket(item.ticketId, {
-        queue_status: ticketQueueStatus
-      })
-    } else if (item.taskId) {
-      // Find the ticket for this task
-      const allTickets = await ticketStorage.readTickets(queue.projectId)
-      for (const [_, ticket] of Object.entries(allTickets)) {
-        const tasks = await ticketStorage.readTasks(ticket.id)
-        if (tasks[String(item.taskId)]) {
-          let taskQueueStatus: string
-          switch (updates.status) {
-            case 'in_progress':
-              taskQueueStatus = 'processing'
-              break
-            case 'completed':
-            case 'failed':
-            case 'cancelled':
-              taskQueueStatus = 'completed'
-              break
-            default:
-              taskQueueStatus = 'queued'
-          }
-
-          await ticketStorage.updateTask(ticket.id, item.taskId, {
-            queue_status: taskQueueStatus,
-            done: updates.status === 'completed'
-          })
-          break
-        }
-      }
+    if (queue.status === 'active') {
+      throw new ApiError(400, `Queue ${queueId} is already active`, 'QUEUE_ALREADY_ACTIVE')
     }
-  }
 
-  return await queueStorage.updateQueueItem(itemId, updates)
-}
-
-export async function deleteQueueItem(itemId: number): Promise<void> {
-  const deleted = await queueStorage.deleteQueueItem(itemId)
-  if (!deleted) {
-    throw new ApiError(404, `Queue item ${itemId} not found`, 'QUEUE_ITEM_NOT_FOUND')
+    // Update queue status to active
+    return await queueStorage.updateQueue(queueId, { status: 'active' })
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('Error resuming queue:', error)
+    throw new ApiError(500, 'Failed to resume queue', 'QUEUE_RESUME_ERROR', { error })
   }
 }
 
-export async function getQueueItems(queueId: number, status?: string): Promise<QueueItem[]> {
-  await getQueueById(queueId) // Verify queue exists
+// === Simplified Queue Operations Using Flow System ===
 
-  const items = await queueStorage.readQueueItems(queueId, status as any)
-  return Object.values(items)
-}
+/**
+ * Enqueue a ticket or task by updating its queueId field
+ */
+export async function enqueueTicket(ticketId: number, queueId: number, priority: number = 0): Promise<Ticket> {
+  try {
+    // Verify queue exists
+    await getQueueById(queueId)
 
-export async function getQueueItemsWithDetails(
-  queueId: number,
-  status?: string
-): Promise<
-  {
-    queueItem: QueueItem
-    ticket?: Ticket
-    task?: TicketTask
-  }[]
-> {
-  const items = await getQueueItems(queueId, status)
+    // Verify ticket exists
+    const ticket = await ticketStorage.readTicket(ticketId)
+    if (!ticket) {
+      throw new ApiError(404, `Ticket ${ticketId} not found`, 'TICKET_NOT_FOUND')
+    }
 
-  // Collect all unique ticket IDs we need to fetch
-  const ticketIds = new Set<number>()
-  items.forEach((item) => {
-    if (item.ticketId) ticketIds.add(item.ticketId)
-  })
-
-  // Fetch all tickets with their tasks in one go
-  const ticketsMap = new Map<number, Ticket>()
-  if (ticketIds.size > 0) {
-    const tickets = await Promise.all(Array.from(ticketIds).map((id) => ticketStorage.readTicket(id)))
-    tickets.forEach((ticket, index) => {
-      if (ticket) {
-        ticketsMap.set(Array.from(ticketIds)[index], ticket)
-      }
+    // Update ticket queue fields
+    const updatedTicket = await ticketStorage.updateTicket(ticketId, {
+      queueId: queueId,
+      queueStatus: 'queued',
+      queuePriority: priority,
+      queuedAt: Date.now()
     })
+
+    return updatedTicket
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('Error enqueuing ticket:', error)
+    throw new ApiError(500, 'Failed to enqueue ticket', 'ENQUEUE_ERROR', { error })
   }
-
-  // Build the result with full details
-  return items.map((queueItem) => {
-    let ticket: Ticket | undefined
-    let task: TicketTask | undefined
-
-    if (queueItem.ticketId) {
-      ticket = ticketsMap.get(queueItem.ticketId)
-    }
-
-    if (queueItem.taskId && ticket?.tasks) {
-      task = ticket.tasks.find((t) => t.id === queueItem.taskId)
-    }
-
-    return { queueItem, ticket, task }
-  })
 }
 
-// === Queue Processing ===
+/**
+ * Enqueue a task by updating its queueId field
+ */
+export async function enqueueTask(
+  ticketId: number,
+  taskId: number,
+  queueId: number,
+  priority: number = 0
+): Promise<TicketTask> {
+  try {
+    // Verify queue exists
+    await getQueueById(queueId)
 
-export async function getNextTaskFromQueue(queueId: number, agentId?: string): Promise<GetNextTaskResponse> {
+    // Verify task exists
+    const task = await ticketStorage.getTaskById(taskId)
+    if (!task || task.ticketId !== ticketId) {
+      throw new ApiError(404, `Task ${taskId} not found for ticket ${ticketId}`, 'TASK_NOT_FOUND')
+    }
+
+    // Update task queue fields
+    const updatedTask = await ticketStorage.updateTask(ticketId, taskId, {
+      queueId: queueId,
+      queueStatus: 'queued',
+      queuePriority: priority,
+      queuedAt: Date.now()
+    })
+
+    return updatedTask
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('Error enqueuing task:', error)
+    throw new ApiError(500, 'Failed to enqueue task', 'ENQUEUE_ERROR', { error })
+  }
+}
+
+/**
+ * Enqueue a ticket with all its tasks
+ */
+export async function enqueueTicketWithAllTasks(
+  queueId: number,
+  ticketId: number,
+  priority?: number
+): Promise<{ ticket: Ticket; tasks: TicketTask[] }> {
+  try {
+    // Verify queue exists
+    await getQueueById(queueId)
+
+    // Enqueue the ticket
+    const ticket = await enqueueTicket(ticketId, queueId, priority || 0)
+
+    // Get all tasks for the ticket
+    const tasks = await ticketStorage.readTasks(ticketId)
+    const taskList = Object.values(tasks)
+      .filter((task) => !task.done) // Only enqueue incomplete tasks
+      .sort((a, b) => a.orderIndex - b.orderIndex) // Maintain order
+
+    // Enqueue each task
+    const enqueuedTasks: TicketTask[] = []
+    for (const [i, task] of taskList.entries()) {
+      const taskPriority = priority !== undefined ? priority + (taskList.length - i) : i + 1
+      const enqueuedTask = await enqueueTask(ticketId, task.id, queueId, taskPriority)
+      enqueuedTasks.push(enqueuedTask)
+    }
+
+    return { ticket, tasks: enqueuedTasks }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('Error enqueuing ticket with tasks:', error)
+    throw new ApiError(500, 'Failed to enqueue ticket with tasks', 'ENQUEUE_TICKET_ERROR', { error })
+  }
+}
+
+/**
+ * Remove ticket from queue
+ */
+export async function dequeueTicket(ticketId: number): Promise<Ticket> {
+  try {
+    const ticket = await ticketStorage.readTicket(ticketId)
+    if (!ticket) {
+      throw new ApiError(404, `Ticket ${ticketId} not found`, 'TICKET_NOT_FOUND')
+    }
+
+    // Clear queue fields on the ticket
+    const updatedTicket = await ticketStorage.updateTicket(ticketId, {
+      queueId: null,
+      queueStatus: null,
+      queuePriority: 0,
+      queuedAt: null
+    })
+
+    // Also dequeue all tasks associated with this ticket
+    const tasks = await ticketStorage.readTasks(ticketId)
+    const taskList = Object.values(tasks).filter((task) => task.queueId !== null)
+
+    for (const task of taskList) {
+      await ticketStorage.dequeueTask(task.id)
+    }
+
+    return updatedTicket
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('Error dequeuing ticket:', error)
+    throw new ApiError(500, 'Failed to dequeue ticket', 'DEQUEUE_ERROR', { error })
+  }
+}
+
+/**
+ * Remove task from queue
+ */
+export async function dequeueTask(ticketId: number, taskId: number): Promise<TicketTask> {
+  try {
+    const task = await ticketStorage.getTaskById(taskId)
+    if (!task || task.ticketId !== ticketId) {
+      throw new ApiError(404, `Task ${taskId} not found for ticket ${ticketId}`, 'TASK_NOT_FOUND')
+    }
+
+    // Clear queue fields
+    const updatedTask = await ticketStorage.updateTask(ticketId, taskId, {
+      queueId: null,
+      queueStatus: null,
+      queuePriority: 0,
+      queuedAt: null
+    })
+
+    return updatedTask
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('Error dequeuing task:', error)
+    throw new ApiError(500, 'Failed to dequeue task', 'DEQUEUE_ERROR', { error })
+  }
+}
+
+/**
+ * Remove a ticket and all its tasks from queue
+ */
+export async function dequeueTicketWithAllTasks(ticketId: number): Promise<{ ticket: Ticket; tasks: TicketTask[] }> {
+  try {
+    // Dequeue the ticket
+    const ticket = await dequeueTicket(ticketId)
+
+    // Get all tasks for the ticket
+    const tasks = await ticketStorage.readTasks(ticketId)
+    const taskList = Object.values(tasks)
+      .filter((task) => task.queueId !== null) // Only dequeue tasks that are queued
+      .sort((a, b) => a.orderIndex - b.orderIndex) // Maintain order
+
+    // Dequeue each task
+    const dequeuedTasks: TicketTask[] = []
+    for (const task of taskList) {
+      const dequeuedTask = await dequeueTask(ticketId, task.id)
+      dequeuedTasks.push(dequeuedTask)
+    }
+
+    return { ticket, tasks: dequeuedTasks }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('Error dequeuing ticket with tasks:', error)
+    throw new ApiError(500, 'Failed to dequeue ticket with tasks', 'DEQUEUE_TICKET_ERROR', { error })
+  }
+}
+
+/**
+ * Get next task from queue for processing
+ * Enforces maxParallelItems limit to prevent too many concurrent tasks
+ */
+export async function getNextTaskFromQueue(
+  queueId: number,
+  agentId?: string
+): Promise<{ type: 'ticket' | 'task' | 'none'; item: Ticket | TicketTask | null; message?: string }> {
   try {
     const queue = await getQueueById(queueId)
 
     // Check if queue is active
     if (queue.status !== 'active') {
+      console.log(`[Queue] Queue ${queueId} is ${queue.status}, not returning tasks`)
+      return { type: 'none', item: null, message: `Queue is ${queue.status}` }
+    }
+
+    // ENFORCE MAX PARALLEL ITEMS
+    // Count current in-progress items
+    const stats = await getQueueStats(queueId)
+    if (stats.inProgressItems >= queue.maxParallelItems) {
+      console.log(
+        `[Queue] Queue ${queueId} has reached max parallel items (${stats.inProgressItems}/${queue.maxParallelItems})`
+      )
       return {
-        queueItem: null,
-        ticket: null,
-        task: null
+        type: 'none',
+        item: null,
+        message: `Queue has reached maximum parallel items limit (${queue.maxParallelItems}). Wait for current tasks to complete.`
       }
     }
 
-    // Check if agent can take more items (respecting maxParallelItems)
-    if (agentId) {
-      const currentAgents = await queueStorage.getCurrentAgents(queueId)
-      const agentCount = currentAgents.filter((a) => a === agentId).length
+    // Get all tickets and tasks in this queue that are queued
+    const projectTickets = await ticketStorage.readTickets(queue.projectId)
 
-      if (agentCount >= queue.maxParallelItems) {
-        return {
-          queueItem: null,
-          ticket: null,
-          task: null
+    // Find tickets in this queue with 'queued' status
+    const queuedTickets = Object.values(projectTickets)
+      .filter((t) => t.queueId === queueId && t.queueStatus === 'queued')
+      .sort((a, b) => {
+        // Sort by priority (lower values first per migration 022), then by queued time (older first)
+        if (a.queuePriority !== b.queuePriority) {
+          return (a.queuePriority || 999) - (b.queuePriority || 999) // Use 999 as default so null/undefined goes last
         }
-      }
+        return (a.queuedAt || 0) - (b.queuedAt || 0)
+      })
+
+    // Try to get a ticket first
+    if (queuedTickets.length > 0) {
+      const ticket = queuedTickets[0]
+
+      // Update ticket status to in_progress
+      const updatedTicket = await ticketStorage.updateTicket(ticket.id, {
+        queueStatus: 'in_progress',
+        queueStartedAt: Date.now(),
+        queueAgentId: agentId
+      })
+
+      return { type: 'ticket', item: updatedTicket }
     }
 
-    // Get next item
-    const queueItem = await queueStorage.getNextQueueItem(queueId, agentId)
-    if (!queueItem) {
-      return {
-        queueItem: null,
-        ticket: null,
-        task: null
-      }
-    }
-
-    // Fetch associated ticket/task
-    let ticket: Ticket | null = null
-    let task: TicketTask | null = null
-
-    if (queueItem.ticketId) {
-      ticket = await ticketStorage.readTicket(queueItem.ticketId)
-
-      // Update ticket status
-      if (ticket) {
-        await ticketStorage.updateTicket(queueItem.ticketId, {
-          queue_status: 'processing'
+    // If no tickets, look for tasks
+    for (const ticket of Object.values(projectTickets)) {
+      const tasks = await ticketStorage.readTasks(ticket.id)
+      const queuedTasks = Object.values(tasks)
+        .filter((t) => t.queueId === queueId && t.queueStatus === 'queued' && !t.done)
+        .sort((a, b) => {
+          // Sort by priority (lower values first per migration 022), then by order index
+          if (a.queuePriority !== b.queuePriority) {
+            return (a.queuePriority || 999) - (b.queuePriority || 999) // Use 999 as default so null/undefined goes last
+          }
+          return a.orderIndex - b.orderIndex
         })
-      }
-    } else if (queueItem.taskId) {
-      // Find the task and its ticket
-      const allTickets = await ticketStorage.readTickets(queue.projectId)
-      for (const [_, t] of Object.entries(allTickets)) {
-        const tasks = await ticketStorage.readTasks(t.id)
-        if (tasks[String(queueItem.taskId)]) {
-          ticket = t
-          task = tasks[String(queueItem.taskId)]
 
-          // Update task status
-          await ticketStorage.updateTask(t.id, queueItem.taskId, {
-            queue_status: 'processing'
-          })
-          break
-        }
+      if (queuedTasks.length > 0) {
+        const task = queuedTasks[0]
+
+        // Update task status to in_progress
+        const updatedTask = await ticketStorage.updateTask(ticket.id, task.id, {
+          queueStatus: 'in_progress',
+          queueStartedAt: Date.now(),
+          queueAgentId: agentId
+        })
+
+        return { type: 'task', item: updatedTask }
       }
     }
 
-    return {
-      queueItem,
-      ticket,
-      task
-    }
+    return { type: 'none', item: null, message: 'No tasks available' }
   } catch (error) {
     if (error instanceof ApiError) throw error
     console.error('Error getting next task from queue:', error)
@@ -344,8 +391,26 @@ export async function getNextTaskFromQueue(queueId: number, agentId?: string): P
 
 export async function getQueueStats(queueId: number): Promise<QueueStats> {
   const queue = await getQueueById(queueId)
-  const stats = await queueStorage.getQueueStats(queueId)
-  const currentAgents = await queueStorage.getCurrentAgents(queueId)
+  const stats = await queueStorage.getEnhancedQueueStats(queueId)
+
+  // Get current agents from tickets/tasks
+  const projectTickets = await ticketStorage.readTickets(queue.projectId)
+  const currentAgents = new Set<string>()
+
+  // Check tickets
+  for (const ticket of Object.values(projectTickets)) {
+    if (ticket.queueId === queueId && ticket.queueStatus === 'in_progress' && ticket.queueAgentId) {
+      currentAgents.add(ticket.queueAgentId)
+    }
+
+    // Check tasks
+    const tasks = await ticketStorage.readTasks(ticket.id)
+    for (const task of Object.values(tasks)) {
+      if (task.queueId === queueId && task.queueStatus === 'in_progress' && task.queueAgentId) {
+        currentAgents.add(task.queueAgentId)
+      }
+    }
+  }
 
   return {
     queueId: queue.id,
@@ -357,7 +422,10 @@ export async function getQueueStats(queueId: number): Promise<QueueStats> {
     failedItems: stats.failedItems,
     cancelledItems: stats.cancelledItems,
     averageProcessingTime: stats.averageProcessingTime,
-    currentAgents
+    currentAgents: Array.from(currentAgents),
+    ticketCount: stats.ticketCount,
+    taskCount: stats.taskCount,
+    uniqueTickets: stats.uniqueTickets
   }
 }
 
@@ -375,210 +443,165 @@ export async function getQueuesWithStats(projectId: number): Promise<QueueWithSt
 
 // === Batch Operations ===
 
-export async function batchEnqueueItems(queueId: number, items: EnqueueItemBody[]): Promise<QueueItem[]> {
-  const results: QueueItem[] = []
-
-  for (const item of items) {
-    try {
-      const queueItem = await enqueueItem(queueId, item)
-      results.push(queueItem)
-    } catch (error) {
-      console.error('Error in batch enqueue:', error)
-      // Continue with other items
-    }
-  }
-
-  return results
-}
-
-export async function batchUpdateQueueItems(
-  updates: Array<{ itemId: number; data: UpdateQueueItemBody }>
-): Promise<QueueItem[]> {
-  const results: QueueItem[] = []
-
-  for (const { itemId, data } of updates) {
-    try {
-      const updated = await updateQueueItem(itemId, data)
-      results.push(updated)
-    } catch (error) {
-      console.error('Error in batch update:', error)
-      // Continue with other items
-    }
-  }
-
-  return results
-}
-
-// === Queue Ticket Operations ===
-
-export async function enqueueTicketWithAllTasks(
-  queueId: number,
-  ticketId: number,
-  priority?: number
-): Promise<QueueItem[]> {
+/**
+ * Move items between queues
+ */
+export async function moveItemToQueue(
+  itemType: 'ticket' | 'task',
+  itemId: number,
+  targetQueueId: number | null,
+  ticketId?: number
+): Promise<void> {
   try {
-    // Verify queue and ticket exist
-    const queue = await getQueueById(queueId)
-    const ticket = await ticketStorage.readTicket(ticketId)
-    if (!ticket) {
-      throw new ApiError(404, `Ticket ${ticketId} not found`, 'TICKET_NOT_FOUND')
+    if (targetQueueId !== null) {
+      // Verify target queue exists
+      await getQueueById(targetQueueId)
     }
 
-    // Get all tasks for the ticket
-    const tasks = await ticketStorage.readTasks(ticketId)
-    const taskList = Object.values(tasks)
-      .filter((task) => !task.done) // Only enqueue incomplete tasks
-      .sort((a, b) => a.orderIndex - b.orderIndex) // Maintain order
-
-    const queueItems: QueueItem[] = []
-
-    // First, enqueue the ticket itself
-    const ticketItem = await enqueueItem(queueId, {
-      ticketId: ticketId,
-      priority: priority || 0
-    })
-    queueItems.push(ticketItem)
-
-    // Then enqueue each task
-    for (let i = 0; i < taskList.length; i++) {
-      const task = taskList[i]
-      const item = await enqueueItem(queueId, {
-        taskId: task.id,
-        priority: priority !== undefined ? priority + (taskList.length - i) + 1 : i + 1, // Higher priority for earlier tasks, but lower than ticket
-        agentId: task.agentId
-      })
-      queueItems.push(item)
+    if (itemType === 'ticket') {
+      if (targetQueueId === null) {
+        await dequeueTicketWithAllTasks(itemId)
+      } else {
+        await enqueueTicket(itemId, targetQueueId)
+      }
+    } else {
+      if (!ticketId) {
+        throw new ApiError(400, 'Ticket ID required for task operations', 'TICKET_ID_REQUIRED')
+      }
+      if (targetQueueId === null) {
+        await dequeueTask(ticketId, itemId)
+      } else {
+        await enqueueTask(ticketId, itemId, targetQueueId)
+      }
     }
-
-    return queueItems
   } catch (error) {
     if (error instanceof ApiError) throw error
-    console.error('Error enqueuing ticket with tasks:', error)
-    throw new ApiError(500, 'Failed to enqueue ticket with tasks', 'ENQUEUE_TICKET_ERROR', { error })
+    console.error('Error moving item to queue:', error)
+    throw new ApiError(500, 'Failed to move item to queue', 'MOVE_ERROR', { error })
   }
 }
 
-// === Kanban Operations ===
-
-export async function bulkMoveItems(itemIds: number[], targetQueueId: number, positions?: number[]): Promise<void> {
+/**
+ * Complete a ticket or task in queue
+ */
+export async function completeQueueItem(itemType: 'ticket' | 'task', itemId: number, ticketId?: number): Promise<void> {
   try {
-    // Verify target queue exists
-    await getQueueById(targetQueueId)
-
-    // Perform bulk move
-    await queueStorage.bulkMoveItems(itemIds, targetQueueId, positions)
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    console.error('Error bulk moving items:', error)
-    throw new ApiError(500, 'Failed to bulk move items', 'BULK_MOVE_ERROR', { error })
-  }
-}
-
-export async function reorderQueueItems(queueId: number, itemIds: number[]): Promise<void> {
-  try {
-    // Verify queue exists
-    await getQueueById(queueId)
-
-    // Perform reorder
-    await queueStorage.reorderQueueItems(queueId, itemIds)
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    console.error('Error reordering queue items:', error)
-    throw new ApiError(500, 'Failed to reorder queue items', 'REORDER_ERROR', { error })
-  }
-}
-
-export async function getQueueTimeline(queueId: number): Promise<QueueTimeline> {
-  try {
-    const queue = await getQueueById(queueId)
-    const items = await queueStorage.readQueueItems(queueId)
-    const itemsArray = Object.values(items).sort((a, b) => {
-      // Sort by position first, then priority, then created
-      if (a.position !== null && b.position !== null) {
-        return a.position - b.position
-      }
-      if (a.priority !== b.priority) {
-        return b.priority - a.priority
-      }
-      return a.created - b.created
-    })
-
-    const now = Date.now()
-    let currentTime = now
-    const timelineItems: QueueTimeline['items'] = []
-
-    for (const item of itemsArray) {
-      if (item.status === 'completed' || item.status === 'failed' || item.status === 'cancelled') {
-        continue
+    if (itemType === 'ticket') {
+      const ticket = await ticketStorage.readTicket(itemId)
+      if (!ticket) {
+        throw new ApiError(404, `Ticket ${itemId} not found`, 'TICKET_NOT_FOUND')
       }
 
-      // Get title from ticket or task
-      let title = 'Unknown Item'
-      if (item.ticketId) {
-        const ticket = await ticketStorage.readTicket(item.ticketId)
-        if (ticket) {
-          title = ticket.title
-        }
-      } else if (item.taskId) {
-        // Get task through tickets
-        const tickets = await ticketStorage.readTickets(queue.projectId)
-        for (const ticket of Object.values(tickets)) {
-          const tasks = await ticketStorage.readTasks(ticket.id)
-          const task = tasks[String(item.taskId)]
-          if (task) {
-            title = task.content
-            break
-          }
-        }
-      }
-
-      const estimatedProcessingTime = item.estimatedProcessingTime || queue.averageProcessingTime || 300000 // Default 5 minutes
-      const estimatedStartTime = item.status === 'in_progress' ? item.startedAt || now : currentTime
-      const estimatedEndTime = estimatedStartTime + estimatedProcessingTime
-
-      timelineItems.push({
-        itemId: item.id,
-        ticketId: item.ticketId,
-        taskId: item.taskId,
-        title,
-        estimatedStartTime,
-        estimatedEndTime,
-        estimatedProcessingTime,
-        status: item.status
+      await ticketStorage.updateTicket(itemId, {
+        queueStatus: 'completed',
+        queueCompletedAt: Date.now(),
+        actualProcessingTime: ticket.queueStartedAt ? Date.now() - ticket.queueStartedAt : undefined
       })
 
-      if (item.status === 'queued') {
-        currentTime = estimatedEndTime
+      // Also mark all tasks as completed
+      const tasks = await ticketStorage.readTasks(itemId)
+      for (const task of Object.values(tasks)) {
+        if (task.queueId === ticket.queueId) {
+          await ticketStorage.updateTask(itemId, task.id, {
+            queueStatus: 'completed',
+            queueCompletedAt: Date.now(),
+            done: true
+          })
+        }
       }
-    }
-
-    const totalEstimatedTime = timelineItems.reduce((sum, item) => {
-      if (item.status === 'queued' || item.status === 'in_progress') {
-        return sum + item.estimatedProcessingTime
+    } else {
+      if (!ticketId) {
+        throw new ApiError(400, 'Ticket ID required for task operations', 'TICKET_ID_REQUIRED')
       }
-      return sum
-    }, 0)
 
-    return {
-      queueId,
-      currentTime: now,
-      items: timelineItems,
-      totalEstimatedTime,
-      estimatedCompletionTime: now + totalEstimatedTime
+      const task = await ticketStorage.getTaskById(itemId)
+      if (!task || task.ticketId !== ticketId) {
+        throw new ApiError(404, `Task ${itemId} not found for ticket ${ticketId}`, 'TASK_NOT_FOUND')
+      }
+
+      await ticketStorage.updateTask(ticketId, itemId, {
+        queueStatus: 'completed',
+        queueCompletedAt: Date.now(),
+        actualProcessingTime: task.queueStartedAt ? Date.now() - task.queueStartedAt : undefined,
+        done: true
+      })
     }
   } catch (error) {
     if (error instanceof ApiError) throw error
-    console.error('Error getting queue timeline:', error)
-    throw new ApiError(500, 'Failed to get queue timeline', 'TIMELINE_ERROR', { error })
+    console.error('Error completing queue item:', error)
+    throw new ApiError(500, 'Failed to complete queue item', 'COMPLETE_ERROR', { error })
   }
 }
 
-export async function getUnqueuedItems(projectId: number): Promise<{ tickets: any[]; tasks: any[] }> {
+/**
+ * Fail a ticket or task in queue
+ */
+export async function failQueueItem(
+  itemType: 'ticket' | 'task',
+  itemId: number,
+  errorMessage: string,
+  ticketId?: number
+): Promise<void> {
   try {
-    return await queueStorage.getUnqueuedItems(projectId)
+    if (itemType === 'ticket') {
+      await ticketStorage.updateTicket(itemId, {
+        queueStatus: 'failed',
+        queueErrorMessage: errorMessage,
+        queueCompletedAt: Date.now()
+      })
+    } else {
+      if (!ticketId) {
+        throw new ApiError(400, 'Ticket ID required for task operations', 'TICKET_ID_REQUIRED')
+      }
+
+      await ticketStorage.updateTask(ticketId, itemId, {
+        queueStatus: 'failed',
+        queueErrorMessage: errorMessage,
+        queueCompletedAt: Date.now()
+      })
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('Error failing queue item:', error)
+    throw new ApiError(500, 'Failed to fail queue item', 'FAIL_ERROR', { error })
+  }
+}
+
+/**
+ * Get unqueued items for a project
+ */
+export async function getUnqueuedItems(projectId: number): Promise<{ tickets: Ticket[]; tasks: TicketTask[] }> {
+  try {
+    const tickets = await ticketStorage.readTickets(projectId)
+    const unqueuedTickets = Object.values(tickets).filter((t) => !t.queueId)
+
+    const unqueuedTasks: TicketTask[] = []
+    for (const ticket of Object.values(tickets)) {
+      const tasks = await ticketStorage.readTasks(ticket.id)
+      const ticketUnqueuedTasks = Object.values(tasks).filter((t) => !t.queueId && !t.done)
+      unqueuedTasks.push(...ticketUnqueuedTasks)
+    }
+
+    return { tickets: unqueuedTickets, tasks: unqueuedTasks }
   } catch (error) {
     if (error instanceof ApiError) throw error
     console.error('Error getting unqueued items:', error)
     throw new ApiError(500, 'Failed to get unqueued items', 'UNQUEUED_ITEMS_ERROR', { error })
   }
+}
+
+// All functions are already exported as named exports above
+// No additional export block needed
+
+// Stub function for backwards compatibility - timeout handling needs to be refactored
+// to work with the Flow system (queue fields on tickets/tasks)
+export async function checkAndHandleTimeouts(
+  queueId: number,
+  timeoutMs: number = 300000
+): Promise<{ timedOut: number; failed: number; errors: Array<{ itemId: number; error: string }> }> {
+  // TODO: Implement timeout handling for Flow system
+  // This would check tickets/tasks with queue_status = 'in_progress'
+  // and queue_started_at older than timeoutMs
+  console.warn('checkAndHandleTimeouts not yet implemented for Flow system')
+  return { timedOut: 0, failed: 0, errors: [] }
 }

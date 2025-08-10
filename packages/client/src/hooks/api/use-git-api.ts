@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { promptlianoClient } from '../promptliano-client'
+import { useApiClient } from './use-api-client'
 import { toast } from 'sonner'
 
 import type {
@@ -16,19 +16,23 @@ import type {
 } from '@promptliano/schemas'
 
 export function useProjectGitStatus(projectId: number | undefined, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'status'],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.getProjectGitStatus(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getProjectGitStatus(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch git status')
       }
       return response.data
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     refetchInterval: 5000, // Refetch every 5 seconds to keep status updated
     staleTime: 4000 // Consider data stale after 4 seconds
   })
@@ -45,14 +49,18 @@ export function useGitFilesWithChanges(projectId: number | undefined) {
 }
 
 export function useStageFiles(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (filePaths: string[]) => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.stageFiles(projectId, filePaths)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.stageFiles(projectId, filePaths)
     },
     onSuccess: (data, filePaths) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -65,14 +73,18 @@ export function useStageFiles(projectId: number | undefined) {
 }
 
 export function useUnstageFiles(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (filePaths: string[]) => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.unstageFiles(projectId, filePaths)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.unstageFiles(projectId, filePaths)
     },
     onSuccess: (data, filePaths) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -85,14 +97,18 @@ export function useUnstageFiles(projectId: number | undefined) {
 }
 
 export function useStageAll(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async () => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.stageAll(projectId)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.stageAll(projectId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -105,14 +121,18 @@ export function useStageAll(projectId: number | undefined) {
 }
 
 export function useUnstageAll(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async () => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.unstageAll(projectId)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.unstageAll(projectId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -125,14 +145,18 @@ export function useUnstageAll(projectId: number | undefined) {
 }
 
 export function useCommitChanges(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (message: string) => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.commitChanges(projectId, message)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.commitChanges(projectId, message)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -150,19 +174,23 @@ export function useFileDiff(
   options?: { staged?: boolean; commit?: string },
   enabled = true
 ) {
+  const client = useApiClient()
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'diff', filePath, options],
     queryFn: async () => {
       if (!projectId || !filePath) {
         throw new Error('Project ID and file path are required')
       }
-      const response = await promptlianoClient.git.getFileDiff(projectId, filePath, options)
+      // Client check handled by enabled condition
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getFileDiff(projectId, filePath, options)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch file diff')
       }
       return response.data
     },
-    enabled: enabled && !!projectId && !!filePath,
+    enabled: !!client && enabled && !!projectId && !!filePath,
     staleTime: 30000 // Consider diff stale after 30 seconds
   })
 }
@@ -172,44 +200,55 @@ export function useFileDiff(
 // ============================================
 
 export function useGitBranches(projectId: number | undefined, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'branches'],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.getBranches(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getBranches(projectId)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch branches')
       }
       return response.data
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     staleTime: 10000 // Consider branches stale after 10 seconds
   })
 }
 
 // Enhanced branches with additional metadata
 export function useBranchesEnhanced(projectId: number | undefined, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'branches', 'enhanced'],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.getBranchesEnhanced(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getBranchesEnhanced(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch enhanced branches')
       }
       return response
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     staleTime: 10000, // Consider branches stale after 10 seconds
     refetchInterval: 30000 // Refetch every 30 seconds to keep branch data fresh
   })
 }
 
 export function useCreateBranch(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -217,7 +256,8 @@ export function useCreateBranch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.createBranch(projectId, name, startPoint)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.createBranch(projectId, name, startPoint)
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
@@ -231,14 +271,18 @@ export function useCreateBranch(projectId: number | undefined) {
 }
 
 export function useSwitchBranch(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (branchName: string) => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.switchBranch(projectId, branchName)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.switchBranch(projectId, branchName)
     },
     onSuccess: (data, branchName) => {
       // Invalidate all branch-related queries
@@ -254,6 +298,9 @@ export function useSwitchBranch(projectId: number | undefined) {
 }
 
 export function useDeleteBranch(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -261,7 +308,8 @@ export function useDeleteBranch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.deleteBranch(projectId, branchName, force)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.deleteBranch(projectId, branchName, force)
     },
     onSuccess: (data, variables) => {
       // Invalidate all branch-related queries
@@ -284,38 +332,46 @@ export function useGitLog(
   options?: { limit?: number; skip?: number; branch?: string; file?: string },
   enabled = true
 ) {
+  const client = useApiClient()
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'log', options],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.getCommitLog(projectId, options)
+      // Client check handled by enabled condition
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getCommitLog(projectId, options)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch commit log')
       }
       return response
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     staleTime: 30000 // Consider log stale after 30 seconds
   })
 }
 
 // Enhanced commit log with pagination and advanced filters
 export function useCommitLogEnhanced(projectId: number | undefined, params?: GitLogEnhancedRequest, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'log', 'enhanced', params],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.getCommitLogEnhanced(projectId, params)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getCommitLogEnhanced(projectId, params)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch enhanced commit log')
       }
       return response
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     staleTime: 30000 // Consider log stale after 30 seconds
   })
 }
@@ -327,19 +383,23 @@ export function useCommitDetail(
   includeFileContents?: boolean,
   enabled = true
 ) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'commits', hash, { includeFileContents }],
     queryFn: async () => {
       if (!projectId || !hash) {
         throw new Error('Project ID and commit hash are required')
       }
-      const response = await promptlianoClient.git.getCommitDetail(projectId, hash, includeFileContents)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getCommitDetail(projectId, hash, includeFileContents)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch commit details')
       }
       return response
     },
-    enabled: enabled && !!projectId && !!hash,
+    enabled: !!client && enabled && !!projectId && !!hash,
     staleTime: 60000 // Consider commit details stale after 1 minute
   })
 }
@@ -349,24 +409,31 @@ export function useCommitDetail(
 // ============================================
 
 export function useGitRemotes(projectId: number | undefined, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'remotes'],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.getRemotes(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getRemotes(projectId)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch remotes')
       }
       return response.data
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     staleTime: 60000 // Consider remotes stale after 1 minute
   })
 }
 
 export function useGitPush(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -384,7 +451,8 @@ export function useGitPush(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.push(projectId, remote, branch, { force, setUpstream })
+      if (!client) throw new Error('API client not initialized')
+      return client.git.push(projectId, remote, branch, { force, setUpstream })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -398,6 +466,9 @@ export function useGitPush(projectId: number | undefined) {
 }
 
 export function useGitFetch(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -405,7 +476,8 @@ export function useGitFetch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.fetch(projectId, remote, prune)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.fetch(projectId, remote, prune)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
@@ -419,6 +491,9 @@ export function useGitFetch(projectId: number | undefined) {
 }
 
 export function useGitPull(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -426,7 +501,8 @@ export function useGitPull(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.pull(projectId, remote, branch, rebase)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.pull(projectId, remote, branch, rebase)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
@@ -443,24 +519,31 @@ export function useGitPull(projectId: number | undefined) {
 // ============================================
 
 export function useGitTags(projectId: number | undefined, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'tags'],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.getTags(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getTags(projectId)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch tags')
       }
       return response.data
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     staleTime: 30000 // Consider tags stale after 30 seconds
   })
 }
 
 export function useCreateTag(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -468,7 +551,8 @@ export function useCreateTag(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.createTag(projectId, name, { message, ref })
+      if (!client) throw new Error('API client not initialized')
+      return client.git.createTag(projectId, name, { message, ref })
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'tags'] })
@@ -485,32 +569,40 @@ export function useCreateTag(projectId: number | undefined) {
 // ============================================
 
 export function useGitStashList(projectId: number | undefined, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'stash'],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.getStashList(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.getStashList(projectId)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch stash list')
       }
       return response
     },
-    enabled: enabled && !!projectId,
+    enabled: !!client && enabled && !!projectId,
     staleTime: 10000 // Consider stash list stale after 10 seconds
   })
 }
 
 export function useGitStash(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (message?: string) => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.stash(projectId, message)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.stash(projectId, message)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -524,14 +616,18 @@ export function useGitStash(projectId: number | undefined) {
 }
 
 export function useGitStashApply(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (ref?: string) => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.stashApply(projectId, ref)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.stashApply(projectId, ref)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -544,14 +640,18 @@ export function useGitStashApply(projectId: number | undefined) {
 }
 
 export function useGitStashPop(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (ref?: string) => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.stashPop(projectId, ref)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.stashPop(projectId, ref)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -565,14 +665,18 @@ export function useGitStashPop(projectId: number | undefined) {
 }
 
 export function useGitStashDrop(projectId: number | undefined) {
+  const client = useApiClient()
+
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (ref?: string) => {
+      // Client null check removed - handled by React Query
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.stashDrop(projectId, ref)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.stashDrop(projectId, ref)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'stash'] })
@@ -589,6 +693,9 @@ export function useGitStashDrop(projectId: number | undefined) {
 // ============================================
 
 export function useGitReset(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -596,7 +703,8 @@ export function useGitReset(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.reset(projectId, ref, mode)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.reset(projectId, ref, mode)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
@@ -613,23 +721,30 @@ export function useGitReset(projectId: number | undefined) {
 // ============================================
 
 export function useGitWorktrees(projectId: number | undefined, enabled = true) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: ['projects', projectId, 'git', 'worktrees'],
     queryFn: async () => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await promptlianoClient.git.worktrees.list(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.git.worktrees.list(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch worktrees')
       }
       return response.data
     },
-    enabled: enabled && !!projectId
+    enabled: !!client && enabled && !!projectId
   })
 }
 
 export function useAddGitWorktree(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -643,7 +758,8 @@ export function useAddGitWorktree(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.worktrees.add(projectId, params)
+      if (!client) throw new Error('API client not initialized')
+      return client.git.worktrees.add(projectId, params)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
@@ -656,6 +772,9 @@ export function useAddGitWorktree(projectId: number | undefined) {
 }
 
 export function useRemoveGitWorktree(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -663,7 +782,8 @@ export function useRemoveGitWorktree(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.worktrees.remove(projectId, { path, force })
+      if (!client) throw new Error('API client not initialized')
+      return client.git.worktrees.remove(projectId, { path, force })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
@@ -676,6 +796,9 @@ export function useRemoveGitWorktree(projectId: number | undefined) {
 }
 
 export function useLockGitWorktree(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -683,7 +806,8 @@ export function useLockGitWorktree(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.worktrees.lock(projectId, { path, reason })
+      if (!client) throw new Error('API client not initialized')
+      return client.git.worktrees.lock(projectId, { path, reason })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
@@ -696,6 +820,9 @@ export function useLockGitWorktree(projectId: number | undefined) {
 }
 
 export function useUnlockGitWorktree(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -703,7 +830,8 @@ export function useUnlockGitWorktree(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.worktrees.unlock(projectId, { path })
+      if (!client) throw new Error('API client not initialized')
+      return client.git.worktrees.unlock(projectId, { path })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })
@@ -716,6 +844,9 @@ export function useUnlockGitWorktree(projectId: number | undefined) {
 }
 
 export function usePruneGitWorktrees(projectId: number | undefined) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -723,7 +854,8 @@ export function usePruneGitWorktrees(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return promptlianoClient.git.worktrees.prune(projectId, { dryRun })
+      if (!client) throw new Error('API client not initialized')
+      return client.git.worktrees.prune(projectId, { dryRun })
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'worktrees'] })

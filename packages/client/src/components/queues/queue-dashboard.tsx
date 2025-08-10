@@ -47,16 +47,14 @@ import {
   Loader2
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
+import { toast } from 'sonner'
 import {
   useGetQueue,
   useGetQueueStats,
   useGetQueueItems,
   useUpdateQueue,
   useDeleteQueue,
-  useDeleteQueueItem,
-  useUpdateQueueItem,
-  useGetQueueTimeline,
-  useClearQueue
+  useGetQueueTimeline
 } from '@/hooks/api/use-queue-api'
 import { useGetFlowData } from '@/hooks/api/use-flow-api'
 import type { QueueItem, QueueStats, TaskQueue } from '@promptliano/schemas'
@@ -86,9 +84,8 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
   // Mutations
   const updateQueueMutation = useUpdateQueue(queueId)
   const deleteQueueMutation = useDeleteQueue()
-  const deleteItemMutation = useDeleteQueueItem()
-  const updateItemMutation = useUpdateQueueItem()
-  const clearQueueMutation = useClearQueue(queueId)
+  // Note: Direct queue item operations are no longer supported.
+  // Items are now managed through their parent tickets/tasks via the flow service.
 
   // Loading state
   if (isLoadingQueue || isLoadingStats || isLoadingItems) {
@@ -123,19 +120,24 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
   }
 
   const handleClearQueue = async () => {
-    await clearQueueMutation.mutateAsync()
+    // Direct queue clearing is no longer supported
+    // Items should be dequeued individually through their parent ticket/task
+    toast.error(
+      'Direct queue clearing is no longer supported. Please dequeue items individually through the ticket/task management interface.'
+    )
     setIsClearDialogOpen(false)
   }
 
   const handleRemoveItem = async (itemId: number) => {
-    await deleteItemMutation.mutateAsync(itemId)
+    // Direct queue item removal is no longer supported
+    // Items should be dequeued through their parent ticket/task
+    toast.error('Direct item removal is no longer supported. Please use the ticket/task management interface.')
   }
 
   const handleRetryItem = async (item: QueueItem) => {
-    await updateItemMutation.mutateAsync({
-      itemId: item.id,
-      data: { status: 'queued', errorMessage: null }
-    })
+    // Direct queue item updates are no longer supported
+    // Status should be managed through their parent ticket/task
+    toast.error('Direct item retry is no longer supported. Please use the ticket/task management interface.')
   }
 
   // Filter items by status
@@ -183,13 +185,9 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
             variant='outline'
             size='sm'
             onClick={() => setIsClearDialogOpen(true)}
-            disabled={!items || items.length === 0 || clearQueueMutation.isPending}
+            disabled={!items || items.length === 0}
           >
-            {clearQueueMutation.isPending ? (
-              <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-            ) : (
-              <RefreshCw className='h-4 w-4 mr-2' />
-            )}
+            <RefreshCw className='h-4 w-4 mr-2' />
             Clear Queue
           </Button>
           <Button variant='destructive' size='sm' onClick={() => setIsDeleteDialogOpen(true)}>
@@ -369,20 +367,12 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={clearQueueMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleClearQueue}
-              disabled={clearQueueMutation.isPending}
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
             >
-              {clearQueueMutation.isPending ? (
-                <>
-                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Clearing...
-                </>
-              ) : (
-                'Clear All Items'
-              )}
+              Clear All Items
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

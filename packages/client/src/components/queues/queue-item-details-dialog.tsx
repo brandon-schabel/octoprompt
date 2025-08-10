@@ -63,7 +63,8 @@ export function QueueItemDetailsDialog({ item, projectId, open, onOpenChange }: 
     in_progress: { icon: Clock, color: 'text-blue-600', bgColor: 'bg-blue-100', label: 'In Progress' },
     completed: { icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-100', label: 'Completed' },
     failed: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100', label: 'Failed' },
-    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100', label: 'Cancelled' }
+    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100', label: 'Cancelled' },
+    timeout: { icon: Clock, color: 'text-orange-600', bgColor: 'bg-orange-100', label: 'Timeout' }
   }
 
   const config = statusConfig[item.status]

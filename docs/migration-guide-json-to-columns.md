@@ -17,6 +17,7 @@ This guide documents the process of migrating from JSON blob storage to proper S
 ### 1. Clean Break Approach (Beta Software)
 
 For beta software, we use a clean break approach:
+
 - Drop existing data during migration
 - Create new table structure
 - No data migration required
@@ -25,6 +26,7 @@ For beta software, we use a clean break approach:
 ### 2. Production Migration Approach
 
 For production systems, implement data migration:
+
 - Create temporary tables with new schema
 - Migrate existing data from JSON to columns
 - Validate data integrity
@@ -64,11 +66,11 @@ import type { Database } from 'bun:sqlite'
 export const entityColumnsMigration = {
   version: X,
   description: 'Convert entity from JSON storage to column-based table',
-  
+
   up: (db: Database) => {
     // Implementation here
   },
-  
+
   down: (db: Database) => {
     // Rollback implementation
   }
@@ -106,7 +108,7 @@ suggested_file_ids TEXT NOT NULL DEFAULT '[]'
 // In storage layer - safe parsing helper
 function safeJsonParse<T>(json: string | null | undefined, fallback: T, context?: string): T {
   if (!json) return fallback
-  
+
   try {
     return JSON.parse(json)
   } catch (error) {
@@ -234,30 +236,35 @@ The following entities still use JSON blob storage and need migration:
 ## Best Practices
 
 ### 1. Field Naming Conventions
+
 - Use snake_case for column names
 - Match TypeScript property names where possible
 - Use `_at` suffix for timestamps
 - Use `_id` suffix for foreign keys
 
 ### 2. Data Types
+
 - Use `INTEGER` for IDs and timestamps
 - Use `TEXT` for strings and JSON arrays
 - Use `REAL` for floating-point numbers
 - Add CHECK constraints for enums
 
 ### 3. Constraints
+
 - Always add NOT NULL for required fields
 - Use DEFAULT values for optional fields
 - Add CHECK constraints for enums
 - Define foreign keys with CASCADE options
 
 ### 4. JSON Array Handling
+
 - Store as TEXT with NOT NULL DEFAULT '[]'
 - Use safeJsonParse helper for reading
 - Always validate against Zod schema
 - Handle parse errors gracefully
 
 ### 5. Index Strategy
+
 - Index foreign key columns
 - Index columns used in WHERE clauses
 - Create composite indexes for common queries
@@ -266,22 +273,27 @@ The following entities still use JSON blob storage and need migration:
 ## Common Pitfalls
 
 ### 1. Null JSON Arrays
+
 - Problem: NULL values in JSON array fields cause parsing errors
 - Solution: Add NOT NULL constraints with DEFAULT '[]'
 
 ### 2. Missing Indexes
+
 - Problem: Slow queries on large tables
 - Solution: Add indexes for all foreign keys and frequently queried fields
 
 ### 3. Type Mismatches
+
 - Problem: JavaScript boolean vs SQLite integer (0/1)
 - Solution: Explicit conversion in storage layer
 
 ### 4. Timestamp Handling
+
 - Problem: Inconsistent timestamp formats
 - Solution: Always store as Unix milliseconds (INTEGER)
 
 ### 5. Migration Rollback
+
 - Problem: Data loss on rollback
 - Solution: Keep old table structure in down() method
 

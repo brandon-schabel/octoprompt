@@ -40,7 +40,7 @@ export const agentManagerTool: MCPToolDefinition = {
       projectId: {
         type: 'number',
         description:
-          'The project ID (required for: list_by_project, associate_with_project, suggest_agents). Example: 1754111018844'
+          'The project ID (required for: list_by_project, associate_with_project, suggest_agents). Example: 1754713756748'
       },
       data: {
         type: 'object',
@@ -129,7 +129,7 @@ export const agentManagerTool: MCPToolDefinition = {
             }
           }
           case AgentManagerAction.LIST_BY_PROJECT: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const agents = await getAgentsByProjectId(process.cwd(), validProjectId)
             const agentList = agents
               .map(
@@ -153,14 +153,14 @@ export const agentManagerTool: MCPToolDefinition = {
             }
           }
           case AgentManagerAction.SUGGEST_AGENTS: {
-            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754111018844')
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1754713756748')
             const context = data?.context || ''
             const limit = data?.limit || 5
             const suggestions = await suggestAgents(validProjectId, context, limit)
             const agentList = suggestions.agents
               .map(
                 (a) =>
-                  `${a.id}: ${a.name}\n   Description: ${a.description}\n   Relevance: ${a.relevanceScore}/10\n   Reason: ${a.relevanceReason}`
+                  `${a.name}\n   Description: ${a.description}\n   Relevance: ${a.relevanceScore}/10\n   Reason: ${a.rationale}`
               )
               .join('\n\n')
             return {

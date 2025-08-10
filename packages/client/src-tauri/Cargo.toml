@@ -1,6 +1,6 @@
 [package]
 name = "Promptliano"
-version = "0.8.3"
+version = "0.9.0"
 description = "Your AI toolkit for context engineering."
 authors = ["Brandon Schabel"]
 edition = "2021"

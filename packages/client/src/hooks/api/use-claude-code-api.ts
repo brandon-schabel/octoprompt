@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { 
-  ClaudeSession, 
-  ClaudeMessage, 
+import type {
+  ClaudeSession,
+  ClaudeMessage,
   ClaudeProjectData,
   ClaudeSessionQuerySchema,
   ClaudeMessageQuerySchema
 } from '@promptliano/schemas'
 import { z } from 'zod'
-import { promptlianoClient } from '../promptliano-client'
+import { useApiClient } from './use-api-client'
 import { toast } from 'sonner'
 import { useCallback, useEffect, useRef } from 'react'
 
@@ -15,13 +15,13 @@ import { useCallback, useEffect, useRef } from 'react'
 const CLAUDE_CODE_KEYS = {
   all: ['claude-code'] as const,
   sessions: (projectId: number) => [...CLAUDE_CODE_KEYS.all, 'sessions', projectId] as const,
-  sessionsWithQuery: (projectId: number, query?: z.infer<typeof ClaudeSessionQuerySchema>) => 
+  sessionsWithQuery: (projectId: number, query?: z.infer<typeof ClaudeSessionQuerySchema>) =>
     [...CLAUDE_CODE_KEYS.sessions(projectId), query] as const,
-  messages: (projectId: number, sessionId: string) => 
+  messages: (projectId: number, sessionId: string) =>
     [...CLAUDE_CODE_KEYS.all, 'messages', projectId, sessionId] as const,
-  messagesWithQuery: (projectId: number, sessionId: string, query?: z.infer<typeof ClaudeMessageQuerySchema>) => 
+  messagesWithQuery: (projectId: number, sessionId: string, query?: z.infer<typeof ClaudeMessageQuerySchema>) =>
     [...CLAUDE_CODE_KEYS.messages(projectId, sessionId), query] as const,
-  projectData: (projectId: number) => [...CLAUDE_CODE_KEYS.all, 'project-data', projectId] as const,
+  projectData: (projectId: number) => [...CLAUDE_CODE_KEYS.all, 'project-data', projectId] as const
 }
 
 /**
@@ -35,14 +35,18 @@ export function useClaudeSessions(
     refetchInterval?: number | false
   }
 ) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: CLAUDE_CODE_KEYS.sessionsWithQuery(projectId ?? 0, query),
     queryFn: async () => {
       if (!projectId) throw new Error('Project ID is required')
-      const response = await promptlianoClient.claudeCode.getSessions(projectId, query)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeCode.getSessions(projectId, query)
       return response.data
     },
-    enabled: options?.enabled !== false && !!projectId,
+    enabled: !!client && options?.enabled !== false && !!projectId,
     refetchInterval: options?.refetchInterval
   })
 }
@@ -59,14 +63,18 @@ export function useClaudeMessages(
     refetchInterval?: number | false
   }
 ) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: CLAUDE_CODE_KEYS.messagesWithQuery(projectId ?? 0, sessionId ?? '', query),
     queryFn: async () => {
       if (!projectId || !sessionId) throw new Error('Project ID and Session ID are required')
-      const response = await promptlianoClient.claudeCode.getSessionMessages(projectId, sessionId, query)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeCode.getSessionMessages(projectId, sessionId, query)
       return response.data
     },
-    enabled: options?.enabled !== false && !!projectId && !!sessionId,
+    enabled: !!client && options?.enabled !== false && !!projectId && !!sessionId,
     refetchInterval: options?.refetchInterval
   })
 }
@@ -81,14 +89,18 @@ export function useClaudeProjectData(
     refetchInterval?: number | false
   }
 ) {
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
+
   return useQuery({
     queryKey: CLAUDE_CODE_KEYS.projectData(projectId ?? 0),
     queryFn: async () => {
       if (!projectId) throw new Error('Project ID is required')
-      const response = await promptlianoClient.claudeCode.getProjectData(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const response = await client.claudeCode.getProjectData(projectId)
       return response.data
     },
-    enabled: options?.enabled !== false && !!projectId,
+    enabled: !!client && options?.enabled !== false && !!projectId,
     refetchInterval: options?.refetchInterval
   })
 }
@@ -106,6 +118,8 @@ export function useWatchClaudeSessions(
 ) {
   const queryClient = useQueryClient()
   const cleanupRef = useRef<(() => void) | null>(null)
+  const client = useApiClient()
+  // Client null check removed - handled by React Query
 
   useEffect(() => {
     if (!projectId || options?.enabled === false) return
@@ -114,15 +128,13 @@ export function useWatchClaudeSessions(
     // For now, we'll use polling as a fallback
     const interval = setInterval(async () => {
       try {
-        const response = await promptlianoClient.claudeCode.getSessions(projectId)
+        if (!client) throw new Error('API client not initialized')
+        const response = await client.claudeCode.getSessions(projectId)
         const sessions = response.data
-        
+
         // Update cache
-        queryClient.setQueryData(
-          CLAUDE_CODE_KEYS.sessions(projectId),
-          sessions
-        )
-        
+        queryClient.setQueryData(CLAUDE_CODE_KEYS.sessions(projectId), sessions)
+
         // Call callback if provided
         options?.onUpdate?.(sessions)
       } catch (error) {
@@ -135,7 +147,7 @@ export function useWatchClaudeSessions(
     return () => {
       cleanupRef.current?.()
     }
-  }, [projectId, options?.enabled, queryClient, options?.onUpdate])
+  }, [projectId, options?.enabled, queryClient, options?.onUpdate, client])
 
   return {
     stop: useCallback(() => {
@@ -170,9 +182,9 @@ export function useFormatClaudeMessage() {
     if (typeof content === 'string') {
       return content
     }
-    
+
     return content
-      .map(item => {
+      .map((item) => {
         if (typeof item === 'string') return item
         if (item.type === 'text') return item.text
         if (item.type === 'image') return '[Image]'

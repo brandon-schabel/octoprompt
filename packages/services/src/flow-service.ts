@@ -68,9 +68,9 @@ export class FlowService {
       suggestedAgentIds: data.suggestedAgentIds || [],
       suggestedPromptIds: data.suggestedPromptIds || [],
       // New tickets start unqueued
-      queueId: null,
-      queueStatus: null,
-      queuePosition: null,
+      queueId: undefined,
+      queueStatus: undefined,
+      queuePosition: undefined,
       queuePriority: 0,
       created: now,
       updated: now
@@ -80,11 +80,11 @@ export class FlowService {
   }
 
   async getTicketById(ticketId: number): Promise<Ticket | null> {
-    return await ticketStorage.getTicketById(ticketId)
+    return await ticketStorage.readTicket(ticketId)
   }
 
   async updateTicket(ticketId: number, updates: UpdateTicketBody): Promise<Ticket> {
-    const ticket = await ticketStorage.getTicketById(ticketId)
+    const ticket = await ticketStorage.readTicket(ticketId)
     if (!ticket) {
       throw new ApiError(404, `Ticket ${ticketId} not found`, 'NOT_FOUND')
     }
@@ -100,7 +100,8 @@ export class FlowService {
   }
 
   async deleteTicket(ticketId: number): Promise<boolean> {
-    return await ticketStorage.deleteTicket(ticketId)
+    await ticketStorage.deleteTicketData(ticketId)
+    return true
   }
 
   // === Task Operations ===
@@ -125,9 +126,9 @@ export class FlowService {
       agentId: data.agentId || null,
       suggestedPromptIds: data.suggestedPromptIds || [],
       // New tasks start unqueued
-      queueId: null,
-      queueStatus: null,
-      queuePosition: null,
+      queueId: undefined,
+      queueStatus: undefined,
+      queuePosition: undefined,
       queuePriority: 0,
       created: now,
       updated: now
@@ -160,7 +161,7 @@ export class FlowService {
 
   async enqueueTicket(ticketId: number, queueId: number, priority: number = 0): Promise<Ticket> {
     // Verify queue exists
-    const queue = await queueStorage.getQueue(queueId)
+    const queue = await queueStorage.readQueue(queueId)
     if (!queue) {
       throw new ApiError(404, `Queue ${queueId} not found`, 'NOT_FOUND')
     }
@@ -169,7 +170,7 @@ export class FlowService {
     await ticketStorage.enqueueTicket(ticketId, queueId, priority)
 
     // Return updated ticket
-    const ticket = await ticketStorage.getTicketById(ticketId)
+    const ticket = await ticketStorage.readTicket(ticketId)
     if (!ticket) {
       throw new ApiError(404, `Ticket ${ticketId} not found`, 'NOT_FOUND')
     }
@@ -179,7 +180,7 @@ export class FlowService {
 
   async enqueueTask(taskId: number, queueId: number, priority: number = 0): Promise<TicketTask> {
     // Verify queue exists
-    const queue = await queueStorage.getQueue(queueId)
+    const queue = await queueStorage.readQueue(queueId)
     if (!queue) {
       throw new ApiError(404, `Queue ${queueId} not found`, 'NOT_FOUND')
     }
@@ -210,12 +211,25 @@ export class FlowService {
   async dequeueTicket(ticketId: number): Promise<Ticket> {
     await ticketStorage.dequeueTicket(ticketId)
 
-    const ticket = await ticketStorage.getTicketById(ticketId)
+    // Also dequeue all tasks associated with this ticket
+    const tasks = await ticketStorage.readTasks(ticketId)
+    for (const task of Object.values(tasks)) {
+      if (task.queueId !== null) {
+        await ticketStorage.dequeueTask(task.id)
+      }
+    }
+
+    const ticket = await ticketStorage.readTicket(ticketId)
     if (!ticket) {
       throw new ApiError(404, `Ticket ${ticketId} not found`, 'NOT_FOUND')
     }
 
     return ticket
+  }
+
+  async dequeueTicketWithTasks(ticketId: number): Promise<Ticket> {
+    // dequeueTicket now handles tasks automatically
+    return await this.dequeueTicket(ticketId)
   }
 
   async dequeueTask(taskId: number): Promise<TicketTask> {
@@ -233,15 +247,61 @@ export class FlowService {
     itemType: 'ticket' | 'task',
     itemId: number,
     targetQueueId: number | null,
-    priority: number = 0
+    priority: number = 0,
+    includeTasks: boolean = false
   ): Promise<FlowItem> {
     if (itemType === 'ticket') {
       if (targetQueueId === null) {
-        const ticket = await this.dequeueTicket(itemId)
+        await this.dequeueTicketWithTasks(itemId)
+        const ticket = await ticketStorage.readTicket(itemId)
+        if (!ticket) {
+          throw new ApiError(404, `Ticket ${itemId} not found`, 'NOT_FOUND')
+        }
         return this.ticketToFlowItem(ticket)
       } else {
-        const ticket = await this.enqueueTicket(itemId, targetQueueId, priority)
-        return this.ticketToFlowItem(ticket)
+        // Moving to another queue
+        if (includeTasks) {
+          // First, get the ticket and all its tasks before any changes
+          const ticket = await ticketStorage.readTicket(itemId)
+          if (!ticket) {
+            throw new ApiError(404, `Ticket ${itemId} not found`, 'NOT_FOUND')
+          }
+
+          // Get all tasks for this ticket, regardless of queue status
+          const tasks = await ticketStorage.readTasks(itemId)
+          const taskList = Object.values(tasks)
+
+          // If ticket is already in a queue, dequeue it first
+          if (ticket.queueId) {
+            await this.dequeueTicket(itemId)
+          }
+
+          // Dequeue all tasks that are currently in any queue
+          for (const task of taskList) {
+            if (task.queueId !== null) {
+              await this.dequeueTask(task.id)
+            }
+          }
+
+          // Now enqueue the ticket to the new queue
+          await this.enqueueTicket(itemId, targetQueueId, priority)
+
+          // And enqueue all its tasks to the same queue
+          for (const task of taskList) {
+            await this.enqueueTask(task.id, targetQueueId, priority)
+          }
+
+          // Return the updated ticket
+          const updatedTicket = await ticketStorage.readTicket(itemId)
+          if (!updatedTicket) {
+            throw new ApiError(404, `Ticket ${itemId} not found after move`, 'NOT_FOUND')
+          }
+          return this.ticketToFlowItem(updatedTicket)
+        } else {
+          // Just move the ticket without tasks (existing behavior)
+          const ticket = await this.enqueueTicket(itemId, targetQueueId, priority)
+          return this.ticketToFlowItem(ticket)
+        }
       }
     } else {
       if (targetQueueId === null) {
@@ -290,7 +350,7 @@ export class FlowService {
       if (!ticket.queueId) {
         flowData.unqueued.tickets.push(ticket)
       } else if (flowData.queues[ticket.queueId]) {
-        flowData.queues[ticket.queueId].tickets.push(ticket)
+        flowData.queues[ticket.queueId]!.tickets.push(ticket)
       }
 
       // Process tasks
@@ -298,7 +358,7 @@ export class FlowService {
         if (!task.queueId) {
           flowData.unqueued.tasks.push(task)
         } else if (flowData.queues[task.queueId]) {
-          flowData.queues[task.queueId].tasks.push(task)
+          flowData.queues[task.queueId]!.tasks.push(task)
         }
       }
     }
@@ -310,6 +370,27 @@ export class FlowService {
     }
 
     return flowData
+  }
+
+  async reorderWithinQueue(
+    queueId: number,
+    items: Array<{ itemType: 'ticket' | 'task'; itemId: number; ticketId?: number }>
+  ): Promise<void> {
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i]
+      if (!it) continue
+      if (it.itemType === 'ticket') {
+        const ticket = await ticketStorage.readTicket(it.itemId)
+        if (ticket?.queueId === queueId) {
+          await ticketStorage.updateTicket(it.itemId, { queuePosition: i })
+        }
+      } else if (it.ticketId) {
+        const task = await ticketStorage.getTaskById(it.itemId)
+        if (task?.queueId === queueId) {
+          await ticketStorage.updateTask(it.ticketId, it.itemId, { queuePosition: i })
+        }
+      }
+    }
   }
 
   async getFlowItems(projectId: number): Promise<FlowItem[]> {
@@ -365,9 +446,9 @@ export class FlowService {
       title: ticket.title,
       description: ticket.overview,
       ticket,
-      queueId: ticket.queueId,
-      queuePosition: ticket.queuePosition,
-      queueStatus: ticket.queueStatus,
+      queueId: ticket.queueId ?? null,
+      queuePosition: ticket.queuePosition ?? null,
+      queueStatus: ticket.queueStatus ?? null,
       queuePriority: ticket.queuePriority,
       created: ticket.created,
       updated: ticket.updated
@@ -381,9 +462,9 @@ export class FlowService {
       title: task.content,
       description: task.description,
       task,
-      queueId: task.queueId,
-      queuePosition: task.queuePosition,
-      queueStatus: task.queueStatus,
+      queueId: task.queueId ?? null,
+      queuePosition: task.queuePosition ?? null,
+      queueStatus: task.queueStatus ?? null,
       queuePriority: task.queuePriority,
       created: task.created,
       updated: task.updated
@@ -394,13 +475,13 @@ export class FlowService {
 
   async startProcessingItem(itemType: 'ticket' | 'task', itemId: number, agentId: string): Promise<void> {
     if (itemType === 'ticket') {
-      const ticket = await ticketStorage.getTicketById(itemId)
+      const ticket = await ticketStorage.readTicket(itemId)
       if (!ticket) throw new ApiError(404, `Ticket ${itemId} not found`, 'NOT_FOUND')
 
       // Use state machine to validate and apply transition
       try {
         const updatedTicket = QueueStateMachine.transition(ticket, 'in_progress', { agentId })
-        await ticketStorage.replaceTicket(itemId, updatedTicket)
+        await ticketStorage.replaceTicket(itemId, updatedTicket as Ticket)
       } catch (error: any) {
         throw new ApiError(400, error.message, 'INVALID_STATE_TRANSITION')
       }
@@ -411,7 +492,7 @@ export class FlowService {
       // Use state machine to validate and apply transition
       try {
         const updatedTask = QueueStateMachine.transition(task, 'in_progress', { agentId })
-        await ticketStorage.replaceTask(itemId, updatedTask)
+        await ticketStorage.replaceTask(itemId, updatedTask as TicketTask)
       } catch (error: any) {
         throw new ApiError(400, error.message, 'INVALID_STATE_TRANSITION')
       }
@@ -420,15 +501,15 @@ export class FlowService {
 
   async completeProcessingItem(itemType: 'ticket' | 'task', itemId: number, processingTime?: number): Promise<void> {
     if (itemType === 'ticket') {
-      const ticket = await ticketStorage.getTicketById(itemId)
+      const ticket = await ticketStorage.readTicket(itemId)
       if (!ticket) throw new ApiError(404, `Ticket ${itemId} not found`, 'NOT_FOUND')
 
       // Use state machine to validate and apply transition
       try {
-        const updatedTicket = QueueStateMachine.transition(ticket, 'completed')
+        const updatedTicket = QueueStateMachine.transition(ticket, 'completed') as Ticket
         // Add processing time if provided
         if (processingTime) {
-          updatedTicket.actualProcessingTime = processingTime
+          ;(updatedTicket as any).actualProcessingTime = processingTime
         }
         await ticketStorage.replaceTicket(itemId, updatedTicket)
       } catch (error: any) {
@@ -440,13 +521,13 @@ export class FlowService {
 
       // Use state machine to validate and apply transition
       try {
-        const updatedTask = QueueStateMachine.transition(task, 'completed')
+        const updatedTask = QueueStateMachine.transition(task, 'completed') as TicketTask
         // Add processing time if provided
         if (processingTime) {
-          updatedTask.actualProcessingTime = processingTime
+          ;(updatedTask as any).actualProcessingTime = processingTime
         }
         // Mark task as done when completed
-        updatedTask.done = true
+        ;(updatedTask as any).done = true
         await ticketStorage.replaceTask(itemId, updatedTask)
       } catch (error: any) {
         throw new ApiError(400, error.message, 'INVALID_STATE_TRANSITION')
@@ -456,13 +537,13 @@ export class FlowService {
 
   async failProcessingItem(itemType: 'ticket' | 'task', itemId: number, errorMessage: string): Promise<void> {
     if (itemType === 'ticket') {
-      const ticket = await ticketStorage.getTicketById(itemId)
+      const ticket = await ticketStorage.readTicket(itemId)
       if (!ticket) throw new ApiError(404, `Ticket ${itemId} not found`, 'NOT_FOUND')
 
       // Use state machine to validate and apply transition
       try {
         const updatedTicket = QueueStateMachine.transition(ticket, 'failed', { errorMessage })
-        await ticketStorage.replaceTicket(itemId, updatedTicket)
+        await ticketStorage.replaceTicket(itemId, updatedTicket as Ticket)
       } catch (error: any) {
         throw new ApiError(400, error.message, 'INVALID_STATE_TRANSITION')
       }
@@ -473,7 +554,7 @@ export class FlowService {
       // Use state machine to validate and apply transition
       try {
         const updatedTask = QueueStateMachine.transition(task, 'failed', { errorMessage })
-        await ticketStorage.replaceTask(itemId, updatedTask)
+        await ticketStorage.replaceTask(itemId, updatedTask as TicketTask)
       } catch (error: any) {
         throw new ApiError(400, error.message, 'INVALID_STATE_TRANSITION')
       }

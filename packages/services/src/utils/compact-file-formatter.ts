@@ -41,7 +41,7 @@ export class CompactFileFormatter {
     const data = files.map((f) => ({
       i: f.id,
       p: this.truncatePath(f.path, 50),
-      s: this.truncateSummary(f.summary, 40)
+      s: this.truncateSummary(f.summary ?? undefined, 40)
     }))
     return JSON.stringify(data)
   }
@@ -54,7 +54,7 @@ export class CompactFileFormatter {
     const data = files.map((f) => ({
       i: f.id,
       p: this.truncatePath(f.path, 60),
-      s: this.truncateSummary(f.summary, 50),
+      s: this.truncateSummary(f.summary ?? undefined, 50),
       t: f.extension,
       m: f.updated
     }))
@@ -78,7 +78,7 @@ export class CompactFileFormatter {
         formattedFiles = files.map((f) => ({
           i: f.id,
           p: this.truncatePath(f.path, 60),
-          s: this.truncateSummary(f.summary, 50),
+          s: this.truncateSummary(f.summary ?? undefined, 50),
           t: f.extension,
           m: f.updated
         }))
@@ -88,7 +88,7 @@ export class CompactFileFormatter {
         formattedFiles = files.map((f) => ({
           i: f.id,
           p: this.truncatePath(f.path, 50),
-          s: this.truncateSummary(f.summary, 40)
+          s: this.truncateSummary(f.summary ?? undefined, 40)
         }))
     }
 
@@ -152,22 +152,14 @@ export class CompactFileFormatter {
 
   private static truncatePath(path: string, maxLength: number): string {
     if (path.length <= maxLength) return path
-
     const parts = path.split('/')
-    if (parts.length <= 2) return path.substring(0, maxLength - 3) + '...'
-
-    // Keep first and last parts, truncate middle
+    if (parts.length <= 2) return path.substring(0, Math.max(0, maxLength - 3)) + '...'
     const first = parts[0]
     const last = parts[parts.length - 1]
     const middle = parts.slice(1, -1).join('/')
-
-    if (first.length + last.length + 6 > maxLength) {
-      return '.../' + last.substring(0, maxLength - 4)
-    }
-
-    const remainingLength = maxLength - first.length - last.length - 6
+    if (first.length + last.length + 6 > maxLength) return '.../' + last.substring(0, Math.max(0, maxLength - 4))
+    const remainingLength = Math.max(0, maxLength - first.length - last.length - 6)
     const truncatedMiddle = middle.substring(0, remainingLength)
-
     return `${first}/...${truncatedMiddle}/${last}`
   }
 

@@ -9,7 +9,14 @@ export {
   useRemovePromptFromProject,
   useOptimizeUserInput,
   useSuggestPrompts,
-  useInvalidatePrompts
+  useInvalidatePrompts,
+  // Markdown Import/Export hooks
+  useImportMarkdownPrompts,
+  useExportPromptAsMarkdown,
+  useExportPromptsAsMarkdown,
+  useValidateMarkdownFile,
+  useImportProjectMarkdownPrompts,
+  useExportProjectPromptsAsMarkdown
 } from '../api-hooks'
 
 // Type exports for backward compatibility
