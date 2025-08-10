@@ -259,7 +259,7 @@ export async function completeTicket(ticketId: number): Promise<{ ticket: Ticket
         done: true,
         updated: now
       }
-      await ticketStorage.replaceTask(updatedTask)
+      await ticketStorage.replaceTask(task.id, updatedTask)
       updatedTasks.push(updatedTask)
     } else {
       updatedTasks.push(task)
