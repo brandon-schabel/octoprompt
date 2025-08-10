@@ -20,13 +20,8 @@ export function ModelListPopover({
   triggerClassName,
   children
 }: ModelListPopoverProps) {
-  // Parse models data - handle different response structures
-  let modelArray: any[] = []
-  if (models?.data && Array.isArray(models.data)) {
-    modelArray = models.data
-  } else if (Array.isArray(models)) {
-    modelArray = models
-  }
+  // Parse models data - now expecting an array directly
+  const modelArray: any[] = models || []
 
   // Default trigger content if no children provided
   const defaultTrigger = (

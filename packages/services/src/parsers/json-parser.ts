@@ -1,4 +1,5 @@
-import { BaseParser, ParserOptions, ParseResult } from './base-parser'
+import { BaseParser } from './base-parser'
+import type { ParserOptions, ParseResult } from './base-parser'
 import { ParseError } from '@promptliano/shared'
 
 export class JsonParser<TData = any> extends BaseParser<TData> {

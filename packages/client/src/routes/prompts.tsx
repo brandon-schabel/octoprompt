@@ -85,7 +85,7 @@ export function PromptsPage() {
       await exportPromptsMutation.mutateAsync({
         promptIds,
         options: {
-          format: promptIds.length > 1 ? 'zip' : 'single',
+          format: promptIds.length > 1 ? 'multi-file' : 'single-file',
           includeFrontmatter: true,
           includeCreatedDate: true,
           includeUpdatedDate: true

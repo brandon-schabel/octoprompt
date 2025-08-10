@@ -870,7 +870,7 @@ export class ProjectService extends BaseApiClient {
                 suggestedFileIds: z.array(z.number()).optional(),
                 ticketSearch: z.string().optional(),
                 ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+                ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed', 'non_closed']).optional(),
                 // Additional fields from ProjectTabState for complete synchronization
                 searchByContent: z.boolean().optional(),
                 resolveImports: z.boolean().optional(),
@@ -921,7 +921,7 @@ export class ProjectService extends BaseApiClient {
         suggestedFileIds?: number[]
         ticketSearch?: string
         ticketSort?: 'created_asc' | 'created_desc' | 'status' | 'priority'
-        ticketStatusFilter?: 'all' | 'open' | 'in_progress' | 'closed'
+        ticketStatusFilter?: 'all' | 'open' | 'in_progress' | 'closed' | 'non_closed'
         // Additional fields from ProjectTabState for complete synchronization
         searchByContent?: boolean
         resolveImports?: boolean
@@ -973,7 +973,7 @@ export class ProjectService extends BaseApiClient {
               suggestedFileIds: z.array(z.number()).optional(),
               ticketSearch: z.string().optional(),
               ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-              ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional(),
+              ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed', 'non_closed']).optional(),
               // Additional fields from ProjectTabState for complete synchronization
               searchByContent: z.boolean().optional(),
               resolveImports: z.boolean().optional(),
@@ -1504,11 +1504,12 @@ export class GenAiService extends BaseApiClient {
     return result as { success: true; data: { text: string } }
   }
 
-  async generateStructured(data: z.infer<typeof AiGenerateStructuredRequestSchema>) {
+  async generateStructured(data: z.infer<typeof AiGenerateStructuredRequestSchema>, options?: { timeout?: number }) {
     const validatedData = this.validateBody(AiGenerateStructuredRequestSchema, data)
     const result = await this.request('POST', '/gen-ai/structured', {
       body: validatedData,
-      responseSchema: AiGenerateStructuredResponseSchema
+      responseSchema: AiGenerateStructuredResponseSchema,
+      timeout: options?.timeout // Pass custom timeout if provided
     })
     return result as { success: true; data: { output: any } }
   }
@@ -3499,13 +3500,16 @@ export class FlowService extends BaseApiClient {
   }
 
   async dequeueTicket(ticketId: number, options?: { includeTasks?: boolean }) {
+    const validatedData = options
+      ? this.validateBody(
+          z.object({
+            includeTasks: z.boolean().optional()
+          }),
+          options
+        )
+      : undefined
     const result = await this.request('POST', `/flow/tickets/${ticketId}/dequeue`, {
-      body: options,
-      bodySchema: z
-        .object({
-          includeTasks: z.boolean().optional()
-        })
-        .optional(),
+      body: validatedData,
       responseSchema: TicketSchema
     })
     return result

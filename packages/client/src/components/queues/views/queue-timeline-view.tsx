@@ -10,7 +10,7 @@ import { format, addMinutes } from 'date-fns'
 import { Clock, AlertCircle, CheckCircle2, XCircle, Play, Pause, ListTodo, FileText, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ensureArray, safeFormatDate } from '@/utils/queue-item-utils'
-import { QueueItem, QueueItemStatus } from '@promptliano/schemas'
+import { QueueItem, ItemQueueStatus } from '@promptliano/schemas'
 
 interface QueueTimelineViewProps {
   projectId: number
@@ -127,7 +127,8 @@ export function QueueTimelineView({ projectId, selectedQueueId }: QueueTimelineV
     in_progress: { icon: Play, color: 'text-green-600', bgColor: 'bg-green-100' },
     completed: { icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-100' },
     failed: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100' },
-    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' }
+    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' },
+    timeout: { icon: Clock, color: 'text-orange-600', bgColor: 'bg-orange-100' }
   }
 
   // Calculate estimated completion time

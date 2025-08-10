@@ -31,6 +31,13 @@ import {
 } from '@promptliano/services'
 import { ProjectIdParamsSchema } from '@promptliano/schemas'
 
+// File upload constants for markdown imports
+const MARKDOWN_UPLOAD_CONFIG = {
+  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  ALLOWED_EXTENSIONS: ['.md', '.markdown'],
+  ALLOWED_MIME_TYPES: ['text/markdown', 'text/x-markdown', 'text/plain']
+} as const
+
 const createPromptRoute = createRoute({
   method: 'post',
   path: '/api/prompts',
@@ -591,9 +598,7 @@ export const promptRoutes = new OpenAPIHono()
     }
 
     // Validate file types and size
-    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-    const ALLOWED_EXTENSIONS = ['.md', '.markdown']
-    const ALLOWED_MIME_TYPES = ['text/markdown', 'text/x-markdown', 'text/plain']
+    const { MAX_FILE_SIZE, ALLOWED_EXTENSIONS, ALLOWED_MIME_TYPES } = MARKDOWN_UPLOAD_CONFIG
 
     for (const entry of fileEntries) {
       if (entry instanceof File) {
@@ -681,9 +686,7 @@ export const promptRoutes = new OpenAPIHono()
     }
 
     // Validate file types and size
-    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-    const ALLOWED_EXTENSIONS = ['.md', '.markdown']
-    const ALLOWED_MIME_TYPES = ['text/markdown', 'text/x-markdown', 'text/plain']
+    const { MAX_FILE_SIZE, ALLOWED_EXTENSIONS, ALLOWED_MIME_TYPES } = MARKDOWN_UPLOAD_CONFIG
 
     for (const entry of fileEntries) {
       if (entry instanceof File) {

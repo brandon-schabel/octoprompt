@@ -30,7 +30,10 @@ export function useGetProjectCommands(projectId: number, query?: SearchCommandsQ
 
   return useQuery({
     queryKey: query ? COMMAND_KEYS.search(projectId, query) : COMMAND_KEYS.list(projectId),
-    queryFn: () => client.commands.listCommands(projectId, query),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.commands.listCommands(projectId, query)
+    },
     enabled: !!client && !!projectId,
     staleTime: 5 * 60 * 1000 // 5 minutes
   })
@@ -42,7 +45,10 @@ export function useGetCommand(projectId: number, commandName: string, namespace?
 
   return useQuery({
     queryKey: COMMAND_KEYS.detail(projectId, commandName, namespace),
-    queryFn: () => client.commands.getCommand(projectId, commandName, namespace),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.commands.getCommand(projectId, commandName, namespace)
+    },
     enabled: !!client && !!projectId && !!commandName,
     staleTime: 5 * 60 * 1000
   })
@@ -55,7 +61,10 @@ export function useCreateCommand(projectId: number) {
   const { invalidateProjectCommands } = useInvalidateCommands()
 
   return useMutation({
-    mutationFn: (data: CreateClaudeCommandBody) => client!.commands.createCommand(projectId, data),
+    mutationFn: (data: CreateClaudeCommandBody) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.commands.createCommand(projectId, data)
+    },
     onSuccess: ({ data: newCommand }: DataResponseSchema<ClaudeCommand>) => {
       invalidateProjectCommands(projectId)
       toast.success(`Command '${newCommand.name}' created successfully`)
@@ -81,7 +90,10 @@ export function useUpdateCommand(projectId: number) {
       commandName: string
       data: UpdateClaudeCommandBody
       namespace?: string
-    }) => client.commands.updateCommand(projectId, commandName, data, namespace),
+    }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.commands.updateCommand(projectId, commandName, data, namespace)
+    },
     onSuccess: ({ data: updatedCommand }: DataResponseSchema<ClaudeCommand>) => {
       invalidateProjectCommands(projectId)
       setCommandDetail(projectId, updatedCommand)
@@ -100,8 +112,10 @@ export function useDeleteCommand(projectId: number) {
   const { invalidateProjectCommands, removeCommand } = useInvalidateCommands()
 
   return useMutation({
-    mutationFn: ({ commandName, namespace }: { commandName: string; namespace?: string }) =>
-      client.commands.deleteCommand(projectId, commandName, namespace),
+    mutationFn: ({ commandName, namespace }: { commandName: string; namespace?: string }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.commands.deleteCommand(projectId, commandName, namespace)
+    },
     onSuccess: (_, { commandName, namespace }) => {
       invalidateProjectCommands(projectId)
       removeCommand(projectId, commandName, namespace)
@@ -118,8 +132,10 @@ export function useExecuteCommand(projectId: number) {
   // Client null check removed - handled by React Query
 
   return useMutation({
-    mutationFn: ({ commandName, args, namespace }: { commandName: string; args?: string; namespace?: string }) =>
-      client.commands.executeCommand(projectId, commandName, args, namespace),
+    mutationFn: ({ commandName, args, namespace }: { commandName: string; args?: string; namespace?: string }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.commands.executeCommand(projectId, commandName, args, namespace)
+    },
     onSuccess: (result, { commandName }) => {
       toast.success(`Command '${commandName}' executed successfully`)
     },
@@ -134,8 +150,10 @@ export function useSuggestCommands(projectId: number) {
   // Client null check removed - handled by React Query
 
   return useMutation({
-    mutationFn: ({ context, limit }: { context?: string; limit?: number }) =>
-      client.commands.suggestCommands(projectId, context, limit),
+    mutationFn: ({ context, limit }: { context?: string; limit?: number }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.commands.suggestCommands(projectId, context, limit)
+    },
     onError: (error) => {
       toast.error(error.message || 'Failed to get command suggestions')
     }
@@ -146,7 +164,10 @@ export function useGenerateCommand(projectId: number) {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: CommandGenerationRequest) => client!.commands.generateCommand(projectId, data),
+    mutationFn: (data: CommandGenerationRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.commands.generateCommand(projectId, data)
+    },
     onSuccess: (result) => {
       toast.success(`Command '${result.data.name}' generated successfully`)
     },

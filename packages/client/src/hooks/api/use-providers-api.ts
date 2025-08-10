@@ -28,7 +28,10 @@ export function useGetProviderKeys() {
   return useQuery({
     queryKey: providerKeys.list(),
     enabled: !!client,
-    queryFn: () => client.keys.listKeys(),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.listKeys()
+    },
     staleTime: 5 * 60 * 1000 // 5 minutes
   })
 }
@@ -39,7 +42,10 @@ export function useGetProviderKey(keyId: number | null) {
   // Client null check removed - handled by React Query
   return useQuery({
     queryKey: providerKeys.detail(keyId!),
-    queryFn: () => client.keys.getKey(keyId!),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.getKey(keyId!)
+    },
     enabled: !!client && !!keyId,
     staleTime: 5 * 60 * 1000
   })
@@ -52,7 +58,10 @@ export function useGetProvidersHealth(refresh = false) {
   return useQuery({
     queryKey: providerKeys.health(),
     enabled: !!client,
-    queryFn: () => client.keys.getProvidersHealth(refresh),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.getProvidersHealth(refresh)
+    },
     staleTime: refresh ? 0 : 2 * 60 * 1000 // 2 minutes if not refreshing
   })
 }
@@ -63,7 +72,10 @@ export function useCreateProviderKey() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: CreateProviderKeyBody) => client!.keys.createKey(data),
+    mutationFn: (data: CreateProviderKeyBody) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.createKey(data)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key created successfully')
@@ -81,7 +93,10 @@ export function useUpdateProviderKey() {
   // Client null check removed - handled by React Query
 
   return useMutation({
-    mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) => client.keys.updateKey(keyId, data),
+    mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.updateKey(keyId, data)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key updated successfully')
@@ -98,7 +113,10 @@ export function useDeleteProviderKey() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (keyId: number) => client!.keys.deleteKey(keyId),
+    mutationFn: (keyId: number) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.deleteKey(keyId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key deleted successfully')
@@ -115,7 +133,10 @@ export function useTestProvider() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: TestProviderRequest) => client!.keys.testProvider(data),
+    mutationFn: (data: TestProviderRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.testProvider(data)
+    },
     onSuccess: (response) => {
       if (response.data.success) {
         toast.success(`Provider connected successfully`)
@@ -136,7 +157,10 @@ export function useBatchTestProviders() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: BatchTestProviderRequest) => client!.keys.batchTestProviders(data),
+    mutationFn: (data: BatchTestProviderRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.batchTestProviders(data)
+    },
     onSuccess: (response) => {
       const results = response.data.results
       const successCount = results.filter((r) => r.success).length

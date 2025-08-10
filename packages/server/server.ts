@@ -41,6 +41,8 @@ export async function instantiateServer({
 }: ServerConfig = {}): Promise<Server> {
   logger.info(`Starting server initialization on port ${port}...`)
   const server = serve({
+    // idleTimeout of 255 seconds (4.25 minutes) to support long-running operations
+    // like asset generation which can take up to 3 minutes
     idleTimeout: 255,
     port,
     async fetch(req: Request): Promise<Response | undefined> {

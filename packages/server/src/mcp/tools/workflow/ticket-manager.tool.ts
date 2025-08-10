@@ -24,10 +24,9 @@ import {
   searchTickets,
   batchCreateTickets,
   batchUpdateTickets,
-  batchDeleteTickets,
-  CreateTicketBody,
-  UpdateTicketBody
+  batchDeleteTickets
 } from '@promptliano/services'
+import type { CreateTicketBody, UpdateTicketBody } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 
 export const ticketManagerTool: MCPToolDefinition = {
@@ -179,7 +178,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               if (error instanceof ApiError) {
                 if (error.status === 404) {
                   throw createMCPError(
-                    MCPErrorCode.RESOURCE_NOT_FOUND,
+                    MCPErrorCode.TICKET_NOT_FOUND,
                     error.message || `Ticket ${ticketId} not found or project has no files`,
                     {
                       ticketId,
@@ -218,7 +217,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               if (error instanceof ApiError) {
                 if (error.status === 404) {
                   throw createMCPError(
-                    MCPErrorCode.RESOURCE_NOT_FOUND,
+                    MCPErrorCode.TICKET_NOT_FOUND,
                     error.message || `Ticket ${ticketId} not found or project has no files`,
                     {
                       ticketId,

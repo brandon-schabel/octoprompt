@@ -21,21 +21,34 @@ export const useGenerateText = () => {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: AiGenerateTextRequest) => client!.genAi.generateText(data),
+    mutationFn: (data: AiGenerateTextRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.genAi.generateText(data)
+    },
     onError: (error) => {
       toast.error(error.message || 'Failed to generate text')
     }
   })
 }
 
-// Hook for generating structured data
-export const useGenerateStructuredData = () => {
+// Hook for generating structured data with optional timeout
+export const useGenerateStructuredData = (options?: { timeout?: number }) => {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: AiGenerateStructuredRequest) => client!.genAi.generateStructured(data),
+    mutationFn: (data: AiGenerateStructuredRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.genAi.generateStructured(data, {
+        timeout: options?.timeout || 180000 // Default 3 minutes for structured generation
+      })
+    },
     onError: (error) => {
-      toast.error(error.message || 'Failed to generate structured data')
+      // Check if error is due to timeout
+      if (error.message?.includes('abort') || error.message?.includes('timeout')) {
+        toast.error('Generation timed out. Try simplifying your request or using a faster model.')
+      } else {
+        toast.error(error.message || 'Failed to generate structured data')
+      }
     }
   })
 }
@@ -45,7 +58,10 @@ export const useStreamText = () => {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: AiGenerateTextRequest) => client!.genAi.streamText(data),
+    mutationFn: (data: AiGenerateTextRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.genAi.streamText(data)
+    },
     onError: (error) => {
       toast.error(error.message || 'Failed to start text stream')
     }
@@ -59,7 +75,10 @@ export const useGetModels = (provider: string, options?: { ollamaUrl?: string; l
 
   return useQuery({
     queryKey: GEN_AI_KEYS.models(provider, options),
-    queryFn: () => client.genAi.getModels(provider, options),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.genAi.getModels(provider, options)
+    },
     enabled: !!client && !!provider,
     staleTime: 10 * 60 * 1000 // 10 minutes - models don't change frequently
   })

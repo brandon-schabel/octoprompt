@@ -14,6 +14,7 @@ export function useJob(jobId: number | undefined) {
     queryKey: ['job', jobId],
     queryFn: async () => {
       if (!jobId) return null
+      if (!client) throw new Error('API client not initialized')
       const result = await client.jobs.getJob(jobId)
       return result.data
     },
@@ -38,6 +39,7 @@ export function useJobs(filter: JobFilter = {}) {
     queryKey: ['jobs', filter],
     enabled: !!client,
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       return await client.jobs.listJobs(filter)
     }
   })
@@ -52,6 +54,7 @@ export function useProjectJobs(projectId: number | undefined) {
     queryKey: ['jobs', 'project', projectId],
     queryFn: async () => {
       if (!projectId) return []
+      if (!client) throw new Error('API client not initialized')
       return await client.jobs.getProjectJobs(projectId)
     },
     enabled: !!client && !!projectId
@@ -67,6 +70,7 @@ export function useCancelJob() {
   return useMutation({
     mutationFn: async (jobId: number) => {
       // Client null check removed - handled by React Query
+      if (!client) throw new Error('API client not initialized')
       return await client.jobs.cancelJob(jobId)
     },
     onSuccess: (_, jobId) => {
@@ -91,6 +95,7 @@ export function useRetryJob() {
   return useMutation({
     mutationFn: async (jobId: number) => {
       // Client null check removed - handled by React Query
+      if (!client) throw new Error('API client not initialized')
       return await client.jobs.retryJob(jobId)
     },
     onSuccess: (newJob) => {

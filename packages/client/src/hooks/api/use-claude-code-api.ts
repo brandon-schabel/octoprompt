@@ -42,6 +42,7 @@ export function useClaudeSessions(
     queryKey: CLAUDE_CODE_KEYS.sessionsWithQuery(projectId ?? 0, query),
     queryFn: async () => {
       if (!projectId) throw new Error('Project ID is required')
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeCode.getSessions(projectId, query)
       return response.data
     },
@@ -69,6 +70,7 @@ export function useClaudeMessages(
     queryKey: CLAUDE_CODE_KEYS.messagesWithQuery(projectId ?? 0, sessionId ?? '', query),
     queryFn: async () => {
       if (!projectId || !sessionId) throw new Error('Project ID and Session ID are required')
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeCode.getSessionMessages(projectId, sessionId, query)
       return response.data
     },
@@ -94,6 +96,7 @@ export function useClaudeProjectData(
     queryKey: CLAUDE_CODE_KEYS.projectData(projectId ?? 0),
     queryFn: async () => {
       if (!projectId) throw new Error('Project ID is required')
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeCode.getProjectData(projectId)
       return response.data
     },
@@ -125,6 +128,7 @@ export function useWatchClaudeSessions(
     // For now, we'll use polling as a fallback
     const interval = setInterval(async () => {
       try {
+        if (!client) throw new Error('API client not initialized')
         const response = await client.claudeCode.getSessions(projectId)
         const sessions = response.data
 

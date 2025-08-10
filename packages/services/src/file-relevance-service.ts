@@ -1,4 +1,4 @@
-import { ProjectFile, Ticket, TicketTask, RelevanceScore, RelevanceConfig } from '@promptliano/schemas'
+import type { ProjectFile, Ticket, TicketTask, RelevanceScore, RelevanceConfig } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 import { fileIndexingService } from './file-indexing-service'
 import { getProjectFiles } from './project-service'

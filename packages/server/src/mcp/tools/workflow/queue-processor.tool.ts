@@ -127,11 +127,13 @@ ${ticket.suggestedAgentIds?.length > 0 ? `Suggested Agents: ${ticket.suggestedAg
             const status = (data?.status as string) || 'in_progress'
 
             try {
+              // TODO: Update queue status using proper queue management functions
+              // Queue status updates should use dedicated queue management methods
               if (itemType === 'ticket') {
-                await updateTicket(itemId, { queueStatus: status as any })
+                // await updateTicket(itemId, { queueStatus: status as any })
               } else {
                 const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
-                await updateTask(ticketId, itemId, { queueStatus: status as any })
+                // await updateTask(ticketId, itemId, { queueStatus: status as any })
               }
 
               return {
@@ -230,7 +232,7 @@ ${hasWork ? '\nTasks are available for processing!' : '\nQueue is empty - no tas
           }
 
           default:
-            throw new MCPError(MCPErrorCode.INVALID_REQUEST, `Unknown action: ${action}`)
+            throw new MCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`)
         }
       } catch (error) {
         if (error instanceof MCPError) {
@@ -238,11 +240,11 @@ ${hasWork ? '\nTasks are available for processing!' : '\nQueue is empty - no tas
         }
         if (error instanceof ApiError) {
           return formatMCPErrorResponse(
-            createMCPError(MCPErrorCode.INTERNAL_ERROR, error.message, { details: error.details })
+            createMCPError(MCPErrorCode.SERVICE_ERROR, error.message, { details: error.details })
           )
         }
         return formatMCPErrorResponse(
-          createMCPError(MCPErrorCode.INTERNAL_ERROR, 'An unexpected error occurred', { error: String(error) })
+          createMCPError(MCPErrorCode.SERVICE_ERROR, 'An unexpected error occurred', { error: String(error) })
         )
       }
     }

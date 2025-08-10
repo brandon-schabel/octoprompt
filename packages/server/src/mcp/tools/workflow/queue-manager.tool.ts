@@ -21,10 +21,9 @@ import {
   enqueueTicket,
   enqueueTask,
   dequeueTicket,
-  dequeueTask,
-  type CreateQueueBody,
-  type UpdateQueueBody
+  dequeueTask
 } from '@promptliano/services'
+import type { CreateQueueBody, UpdateQueueBody } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 
 // Define action types
@@ -201,9 +200,9 @@ Updated: ${new Date(queue.updated).toLocaleString()}`
                   type: 'text',
                   text: `Ticket enqueued successfully:
 Ticket ID: ${ticket.id}
-Queue ID: ${ticket.queue_id}
-Status: ${ticket.queue_status}
-Priority: ${ticket.queue_priority}`
+Queue ID: ${ticket.queueId}
+Status: ${ticket.queueStatus}
+Priority: ${ticket.queuePriority}`
                 }
               ]
             }
@@ -222,9 +221,9 @@ Priority: ${ticket.queue_priority}`
                   type: 'text',
                   text: `Task enqueued successfully:
 Task ID: ${task.id}
-Queue ID: ${task.queue_id}
-Status: ${task.queue_status}
-Priority: ${task.queue_priority}`
+Queue ID: ${task.queueId}
+Status: ${task.queueStatus}
+Priority: ${task.queuePriority}`
                 }
               ]
             }
@@ -327,7 +326,7 @@ Current Agents: ${stats.currentAgents.length > 0 ? stats.currentAgents.join(', '
           }
 
           default:
-            throw new MCPError(MCPErrorCode.INVALID_REQUEST, `Unknown action: ${action}`)
+            throw new MCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`)
         }
       } catch (error) {
         if (error instanceof MCPError) {
@@ -335,11 +334,11 @@ Current Agents: ${stats.currentAgents.length > 0 ? stats.currentAgents.join(', '
         }
         if (error instanceof ApiError) {
           return formatMCPErrorResponse(
-            createMCPError(MCPErrorCode.INTERNAL_ERROR, error.message, { details: error.details })
+            createMCPError(MCPErrorCode.SERVICE_ERROR, error.message, { details: error.details })
           )
         }
         return formatMCPErrorResponse(
-          createMCPError(MCPErrorCode.INTERNAL_ERROR, 'An unexpected error occurred', { error: String(error) })
+          createMCPError(MCPErrorCode.SERVICE_ERROR, 'An unexpected error occurred', { error: String(error) })
         )
       }
     }

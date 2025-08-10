@@ -15,13 +15,9 @@ import {
 } from '@promptliano/ui'
 import { DataTable } from '@promptliano/ui'
 import type { ColumnDef } from '@tanstack/react-table'
-import { QueueItem, QueueItemStatus } from '@promptliano/schemas'
-import {
-  useGetQueuesWithStats,
-  useGetQueueItems,
-  useUpdateQueueItem,
-  useDeleteQueueItem
-} from '@/hooks/api/use-queue-api'
+import { QueueItem, ItemQueueStatus } from '@promptliano/schemas'
+import { toast } from 'sonner'
+import { useGetQueuesWithStats, useGetQueueItems } from '@/hooks/api/use-queue-api'
 import { useGetTicketsWithTasks } from '@/hooks/api/use-tickets-api'
 import { formatDistanceToNow } from 'date-fns'
 import { ensureArray, safeFormatDate } from '@/utils/queue-item-utils'
@@ -52,7 +48,7 @@ interface QueueItemsViewProps {
 }
 
 export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: QueueItemsViewProps) {
-  const [statusFilter, setStatusFilter] = useState<QueueItemStatus | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<ItemQueueStatus | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedItem, setSelectedItem] = useState<QueueItem | null>(null)
 
@@ -63,8 +59,8 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
   )
   const { data: ticketsWithTasks } = useGetTicketsWithTasks(projectId)
 
-  const updateItemMutation = useUpdateQueueItem()
-  const deleteItemMutation = useDeleteQueueItem()
+  // Note: Direct queue item operations are no longer supported.
+  // Items are now managed through their parent tickets/tasks via the flow service.
 
   // Find selected queue
   const selectedQueue = queuesWithStats?.find((q) => q.queue.id === selectedQueueId)
@@ -102,26 +98,22 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     return task ? { ticket: ticket.ticket, task } : null
   }
 
-  const handleStatusChange = async (item: QueueItem, status: QueueItemStatus) => {
-    await updateItemMutation.mutateAsync({
-      itemId: item.id,
-      data: { status }
-    })
+  const handleStatusChange = async (item: QueueItem, status: ItemQueueStatus) => {
+    // Direct queue item status changes are no longer supported
+    // Status should be managed through their parent ticket/task
+    toast.error('Direct item status changes are no longer supported. Please use the ticket/task management interface.')
   }
 
   const handleDelete = async (item: QueueItem) => {
-    await deleteItemMutation.mutateAsync(item.id)
+    // Direct queue item deletion is no longer supported
+    // Items should be dequeued through their parent ticket/task
+    toast.error('Direct item deletion is no longer supported. Please use the ticket/task management interface.')
   }
 
   const handleRetry = async (item: QueueItem) => {
-    await updateItemMutation.mutateAsync({
-      itemId: item.id,
-      data: {
-        status: 'queued',
-        errorMessage: null,
-        agentId: null
-      }
-    })
+    // Direct queue item retry is no longer supported
+    // Retry should be managed through their parent ticket/task
+    toast.error('Direct item retry is no longer supported. Please use the ticket/task management interface.')
   }
 
   const statusConfig = {
@@ -129,7 +121,8 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     in_progress: { icon: Clock, color: 'text-blue-600', bgColor: 'bg-blue-100' },
     completed: { icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-100' },
     failed: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100' },
-    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' }
+    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' },
+    timeout: { icon: Clock, color: 'text-orange-600', bgColor: 'bg-orange-100' }
   }
 
   const columns: ColumnDef<QueueItem>[] = [

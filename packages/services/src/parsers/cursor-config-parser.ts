@@ -1,5 +1,5 @@
 import { JsonParser } from './json-parser'
-import { ParserOptions } from './base-parser'
+import type { ParserOptions } from './base-parser'
 import { z } from 'zod'
 
 // Cursor-specific settings schema

@@ -48,6 +48,7 @@ interface ProjectNavigationMenuProps {
   activeView: ProjectView | undefined
   onViewChange: (view: ProjectView) => void
   claudeCodeEnabled?: boolean
+  assetsEnabled?: boolean
   showMenus?: boolean
   showTabs?: boolean
 }
@@ -57,6 +58,7 @@ export function ProjectNavigationMenu({
   activeView,
   onViewChange,
   claudeCodeEnabled,
+  assetsEnabled,
   showMenus = true,
   showTabs = true
 }: ProjectNavigationMenuProps) {
@@ -182,7 +184,7 @@ export function ProjectNavigationMenu({
         <TabButton view='context' icon={Layers} label='Context' />
         <TabButton view='flow' icon={Workflow} label='Flow' />
         <TabButton view='manage' icon={Sliders} label='Manage' />
-        <TabButton view='assets' icon={FolderOpen} label='Assets' />
+        {assetsEnabled && <TabButton view='assets' icon={FolderOpen} label='Assets' />}
         {claudeCodeEnabled &&
           (isCompact ? (
             <Tooltip>

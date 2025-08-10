@@ -254,7 +254,7 @@ export function ProviderCard({
           {isConnected && (
             <div className='grid grid-cols-3 gap-2 animate-in fade-in duration-300'>
               <ModelListPopover
-                models={modelsResponse}
+                models={modelsResponse?.data || []}
                 isLoading={modelsLoading}
                 providerName={meta?.name || provider.provider}
                 isConnected={isConnected}

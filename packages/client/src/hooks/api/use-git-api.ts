@@ -25,6 +25,7 @@ export function useProjectGitStatus(projectId: number | undefined, enabled = tru
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getProjectGitStatus(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch git status')
@@ -58,6 +59,7 @@ export function useStageFiles(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.stageFiles(projectId, filePaths)
     },
     onSuccess: (data, filePaths) => {
@@ -81,6 +83,7 @@ export function useUnstageFiles(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.unstageFiles(projectId, filePaths)
     },
     onSuccess: (data, filePaths) => {
@@ -104,6 +107,7 @@ export function useStageAll(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.stageAll(projectId)
     },
     onSuccess: () => {
@@ -127,6 +131,7 @@ export function useUnstageAll(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.unstageAll(projectId)
     },
     onSuccess: () => {
@@ -150,6 +155,7 @@ export function useCommitChanges(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.commitChanges(projectId, message)
     },
     onSuccess: () => {
@@ -177,6 +183,7 @@ export function useFileDiff(
         throw new Error('Project ID and file path are required')
       }
       // Client check handled by enabled condition
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getFileDiff(projectId, filePath, options)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch file diff')
@@ -202,6 +209,7 @@ export function useGitBranches(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getBranches(projectId)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch branches')
@@ -224,6 +232,7 @@ export function useBranchesEnhanced(projectId: number | undefined, enabled = tru
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getBranchesEnhanced(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch enhanced branches')
@@ -247,6 +256,7 @@ export function useCreateBranch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.createBranch(projectId, name, startPoint)
     },
     onSuccess: (data, variables) => {
@@ -271,6 +281,7 @@ export function useSwitchBranch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.switchBranch(projectId, branchName)
     },
     onSuccess: (data, branchName) => {
@@ -297,6 +308,7 @@ export function useDeleteBranch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.deleteBranch(projectId, branchName, force)
     },
     onSuccess: (data, variables) => {
@@ -329,6 +341,7 @@ export function useGitLog(
         throw new Error('Project ID is required')
       }
       // Client check handled by enabled condition
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getCommitLog(projectId, options)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch commit log')
@@ -351,6 +364,7 @@ export function useCommitLogEnhanced(projectId: number | undefined, params?: Git
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getCommitLogEnhanced(projectId, params)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch enhanced commit log')
@@ -378,6 +392,7 @@ export function useCommitDetail(
       if (!projectId || !hash) {
         throw new Error('Project ID and commit hash are required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getCommitDetail(projectId, hash, includeFileContents)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch commit details')
@@ -403,6 +418,7 @@ export function useGitRemotes(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getRemotes(projectId)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch remotes')
@@ -435,6 +451,7 @@ export function useGitPush(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.push(projectId, remote, branch, { force, setUpstream })
     },
     onSuccess: () => {
@@ -459,6 +476,7 @@ export function useGitFetch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.fetch(projectId, remote, prune)
     },
     onSuccess: () => {
@@ -483,6 +501,7 @@ export function useGitPull(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.pull(projectId, remote, branch, rebase)
     },
     onSuccess: () => {
@@ -509,6 +528,7 @@ export function useGitTags(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getTags(projectId)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch tags')
@@ -531,6 +551,7 @@ export function useCreateTag(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.createTag(projectId, name, { message, ref })
     },
     onSuccess: (data, variables) => {
@@ -557,6 +578,7 @@ export function useGitStashList(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.getStashList(projectId)
       if (!response.success || !response.data) {
         throw new Error('Failed to fetch stash list')
@@ -579,6 +601,7 @@ export function useGitStash(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.stash(projectId, message)
     },
     onSuccess: () => {
@@ -603,6 +626,7 @@ export function useGitStashApply(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.stashApply(projectId, ref)
     },
     onSuccess: () => {
@@ -626,6 +650,7 @@ export function useGitStashPop(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.stashPop(projectId, ref)
     },
     onSuccess: () => {
@@ -650,6 +675,7 @@ export function useGitStashDrop(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.stashDrop(projectId, ref)
     },
     onSuccess: () => {
@@ -677,6 +703,7 @@ export function useGitReset(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.reset(projectId, ref, mode)
     },
     onSuccess: () => {
@@ -703,6 +730,7 @@ export function useGitWorktrees(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       const response = await client.git.worktrees.list(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch worktrees')
@@ -730,6 +758,7 @@ export function useAddGitWorktree(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.worktrees.add(projectId, params)
     },
     onSuccess: () => {
@@ -753,6 +782,7 @@ export function useRemoveGitWorktree(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.worktrees.remove(projectId, { path, force })
     },
     onSuccess: () => {
@@ -776,6 +806,7 @@ export function useLockGitWorktree(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.worktrees.lock(projectId, { path, reason })
     },
     onSuccess: () => {
@@ -799,6 +830,7 @@ export function useUnlockGitWorktree(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.worktrees.unlock(projectId, { path })
     },
     onSuccess: () => {
@@ -822,6 +854,7 @@ export function usePruneGitWorktrees(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
+      if (!client) throw new Error('API client not initialized')
       return client.git.worktrees.prune(projectId, { dryRun })
     },
     onSuccess: (data, variables) => {

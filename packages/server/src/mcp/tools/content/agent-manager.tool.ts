@@ -160,7 +160,7 @@ export const agentManagerTool: MCPToolDefinition = {
             const agentList = suggestions.agents
               .map(
                 (a) =>
-                  `${a.id}: ${a.name}\n   Description: ${a.description}\n   Relevance: ${a.relevanceScore}/10\n   Reason: ${a.relevanceReason}`
+                  `${a.name}\n   Description: ${a.description}\n   Relevance: ${a.relevanceScore}/10\n   Reason: ${a.rationale}`
               )
               .join('\n\n')
             return {

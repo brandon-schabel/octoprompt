@@ -57,8 +57,8 @@ class QueueStorage {
           maxParallelItems: row.max_parallel_items || 1,
           averageProcessingTime: row.average_processing_time ?? null,
           totalCompletedItems: row.total_completed_items || 0,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
 
         const validatedQueue = await validateData<TaskQueue>(queue, TaskQueueSchema as any, `queue ${queue.id}`)
@@ -98,8 +98,8 @@ class QueueStorage {
         maxParallelItems: row.max_parallel_items || 1,
         averageProcessingTime: row.average_processing_time ?? null,
         totalCompletedItems: row.total_completed_items || 0,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
+        created: Number(row.created_at) || Date.now(),
+        updated: Number(row.updated_at) || Date.now()
       }
 
       return await validateData<TaskQueue>(queue, TaskQueueSchema as any, `queue ${queue.id}`)

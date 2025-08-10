@@ -1,4 +1,5 @@
-import { BunFile, file, write } from 'bun'
+import { file, write } from 'bun'
+import type { BunFile } from 'bun'
 import { mkdir, readdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 

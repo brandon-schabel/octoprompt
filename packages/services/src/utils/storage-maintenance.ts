@@ -3,13 +3,17 @@ import {
   chatStorage,
   promptStorage,
   providerKeyStorage,
-  claudeCodeStorage,
-  createCleanupScheduler,
-  type CleanupOptions
+  claudeAgentStorage
 } from '@promptliano/storage'
 import path from 'node:path'
 import * as fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+
+interface CleanupOptions {
+  dryRun?: boolean
+  verbose?: boolean
+  continueOnError?: boolean
+}
 
 interface MaintenanceOptions {
   enableScheduledCleanup?: boolean
@@ -167,9 +171,9 @@ function setupScheduledCleanup(intervalMs: number, verbose: boolean): void {
   // Uncomment to enable full cleanup on schedule:
   // const storages = [...]
   // for (const { storage, basePath } of storages) {
-  //   const scheduler = createCleanupScheduler(storage as any, basePath, intervalMs)
-  //   scheduler.start()
-  //   cleanupSchedulers.push(scheduler)
+  //   // const scheduler = createCleanupScheduler(storage as any, basePath, intervalMs)
+  //   // scheduler.start()
+  //   // cleanupSchedulers.push(scheduler)
   // }
 }
 

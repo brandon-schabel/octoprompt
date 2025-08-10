@@ -41,7 +41,7 @@ describe('App', () => {
       expect(res.status).toBe(422)
       const data = await res.json()
       expect(data).toHaveProperty('success', false)
-      expect(data.error).toHaveProperty('code', 'VALIDATION_ERROR')
+      expect((data as any).error).toHaveProperty('code', 'VALIDATION_ERROR')
     })
   })
 

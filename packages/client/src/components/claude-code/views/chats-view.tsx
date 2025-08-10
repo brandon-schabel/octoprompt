@@ -257,9 +257,10 @@ export function ChatsView({ projectId, projectName, sessionId, onBack }: ChatsVi
     mutationFn: async () => {
       if (!sessionId) throw new Error('No session ID')
       const response = await client?.claudeCode.importSession(projectId, sessionId)
-      return response.data
+      return response?.data
     },
     onSuccess: (chat) => {
+      if (!chat) return
       toast.success('Session imported to chat')
       // Navigate to the new chat
       navigate({ to: '/chat', search: { chatId: chat.id } })

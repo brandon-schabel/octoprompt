@@ -74,7 +74,10 @@ export function useCreateChat() {
   const { invalidateAllChats } = useInvalidateChats()
 
   return useMutation({
-    mutationFn: (data: CreateChatBody) => client!.chats.createChat(data),
+    mutationFn: (data: CreateChatBody) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.chats.createChat(data)
+    },
     onSuccess: (newChat) => {
       invalidateAllChats()
       toast.success('Chat created successfully')
@@ -91,7 +94,10 @@ export function useUpdateChat() {
   const { invalidateAllChats, setChatDetail } = useInvalidateChats()
 
   return useMutation({
-    mutationFn: ({ chatId, data }: { chatId: number; data: UpdateChatBody }) => client.chats.updateChat(chatId, data),
+    mutationFn: ({ chatId, data }: { chatId: number; data: UpdateChatBody }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.chats.updateChat(chatId, data)
+    },
     onSuccess: ({ data: updatedChat }: DataResponseSchema<Chat>) => {
       invalidateAllChats()
       setChatDetail(updatedChat)
@@ -109,7 +115,10 @@ export function useDeleteChat() {
   const { invalidateAllChats, removeChat } = useInvalidateChats()
 
   return useMutation({
-    mutationFn: (chatId: number) => client!.chats.deleteChat(chatId),
+    mutationFn: (chatId: number) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.chats.deleteChat(chatId)
+    },
     onSuccess: (_, chatId) => {
       invalidateAllChats()
       removeChat(chatId)
@@ -127,8 +136,10 @@ export function useForkChat() {
   const { invalidateAllChats } = useInvalidateChats()
 
   return useMutation({
-    mutationFn: ({ chatId, excludeMessageIds }: { chatId: number; excludeMessageIds?: number[] }) =>
-      client.chats.forkChat(chatId, { excludedMessageIds: excludeMessageIds || [] }),
+    mutationFn: ({ chatId, excludeMessageIds }: { chatId: number; excludeMessageIds?: number[] }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.chats.forkChat(chatId, { excludedMessageIds: excludeMessageIds || [] })
+    },
     onSuccess: (newChat) => {
       invalidateAllChats()
       toast.success('Chat forked successfully')
@@ -153,10 +164,12 @@ export function useForkChatFromMessage() {
       chatId: number
       messageId: number
       excludedMessageIds?: number[]
-    }) =>
-      client.chats.forkChatFromMessage(chatId, messageId, {
+    }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.chats.forkChatFromMessage(chatId, messageId, {
         excludedMessageIds: excludedMessageIds || []
-      }),
+      })
+    },
     onSuccess: (newChat) => {
       invalidateAllChats()
       toast.success('Chat forked from message successfully')
@@ -173,8 +186,10 @@ export function useDeleteMessage() {
   const { invalidateChatMessages } = useInvalidateChats()
 
   return useMutation({
-    mutationFn: ({ chatId, messageId }: { chatId: number; messageId: number }) =>
-      client.chats.deleteMessage(chatId, messageId),
+    mutationFn: ({ chatId, messageId }: { chatId: number; messageId: number }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.chats.deleteMessage(chatId, messageId)
+    },
     onSuccess: (_, { chatId }) => {
       invalidateChatMessages(chatId)
       toast.success('Message deleted successfully')
@@ -189,7 +204,10 @@ export function useStreamChat() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: AiChatStreamRequest) => client!.chats.streamChat(data),
+    mutationFn: (data: AiChatStreamRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.chats.streamChat(data)
+    },
     onError: (error) => {
       toast.error(error.message || 'Failed to start chat stream')
     }
@@ -336,7 +354,10 @@ export function useCreateProject() {
   const { invalidateAllProjects } = useInvalidateProjects()
 
   return useMutation({
-    mutationFn: (data: CreateProjectBody) => client!.projects.createProject(data),
+    mutationFn: (data: CreateProjectBody) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.projects.createProject(data)
+    },
     onSuccess: (newProject) => {
       invalidateAllProjects()
       toast.success('Project created successfully')
@@ -353,8 +374,10 @@ export function useUpdateProject() {
   const { invalidateAllProjects, setProjectDetail } = useInvalidateProjects()
 
   return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: number; data: UpdateProjectBody }) =>
-      client.projects.updateProject(projectId, data),
+    mutationFn: ({ projectId, data }: { projectId: number; data: UpdateProjectBody }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.projects.updateProject(projectId, data)
+    },
     onSuccess: ({ data: updatedProject }: DataResponseSchema<Project>) => {
       invalidateAllProjects()
       setProjectDetail(updatedProject)
@@ -373,7 +396,10 @@ export function useDeleteProject() {
   const { removeProjectPrompts } = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: (projectId: number) => client!.projects.deleteProject(projectId),
+    mutationFn: (projectId: number) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.projects.deleteProject(projectId)
+    },
     onSuccess: (_, projectId) => {
       invalidateAllProjects()
       removeProject(projectId)
@@ -392,7 +418,10 @@ export function useSyncProject() {
   const { invalidateProjectFiles, invalidateProject } = useInvalidateProjects()
 
   return useMutation({
-    mutationFn: (projectId: number) => client!.projects.syncProject(projectId),
+    mutationFn: (projectId: number) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.projects.syncProject(projectId)
+    },
     onSuccess: (_, projectId) => {
       invalidateProjectFiles(projectId)
       invalidateProject(projectId)
@@ -412,8 +441,10 @@ export function useRefreshProject() {
   const { invalidateProjectFiles } = useInvalidateProjects()
 
   return useMutation({
-    mutationFn: ({ projectId, folder }: { projectId: number; folder?: string }) =>
-      client.projects.refreshProject(projectId, folder ? { folder } : undefined),
+    mutationFn: ({ projectId, folder }: { projectId: number; folder?: string }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.projects.refreshProject(projectId, folder ? { folder } : undefined)
+    },
     onSuccess: (_, { projectId }) => {
       invalidateProjectFiles(projectId)
       toast.success('Project refreshed successfully')
@@ -431,6 +462,8 @@ export function useUpdateFileContent() {
 
   return useMutation({
     mutationFn: async ({ projectId, fileId, content }: { projectId: number; fileId: number; content: string }) => {
+      if (!client) throw new Error('API client not initialized')
+
       // Update the file content
       const result = await client.projects.updateFileContent(projectId, fileId, content)
 
@@ -454,6 +487,7 @@ export function useSuggestFiles() {
 
   return useMutation({
     mutationFn: async ({ projectId, prompt, limit = 10 }: { projectId: number; prompt: string; limit?: number }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.projects.suggestFiles(projectId, { prompt, limit })
       return response.data
     },
@@ -477,6 +511,7 @@ export function useSummarizeProjectFiles() {
       fileIds: number[]
       force?: boolean
     }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.projects.summarizeFiles(projectId, { fileIds, force })
       return response.data
     },
@@ -497,6 +532,7 @@ export function useRemoveSummariesFromFiles() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ projectId, fileIds }: { projectId: number; fileIds: number[] }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.projects.removeSummariesFromFiles(projectId, { fileIds })
       return response.data
     },
@@ -560,7 +596,10 @@ export function useCreatePrompt() {
   const { invalidateAllPrompts } = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: (data: CreatePromptBody) => client!.prompts.createPrompt(data),
+    mutationFn: (data: CreatePromptBody) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.prompts.createPrompt(data)
+    },
     onSuccess: (newPrompt) => {
       invalidateAllPrompts()
       toast.success('Prompt created successfully')
@@ -577,8 +616,10 @@ export function useUpdatePrompt() {
   const { invalidateAllPrompts, setPromptDetail } = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: ({ promptId, data }: { promptId: number; data: UpdatePromptBody }) =>
-      client.prompts.updatePrompt(promptId, data),
+    mutationFn: ({ promptId, data }: { promptId: number; data: UpdatePromptBody }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.prompts.updatePrompt(promptId, data)
+    },
     onSuccess: ({ data: updatedPrompt }: DataResponseSchema<Prompt>) => {
       invalidateAllPrompts()
       setPromptDetail(updatedPrompt)
@@ -596,7 +637,10 @@ export function useDeletePrompt() {
   const invalidatePrompts = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: ({ promptId }: { promptId: number }) => client.prompts.deletePrompt(promptId),
+    mutationFn: ({ promptId }: { promptId: number }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.prompts.deletePrompt(promptId)
+    },
     onSuccess: (_, { promptId }) => {
       // Invalidate all prompt-related queries including project prompts
       invalidatePrompts.invalidateAllPrompts()
@@ -615,8 +659,10 @@ export function useAddPromptToProject() {
   const invalidatePrompts = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: ({ projectId, promptId }: { projectId: number; promptId: number }) =>
-      client.prompts.addPromptToProject(projectId, promptId),
+    mutationFn: ({ projectId, promptId }: { projectId: number; promptId: number }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.prompts.addPromptToProject(projectId, promptId)
+    },
     onSuccess: (_, { projectId }) => {
       // Invalidate both project-specific prompts and all prompts list
       invalidatePrompts.invalidateProjectPrompts(projectId)
@@ -635,8 +681,10 @@ export function useRemovePromptFromProject() {
   const invalidatePrompts = useInvalidatePrompts()
 
   return useMutation({
-    mutationFn: ({ projectId, promptId }: { projectId: number; promptId: number }) =>
-      client.prompts.removePromptFromProject(projectId, promptId),
+    mutationFn: ({ projectId, promptId }: { projectId: number; promptId: number }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.prompts.removePromptFromProject(projectId, promptId)
+    },
     onSuccess: (_, { projectId }) => {
       // Invalidate both project-specific prompts and all prompts list
       invalidatePrompts.invalidateProjectPrompts(projectId)
@@ -653,7 +701,10 @@ export function useOptimizeUserInput() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: OptimizePromptRequest) => client!.prompts.optimizeUserInput(data),
+    mutationFn: (data: OptimizePromptRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.prompts.optimizeUserInput(data)
+    },
     onError: (error) => {
       toast.error(error.message || 'Failed to optimize user input')
     }
@@ -673,6 +724,7 @@ export function useSuggestPrompts() {
       userInput: string
       limit?: number
     }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.prompts.suggestPrompts(projectId, { userInput, limit })
       return response.data.prompts
     },
@@ -1165,7 +1217,10 @@ export function useCreateKey() {
   const { invalidateAllKeys } = useInvalidateKeys()
 
   return useMutation({
-    mutationFn: (data: CreateProviderKeyBody) => client!.keys.createKey(data),
+    mutationFn: (data: CreateProviderKeyBody) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.createKey(data)
+    },
     onSuccess: (newKey) => {
       invalidateAllKeys()
       toast.success('API key created successfully')
@@ -1182,7 +1237,10 @@ export function useUpdateKey() {
   const { invalidateAllKeys, setKeyDetail } = useInvalidateKeys()
 
   return useMutation({
-    mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) => client.keys.updateKey(keyId, data),
+    mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.updateKey(keyId, data)
+    },
     onSuccess: ({ data: updatedKey }: DataResponseSchema<ProviderKey>) => {
       invalidateAllKeys()
       setKeyDetail(updatedKey)
@@ -1200,7 +1258,10 @@ export function useDeleteKey() {
   const { invalidateAllKeys, removeKey } = useInvalidateKeys()
 
   return useMutation({
-    mutationFn: (keyId: number) => client!.keys.deleteKey(keyId),
+    mutationFn: (keyId: number) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.keys.deleteKey(keyId)
+    },
     onSuccess: (_, keyId) => {
       invalidateAllKeys()
       removeKey(keyId)

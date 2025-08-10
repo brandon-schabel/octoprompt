@@ -21,6 +21,7 @@ export function useGetProjectHooks(projectPath: string) {
   return useQuery({
     queryKey: [QUERY_KEY_PREFIX, projectPath],
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeHooks.list(projectPath)
       return response.data
     },
@@ -38,6 +39,7 @@ export function useGetHook(projectPath: string, eventName: HookEvent, matcherInd
   return useQuery({
     queryKey: [QUERY_KEY_PREFIX, projectPath, eventName, matcherIndex],
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeHooks.get(projectPath, eventName, matcherIndex)
       return response.data
     },
@@ -55,7 +57,7 @@ export function useCreateHook(projectPath: string) {
 
   return useMutation({
     mutationFn: async (data: CreateHookConfigBody) => {
-      // Client null check removed - handled by React Query
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeHooks.create(projectPath, data)
       return response.data
     },
@@ -88,6 +90,7 @@ export function useUpdateHook(projectPath: string) {
       matcherIndex: number
       data: UpdateHookConfigBody
     }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeHooks.update(projectPath, eventName, matcherIndex, data)
       return response.data
     },
@@ -111,8 +114,10 @@ export function useDeleteHook(projectPath: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ eventName, matcherIndex }: { eventName: HookEvent; matcherIndex: number }) =>
-      client.claudeHooks.delete(projectPath, eventName, matcherIndex),
+    mutationFn: ({ eventName, matcherIndex }: { eventName: HookEvent; matcherIndex: number }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.claudeHooks.delete(projectPath, eventName, matcherIndex)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY_PREFIX, projectPath] })
       toast.success('Hook deleted successfully')
@@ -131,7 +136,7 @@ export function useGenerateHook(projectPath: string) {
 
   return useMutation({
     mutationFn: async (data: HookGenerationRequest) => {
-      // Client null check removed - handled by React Query
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeHooks.generate(projectPath, data)
       return response.data
     },
@@ -149,7 +154,7 @@ export function useTestHook(projectPath: string) {
 
   return useMutation({
     mutationFn: async (data: HookTestRequest) => {
-      // Client null check removed - handled by React Query
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeHooks.test(projectPath, data)
       return response.data
     },
@@ -169,6 +174,7 @@ export function useSearchHooks(projectPath: string, query: string) {
   return useQuery({
     queryKey: [QUERY_KEY_PREFIX, projectPath, 'search', query],
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.claudeHooks.search(projectPath, query)
       return response.data
     },

@@ -96,6 +96,7 @@ export function useGetTickets(projectId: number, status?: string) {
   return useQuery({
     queryKey: TICKET_KEYS.list(projectId, status),
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.listTickets(projectId, status)
       return response.data
     },
@@ -111,6 +112,7 @@ export function useGetTicket(ticketId: number) {
   return useQuery({
     queryKey: TICKET_KEYS.detail(ticketId),
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.getTicket(ticketId)
       return response.data
     },
@@ -126,6 +128,7 @@ export function useGetTicketsWithCounts(projectId: number, status?: string) {
   return useQuery({
     queryKey: TICKET_KEYS.withCounts(projectId, status),
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.getTicketsWithCounts(projectId, status)
       return response.data
     },
@@ -141,6 +144,7 @@ export function useGetTicketsWithTasks(projectId: number, status?: string) {
   return useQuery({
     queryKey: TICKET_KEYS.withTasks(projectId, status),
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       try {
         const response = await client.tickets.getTicketsWithTasks(projectId, status)
         return response.data || []
@@ -164,6 +168,7 @@ export function useGetTasks(ticketId: number) {
   return useQuery({
     queryKey: TICKET_KEYS.tasks(ticketId),
     queryFn: async () => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.getTasks(ticketId)
       return response.data
     },
@@ -180,7 +185,7 @@ export function useCreateTicket() {
 
   return useMutation({
     mutationFn: async (data: CreateTicketBody) => {
-      // Client null check removed - handled by React Query
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.createTicket(data)
       return response.data
     },
@@ -202,6 +207,7 @@ export function useUpdateTicket() {
 
   return useMutation({
     mutationFn: async ({ ticketId, data }: { ticketId: number; data: UpdateTicketBody }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.updateTicket(ticketId, data)
       return response.data
     },
@@ -244,6 +250,7 @@ export function useCompleteTicket() {
 
   return useMutation({
     mutationFn: async (ticketId: number) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.completeTicket(ticketId)
       return response.data
     },
@@ -273,6 +280,7 @@ export function useDeleteTicket() {
 
   return useMutation({
     mutationFn: async ({ ticketId, projectId }: { ticketId: number; projectId: number }) => {
+      if (!client) throw new Error('API client not initialized')
       await client.tickets.deleteTicket(ticketId)
       return { ticketId, projectId }
     },
@@ -295,6 +303,7 @@ export function useCreateTask() {
 
   return useMutation({
     mutationFn: async ({ ticketId, data }: { ticketId: number; data: CreateTaskBody }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.createTask(ticketId, data)
       return response.data
     },
@@ -317,6 +326,7 @@ export function useUpdateTask() {
 
   return useMutation({
     mutationFn: async ({ ticketId, taskId, data }: { ticketId: number; taskId: number; data: UpdateTaskBody }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.updateTask(ticketId, taskId, data)
       return response.data
     },
@@ -328,7 +338,7 @@ export function useUpdateTask() {
       // Ensure ticket detail and flow/queue views refresh
       queryClient.invalidateQueries({ queryKey: TICKET_KEYS.detail(task.ticketId), exact: false })
       // Invalidate withTasks queries that might contain this ticket's tasks
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.withTasks, exact: false })
+      queryClient.invalidateQueries({ queryKey: [...TICKET_KEYS.all, 'withTasks'], exact: false })
       // Invalidate flow queries
       queryClient.invalidateQueries({ queryKey: ['flow'], exact: false })
       // Force refetch of the specific task query
@@ -353,6 +363,7 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationFn: async ({ ticketId, taskId }: { ticketId: number; taskId: number }) => {
+      if (!client) throw new Error('API client not initialized')
       await client.tickets.deleteTask(ticketId, taskId)
       return { ticketId, taskId }
     },
@@ -375,6 +386,7 @@ export function useReorderTasks() {
 
   return useMutation({
     mutationFn: async ({ ticketId, data }: { ticketId: number; data: ReorderTasksBody }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.reorderTasks(ticketId, data)
       return response.data
     },
@@ -395,6 +407,7 @@ export function useSuggestTasks() {
 
   return useMutation({
     mutationFn: async ({ ticketId, userContext }: { ticketId: number; userContext?: string }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.suggestTasks(ticketId, userContext)
       return response.data.suggestedTasks
     },
@@ -409,7 +422,7 @@ export function useAutoGenerateTasks() {
 
   return useMutation({
     mutationFn: async (ticketId: number) => {
-      // Client null check removed - handled by React Query
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.autoGenerateTasks(ticketId)
       return response.data
     },
@@ -432,6 +445,7 @@ export function useSuggestFiles() {
 
   return useMutation({
     mutationFn: async ({ ticketId, extraUserInput }: { ticketId: number; extraUserInput?: string }) => {
+      if (!client) throw new Error('API client not initialized')
       const response = await client.tickets.suggestFiles(ticketId, extraUserInput)
       return response.data
     },

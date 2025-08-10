@@ -23,7 +23,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
     queryKey: ['mcp-detection-batch'],
     queryFn: async () => {
       const result = await client?.mcpInstallation.detectTools()
-      return result.data
+      return result?.data
     }
   })
 
@@ -31,7 +31,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
     queryKey: ['mcp-installation-status-batch', projectId],
     queryFn: async () => {
       const result = await client?.mcpInstallation.getInstallationStatus(projectId)
-      return result.data
+      return result?.data
     }
   })
 
@@ -44,7 +44,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
       return response
     },
     onSuccess: async (data) => {
-      const { succeeded, failed, total } = data.data.summary
+      const { succeeded, failed, total } = data?.data?.summary || { succeeded: 0, failed: 0, total: 0 }
 
       if (succeeded === total) {
         toast.success('Installation Complete', {
@@ -61,7 +61,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
       }
 
       // Show individual results
-      data.data.results.forEach((result) => {
+      data?.data?.results?.forEach((result) => {
         if (!result.success) {
           toast.error(`${result.tool} failed: ${result.message}`)
         }

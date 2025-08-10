@@ -39,7 +39,7 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
     queryKey: ['agent-files', projectId],
     queryFn: async () => {
       const response = await client?.agentFiles.detectFiles(projectId)
-      return response.data
+      return response?.data
     }
   })
 
@@ -47,7 +47,7 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
     queryKey: ['agent-files-status', projectId],
     queryFn: async () => {
       const response = await client?.agentFiles.getStatus(projectId)
-      return response.data
+      return response?.data
     }
   })
 
@@ -60,7 +60,7 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
     },
     onSuccess: (data) => {
       toast.success('Agent files updated', {
-        description: `Successfully updated ${data.data.results.length} files`
+        description: `Successfully updated ${data?.data?.results?.length || 0} files`
       })
       queryClient.invalidateQueries({ queryKey: ['agent-files', projectId] })
       queryClient.invalidateQueries({ queryKey: ['agent-files-status', projectId] })

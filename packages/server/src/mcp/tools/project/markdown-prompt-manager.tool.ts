@@ -112,7 +112,7 @@ export const markdownPromptManagerTool: MCPToolDefinition = {
               }
             } catch (error) {
               throw createMCPError(
-                MCPErrorCode.INVALID_REQUEST,
+                MCPErrorCode.INVALID_PARAMS,
                 `Failed to import markdown: ${error instanceof Error ? error.message : String(error)}`,
                 { action, content: content.substring(0, 100) + '...' }
               )
@@ -136,7 +136,7 @@ export const markdownPromptManagerTool: MCPToolDefinition = {
                 )
               } catch (error) {
                 throw createMCPError(
-                  MCPErrorCode.RESOURCE_NOT_FOUND,
+                  MCPErrorCode.PROMPT_NOT_FOUND,
                   `Failed to retrieve one or more prompts: ${error instanceof Error ? error.message : String(error)}`,
                   { action, promptIds }
                 )
@@ -157,14 +157,14 @@ export const markdownPromptManagerTool: MCPToolDefinition = {
                 }
               } catch (error) {
                 throw createMCPError(
-                  MCPErrorCode.RESOURCE_NOT_FOUND,
+                  MCPErrorCode.PROMPT_NOT_FOUND,
                   `Failed to retrieve prompts for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
                   { action, projectId }
                 )
               }
             } else {
               throw createMCPError(
-                MCPErrorCode.INVALID_REQUEST,
+                MCPErrorCode.INVALID_PARAMS,
                 'Either promptIds array or projectId must be provided for export',
                 { action, data }
               )
@@ -208,7 +208,7 @@ export const markdownPromptManagerTool: MCPToolDefinition = {
               }
             } catch (error) {
               throw createMCPError(
-                MCPErrorCode.INTERNAL_ERROR,
+                MCPErrorCode.SERVICE_ERROR,
                 `Failed to export markdown: ${error instanceof Error ? error.message : String(error)}`,
                 { action, promptCount: prompts.length }
               )
@@ -253,7 +253,7 @@ export const markdownPromptManagerTool: MCPToolDefinition = {
               }
             } catch (error) {
               throw createMCPError(
-                MCPErrorCode.INVALID_REQUEST,
+                MCPErrorCode.INVALID_PARAMS,
                 `Failed to validate markdown: ${error instanceof Error ? error.message : String(error)}`,
                 { action, content: content.substring(0, 100) + '...' }
               )
@@ -286,7 +286,7 @@ export const markdownPromptManagerTool: MCPToolDefinition = {
               }
               if (!file.name || !file.content || typeof file.size !== 'number') {
                 throw createMCPError(
-                  MCPErrorCode.INVALID_REQUEST,
+                  MCPErrorCode.INVALID_PARAMS,
                   `File at index ${i} missing required fields: name, content, size`,
                   { action, fileIndex: i, fileName: file.name }
                 )
@@ -328,7 +328,7 @@ export const markdownPromptManagerTool: MCPToolDefinition = {
               }
             } catch (error) {
               throw createMCPError(
-                MCPErrorCode.INTERNAL_ERROR,
+                MCPErrorCode.SERVICE_ERROR,
                 `Bulk import failed: ${error instanceof Error ? error.message : String(error)}`,
                 { action, filesCount: files.length }
               )

@@ -51,7 +51,7 @@ export function MCPView({ projectId, projectName }: MCPViewProps) {
     queryKey: ['claude-code-mcp-status', projectId],
     queryFn: async () => {
       const response = await client?.claudeCode.getMCPStatus(projectId)
-      return response.data as MCPStatusInfo
+      return response?.data as MCPStatusInfo
     },
     refetchInterval: false
   })

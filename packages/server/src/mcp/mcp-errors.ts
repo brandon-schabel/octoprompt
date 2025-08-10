@@ -1,5 +1,5 @@
 import { ApiError } from '@promptliano/shared'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { MCPToolResponse } from './tools-registry'
 import {
   listProjects,
   listTicketsByProject,
@@ -16,6 +16,7 @@ import * as path from 'path'
 export enum MCPErrorCode {
   // Parameter validation errors
   INVALID_PARAMS = 'INVALID_PARAMS',
+  INVALID_REQUEST = 'INVALID_REQUEST',
   MISSING_REQUIRED_PARAM = 'MISSING_REQUIRED_PARAM',
   INVALID_PARAM_VALUE = 'INVALID_PARAM_VALUE',
   INVALID_PARAM_TYPE = 'INVALID_PARAM_TYPE',
@@ -26,6 +27,7 @@ export enum MCPErrorCode {
   TICKET_NOT_FOUND = 'TICKET_NOT_FOUND',
   PROMPT_NOT_FOUND = 'PROMPT_NOT_FOUND',
   AGENT_NOT_FOUND = 'AGENT_NOT_FOUND',
+  RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
   RESOURCE_ALREADY_EXISTS = 'RESOURCE_ALREADY_EXISTS',
   // Service errors
   SERVICE_ERROR = 'SERVICE_ERROR',
@@ -63,6 +65,7 @@ export enum MCPErrorCode {
  * Recovery suggestions for each error code
  */
 const ERROR_RECOVERY_SUGGESTIONS: Record<MCPErrorCode, string> = {
+  [MCPErrorCode.INVALID_PARAMS]: 'Validate the provided parameters and try again.',
   [MCPErrorCode.MISSING_REQUIRED_PARAM]: 'Ensure all required parameters are provided in the request.',
   [MCPErrorCode.INVALID_PARAM_VALUE]: 'Check that the parameter value matches the expected format and constraints.',
   [MCPErrorCode.INVALID_PARAM_TYPE]: 'Verify the parameter type matches the expected type (string, number, etc.).',
@@ -128,6 +131,29 @@ export interface MCPErrorDetails {
     value?: any
     validationErrors?: Record<string, string>
     relatedResources?: string[]
+    projectId?: number
+    originalError?: string
+    field?: string
+    validActions?: string[]
+    expected?: string
+    example?: string
+    content?: string
+    promptIds?: number[]
+    data?: any
+    promptCount?: number
+    filesCount?: number
+    fileIndex?: number
+    details?: any
+    statusCode?: number
+    code?: string
+    ticketId?: number
+    suggestion?: string
+    error?: string
+    queueStatus?: string
+    itemType?: string
+    itemId?: number
+    status?: string
+    errorMessage?: string
   }
   timestamp: number
 }
@@ -157,8 +183,8 @@ export class MCPError extends ApiError {
     this.suggestion = suggestion
     this.context = context
 
-    // Add structured details
-    this.details = {
+    // Add structured details to parent class
+    ;(this as any).details = {
       code,
       message,
       suggestion,
@@ -324,7 +350,7 @@ export function isMCPError(error: unknown): error is MCPError {
 /**
  * Format MCP error for tool response
  */
-export async function formatMCPErrorResponse(error: MCPError): Promise<CallToolResult> {
+export async function formatMCPErrorResponse(error: MCPError): Promise<MCPToolResponse> {
   let errorText = `Error: ${error.message}\n\nSuggestion: ${error.suggestion}`
 
   // Special handling for PROJECT_NOT_FOUND to include available projects

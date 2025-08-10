@@ -24,9 +24,9 @@ import {
   batchCreateTasks,
   batchUpdateTasks,
   batchDeleteTasks,
-  batchMoveTasks,
-  UpdateTaskBody
+  batchMoveTasks
 } from '@promptliano/services'
+import type { UpdateTaskBody } from '@promptliano/schemas'
 
 export const taskManagerTool: MCPToolDefinition = {
   name: 'task_manager',

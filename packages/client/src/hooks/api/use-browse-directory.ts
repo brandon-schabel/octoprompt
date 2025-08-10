@@ -6,7 +6,10 @@ export function useBrowseDirectory() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data?: BrowseDirectoryRequest) => client!.system.browseDirectory(data),
+    mutationFn: (data?: BrowseDirectoryRequest) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.system.browseDirectory(data)
+    },
     onError: (error) => {
       console.error('Failed to browse directory:', error)
     }

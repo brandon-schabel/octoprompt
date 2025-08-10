@@ -20,10 +20,9 @@ import {
   listPromptsByProject,
   addPromptToProject,
   removePromptFromProject,
-  suggestPrompts,
-  CreatePromptBody,
-  UpdatePromptBody
+  suggestPrompts
 } from '@promptliano/services'
+import type { CreatePromptBody, UpdatePromptBody } from '@promptliano/schemas'
 
 export const promptManagerTool: MCPToolDefinition = {
   name: 'prompt_manager',

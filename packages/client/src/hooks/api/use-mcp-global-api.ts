@@ -19,7 +19,10 @@ export function useGetGlobalMCPConfig() {
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.config(),
     enabled: !!client,
-    queryFn: () => client.mcpGlobalConfig.getGlobalConfig(),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.getGlobalConfig()
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2
   })
@@ -32,7 +35,10 @@ export function useGetGlobalInstallations() {
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.installations(),
     enabled: !!client,
-    queryFn: () => client.mcpGlobalConfig.getGlobalInstallations(),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.getGlobalInstallations()
+    },
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: true
   })
@@ -45,7 +51,10 @@ export function useGetGlobalMCPStatus() {
   return useQuery({
     queryKey: MCP_GLOBAL_KEYS.status(),
     enabled: !!client,
-    queryFn: () => client.mcpGlobalConfig.getGlobalStatus(),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.getGlobalStatus()
+    },
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: true
   })
@@ -59,7 +68,10 @@ export function useUpdateGlobalMCPConfig() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (updates: any) => client!.mcpGlobalConfig.updateGlobalConfig(updates),
+    mutationFn: (updates: any) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.updateGlobalConfig(updates)
+    },
     onSuccess: (data) => {
       // Invalidate all MCP global queries
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.all })
@@ -78,8 +90,10 @@ export function useInstallGlobalMCP() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { tool: string; serverName?: string; debug?: boolean }) =>
-      client.mcpGlobalConfig.installGlobalMCP(data),
+    mutationFn: (data: { tool: string; serverName?: string; debug?: boolean }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.installGlobalMCP(data)
+    },
     onSuccess: (data) => {
       // Invalidate installations and status
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })
@@ -100,7 +114,10 @@ export function useUninstallGlobalMCP() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { tool: string }) => client.mcpGlobalConfig.uninstallGlobalMCP(data),
+    mutationFn: (data: { tool: string }) => {
+      if (!client) throw new Error('API client not initialized')
+      return client.mcpGlobalConfig.uninstallGlobalMCP(data)
+    },
     onSuccess: (data) => {
       // Invalidate installations and status
       queryClient.invalidateQueries({ queryKey: MCP_GLOBAL_KEYS.installations() })

@@ -71,21 +71,6 @@ function createTrackedHandler(toolName: string, handler: (args: any) => Promise<
       success = false
       errorMessage = error instanceof Error ? error.message : String(error)
       throw error
-    } finally {
-      // Track execution
-      try {
-        await trackMCPToolExecution({
-          toolName,
-          projectId: projectId || args.projectId,
-          executionTime: Date.now() - startTime,
-          success,
-          errorMessage,
-          inputSize: JSON.stringify(args).length,
-          outputSize: 0 // Will be updated if we have access to response
-        })
-      } catch (trackError) {
-        console.error('Failed to track MCP tool execution:', trackError)
-      }
     }
   }
 }
@@ -126,13 +111,10 @@ export const hookManagerTool: MCPToolDefinition = {
 
         switch (action) {
           case HookManagerAction.LIST: {
-            const hooks = await claudeHookService.listAllHooks(project.path)
+            const hooks = await claudeHookService.listHooks(project.path)
             const hookList = hooks
               .map((hook) => {
-                const eventHooks = hook.matchers
-                  .map((matcher, idx) => `  [${idx}] ${matcher} → ${hook.command}`)
-                  .join('\n')
-                return `[${hook.level.toUpperCase()}] ${hook.event}:\n${eventHooks}`
+                return `Event: ${hook.event}\n  Matcher [${hook.matcherIndex}]: ${hook.matcher} → ${hook.command}`
               })
               .join('\n\n')
             return {
@@ -141,19 +123,22 @@ export const hookManagerTool: MCPToolDefinition = {
           }
 
           case HookManagerAction.GET: {
-            const level = validateDataField<HookConfigurationLevel>(data, 'level', 'string', 'project')
             const eventName = validateDataField<HookEvent>(data, 'eventName', 'string', 'PreToolUse')
-            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', '0')
+            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', 0)
 
-            const hook = await claudeHookService.getHook(project.path, level, eventName, matcherIndex)
+            const hook = await claudeHookService.getHook(project.path, eventName, matcherIndex.toString())
+            if (!hook) {
+              throw createMCPError(MCPErrorCode.RESOURCE_NOT_FOUND, `Hook not found: ${eventName}[${matcherIndex}]`, {
+                projectId: validProjectId,
+                event: eventName,
+                matcherIndex
+              })
+            }
             const details = `Hook Details:
-Level: ${hook.level}
 Event: ${hook.event}
 Matcher Index: ${hook.matcherIndex}
 Matcher: ${hook.matcher}
-Command: ${hook.command}
-Message: ${hook.message || 'None'}
-Allow: ${hook.allow !== undefined ? hook.allow : 'Not specified'}`
+Command: ${hook.command}`
             return {
               content: [{ type: 'text', text: details }]
             }
@@ -162,9 +147,9 @@ Allow: ${hook.allow !== undefined ? hook.allow : 'Not specified'}`
           case HookManagerAction.CREATE: {
             const hookData = validateDataField<CreateHookConfigBody>(
               data,
-              'level',
+              'hookData',
               'object',
-              '{ level: "project", eventName: "PreToolUse", matcher: "^rm", command: "echo Blocked" }'
+              '{ event: "PreToolUse", matcher: "^rm", command: "echo Blocked" }'
             )
 
             const createdHook = await claudeHookService.createHook(project.path, hookData)
@@ -172,30 +157,22 @@ Allow: ${hook.allow !== undefined ? hook.allow : 'Not specified'}`
               content: [
                 {
                   type: 'text',
-                  text: `Hook created successfully: ${createdHook.event} at ${createdHook.level} level with matcher "${createdHook.matcher}"`
+                  text: `Hook created successfully: ${createdHook.event} with matcher "${createdHook.matcher}"`
                 }
               ]
             }
           }
 
           case HookManagerAction.UPDATE: {
-            const level = validateDataField<HookConfigurationLevel>(data, 'level', 'string', 'project')
             const eventName = validateDataField<HookEvent>(data, 'eventName', 'string', 'PreToolUse')
-            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', '0')
+            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', 0)
 
             const updateData: UpdateHookConfigBody = {}
             if (data.matcher !== undefined) updateData.matcher = data.matcher
             if (data.command !== undefined) updateData.command = data.command
-            if (data.message !== undefined) updateData.message = data.message
-            if (data.allow !== undefined) updateData.allow = data.allow
+            if (data.timeout !== undefined) updateData.timeout = data.timeout
 
-            const updatedHook = await claudeHookService.updateHook(
-              project.path,
-              level,
-              eventName,
-              matcherIndex,
-              updateData
-            )
+            const updatedHook = await claudeHookService.updateHook(project.path, eventName, matcherIndex, updateData)
             return {
               content: [
                 { type: 'text', text: `Hook updated successfully: ${updatedHook.event} at index ${matcherIndex}` }
@@ -204,11 +181,10 @@ Allow: ${hook.allow !== undefined ? hook.allow : 'Not specified'}`
           }
 
           case HookManagerAction.DELETE: {
-            const level = validateDataField<HookConfigurationLevel>(data, 'level', 'string', 'project')
             const eventName = validateDataField<HookEvent>(data, 'eventName', 'string', 'PreToolUse')
-            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', '0')
+            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', 0)
 
-            await claudeHookService.deleteHook(project.path, level, eventName, matcherIndex)
+            await claudeHookService.deleteHook(project.path, eventName, matcherIndex)
             return {
               content: [{ type: 'text', text: `Hook deleted successfully: ${eventName} at index ${matcherIndex}` }]
             }

@@ -1,5 +1,6 @@
 import yaml from 'js-yaml'
-import { BaseParser, ParserOptions, ParseResult } from './base-parser'
+import { BaseParser } from './base-parser'
+import type { ParserOptions, ParseResult } from './base-parser'
 import { ParseError } from '@promptliano/shared'
 
 export interface YamlParserOptions extends ParserOptions {

@@ -1,5 +1,5 @@
 import { MarkdownParser } from './markdown-parser'
-import { ParseResult, ParserOptions } from './base-parser'
+import type { ParseResult, ParserOptions } from './base-parser'
 import { ParseError } from '@promptliano/shared'
 import { z } from 'zod'
 

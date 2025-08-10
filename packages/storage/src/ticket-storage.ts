@@ -104,8 +104,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message || undefined,
           estimatedProcessingTime: row.estimated_processing_time || undefined,
           actualProcessingTime: row.actual_processing_time || undefined,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
 
         // Validate the ticket
@@ -225,8 +225,8 @@ class TicketStorage {
         queueErrorMessage: row.queue_error_message || undefined,
         estimatedProcessingTime: row.estimated_processing_time || undefined,
         actualProcessingTime: row.actual_processing_time || undefined,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
+        created: Number(row.created_at) || Date.now(),
+        updated: Number(row.updated_at) || Date.now()
       }
 
       // Validate the ticket data
@@ -289,8 +289,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message || undefined,
           estimatedProcessingTime: row.estimated_processing_time || undefined,
           actualProcessingTime: row.actual_processing_time || undefined,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
 
         // Validate each task
@@ -504,8 +504,8 @@ class TicketStorage {
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
           suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         const validated = await validateData(ticket, TicketSchema, `ticket ${ticket.id}`)
         validatedTickets.push(validated)
@@ -587,8 +587,8 @@ class TicketStorage {
         queueErrorMessage: row.queue_error_message || undefined,
         estimatedProcessingTime: row.estimated_processing_time || undefined,
         actualProcessingTime: row.actual_processing_time || undefined,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
+        created: Number(row.created_at) || Date.now(),
+        updated: Number(row.updated_at) || Date.now()
       }
 
       // Validate the task data
@@ -882,8 +882,8 @@ class TicketStorage {
         queueErrorMessage: row.queue_error_message || undefined,
         estimatedProcessingTime: row.estimated_processing_time || undefined,
         actualProcessingTime: row.actual_processing_time || undefined,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
+        created: Number(row.created_at) || Date.now(),
+        updated: Number(row.updated_at) || Date.now()
       }
 
       return await validateData(ticket, TicketSchema, `ticket ${ticket.id}`)
@@ -1263,8 +1263,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message,
           estimatedProcessingTime: row.estimated_processing_time,
           actualProcessingTime: row.actual_processing_time,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         tickets.push(await validateData(ticket as any, TicketSchema, `ticket ${ticket.id}`))
       }
@@ -1295,8 +1295,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message,
           estimatedProcessingTime: row.estimated_processing_time,
           actualProcessingTime: row.actual_processing_time,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         tasks.push(await validateData(task as any, TicketTaskSchema, `task ${task.id}`))
       }
@@ -1363,8 +1363,8 @@ class TicketStorage {
           suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
           suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         tickets.push(await validateData(ticket as any, TicketSchema, `ticket ${ticket.id}`))
       }
@@ -1384,8 +1384,8 @@ class TicketStorage {
           tags: safeJsonParse(row.tags, [], 'task.tags'),
           agentId: row.agent_id,
           suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
+          created: Number(row.created_at) || Date.now(),
+          updated: Number(row.updated_at) || Date.now()
         }
         tasks.push(await validateData(task as any, TicketTaskSchema, `task ${task.id}`))
       }

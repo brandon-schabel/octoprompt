@@ -230,7 +230,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
       const defaultConfigResult = await client?.mcpProjectConfig.getDefaultConfigForLocation(projectId, location.path)
 
       // Save it to the specific location
-      if (!client) return
+      if (!client || !defaultConfigResult) return
       await client.mcpProjectConfig.saveProjectConfigToLocation(
         projectId,
         defaultConfigResult.data.config,

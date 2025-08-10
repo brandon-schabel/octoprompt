@@ -27,10 +27,9 @@ import {
   getActiveTab,
   getProjectSummaryWithOptions,
   getProjectFileTree,
-  getProjectOverview,
-  CreateProjectBody,
-  UpdateProjectBody
+  getProjectOverview
 } from '@promptliano/services'
+import type { CreateProjectBody, UpdateProjectBody } from '@promptliano/services'
 import { SummaryOptionsSchema } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 
@@ -579,7 +578,7 @@ Version Info:
         // Convert API errors to MCP errors
         if (error instanceof ApiError) {
           throw createMCPError(
-            error.code === 'NOT_FOUND' ? MCPErrorCode.NOT_FOUND : MCPErrorCode.SERVICE_ERROR,
+            error.code === 'NOT_FOUND' ? MCPErrorCode.FILE_NOT_FOUND : MCPErrorCode.SERVICE_ERROR,
             error.message,
             {
               statusCode: error.statusCode,

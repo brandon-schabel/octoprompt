@@ -41,7 +41,7 @@ const getActiveTabRoute = createRoute({
                     suggestedFileIds: z.array(z.number()).optional(),
                     ticketSearch: z.string().optional(),
                     ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-                    ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+                    ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed', 'non_closed']).optional()
                   })
                   .optional()
               })
@@ -111,7 +111,7 @@ const setActiveTabRoute = createRoute({
                   suggestedFileIds: z.array(z.number()).optional(),
                   ticketSearch: z.string().optional(),
                   ticketSort: z.enum(['created_asc', 'created_desc', 'status', 'priority']).optional(),
-                  ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed']).optional()
+                  ticketStatusFilter: z.enum(['all', 'open', 'in_progress', 'closed', 'non_closed']).optional()
                 })
                 .optional()
             })

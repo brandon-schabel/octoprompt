@@ -244,17 +244,12 @@ const dequeueTicketRoute = createRoute({
     params: z.object({
       ticketId: z.coerce.number()
     }),
-    body: {
-      content: {
-        'application/json': {
-          schema: z
-            .object({
-              includeTasks: z.boolean().default(false)
-            })
-            .optional()
-        }
-      }
-    }
+    query: z.object({
+      includeTasks: z
+        .string()
+        .optional()
+        .transform((val) => val === 'true')
+    })
   },
   responses: {
     200: {
@@ -272,8 +267,7 @@ const dequeueTicketRoute = createRoute({
 
 app.openapi(dequeueTicketRoute, async (c) => {
   const { ticketId } = c.req.valid('param')
-  const body = c.req.valid('json')
-  const includeTasks = body?.includeTasks || false
+  const { includeTasks = false } = c.req.valid('query')
 
   if (includeTasks) {
     const ticket = await flowService.dequeueTicketWithTasks(ticketId)

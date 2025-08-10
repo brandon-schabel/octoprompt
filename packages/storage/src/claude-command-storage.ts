@@ -30,7 +30,7 @@ export const claudeCommandStorage = {
   initializePathValidator(projectPath?: string) {
     // Always allow user commands directory
     this.pathValidator.addAllowedPath(this.getUserCommandsDir())
-    
+
     // Add project path if provided
     if (projectPath) {
       this.pathValidator.addAllowedPath(projectPath)
@@ -61,7 +61,7 @@ export const claudeCommandStorage = {
 
   /** Generate command key from file path and scope */
   generateCommandKey(commandName: string, namespace?: string, scope?: CommandScope): string {
-    const parts = [scope || 'project']
+    const parts = [(scope || 'project') as string]
     if (namespace) parts.push(namespace)
     parts.push(commandName)
     return parts.join(':')
@@ -70,9 +70,9 @@ export const claudeCommandStorage = {
   /** Parse command key into components */
   parseCommandKey(key: string): { scope: CommandScope; namespace?: string; commandName: string } {
     const parts = key.split(':')
-    if (parts.length === 2) {
+    if (parts.length === 2 && parts[0] && parts[1]) {
       return { scope: parts[0] as CommandScope, commandName: parts[1] }
-    } else if (parts.length === 3) {
+    } else if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
       return { scope: parts[0] as CommandScope, namespace: parts[1], commandName: parts[2] }
     }
     throw new Error(`Invalid command key format: ${key}`)
@@ -158,7 +158,7 @@ export const claudeCommandStorage = {
   async readCommands(projectPath: string, includeGlobal: boolean = true): Promise<ClaudeCommandsStorage> {
     // Initialize path validator with project path
     this.initializePathValidator(projectPath)
-    
+
     const cacheKey = `${projectPath}:${includeGlobal}`
 
     // Check cache
@@ -223,7 +223,7 @@ export const claudeCommandStorage = {
   ): Promise<ClaudeCommand> {
     // Initialize path validator with project path
     this.initializePathValidator(projectPath)
-    
+
     // Validate command name
     const nameValidation = this.pathValidator.validateCommandName(commandName)
     if (!nameValidation.valid) {

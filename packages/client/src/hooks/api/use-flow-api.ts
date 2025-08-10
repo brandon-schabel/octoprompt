@@ -86,7 +86,8 @@ export function useGetFlowData(projectId: number, enabled = true) {
   return useQuery({
     queryKey: FLOW_KEYS.data(projectId),
     queryFn: async () => {
-      const data = await client!.flow.getFlowData(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const data = await client.flow.getFlowData(projectId)
       return data as FlowData
     },
     enabled: !!client && enabled && !!projectId,
@@ -105,7 +106,8 @@ export function useGetFlowItems(projectId: number, enabled = true) {
   return useQuery({
     queryKey: FLOW_KEYS.items(projectId),
     queryFn: async () => {
-      const items = await client!.flow.getFlowItems(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const items = await client.flow.getFlowItems(projectId)
       return items as FlowItem[]
     },
     enabled: !!client && enabled && !!projectId,
@@ -123,7 +125,8 @@ export function useGetUnqueuedItems(projectId: number, enabled = true) {
   return useQuery({
     queryKey: FLOW_KEYS.unqueued(projectId),
     queryFn: async () => {
-      const items = await client!.flow.getUnqueuedItems(projectId)
+      if (!client) throw new Error('API client not initialized')
+      const items = await client.flow.getUnqueuedItems(projectId)
       return items as { tickets: Ticket[]; tasks: TicketTask[] }
     },
     enabled: !!client && enabled && !!projectId,
@@ -155,7 +158,8 @@ export function useEnqueueTicket() {
       priority?: number
       includeTasks?: boolean
     }) => {
-      const result = await client!.flow.enqueueTicket(ticketId, { queueId, priority, includeTasks })
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.enqueueTicket(ticketId, { queueId, priority, includeTasks })
       return result as Ticket
     },
     onSuccess: (ticket) => {
@@ -178,7 +182,8 @@ export function useEnqueueTask() {
 
   return useMutation({
     mutationFn: async ({ taskId, queueId, priority = 0 }: { taskId: number; queueId: number; priority?: number }) => {
-      const result = await client!.flow.enqueueTask(taskId, { queueId, priority })
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.enqueueTask(taskId, { queueId, priority })
       return result as TicketTask
     },
     onSuccess: () => {
@@ -204,7 +209,8 @@ export function useDequeueTicket() {
       const includeTasks = typeof params === 'object' ? params.includeTasks : false
 
       // Client null check removed - handled by React Query
-      const result = await client!.flow.dequeueTicket(ticketId, { includeTasks })
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.dequeueTicket(ticketId, { includeTasks })
       return result as Ticket
     },
     onSuccess: (ticket) => {
@@ -228,7 +234,8 @@ export function useDequeueTask() {
   return useMutation({
     mutationFn: async (taskId: number) => {
       // Client null check removed - handled by React Query
-      const result = await client!.flow.dequeueTask(taskId)
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.dequeueTask(taskId)
       return result as TicketTask
     },
     onSuccess: (task) => {
@@ -263,7 +270,8 @@ export function useMoveItem() {
       priority?: number
       includeTasks?: boolean
     }) => {
-      const result = await client!.flow.moveItem({ itemType, itemId, targetQueueId, priority, includeTasks })
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.moveItem({ itemType, itemId, targetQueueId, priority, includeTasks })
       return result as FlowItem
     },
     onSuccess: () => {
@@ -292,7 +300,8 @@ export function useBulkMoveItems() {
       targetQueueId: number | null
       priority?: number
     }) => {
-      const result = await client!.flow.bulkMoveItems({ items, targetQueueId, priority })
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.bulkMoveItems({ items, targetQueueId, priority })
       return result as { success: boolean; movedCount: number }
     },
     onSuccess: () => {
@@ -323,7 +332,8 @@ export function useStartProcessing() {
       itemId: number
       agentId: string
     }) => {
-      const result = await client!.flow.startProcessingItem({ itemType, itemId, agentId })
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.startProcessingItem({ itemType, itemId, agentId })
       return result as { success: boolean }
     },
     onSuccess: () => {
@@ -352,7 +362,8 @@ export function useCompleteProcessing() {
       itemId: number
       processingTime?: number
     }) => {
-      const result = await client!.flow.completeProcessingItem({ itemType, itemId, processingTime })
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.completeProcessingItem({ itemType, itemId, processingTime })
       return result as { success: boolean }
     },
     onSuccess: () => {
@@ -381,7 +392,8 @@ export function useFailProcessing() {
       itemId: number
       errorMessage: string
     }) => {
-      const result = await client!.flow.failProcessingItem({ itemType, itemId, errorMessage })
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.flow.failProcessingItem({ itemType, itemId, errorMessage })
       return result as { success: boolean }
     },
     onSuccess: () => {
@@ -409,7 +421,8 @@ export function useCompleteQueueItem() {
       itemId: number
       ticketId?: number
     }) => {
-      const result = await client!.queues.completeQueueItem(itemType, itemId, ticketId)
+      if (!client) throw new Error('API client not initialized')
+      const result = await client.queues.completeQueueItem(itemType, itemId, ticketId)
       return result
     },
     onSuccess: (_, variables) => {

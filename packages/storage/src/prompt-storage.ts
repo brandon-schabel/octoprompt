@@ -51,8 +51,8 @@ export const promptStorage = {
         name: row.name,
         content: row.content,
         projectId: row.project_id,
-        created: row.created_at,
-        updated: row.updated_at
+        created: Number(row.created_at),
+        updated: Number(row.updated_at)
       }
 
       // Validate the result
@@ -145,7 +145,11 @@ export const promptStorage = {
     const database = db.getDatabase()
 
     // Validate input
-    const validatedAssociations = await validateData(promptProjects, PromptProjectsStorageSchema, 'prompt-project associations')
+    const validatedAssociations = await validateData(
+      promptProjects,
+      PromptProjectsStorageSchema,
+      'prompt-project associations'
+    )
 
     // Use transaction to ensure atomicity
     database.transaction(() => {
@@ -160,12 +164,7 @@ export const promptStorage = {
 
       for (const association of validatedAssociations) {
         const now = Date.now()
-        insertStmt.run(
-          association.id,
-          association.promptId,
-          association.projectId,
-          now
-        )
+        insertStmt.run(association.id, association.promptId, association.projectId, now)
       }
     })()
 
@@ -358,12 +357,7 @@ export const promptStorage = {
       INSERT INTO prompt_projects (id, prompt_id, project_id, created_at)
       VALUES (?, ?, ?, ?)
     `)
-    insertQuery.run(
-      validatedAssociation.id,
-      validatedAssociation.promptId,
-      validatedAssociation.projectId,
-      Date.now()
-    )
+    insertQuery.run(validatedAssociation.id, validatedAssociation.promptId, validatedAssociation.projectId, Date.now())
 
     return validatedAssociation
   },

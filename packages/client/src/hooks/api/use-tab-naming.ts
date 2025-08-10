@@ -15,6 +15,7 @@ export function useGenerateTabName() {
     mutationFn: async (params: TabNameGenerationRequest) => {
       // Client null check removed - handled by React Query
       // Since we're using AI generation, we'll call the gen-ai endpoint directly
+      if (!client) throw new Error('API client not initialized')
       const response = await client.genAi.generateStructured({
         schemaKey: 'tabNaming',
         userInput: `Project Name: ${params.projectName}, Selected Files: ${params.selectedFiles?.join(', ') || 'None'}, Context: ${params.context || 'General project work'}`

@@ -70,6 +70,11 @@ export const claudeAgentStorage = {
       }
 
       const [, frontmatterStr, body] = match
+
+      if (!frontmatterStr) {
+        throw new Error('Invalid agent file: missing frontmatter content')
+      }
+
       const frontmatter: AgentFrontmatter = {
         name: '',
         description: ''
@@ -92,7 +97,7 @@ export const claudeAgentStorage = {
         throw new Error('Invalid agent file: missing name in frontmatter')
       }
 
-      return { frontmatter, body: body.trim() }
+      return { frontmatter, body: body?.trim() || '' }
     }
   },
 
