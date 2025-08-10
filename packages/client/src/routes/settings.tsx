@@ -84,7 +84,7 @@ export function SettingsPage() {
         }}
         className='w-full'
       >
-        <TabsList className='grid w-full grid-cols-3'>
+        <TabsList className='grid w-full grid-cols-2'>
           <TabsTrigger value='general'>General</TabsTrigger>
           <TabsTrigger value='server'>Server</TabsTrigger>
           <TabsTrigger value='global-mcp'>Global MCP</TabsTrigger>
