@@ -18,6 +18,7 @@ interface KanbanItem {
   ticketId?: number // For tasks to group by parent ticket
   taskCount?: number // For tickets - total number of tasks
   completedTaskCount?: number // For tickets - number of completed tasks
+  actualId?: number // The actual database ID for the ticket or task
 }
 
 interface KanbanColumnProps {
@@ -27,6 +28,8 @@ interface KanbanColumnProps {
   onAddToQueue?: () => void
   onPauseQueue?: () => void
   onResumeQueue?: () => void
+  onItemCompleted?: () => void
+  onOpenTicket?: (ticketId: number) => void
 }
 
 export function KanbanColumn({
@@ -35,7 +38,9 @@ export function KanbanColumn({
   isUnqueued = false,
   onAddToQueue,
   onPauseQueue,
-  onResumeQueue
+  onResumeQueue,
+  onItemCompleted,
+  onOpenTicket
 }: KanbanColumnProps) {
   const id = queue?.queue.id.toString() || 'unqueued'
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -161,6 +166,9 @@ export function KanbanColumn({
                           estimatedHours={ticket.estimatedHours}
                           taskCount={ticket.taskCount}
                           completedTaskCount={ticket.completedTaskCount}
+                          actualId={ticket.actualId}
+                          onComplete={onItemCompleted}
+                          onOpenTicket={onOpenTicket}
                         />
                         {ticketTasks.length > 0 && (
                           <div className='space-y-1.5 ml-2'>
@@ -172,6 +180,9 @@ export function KanbanColumn({
                                 type={task.type}
                                 estimatedHours={task.estimatedHours}
                                 isNested={true}
+                                actualId={task.actualId}
+                                ticketId={task.ticketId}
+                                onComplete={onItemCompleted}
                               />
                             ))}
                           </div>
@@ -195,6 +206,9 @@ export function KanbanColumn({
                             type={task.type}
                             estimatedHours={task.estimatedHours}
                             ticketTitle={task.ticketTitle}
+                            actualId={task.actualId}
+                            ticketId={task.ticketId}
+                            onComplete={onItemCompleted}
                           />
                         ))}
                       </div>

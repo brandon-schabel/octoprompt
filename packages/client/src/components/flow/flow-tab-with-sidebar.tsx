@@ -11,9 +11,11 @@ import { TicketDetailView } from '@/components/tickets/ticket-detail-view'
 import { KanbanBoard } from '@/components/queues/kanban-board'
 import { TicketDialog } from '@/components/tickets/ticket-dialog'
 import { useGetTicketsWithTasks } from '@/hooks/api/use-tickets-api'
+import { useGetQueuesWithStats } from '@/hooks/api/use-queue-api'
 import { TicketWithTasks } from '@promptliano/schemas'
 import { Button } from '@promptliano/ui'
-import { Plus } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@promptliano/ui'
+import { Plus, Filter } from 'lucide-react'
 import { type FlowView } from '@/lib/search-schemas'
 
 interface FlowTabWithSidebarProps {
@@ -43,7 +45,10 @@ export function FlowTabWithSidebar({
 }: FlowTabWithSidebarProps) {
   const [isCreateQueueDialogOpen, setIsCreateQueueDialogOpen] = useState(false)
   const [isCreateTicketDialogOpen, setIsCreateTicketDialogOpen] = useState(false)
-  const [selectedTicket, setSelectedTicket] = useState<TicketWithTasks | null>(null)
+  const [ticketStatusFilter, setTicketStatusFilter] = useState<
+    'all' | 'open' | 'in_progress' | 'closed' | 'non_closed'
+  >('non_closed')
+  const [ticketQueueFilter, setTicketQueueFilter] = useState<string>('all')
 
   // Responsive sidebar width
   const isCompact = useMediaQuery('(max-width: 768px)')
@@ -51,9 +56,56 @@ export function FlowTabWithSidebar({
   // Fetch tickets for the tickets view
   const { data: tickets, isLoading, refetch, error } = useGetTicketsWithTasks(projectId)
 
+  // Fetch available queues
+  const { data: queuesData } = useGetQueuesWithStats(projectId)
+
+  // Derive selected ticket from selectedTicketId and tickets data
+  const selectedTicket = React.useMemo(() => {
+    if (!selectedTicketId || !tickets) return null
+    return tickets.find((t) => t.ticket.id === selectedTicketId) || null
+  }, [selectedTicketId, tickets])
+
+  // Filter tickets based on status and queue
+  const filteredTickets = React.useMemo(() => {
+    if (!tickets) return []
+
+    let filtered = tickets
+
+    // Apply status filter
+    switch (ticketStatusFilter) {
+      case 'non_closed':
+        filtered = filtered.filter((t) => t.ticket.status !== 'closed')
+        break
+      case 'open':
+        filtered = filtered.filter((t) => t.ticket.status === 'open')
+        break
+      case 'in_progress':
+        filtered = filtered.filter((t) => t.ticket.status === 'in_progress')
+        break
+      case 'closed':
+        filtered = filtered.filter((t) => t.ticket.status === 'closed')
+        break
+      case 'all':
+      default:
+        // No status filtering
+        break
+    }
+
+    // Apply queue filter
+    if (ticketQueueFilter === 'all') {
+      // No queue filtering
+    } else if (ticketQueueFilter === 'unqueued') {
+      filtered = filtered.filter((t) => t.ticket.queueId == null)
+    } else {
+      // It's a specific queue ID
+      filtered = filtered.filter((t) => t.ticket.queueId?.toString() === ticketQueueFilter)
+    }
+
+    return filtered
+  }, [tickets, ticketStatusFilter, ticketQueueFilter])
+
   // Handle ticket selection
   const handleSelectTicket = (ticket: TicketWithTasks) => {
-    setSelectedTicket(ticket)
     onTicketSelect(ticket.ticket.id)
   }
 
@@ -74,12 +126,49 @@ export function FlowTabWithSidebar({
           <div className='flex h-full'>
             <div className='w-1/3 min-w-[300px] max-w-[400px] border-r'>
               <div className='h-full flex flex-col'>
-                <div className='p-4 border-b flex items-center justify-between'>
-                  <h3 className='font-semibold'>Tickets</h3>
-                  <Button size='sm' onClick={() => setIsCreateTicketDialogOpen(true)} className='gap-1'>
-                    <Plus className='h-4 w-4' />
-                    New Ticket
-                  </Button>
+                <div className='p-4 border-b flex flex-col gap-2'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <h3 className='font-semibold flex-shrink-0'>Tickets</h3>
+                    <Button size='sm' onClick={() => setIsCreateTicketDialogOpen(true)} className='gap-1'>
+                      <Plus className='h-4 w-4' />
+                      New Ticket
+                    </Button>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Select value={ticketStatusFilter} onValueChange={(value) => setTicketStatusFilter(value as any)}>
+                      <SelectTrigger className='flex-1 h-8'>
+                        <Filter className='h-3 w-3 mr-1' />
+                        <SelectValue placeholder='Status' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='non_closed'>Non-Closed</SelectItem>
+                        <SelectItem value='all'>All Status</SelectItem>
+                        <SelectItem value='open'>Open</SelectItem>
+                        <SelectItem value='in_progress'>In Progress</SelectItem>
+                        <SelectItem value='closed'>Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={ticketQueueFilter} onValueChange={(value) => setTicketQueueFilter(value)}>
+                      <SelectTrigger className='flex-1 h-8'>
+                        <Filter className='h-3 w-3 mr-1' />
+                        <SelectValue placeholder='Queue' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='all'>All Tickets</SelectItem>
+                        <SelectItem value='unqueued'>Unqueued</SelectItem>
+                        {queuesData && queuesData.length > 0 && (
+                          <>
+                            <SelectSeparator />
+                            {queuesData.map((queueWithStats) => (
+                              <SelectItem key={queueWithStats.queue.id} value={queueWithStats.queue.id.toString()}>
+                                {queueWithStats.queue.name}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className='flex-1 overflow-y-auto'>
                   {error ? (
@@ -92,10 +181,11 @@ export function FlowTabWithSidebar({
                     </div>
                   ) : (
                     <SimpleTicketList
-                      tickets={tickets || []}
+                      tickets={filteredTickets}
                       selectedTicket={selectedTicket}
                       onSelectTicket={handleSelectTicket}
                       loading={isLoading}
+                      projectId={projectId}
                     />
                   )}
                 </div>

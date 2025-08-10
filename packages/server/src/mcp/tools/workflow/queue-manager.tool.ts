@@ -15,17 +15,15 @@ import {
   listQueuesByProject,
   updateQueue,
   deleteQueue,
-  enqueueItem,
-  updateQueueItem,
-  deleteQueueItem,
-  getQueueItems,
   getQueueStats,
   getQueuesWithStats,
-  batchEnqueueItems,
   enqueueTicketWithAllTasks,
+  enqueueTicket,
+  enqueueTask,
+  dequeueTicket,
+  dequeueTask,
   type CreateQueueBody,
-  type UpdateQueueBody,
-  type EnqueueItemBody
+  type UpdateQueueBody
 } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
 
@@ -36,12 +34,11 @@ export enum QueueManagerAction {
   GET_QUEUE = 'get_queue',
   UPDATE_QUEUE = 'update_queue',
   DELETE_QUEUE = 'delete_queue',
-  ENQUEUE_ITEM = 'enqueue_item',
   ENQUEUE_TICKET = 'enqueue_ticket',
-  BATCH_ENQUEUE = 'batch_enqueue',
-  UPDATE_ITEM = 'update_item',
-  DELETE_ITEM = 'delete_item',
-  GET_ITEMS = 'get_items',
+  ENQUEUE_TASK = 'enqueue_task',
+  ENQUEUE_TICKET_WITH_TASKS = 'enqueue_ticket_with_tasks',
+  DEQUEUE_TICKET = 'dequeue_ticket',
+  DEQUEUE_TASK = 'dequeue_task',
   GET_STATS = 'get_stats',
   GET_ALL_STATS = 'get_all_stats'
 }
@@ -57,7 +54,7 @@ export const QueueManagerSchema = z.object({
 export const queueManagerTool: MCPToolDefinition = {
   name: 'queue_manager',
   description:
-    'Manage task queues for AI agent processing. Actions: create_queue, list_queues, get_queue, update_queue, delete_queue, enqueue_item, enqueue_ticket, batch_enqueue, update_item, delete_item, get_items, get_stats, get_all_stats',
+    'Manage task queues for AI agent processing. Actions: create_queue, list_queues, get_queue, update_queue, delete_queue, enqueue_ticket, enqueue_task, enqueue_ticket_with_tasks, dequeue_ticket, dequeue_task, get_stats, get_all_stats',
   inputSchema: {
     type: 'object',
     properties: {
@@ -77,7 +74,7 @@ export const queueManagerTool: MCPToolDefinition = {
       data: {
         type: 'object',
         description:
-          'Action-specific data. For create_queue: { name: "Main Queue", description: "Primary processing queue", maxParallelItems: 3 }. For enqueue_item: { ticketId: 456 } or { taskId: 789, priority: 10 }. For enqueue_ticket: { ticketId: 456, priority: 5 }. For batch_enqueue: { items: [{ticketId: 456}, {taskId: 789}] }. For update_item: { itemId: 123, status: "completed" }. For get_items: { status: "queued" }'
+          'Action-specific data. For create_queue: { name: "Main Queue", description: "Primary processing queue", maxParallelItems: 3 }. For enqueue_ticket: { ticketId: 456, priority: 5 }. For enqueue_task: { ticketId: 123, taskId: 789, priority: 5 }. For enqueue_ticket_with_tasks: { ticketId: 456, priority: 5 }. For dequeue_ticket: { ticketId: 456 }. For dequeue_task: { ticketId: 123, taskId: 789 }'
       }
     },
     required: ['action']
@@ -192,128 +189,87 @@ Updated: ${new Date(queue.updated).toLocaleString()}`
             }
           }
 
-          case QueueManagerAction.ENQUEUE_ITEM: {
-            const validQueueId = validateRequiredParam(queueId, 'queueId', 'number', '1')
-
-            const enqueueData: EnqueueItemBody = {
-              ticketId: data?.ticketId,
-              taskId: data?.taskId,
-              priority: data?.priority,
-              agentId: data?.agentId
-            }
-
-            const item = await enqueueItem(validQueueId, enqueueData)
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Item enqueued successfully:
-ID: ${item.id}
-Queue ID: ${item.queueId}
-${item.ticketId ? `Ticket ID: ${item.ticketId}` : `Task ID: ${item.taskId}`}
-Status: ${item.status}
-Priority: ${item.priority}
-${item.agentId ? `Assigned Agent: ${item.agentId}` : ''}`
-                }
-              ]
-            }
-          }
-
           case QueueManagerAction.ENQUEUE_TICKET: {
             const validQueueId = validateRequiredParam(queueId, 'queueId', 'number', '1')
             const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
+            const priority = data?.priority || 5
 
-            const items = await enqueueTicketWithAllTasks(validQueueId, ticketId, data?.priority)
+            const ticket = await enqueueTicket(ticketId, validQueueId, priority)
             return {
               content: [
                 {
                   type: 'text',
-                  text: `Enqueued ${items.length} tasks from ticket ${ticketId} to queue ${validQueueId}`
+                  text: `Ticket enqueued successfully:
+Ticket ID: ${ticket.id}
+Queue ID: ${ticket.queue_id}
+Status: ${ticket.queue_status}
+Priority: ${ticket.queue_priority}`
                 }
               ]
             }
           }
 
-          case QueueManagerAction.BATCH_ENQUEUE: {
+          case QueueManagerAction.ENQUEUE_TASK: {
             const validQueueId = validateRequiredParam(queueId, 'queueId', 'number', '1')
-            const items = validateDataField<EnqueueItemBody[]>(data, 'items', 'array', '[]')
+            const ticketId = validateDataField<number>(data, 'ticketId', 'number', '123')
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const priority = data?.priority || 5
 
-            const results = await batchEnqueueItems(validQueueId, items)
+            const task = await enqueueTask(ticketId, taskId, validQueueId, priority)
             return {
               content: [
                 {
                   type: 'text',
-                  text: `Batch enqueued ${results.length} items to queue ${validQueueId}`
+                  text: `Task enqueued successfully:
+Task ID: ${task.id}
+Queue ID: ${task.queue_id}
+Status: ${task.queue_status}
+Priority: ${task.queue_priority}`
                 }
               ]
             }
           }
 
-          case QueueManagerAction.UPDATE_ITEM: {
-            const itemId = validateDataField<number>(data, 'itemId', 'number', '123')
-
-            const updateData = {
-              status: data?.status,
-              agentId: data?.agentId,
-              errorMessage: data?.errorMessage
-            }
-
-            const item = await updateQueueItem(itemId, updateData)
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Queue item ${item.id} updated successfully`
-                }
-              ]
-            }
-          }
-
-          case QueueManagerAction.DELETE_ITEM: {
-            const itemId = validateDataField<number>(data, 'itemId', 'number', '123')
-            await deleteQueueItem(itemId)
-
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Queue item ${itemId} deleted successfully`
-                }
-              ]
-            }
-          }
-
-          case QueueManagerAction.GET_ITEMS: {
+          case QueueManagerAction.ENQUEUE_TICKET_WITH_TASKS: {
             const validQueueId = validateRequiredParam(queueId, 'queueId', 'number', '1')
-            const status = data?.status as string | undefined
+            const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
+            const priority = data?.priority || 5
 
-            const items = await getQueueItems(validQueueId, status)
-
-            if (items.length === 0) {
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: `No items found in queue ${validQueueId}${status ? ` with status '${status}'` : ''}`
-                  }
-                ]
-              }
+            const result = await enqueueTicketWithAllTasks(validQueueId, ticketId, priority)
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Enqueued ticket with ${result.tasks.length} tasks to queue ${validQueueId}`
+                }
+              ]
             }
+          }
 
-            const itemList = items
-              .map(
-                (item) =>
-                  `${item.id}: ${item.ticketId ? `Ticket ${item.ticketId}` : `Task ${item.taskId}`} ` +
-                  `[${item.status}] Priority: ${item.priority}` +
-                  `${item.agentId ? ` (Agent: ${item.agentId})` : ''}`
-              )
-              .join('\n')
+          case QueueManagerAction.DEQUEUE_TICKET: {
+            const ticketId = validateDataField<number>(data, 'ticketId', 'number', '456')
+            await dequeueTicket(ticketId)
 
             return {
               content: [
                 {
                   type: 'text',
-                  text: `Queue items:\n${itemList}`
+                  text: `Ticket ${ticketId} removed from queue`
+                }
+              ]
+            }
+          }
+
+          case QueueManagerAction.DEQUEUE_TASK: {
+            const ticketId = validateDataField<number>(data, 'ticketId', 'number', '123')
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            await dequeueTask(ticketId, taskId)
+
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Task ${taskId} removed from queue`
                 }
               ]
             }

@@ -54,6 +54,8 @@ export function QueueOverviewSection({ projectId }: QueueOverviewSectionProps) {
   const totalInProgress = queuesWithStats.reduce((sum, q) => sum + q.stats.inProgressItems, 0)
   const totalCompleted = queuesWithStats.reduce((sum, q) => sum + q.stats.completedItems, 0)
   const totalItems = queuesWithStats.reduce((sum, q) => sum + q.stats.totalItems, 0)
+  const totalTickets = queuesWithStats.reduce((sum, q) => sum + (q.stats.uniqueTickets || 0), 0)
+  const totalTasks = queuesWithStats.reduce((sum, q) => sum + (q.stats.taskCount || 0), 0)
   const activeQueues = queuesWithStats.filter((q) => q.queue.status === 'active')
 
   const progressPercentage = totalItems > 0 ? (totalCompleted / totalItems) * 100 : 0
@@ -81,7 +83,7 @@ export function QueueOverviewSection({ projectId }: QueueOverviewSectionProps) {
             </div>
             <div>
               <div className='text-2xl font-semibold text-orange-600'>{totalQueued}</div>
-              <p className='text-xs text-muted-foreground'>Queued</p>
+              <p className='text-xs text-muted-foreground'>Queued Tasks</p>
             </div>
             <div>
               <div className='text-2xl font-semibold text-blue-600'>{totalInProgress}</div>
@@ -92,6 +94,20 @@ export function QueueOverviewSection({ projectId }: QueueOverviewSectionProps) {
               <p className='text-xs text-muted-foreground'>Completed</p>
             </div>
           </div>
+
+          {/* Ticket/Task breakdown */}
+          {(totalTickets > 0 || totalTasks > 0) && (
+            <div className='flex justify-around text-sm pt-2 border-t'>
+              <div className='text-center'>
+                <span className='font-semibold text-lg'>{totalTickets}</span>
+                <p className='text-xs text-muted-foreground'>Tickets</p>
+              </div>
+              <div className='text-center'>
+                <span className='font-semibold text-lg'>{totalTasks}</span>
+                <p className='text-xs text-muted-foreground'>Tasks</p>
+              </div>
+            </div>
+          )}
 
           {/* Overall progress */}
           {totalItems > 0 && (
@@ -111,6 +127,8 @@ export function QueueOverviewSection({ projectId }: QueueOverviewSectionProps) {
               {activeQueues.slice(0, 3).map((queueWithStats) => {
                 const { queue, stats } = queueWithStats
                 const pendingItems = stats.queuedItems + stats.inProgressItems
+                const tickets = stats.uniqueTickets || 0
+                const tasks = stats.taskCount || 0
 
                 return (
                   <div key={queue.id} className='flex items-center justify-between text-sm'>
@@ -118,7 +136,10 @@ export function QueueOverviewSection({ projectId }: QueueOverviewSectionProps) {
                       <span className='font-medium'>{queue.name}</span>
                       {pendingItems > 0 && (
                         <Badge variant='secondary' className='text-xs'>
-                          {pendingItems} pending
+                          {tickets > 0 && `${tickets} ticket${tickets !== 1 ? 's' : ''}`}
+                          {tickets > 0 && tasks > 0 && ', '}
+                          {tasks > 0 && `${tasks} task${tasks !== 1 ? 's' : ''}`}
+                          {tickets === 0 && tasks === 0 && `${pendingItems} pending`}
                         </Badge>
                       )}
                     </div>
@@ -148,7 +169,9 @@ export function QueueOverviewSection({ projectId }: QueueOverviewSectionProps) {
                 <PlayCircle className='h-4 w-4 text-orange-600 mt-0.5' />
                 <div>
                   <p className='font-medium text-orange-900 dark:text-orange-200'>
-                    {totalQueued} tasks ready for processing
+                    {totalTickets > 0
+                      ? `${totalTickets} ticket${totalTickets !== 1 ? 's' : ''} (${totalTasks} task${totalTasks !== 1 ? 's' : ''}) ready for processing`
+                      : `${totalQueued} task${totalQueued !== 1 ? 's' : ''} ready for processing`}
                   </p>
                   <p className='text-xs text-orange-700 dark:text-orange-300 mt-0.5'>
                     Use the queue_processor MCP tool to start processing tasks

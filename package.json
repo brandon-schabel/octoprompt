@@ -100,6 +100,7 @@
     "hono": "^4.7.11",
     "hono-rate-limiter": "^0.4.2",
     "ignore": "^7.0.5",
+    "isomorphic-dompurify": "^2.26.0",
     "js-yaml": "^4.1.0",
     "marked": "^16.1.1",
     "openai": "^4.104.0",

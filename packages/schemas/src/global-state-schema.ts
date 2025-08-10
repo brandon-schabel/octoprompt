@@ -144,10 +144,15 @@ export const projectTabStateSchema = z
       .default('created_desc')
       .openapi({ description: 'Sort order for tickets display.' }),
     ticketStatusFilter: z
-      .enum(['all', 'open', 'in_progress', 'closed'])
+      .enum(['all', 'open', 'in_progress', 'closed', 'non_closed'])
+      .optional()
+      .default('non_closed')
+      .openapi({ description: 'Status filter for tickets display.' }),
+    ticketQueueFilter: z
+      .string()
       .optional()
       .default('all')
-      .openapi({ description: 'Status filter for tickets display.' }),
+      .openapi({ description: 'Queue filter for tickets display. Can be "all", "unqueued", or a queue ID.' }),
     promptsPanelCollapsed: z
       .boolean()
       .optional()
@@ -534,7 +539,8 @@ export const createSafeGlobalState = (): GlobalState => ({
       sortOrder: 0,
       ticketSearch: '',
       ticketSort: 'created_desc' as const,
-      ticketStatusFilter: 'all' as const,
+      ticketStatusFilter: 'non_closed' as const,
+      ticketQueueFilter: 'all' as const,
       promptsPanelCollapsed: true,
       selectedFilesCollapsed: false,
       claudeCodeEnabled: false,

@@ -11,9 +11,9 @@ import {
 export const QueueStatusEnum = z.enum(['active', 'paused', 'inactive'])
 export type QueueStatus = z.infer<typeof QueueStatusEnum>
 
-// Queue item status enum
-export const QueueItemStatusEnum = z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled', 'timeout'])
-export type QueueItemStatus = z.infer<typeof QueueItemStatusEnum>
+// Item queue status enum for tickets/tasks in Flow System
+export const ItemQueueStatusEnum = z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled', 'timeout'])
+export type ItemQueueStatus = z.infer<typeof ItemQueueStatusEnum>
 
 // Task queue schema
 export const TaskQueueSchema = z
@@ -38,7 +38,7 @@ export const QueueItemSchema = z
     queueId: entityIdSchema,
     ticketId: entityIdNullableOptionalSchema,
     taskId: entityIdNullableOptionalSchema,
-    status: QueueItemStatusEnum.default('queued'),
+    status: ItemQueueStatusEnum.default('queued'),
     priority: z.number().default(0),
     position: z.number().nullable().optional(),
     estimatedProcessingTime: z.number().nullable().optional(), // in milliseconds
@@ -78,7 +78,11 @@ export const QueueStatsSchema = z
     failedItems: z.number(),
     cancelledItems: z.number(),
     averageProcessingTime: z.number().nullable(), // in milliseconds
-    currentAgents: z.array(z.string()) // list of agent IDs currently processing
+    currentAgents: z.array(z.string()), // list of agent IDs currently processing
+    // Enhanced stats fields (optional for backward compatibility)
+    ticketCount: z.number().optional(),
+    taskCount: z.number().optional(),
+    uniqueTickets: z.number().optional()
   })
   .openapi('QueueStats')
 
@@ -124,14 +128,7 @@ export const EnqueueItemBodySchema = z
   )
   .openapi('EnqueueItemBody')
 
-// Update queue item body schema
-export const UpdateQueueItemBodySchema = z
-  .object({
-    status: QueueItemStatusEnum.optional(),
-    agentId: z.string().nullable().optional(),
-    errorMessage: z.string().nullable().optional()
-  })
-  .openapi('UpdateQueueItemBody')
+// Note: UpdateQueueItemBodySchema removed - use ticket/task update endpoints directly
 
 // Get next task response schema
 // Note: Import cycle prevents direct import of TicketSchema and TicketTaskSchema
@@ -168,7 +165,6 @@ export type QueueStats = z.infer<typeof QueueStatsSchema>
 export type CreateQueueBody = z.infer<typeof CreateQueueBodySchema>
 export type UpdateQueueBody = z.infer<typeof UpdateQueueBodySchema>
 export type EnqueueItemBody = z.infer<typeof EnqueueItemBodySchema>
-export type UpdateQueueItemBody = z.infer<typeof UpdateQueueItemBodySchema>
 export type GetNextTaskResponse = z.infer<typeof GetNextTaskResponseSchema>
 export type BatchEnqueueResult = z.infer<typeof BatchEnqueueResultSchema>
 export type QueueWithStats = z.infer<typeof QueueWithStatsSchema>
@@ -195,12 +191,7 @@ export const queueApiValidation = {
       queueId: z.string()
     })
   },
-  updateItem: {
-    body: UpdateQueueItemBodySchema,
-    params: z.object({
-      itemId: z.string()
-    })
-  },
+  // Note: updateItem removed - use ticket/task update endpoints
   getNextTask: {
     params: z.object({
       queueId: z.string()
@@ -218,22 +209,10 @@ export const BatchEnqueueBodySchema = z
   })
   .openapi('BatchEnqueueBody')
 
-export const BatchUpdateItemsBodySchema = z
-  .object({
-    updates: z
-      .array(
-        z.object({
-          itemId: entityIdSchema,
-          data: UpdateQueueItemBodySchema
-        })
-      )
-      .min(1)
-      .max(100)
-  })
-  .openapi('BatchUpdateItemsBody')
+// Note: BatchUpdateItemsBodySchema removed - use ticket/task batch update endpoints
 
 export type BatchEnqueueBody = z.infer<typeof BatchEnqueueBodySchema>
-export type BatchUpdateItemsBody = z.infer<typeof BatchUpdateItemsBodySchema>
+// Note: BatchUpdateItemsBody type removed
 
 // Kanban operation schemas
 export const BulkMoveItemsBodySchema = z
@@ -264,7 +243,7 @@ export const QueueTimelineSchema = z
         estimatedStartTime: z.number(),
         estimatedEndTime: z.number(),
         estimatedProcessingTime: z.number(),
-        status: QueueItemStatusEnum
+        status: ItemQueueStatusEnum
       })
     ),
     totalEstimatedTime: z.number(),

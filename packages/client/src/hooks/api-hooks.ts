@@ -10,6 +10,15 @@ import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '
 
 import type { CreateClaudeAgentBody, UpdateClaudeAgentBody, ClaudeAgent } from '@promptliano/schemas'
 
+import type {
+  MarkdownImportRequest,
+  MarkdownExportRequest,
+  BatchExportRequest,
+  BulkImportResponse,
+  MarkdownExportResponse,
+  MarkdownContentValidation
+} from '@promptliano/schemas'
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -669,6 +678,407 @@ export function useSuggestPrompts() {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to suggest prompts')
+    }
+  })
+}
+
+// --- Markdown Import/Export Hooks ---
+
+/**
+ * Hook to import markdown files containing prompts
+ * Supports bulk import with progress tracking
+ */
+export function useImportMarkdownPrompts() {
+  const client = useApiClient()
+  const { invalidateAllPrompts, invalidateAllPromptsAndProjects } = useInvalidatePrompts()
+
+  return useMutation({
+    mutationFn: async ({ files, options = {} }: { files: File[]; options?: Partial<MarkdownImportRequest> }) => {
+      if (!client) throw new Error('Client not connected')
+
+      // Create FormData for multipart upload
+      const formData = new FormData()
+      files.forEach((file) => formData.append('files', file))
+      if (options.projectId) formData.append('projectId', options.projectId.toString())
+      if (options.overwriteExisting) formData.append('overwriteExisting', 'true')
+
+      const response = await fetch('/api/prompts/import', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to import prompts')
+      }
+
+      return response.json()
+    },
+    onSuccess: (result: any, variables) => {
+      // Invalidate all prompts and optionally project prompts
+      invalidateAllPromptsAndProjects(variables.options?.projectId)
+
+      // Access the summary from result.data
+      const successCount = result.data?.summary?.created || 0
+      const updatedCount = result.data?.summary?.updated || 0
+      const errorCount = result.data?.summary?.failed || 0
+      const totalSuccessful = successCount + updatedCount
+
+      if (totalSuccessful > 0 && errorCount === 0) {
+        toast.success(`Successfully imported ${totalSuccessful} prompt${totalSuccessful > 1 ? 's' : ''}`)
+      } else if (totalSuccessful > 0 && errorCount > 0) {
+        toast.warning(`Imported ${totalSuccessful} prompt${totalSuccessful > 1 ? 's' : ''}, ${errorCount} failed`)
+      } else {
+        toast.error('Failed to import any prompts')
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to import markdown prompts')
+    }
+  })
+}
+
+/**
+ * Hook to export a single prompt as markdown
+ * Returns markdown text and triggers download
+ */
+export function useExportPromptAsMarkdown() {
+  const client = useApiClient()
+
+  return useMutation({
+    mutationFn: async ({
+      promptId,
+      options = {},
+      filename
+    }: {
+      promptId: number
+      options?: Partial<MarkdownExportRequest>
+      filename?: string
+    }) => {
+      if (!client) throw new Error('Client not connected')
+
+      const response = await fetch(`/api/prompts/${promptId}/export`, {
+        method: 'GET'
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to export prompt')
+      }
+
+      const markdown = await response.text()
+      return { markdown, filename: filename || `prompt-${promptId}.md` }
+    },
+    onSuccess: ({ markdown, filename }) => {
+      // Create blob and trigger download
+      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success('Prompt exported successfully')
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to export prompt')
+    }
+  })
+}
+
+/**
+ * Hook to export multiple prompts as markdown
+ * Supports batch export with optional zip packaging
+ */
+export function useExportPromptsAsMarkdown() {
+  const client = useApiClient()
+
+  return useMutation({
+    mutationFn: async ({ promptIds, options = {} }: { promptIds: number[]; options?: Partial<BatchExportRequest> }) => {
+      if (!client) throw new Error('Client not connected')
+
+      const response = await fetch('/api/prompts/export-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptIds, ...options })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to export prompts')
+      }
+
+      return response.json()
+    },
+    onSuccess: (result: any, variables) => {
+      const exportData = result.data
+
+      if (exportData?.format === 'multi-file' && exportData?.files) {
+        // Handle multiple file downloads
+        exportData.files.forEach((file: any) => {
+          const blob = new Blob([file.content], { type: 'text/markdown;charset=utf-8' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = file.filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        })
+      } else if (exportData?.content) {
+        // Single file export
+        const blob = new Blob([exportData.content], { type: 'text/markdown;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'prompts-export.md'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }
+
+      toast.success(`Exported ${variables.promptIds.length} prompt${variables.promptIds.length > 1 ? 's' : ''}`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to export prompts')
+    }
+  })
+}
+
+/**
+ * Hook to validate markdown files before import
+ * Useful for pre-validation and showing warnings to users
+ */
+export function useValidateMarkdownFile() {
+  const client = useApiClient()
+
+  return useMutation({
+    mutationFn: async (file: File): Promise<MarkdownContentValidation & { isValid: boolean; metadata?: any }> => {
+      if (!client) throw new Error('Client not connected')
+
+      const content = await file.text()
+
+      // Parse frontmatter and validate structure
+      const validation: MarkdownContentValidation = {
+        hasValidFrontmatter: false,
+        hasRequiredFields: false,
+        contentLength: content.length,
+        estimatedPrompts: 0,
+        warnings: [],
+        errors: []
+      }
+
+      try {
+        // Check for frontmatter
+        if (!content.startsWith('---')) {
+          validation.errors.push({ message: 'Missing frontmatter', path: [] } as any)
+          return { isValid: false, ...validation }
+        }
+
+        const frontmatterEnd = content.indexOf('---', 3)
+        if (frontmatterEnd === -1) {
+          validation.errors.push({ message: 'Invalid frontmatter format', path: [] } as any)
+          return { isValid: false, ...validation }
+        }
+
+        validation.hasValidFrontmatter = true
+
+        // Extract frontmatter
+        const frontmatterContent = content.substring(3, frontmatterEnd).trim()
+
+        // Parse frontmatter as YAML-like structure
+        let metadata: any = {}
+        const lines = frontmatterContent.split('\n')
+        for (const line of lines) {
+          const colonIndex = line.indexOf(':')
+          if (colonIndex > 0) {
+            const key = line.substring(0, colonIndex).trim()
+            const value = line.substring(colonIndex + 1).trim()
+            metadata[key] = value
+          }
+        }
+
+        // Check for required 'name' field
+        if (!metadata.name) {
+          validation.errors.push({ message: 'Missing required field: name', path: ['name'] } as any)
+          validation.hasRequiredFields = false
+        } else {
+          validation.hasRequiredFields = true
+          validation.estimatedPrompts = 1
+        }
+
+        // Check content after frontmatter
+        const promptContent = content.substring(frontmatterEnd + 3).trim()
+        if (promptContent.length === 0) {
+          validation.warnings.push('Prompt content is empty')
+        }
+
+        validation.contentLength = promptContent.length
+
+        return {
+          isValid: validation.errors.length === 0,
+          metadata,
+          ...validation
+        }
+      } catch (error: any) {
+        validation.errors.push({ message: error.message || 'Failed to validate file', path: [] } as any)
+        return {
+          isValid: false,
+          ...validation
+        }
+      }
+    },
+    onSuccess: (validation: any) => {
+      if (validation.isValid && validation.warnings.length === 0) {
+        toast.success('Markdown file is valid')
+      } else if (validation.isValid && validation.warnings.length > 0) {
+        toast.warning(
+          `File is valid but has ${validation.warnings.length} warning${validation.warnings.length > 1 ? 's' : ''}`
+        )
+      } else {
+        toast.error(`Validation failed: ${validation.errors[0]?.message || 'Unknown error'}`)
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to validate markdown file')
+    }
+  })
+}
+
+/**
+ * Hook to import markdown prompts for a specific project
+ * Convenience wrapper for project-specific imports
+ */
+export function useImportProjectMarkdownPrompts() {
+  const client = useApiClient()
+  const { invalidateAllPromptsAndProjects } = useInvalidatePrompts()
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      files,
+      options = {}
+    }: {
+      projectId: number
+      files: File[]
+      options?: Partial<Omit<MarkdownImportRequest, 'projectId'>>
+    }) => {
+      if (!client) throw new Error('Client not connected')
+
+      // Create FormData for multipart upload
+      const formData = new FormData()
+      files.forEach((file) => formData.append('files', file))
+      if (options.overwriteExisting) formData.append('overwriteExisting', 'true')
+
+      const response = await fetch(`/api/projects/${projectId}/prompts/import`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to import prompts to project')
+      }
+
+      return response.json()
+    },
+    onSuccess: (result: any, variables) => {
+      // Invalidate project-specific prompts
+      invalidateAllPromptsAndProjects(variables.projectId)
+
+      // Access the summary from result.data
+      const successCount = result.data?.summary?.created || 0
+      const updatedCount = result.data?.summary?.updated || 0
+      const errorCount = result.data?.summary?.failed || 0
+      const totalSuccessful = successCount + updatedCount
+
+      if (totalSuccessful > 0 && errorCount === 0) {
+        toast.success(`Successfully imported ${totalSuccessful} prompt${totalSuccessful > 1 ? 's' : ''} to project`)
+      } else if (totalSuccessful > 0 && errorCount > 0) {
+        toast.warning(
+          `Imported ${totalSuccessful} prompt${totalSuccessful > 1 ? 's' : ''} to project, ${errorCount} failed`
+        )
+      } else {
+        toast.error('Failed to import any prompts to project')
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to import markdown prompts to project')
+    }
+  })
+}
+
+/**
+ * Hook to export all prompts from a project as markdown
+ * Exports all prompts associated with a specific project
+ */
+export function useExportProjectPromptsAsMarkdown() {
+  const client = useApiClient()
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      options = {}
+    }: {
+      projectId: number
+      options?: Partial<Omit<MarkdownExportRequest, 'projectId'>>
+    }) => {
+      if (!client) throw new Error('Client not connected')
+
+      const queryParams = new URLSearchParams()
+      if (options.format) queryParams.append('format', options.format)
+      if (options.sortBy) queryParams.append('sortBy', options.sortBy)
+      if (options.sortOrder) queryParams.append('sortOrder', options.sortOrder)
+
+      const response = await fetch(`/api/projects/${projectId}/prompts/export?${queryParams}`, {
+        method: 'GET'
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to export project prompts')
+      }
+
+      return response.json()
+    },
+    onSuccess: (result: any, variables) => {
+      const exportData = result.data
+
+      if (exportData?.format === 'multi-file' && exportData?.files) {
+        // Handle multiple file downloads
+        exportData.files.forEach((file: any) => {
+          const blob = new Blob([file.content], { type: 'text/markdown;charset=utf-8' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = file.filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        })
+      } else if (exportData?.content) {
+        // Single file export
+        const blob = new Blob([exportData.content], { type: 'text/markdown;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `project-${variables.projectId}-prompts.md`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }
+
+      toast.success(`Exported all prompts from project`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to export project prompts')
     }
   })
 }

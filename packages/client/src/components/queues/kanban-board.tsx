@@ -32,6 +32,8 @@ import {
 import { useApiClient } from '@/hooks/api/use-api-client'
 import { QueueWithStats } from '@promptliano/schemas'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@promptliano/ui'
+import { TicketDetailView } from '@/components/tickets/ticket-detail-view'
+import { useGetTicket, useGetTasks } from '@/hooks/api/use-tickets-api'
 import { Input } from '@promptliano/ui'
 import { Label } from '@promptliano/ui'
 import { Textarea } from '@promptliano/ui'
@@ -63,6 +65,7 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
   const [newQueueName, setNewQueueName] = useState('')
   const [newQueueDescription, setNewQueueDescription] = useState('')
   const [maxParallelItems, setMaxParallelItems] = useState('1')
+  const [openTicketId, setOpenTicketId] = useState<number | null>(null)
 
   // Fetch data using unified flow system
   const {
@@ -108,24 +111,15 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
 
     // Add unqueued items
     if (flowData.unqueued?.tickets) {
-      flowData.unqueued.tickets.forEach((ticket) => {
-        // Count tasks for this ticket
-        let totalTaskCount = 0
-        let completedTaskCount = 0
+      flowData.unqueued.tickets
+        .filter((t) => t.status !== 'closed')
+        .forEach((ticket) => {
+          // Count tasks for this ticket
+          let totalTaskCount = 0
+          let completedTaskCount = 0
 
-        // Check unqueued tasks
-        flowData.unqueued.tasks?.forEach((task) => {
-          if (task.ticketId === ticket.id) {
-            totalTaskCount++
-            if (task.done) {
-              completedTaskCount++
-            }
-          }
-        })
-
-        // Also check queued tasks
-        Object.values(flowData.queues || {}).forEach((queueData) => {
-          queueData.tasks?.forEach((task) => {
+          // Check unqueued tasks
+          flowData.unqueued.tasks?.forEach((task) => {
             if (task.ticketId === ticket.id) {
               totalTaskCount++
               if (task.done) {
@@ -133,45 +127,58 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
               }
             }
           })
-        })
 
-        result.unqueued.push({
-          id: `ticket-${ticket.id}`,
-          title: ticket.title,
-          type: 'ticket',
-          priority: ticket.priority,
-          actualId: ticket.id,
-          taskCount: totalTaskCount,
-          completedTaskCount: completedTaskCount
+          // Also check queued tasks
+          Object.values(flowData.queues || {}).forEach((queueData) => {
+            queueData.tasks?.forEach((task) => {
+              if (task.ticketId === ticket.id) {
+                totalTaskCount++
+                if (task.done) {
+                  completedTaskCount++
+                }
+              }
+            })
+          })
+
+          result.unqueued.push({
+            id: `ticket-${ticket.id}`,
+            title: ticket.title,
+            type: 'ticket',
+            priority: ticket.priority,
+            actualId: ticket.id,
+            taskCount: totalTaskCount,
+            completedTaskCount: completedTaskCount
+          })
         })
-      })
     }
 
     if (flowData.unqueued?.tasks) {
-      flowData.unqueued.tasks.forEach((task) => {
-        // Find parent ticket for title
-        let ticketTitle: string | undefined
-        const parentTicket = flowData.unqueued.tickets?.find((t) => t.id === task.ticketId)
-        if (parentTicket) {
-          ticketTitle = parentTicket.title
-        } else {
-          // Check in queued tickets
-          Object.values(flowData.queues || {}).forEach((queueData) => {
-            const ticket = queueData.tickets?.find((t) => t.id === task.ticketId)
-            if (ticket) ticketTitle = ticket.title
-          })
-        }
+      flowData.unqueued.tasks
+        .filter((t) => !t.done)
+        .forEach((task) => {
+          // Find parent ticket for title
+          let ticketTitle: string | undefined
+          const parentTicket = flowData.unqueued.tickets?.find((t) => t.id === task.ticketId)
+          if (parentTicket) {
+            ticketTitle = parentTicket.title
+          } else {
+            // Check in queued tickets
+            Object.values(flowData.queues || {}).forEach((queueData) => {
+              const ticket = queueData.tickets?.find((t) => t.id === task.ticketId)
+              if (ticket) ticketTitle = ticket.title
+            })
+          }
 
-        result.unqueued.push({
-          id: `task-${task.id}`,
-          title: task.content,
-          type: 'task',
-          estimatedHours: task.estimatedHours ?? undefined,
-          ticketTitle,
-          ticketId: task.ticketId,
-          actualId: task.id
+          result.unqueued.push({
+            id: `task-${task.id}`,
+            title: task.content,
+            type: 'task',
+            estimatedHours: task.estimatedHours ?? undefined,
+            ticketTitle,
+            ticketId: task.ticketId,
+            actualId: task.id
+          })
         })
-      })
     }
 
     // Add queued items
@@ -179,66 +186,70 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
       result[queueId] = []
 
       // Add queued tickets
-      queueData.tickets?.forEach((ticket) => {
-        // Count all tasks for this ticket
-        let totalTaskCount = 0
-        let completedTaskCount = 0
+      queueData.tickets
+        ?.filter((t) => t.status !== 'closed')
+        .forEach((ticket) => {
+          // Count all tasks for this ticket
+          let totalTaskCount = 0
+          let completedTaskCount = 0
 
-        // Check tasks in all locations
-        flowData.unqueued.tasks?.forEach((task) => {
-          if (task.ticketId === ticket.id) {
-            totalTaskCount++
-            if (task.done) completedTaskCount++
-          }
-        })
-
-        Object.values(flowData.queues || {}).forEach((q) => {
-          q.tasks?.forEach((task) => {
+          // Check tasks in all locations
+          flowData.unqueued.tasks?.forEach((task) => {
             if (task.ticketId === ticket.id) {
               totalTaskCount++
               if (task.done) completedTaskCount++
             }
           })
-        })
 
-        result[queueId].push({
-          id: `ticket-${ticket.id}`,
-          title: ticket.title,
-          type: 'ticket',
-          priority: ticket.priority,
-          actualId: ticket.id,
-          currentQueueId: queueId,
-          queuePosition: ticket.queuePosition,
-          taskCount: totalTaskCount,
-          completedTaskCount: completedTaskCount
+          Object.values(flowData.queues || {}).forEach((q) => {
+            q.tasks?.forEach((task) => {
+              if (task.ticketId === ticket.id) {
+                totalTaskCount++
+                if (task.done) completedTaskCount++
+              }
+            })
+          })
+
+          result[queueId].push({
+            id: `ticket-${ticket.id}`,
+            title: ticket.title,
+            type: 'ticket',
+            priority: ticket.priority,
+            actualId: ticket.id,
+            currentQueueId: queueId,
+            queuePosition: ticket.queuePosition,
+            taskCount: totalTaskCount,
+            completedTaskCount: completedTaskCount
+          })
         })
-      })
 
       // Add queued tasks
-      queueData.tasks?.forEach((task) => {
-        // Find parent ticket for title
-        let ticketTitle: string | undefined
-        Object.values(flowData.queues || {}).forEach((q) => {
-          const ticket = q.tickets?.find((t) => t.id === task.ticketId)
-          if (ticket) ticketTitle = ticket.title
-        })
-        if (!ticketTitle) {
-          const ticket = flowData.unqueued.tickets?.find((t) => t.id === task.ticketId)
-          if (ticket) ticketTitle = ticket.title
-        }
+      queueData.tasks
+        ?.filter((t) => !t.done)
+        .forEach((task) => {
+          // Find parent ticket for title
+          let ticketTitle: string | undefined
+          Object.values(flowData.queues || {}).forEach((q) => {
+            const ticket = q.tickets?.find((t) => t.id === task.ticketId)
+            if (ticket) ticketTitle = ticket.title
+          })
+          if (!ticketTitle) {
+            const ticket = flowData.unqueued.tickets?.find((t) => t.id === task.ticketId)
+            if (ticket) ticketTitle = ticket.title
+          }
 
-        result[queueId].push({
-          id: `task-${task.id}`,
-          title: task.content,
-          type: 'task',
-          estimatedHours: task.estimatedHours ?? undefined,
-          ticketTitle,
-          ticketId: task.ticketId,
-          actualId: task.id,
-          currentQueueId: queueId,
-          queuePosition: task.queuePosition
+          result[queueId].push({
+            id: `task-${task.id}`,
+            title: task.content,
+            type: 'task',
+            estimatedHours: task.estimatedHours ?? undefined,
+            ticketTitle,
+            ticketId: task.ticketId,
+            actualId: task.id,
+            currentQueueId: queueId,
+            queuePosition: task.queuePosition
+          })
         })
-      })
 
       // Sort by queue position
       result[queueId].sort((a, b) => (a.queuePosition || 0) - (b.queuePosition || 0))
@@ -246,6 +257,13 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
 
     return result
   }, [flowData])
+
+  const { data: openTicketData } = useGetTicket(openTicketId || 0)
+  const { data: openTicketTasks } = useGetTasks(openTicketId || 0)
+  const openTicketWithTasks = useMemo(
+    () => (openTicketData && openTicketTasks ? { ticket: openTicketData, tasks: openTicketTasks } : null),
+    [openTicketData, openTicketTasks]
+  )
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -339,18 +357,34 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
           }
         } else if (fromQueueId !== 'unqueued' && toQueueId !== 'unqueued') {
           // Moving between queues
-          await moveItemMutation.mutateAsync({
-            itemType: activeItem.type,
-            itemId: activeItem.actualId,
-            targetQueueId: parseInt(toQueueId),
-            priority: 0
-          })
-          toast.success('Item moved to queue')
+          if (activeItem.type === 'ticket') {
+            // Move ticket with all its tasks
+            await moveItemMutation.mutateAsync({
+              itemType: activeItem.type,
+              itemId: activeItem.actualId,
+              targetQueueId: parseInt(toQueueId),
+              priority: 0,
+              includeTasks: true
+            })
+            toast.success('Ticket and tasks moved to queue')
+          } else {
+            // Move individual task
+            await moveItemMutation.mutateAsync({
+              itemType: activeItem.type,
+              itemId: activeItem.actualId,
+              targetQueueId: parseInt(toQueueId),
+              priority: 0
+            })
+            toast.success('Task moved to queue')
+          }
         } else if (fromQueueId !== 'unqueued' && toQueueId === 'unqueued') {
           // Moving from a queue back to unqueued
           if (activeItem.type === 'ticket') {
-            // Dequeue ticket (and its tasks)
-            await dequeueTicketMutation.mutateAsync(activeItem.actualId)
+            // Dequeue ticket with all its tasks
+            await dequeueTicketMutation.mutateAsync({
+              ticketId: activeItem.actualId,
+              includeTasks: true
+            })
             toast.success('Ticket and tasks moved back to unqueued')
           } else {
             // Dequeue single task
@@ -373,15 +407,19 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
 
       if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
         const newItems = arrayMove(items, fromIndex, toIndex)
-
-        // Update positions for all items in the new order
         try {
-          // For now, we'll just refetch as reordering within queue
-          // will need a dedicated endpoint in the flow system
-          toast.info('Reordering within queue - refreshing...')
+          // Persist new order
+          await client?.flow.reorderQueueItems({
+            queueId: parseInt(fromQueueId),
+            items: newItems.map((it) => ({
+              itemType: it.type,
+              itemId: it.actualId,
+              ticketId: it.type === 'task' ? it.ticketId : undefined
+            }))
+          })
           await refetchFlow()
-        } catch (error) {
-          toast.error('Failed to reorder items')
+        } catch (error: any) {
+          toast.error(error?.message || 'Failed to reorder items')
         }
       }
     }
@@ -492,7 +530,16 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
         >
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-x-auto flex-1'>
             {/* Unqueued column */}
-            <KanbanColumn items={itemsByQueue.unqueued || []} isUnqueued onAddToQueue={onCreateTicket} />
+            <KanbanColumn
+              items={itemsByQueue.unqueued || []}
+              isUnqueued
+              onAddToQueue={onCreateTicket}
+              onItemCompleted={async () => {
+                await refetchFlow()
+                await refetchQueues()
+              }}
+              onOpenTicket={(id) => setOpenTicketId(id)}
+            />
 
             {/* Queue columns */}
             {queuesWithStats?.map((queueWithStats) => {
@@ -507,6 +554,11 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
                   items={itemsByQueue[queueWithStats.queue.id.toString()] || []}
                   onPauseQueue={() => handlePauseQueue(queueWithStats)}
                   onResumeQueue={() => handleResumeQueue(queueWithStats)}
+                  onItemCompleted={async () => {
+                    await refetchFlow()
+                    await refetchQueues()
+                  }}
+                  onOpenTicket={(id) => setOpenTicketId(id)}
                 />
               )
             })}
@@ -521,6 +573,10 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
                 priority={activeItem.priority}
                 estimatedHours={activeItem.estimatedHours}
                 ticketTitle={activeItem.ticketTitle}
+                actualId={activeItem.actualId}
+                ticketId={activeItem.ticketId}
+                taskCount={activeItem.taskCount}
+                completedTaskCount={activeItem.completedTaskCount}
                 isDragging
                 overlay
                 isNested={activeItem.type === 'task'}
@@ -584,6 +640,31 @@ export function KanbanBoard({ projectId, onCreateTicket }: KanbanBoardProps) {
               Create Queue
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ticket Detail Modal (overview) */}
+      <Dialog
+        open={!!openTicketId}
+        onOpenChange={(open) => {
+          if (!open) setOpenTicketId(null)
+        }}
+      >
+        <DialogContent className='max-w-4xl p-0 overflow-hidden'>
+          {openTicketId && openTicketWithTasks ? (
+            <div className='h-[75vh]'>
+              <TicketDetailView
+                ticket={openTicketWithTasks}
+                projectId={projectId}
+                onTicketUpdate={async () => {
+                  await refetchFlow()
+                  await refetchQueues()
+                }}
+              />
+            </div>
+          ) : (
+            <div className='p-6'>Loading...</div>
+          )}
         </DialogContent>
       </Dialog>
     </>

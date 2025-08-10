@@ -7,29 +7,51 @@ export const queueActualProcessingTimeMigration = {
   up: (db: Database) => {
     console.log('[Migration 019] Starting queue actual processing time migration...')
 
-    // Step 1: Add actual_processing_time column to queue_items
-    console.log('[Migration 019] Adding actual_processing_time column to queue_items...')
-    db.exec(`
-      ALTER TABLE queue_items 
-      ADD COLUMN actual_processing_time INTEGER
-    `)
+    // Check if the column already exists
+    const queueItemsColumns = db.prepare("PRAGMA table_info('queue_items')").all() as any[]
+    const hasActualProcessingTime = queueItemsColumns.some((col: any) => col.name === 'actual_processing_time')
 
-    // Step 2: Add actual_processing_time to queue_history table for consistency
-    console.log('[Migration 019] Adding actual_processing_time column to queue_history...')
-    db.exec(`
-      ALTER TABLE queue_history 
-      ADD COLUMN actual_processing_time INTEGER
-    `)
+    if (!hasActualProcessingTime) {
+      // Step 1: Add actual_processing_time column to queue_items
+      console.log('[Migration 019] Adding actual_processing_time column to queue_items...')
+      db.exec(`
+        ALTER TABLE queue_items 
+        ADD COLUMN actual_processing_time INTEGER
+      `)
+    } else {
+      console.log('[Migration 019] actual_processing_time column already exists in queue_items, skipping...')
+    }
 
-    // Step 3: Calculate actual_processing_time for completed items
-    console.log('[Migration 019] Calculating actual processing time for completed items...')
-    db.exec(`
-      UPDATE queue_items 
-      SET actual_processing_time = completed_at - started_at
-      WHERE status = 'completed' 
-        AND started_at IS NOT NULL 
-        AND completed_at IS NOT NULL
-    `)
+    // Check if queue_history table exists before trying to alter it
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='queue_history'").all()
+    if (tables.length > 0) {
+      const queueHistoryColumns = db.prepare("PRAGMA table_info('queue_history')").all() as any[]
+      const historyHasActualProcessingTime = queueHistoryColumns.some(
+        (col: any) => col.name === 'actual_processing_time'
+      )
+
+      if (!historyHasActualProcessingTime) {
+        // Step 2: Add actual_processing_time to queue_history table for consistency
+        console.log('[Migration 019] Adding actual_processing_time column to queue_history...')
+        db.exec(`
+          ALTER TABLE queue_history 
+          ADD COLUMN actual_processing_time INTEGER
+        `)
+      } else {
+        console.log('[Migration 019] actual_processing_time column already exists in queue_history, skipping...')
+      }
+
+      // Step 3: Calculate actual_processing_time for completed items
+      console.log('[Migration 019] Calculating actual processing time for completed items...')
+      db.exec(`
+        UPDATE queue_items 
+        SET actual_processing_time = completed_at - started_at
+        WHERE status = 'completed' 
+          AND started_at IS NOT NULL 
+          AND completed_at IS NOT NULL
+          AND actual_processing_time IS NULL
+      `)
+    }
 
     console.log('[Migration 019] Queue actual processing time migration completed successfully')
   },
@@ -48,62 +70,10 @@ export const queueActualProcessingTimeMigration = {
     // Alternative approach (not recommended for production):
     // If you absolutely need to remove the column, you would need to:
     // 1. Create a new table without the column
-    // 2. Copy all data except the column
+    // 2. Copy data from the old table
     // 3. Drop the old table
     // 4. Rename the new table
-    // 5. Recreate all indexes and foreign keys
-    //
-    // This approach risks data loss and constraint violations, so we opt for the safer
-    // approach of leaving the column in place.
 
-    // Mark in a migration metadata table that this column should be ignored
-    // This is a safer approach than trying to recreate tables
-    try {
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS migration_metadata (
-          id INTEGER PRIMARY KEY,
-          table_name TEXT NOT NULL,
-          column_name TEXT NOT NULL,
-          status TEXT NOT NULL,
-          notes TEXT,
-          created_at INTEGER NOT NULL,
-          UNIQUE(table_name, column_name)
-        )
-      `)
-
-      const now = Date.now()
-      db.prepare(
-        `
-        INSERT OR REPLACE INTO migration_metadata (table_name, column_name, status, notes, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `
-      ).run(
-        'queue_items',
-        'actual_processing_time',
-        'deprecated',
-        'Column added in migration 019, marked as deprecated during rollback. Safe to ignore.',
-        now
-      )
-
-      db.prepare(
-        `
-        INSERT OR REPLACE INTO migration_metadata (table_name, column_name, status, notes, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `
-      ).run(
-        'queue_history',
-        'actual_processing_time',
-        'deprecated',
-        'Column added in migration 019, marked as deprecated during rollback. Safe to ignore.',
-        now
-      )
-    } catch (error) {
-      console.warn('[Migration 019] Could not create migration metadata table:', error)
-    }
-
-    console.log(
-      '[Migration 019] Rollback completed safely. Columns remain but are marked as deprecated. ' +
-        'Application code should ignore these columns.'
-    )
+    console.log('[Migration 019] Rollback completed')
   }
 }

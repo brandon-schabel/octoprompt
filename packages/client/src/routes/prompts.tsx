@@ -6,21 +6,31 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@promptliano/ui'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@promptliano/ui'
 import { toast } from 'sonner'
-import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetAllPrompts } from '@/hooks/api/use-prompts-api'
+import {
+  useCreatePrompt,
+  useUpdatePrompt,
+  useDeletePrompt,
+  useGetAllPrompts,
+  useExportPromptAsMarkdown,
+  useExportPromptsAsMarkdown
+} from '@/hooks/api/use-prompts-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
-  DropdownMenuRadioItem
+  DropdownMenuRadioItem,
+  DropdownMenuItem,
+  DropdownMenuSeparator
 } from '@promptliano/ui'
-import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
+import { ArrowDownAZ, ArrowUpDown, Copy, Pencil, Upload, Download, MoreVertical, Trash } from 'lucide-react'
 import { Badge } from '@promptliano/ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { Prompt } from '@promptliano/schemas'
 import { estimateTokenCount, formatTokenCount } from '@promptliano/shared'
+import { MarkdownImportDialog } from '@/components/prompts/markdown-import-dialog'
 
 export function PromptsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -28,12 +38,16 @@ export function PromptsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null)
   const [sortOrder, setSortOrder] = useState<'alphabetical' | 'default' | 'size_asc' | 'size_desc'>('alphabetical')
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [selectedPrompts, setSelectedPrompts] = useState<Set<number>>(new Set())
 
-  const { data: promptsRes, isLoading, error } = useGetAllPrompts()
+  const { data: promptsRes, isLoading, error, refetch } = useGetAllPrompts()
   const prompts = promptsRes?.data as Prompt[]
   const deletePromptMutation = useDeletePrompt()
   const createPromptMutation = useCreatePrompt()
   const updatePromptMutation = useUpdatePrompt()
+  const exportPromptMutation = useExportPromptAsMarkdown()
+  const exportPromptsMutation = useExportPromptsAsMarkdown()
 
   // Filter and sort prompts
   const filteredAndSortedPrompts = useMemo(() => {
@@ -58,11 +72,66 @@ export function PromptsPage() {
     return sorted
   }, [prompts, debouncedSearch, sortOrder])
 
+  // Handle bulk export
+  const handleBulkExport = async () => {
+    const promptIds = selectedPrompts.size > 0 ? Array.from(selectedPrompts) : prompts?.map((p) => p.id) || []
+
+    if (promptIds.length === 0) {
+      toast.error('No prompts to export')
+      return
+    }
+
+    try {
+      await exportPromptsMutation.mutateAsync({
+        promptIds,
+        options: {
+          format: promptIds.length > 1 ? 'zip' : 'single',
+          includeFrontmatter: true,
+          includeCreatedDate: true,
+          includeUpdatedDate: true
+        }
+      })
+      toast.success(`Exported ${promptIds.length} prompt${promptIds.length > 1 ? 's' : ''}`)
+      setSelectedPrompts(new Set())
+    } catch (error) {
+      toast.error('Failed to export prompts')
+    }
+  }
+
+  // Handle import success
+  const handleImportSuccess = (count: number) => {
+    refetch()
+    setIsImportDialogOpen(false)
+  }
+
   return (
     <div className='container mx-auto p-6 space-y-6'>
       <div className='flex justify-between items-center'>
         <h1 className='text-3xl font-bold'>Prompt Management</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>Create New Prompt</Button>
+        <div className='flex gap-2'>
+          <Button
+            variant='outline'
+            onClick={() => setIsImportDialogOpen(true)}
+            title='Import prompts from markdown files'
+          >
+            <Upload className='h-4 w-4 mr-2' />
+            Import
+          </Button>
+          <Button
+            variant='outline'
+            onClick={handleBulkExport}
+            disabled={exportPromptsMutation.isPending}
+            title={
+              selectedPrompts.size > 0
+                ? `Export ${selectedPrompts.size} selected prompt${selectedPrompts.size > 1 ? 's' : ''}`
+                : 'Export all prompts'
+            }
+          >
+            <Download className='h-4 w-4 mr-2' />
+            Export {selectedPrompts.size > 0 ? `(${selectedPrompts.size})` : 'All'}
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>Create New Prompt</Button>
+        </div>
       </div>
 
       <div className='flex items-center justify-between'>
@@ -115,6 +184,16 @@ export function PromptsPage() {
                 <PromptCard
                   key={prompt.id}
                   prompt={prompt}
+                  isSelected={selectedPrompts.has(prompt.id)}
+                  onToggleSelect={(selected) => {
+                    const newSelected = new Set(selectedPrompts)
+                    if (selected) {
+                      newSelected.add(prompt.id)
+                    } else {
+                      newSelected.delete(prompt.id)
+                    }
+                    setSelectedPrompts(newSelected)
+                  }}
                   onEdit={() => setSelectedPrompt(prompt)}
                   onDelete={async () => {
                     try {
@@ -126,6 +205,23 @@ export function PromptsPage() {
                       toast.success('Prompt deleted successfully')
                     } catch {
                       // Error is handled in usePrompts
+                    }
+                  }}
+                  onExport={async () => {
+                    try {
+                      const promptName = prompt.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+                      await exportPromptMutation.mutateAsync({
+                        promptId: prompt.id,
+                        filename: `${promptName}.md`,
+                        options: {
+                          includeFrontmatter: true,
+                          includeCreatedDate: true,
+                          includeUpdatedDate: true
+                        }
+                      })
+                      toast.success(`Exported "${prompt.name}"`)
+                    } catch (error) {
+                      toast.error('Failed to export prompt')
                     }
                   }}
                 />
@@ -155,6 +251,13 @@ export function PromptsPage() {
           setSelectedPrompt(null)
         }}
       />
+
+      {/* Import Dialog */}
+      <MarkdownImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onSuccess={handleImportSuccess}
+      />
     </div>
   )
 }
@@ -162,12 +265,16 @@ export function PromptsPage() {
 // Prompt Card Component
 interface PromptCardProps {
   prompt: Prompt
+  isSelected?: boolean
+  onToggleSelect?: (selected: boolean) => void
   onEdit: () => void
   onDelete: () => Promise<void>
+  onExport?: () => Promise<void>
 }
 
-function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
+function PromptCard({ prompt, isSelected = false, onToggleSelect, onEdit, onDelete, onExport }: PromptCardProps) {
   const { copyToClipboard, status } = useCopyClipboard()
+  const [isExporting, setIsExporting] = useState(false)
 
   const formatDate = (date: string | Date | number) => {
     try {
@@ -193,29 +300,70 @@ function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
     })
   }
 
+  const handleExport = async () => {
+    if (onExport) {
+      setIsExporting(true)
+      try {
+        await onExport()
+      } finally {
+        setIsExporting(false)
+      }
+    }
+  }
+
   return (
-    <Card className='group'>
+    <Card className={`group ${isSelected ? 'ring-2 ring-primary' : ''}`}>
       <CardHeader>
         <div className='flex justify-between items-start'>
-          <CardTitle>{prompt.name}</CardTitle>
-          <span className={`text-xs ${getTokenCountClass()}`}>{formatTokenCount(tokenCount)} tokens</span>
+          <div className='flex items-start gap-2 flex-1'>
+            {onToggleSelect && (
+              <input
+                type='checkbox'
+                checked={isSelected}
+                onChange={(e) => onToggleSelect(e.target.checked)}
+                className='mt-1'
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+            <CardTitle className='flex-1'>{prompt.name}</CardTitle>
+          </div>
+          <div className='flex items-center gap-2'>
+            <span className={`text-xs ${getTokenCountClass()}`}>{formatTokenCount(tokenCount)} tokens</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='ghost' size='icon' className='h-8 w-8' onClick={(e) => e.stopPropagation()}>
+                  <MoreVertical className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={handleCopy}>
+                  <Copy className='h-4 w-4 mr-2' />
+                  Copy Content
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil className='h-4 w-4 mr-2' />
+                  Edit
+                </DropdownMenuItem>
+                {onExport && (
+                  <DropdownMenuItem onClick={handleExport} disabled={isExporting}>
+                    <Download className='h-4 w-4 mr-2' />
+                    {isExporting ? 'Exporting...' : 'Export as Markdown'}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onDelete} className='text-destructive'>
+                  <Trash className='h-4 w-4 mr-2' />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         <CardDescription>Created: {formatDate(prompt.created)}</CardDescription>
       </CardHeader>
       <CardContent>
         <p className='text-sm text-muted-foreground line-clamp-3'>{prompt.content}</p>
       </CardContent>
-      <CardFooter className='flex justify-end space-x-2 md:invisible md:group-hover:visible'>
-        <Button variant='ghost' size='icon' onClick={handleCopy} title='Copy prompt content' className='h-8 w-8'>
-          <Copy className='h-4 w-4' />
-        </Button>
-        <Button variant='ghost' size='icon' onClick={onEdit} title='Edit prompt' className='h-8 w-8'>
-          <Pencil className='h-4 w-4' />
-        </Button>
-        <Button variant='destructive' size='sm' onClick={onDelete}>
-          Delete
-        </Button>
-      </CardFooter>
     </Card>
   )
 }

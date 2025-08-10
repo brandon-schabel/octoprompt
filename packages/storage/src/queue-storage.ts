@@ -1,27 +1,16 @@
 // Queue storage layer using proper database columns
 import { z } from 'zod'
-import {
-  TaskQueueSchema,
-  QueueItemSchema,
-  type TaskQueue,
-  type QueueItem,
-  type QueueStatus,
-  type QueueItemStatus
-} from '@promptliano/schemas'
+import { TaskQueueSchema, type TaskQueue, type QueueStatus } from '@promptliano/schemas'
 import { normalizeToUnixMs } from '@promptliano/shared/src/utils/parse-timestamp'
 import { DatabaseManager, getDb } from './database-manager'
 import { ApiError } from '@promptliano/shared'
 
 // Table names
 const TASK_QUEUES_TABLE = 'task_queues'
-const QUEUE_ITEMS_TABLE = 'queue_items'
 
 // Storage schemas for validation
 export const TaskQueuesStorageSchema = z.record(z.string(), TaskQueueSchema)
 export type TaskQueuesStorage = z.infer<typeof TaskQueuesStorageSchema>
-
-export const QueueItemsStorageSchema = z.record(z.string(), QueueItemSchema)
-export type QueueItemsStorage = z.infer<typeof QueueItemsStorageSchema>
 
 // Helper functions
 async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: string): Promise<T> {
@@ -240,467 +229,16 @@ class QueueStorage {
     }
   }
 
-  // === Queue Items ===
-
-  async readQueueItems(queueId: number, status?: QueueItemStatus): Promise<QueueItemsStorage> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      let query
-      if (status) {
-        query = database.prepare(`
-          SELECT 
-            id, queue_id, ticket_id, task_id, status, priority, position,
-            estimated_processing_time, actual_processing_time, agent_id,
-            error_message, retry_count, max_retries, timeout_at,
-            started_at, completed_at, created_at, updated_at
-          FROM ${QUEUE_ITEMS_TABLE}
-          WHERE queue_id = ? AND status = ?
-          ORDER BY position ASC, priority ASC, created_at ASC
-        `)
-        var rows = query.all(queueId, status) as any[]
-      } else {
-        query = database.prepare(`
-          SELECT 
-            id, queue_id, ticket_id, task_id, status, priority, position,
-            estimated_processing_time, actual_processing_time, agent_id,
-            error_message, retry_count, max_retries, timeout_at,
-            started_at, completed_at, created_at, updated_at
-          FROM ${QUEUE_ITEMS_TABLE}
-          WHERE queue_id = ?
-          ORDER BY position ASC, priority ASC, created_at ASC
-        `)
-        var rows = query.all(queueId) as any[]
-      }
-
-      const itemsStorage: QueueItemsStorage = {}
-
-      for (const row of rows) {
-        const item: any = {
-          id: row.id,
-          queueId: row.queue_id,
-          ticketId: row.ticket_id,
-          taskId: row.task_id,
-          status: (row.status as QueueItemStatus) || 'queued',
-          priority: row.priority ?? 0,
-          position: row.position,
-          estimatedProcessingTime: row.estimated_processing_time ?? null,
-          actualProcessingTime: row.actual_processing_time ?? null,
-          agentId: row.agent_id ?? null,
-          errorMessage: row.error_message ?? null,
-          retryCount: row.retry_count || 0,
-          maxRetries: row.max_retries || 3,
-          timeoutAt: row.timeout_at ?? null,
-          created: row.created_at || Date.now(),
-          updated: row.updated_at || Date.now()
-        }
-
-        // Only add optional timestamp fields if they have values
-        if (row.started_at !== null) item.startedAt = row.started_at
-        if (row.completed_at !== null) item.completedAt = row.completed_at
-
-        const validatedItem = await validateData<QueueItem>(item, QueueItemSchema as any, `queue item ${item.id}`)
-        itemsStorage[String(validatedItem.id)] = validatedItem
-      }
-
-      return itemsStorage
-    } catch (error: any) {
-      console.error(`Error reading queue items for queue ${queueId}:`, error)
-      const errorDetails = {
-        queueId,
-        status,
-        errorMessage: error.message,
-        errorCode: error.code
-      }
-      throw new ApiError(
-        500,
-        `Failed to read queue items for queue ${queueId}: ${error.message}`,
-        'DB_READ_ERROR',
-        errorDetails
-      )
-    }
-  }
-
-  async readQueueItem(itemId: number): Promise<QueueItem | null> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      const query = database.prepare(`
-        SELECT 
-          id, queue_id, ticket_id, task_id, status, priority, position,
-          estimated_processing_time, actual_processing_time, agent_id,
-          error_message, retry_count, max_retries, timeout_at,
-          started_at, completed_at, created_at, updated_at
-        FROM ${QUEUE_ITEMS_TABLE}
-        WHERE id = ?
-      `)
-
-      const row = query.get(itemId) as any
-      if (!row) return null
-
-      const item: any = {
-        id: row.id,
-        queueId: row.queue_id,
-        ticketId: row.ticket_id,
-        taskId: row.task_id,
-        status: (row.status as QueueItemStatus) || 'queued',
-        priority: row.priority ?? 0,
-        position: row.position,
-        estimatedProcessingTime: row.estimated_processing_time ?? null,
-        actualProcessingTime: row.actual_processing_time ?? null,
-        agentId: row.agent_id ?? null,
-        errorMessage: row.error_message ?? null,
-        retryCount: row.retry_count || 0,
-        maxRetries: row.max_retries || 3,
-        timeoutAt: row.timeout_at ?? null,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
-      }
-
-      // Only add optional timestamp fields if they have values
-      if (row.started_at !== null) item.startedAt = row.started_at
-      if (row.completed_at !== null) item.completedAt = row.completed_at
-
-      return await validateData<QueueItem>(item, QueueItemSchema as any, `queue item ${item.id}`)
-    } catch (error: any) {
-      console.error(`Error reading queue item ${itemId}:`, error)
-      throw new ApiError(500, `Failed to read queue item ${itemId}`, 'DB_READ_ERROR')
-    }
-  }
-
-  async checkExistingQueueItem(
-    queueId: number,
-    ticketId: number | null,
-    taskId: number | null
-  ): Promise<QueueItem | null> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      // Check for existing non-completed item
-      const query = database.prepare(`
-        SELECT 
-          id, queue_id, ticket_id, task_id, status, priority, position,
-          estimated_processing_time, agent_id,
-          error_message, started_at, completed_at, created_at, updated_at,
-          retry_count, max_retries, timeout_at
-        FROM ${QUEUE_ITEMS_TABLE}
-        WHERE queue_id = ? 
-          AND ticket_id ${ticketId ? '= ?' : 'IS NULL'}
-          AND task_id ${taskId ? '= ?' : 'IS NULL'}
-          AND status NOT IN ('completed', 'failed', 'cancelled', 'timeout')
-      `)
-
-      const params = [queueId]
-      if (ticketId) params.push(ticketId)
-      if (taskId) params.push(taskId)
-
-      const row = query.get(...params) as any
-      if (!row) return null
-
-      const item: any = {
-        id: row.id,
-        queueId: row.queue_id,
-        ticketId: row.ticket_id,
-        taskId: row.task_id,
-        status: (row.status as QueueItemStatus) || 'queued',
-        priority: row.priority ?? 0,
-        position: row.position,
-        estimatedProcessingTime: row.estimated_processing_time ?? null,
-        agentId: row.agent_id ?? null,
-        errorMessage: row.error_message ?? null,
-        retryCount: row.retry_count || 0,
-        maxRetries: row.max_retries || 3,
-        timeoutAt: row.timeout_at ?? null,
-        created: row.created_at || Date.now(),
-        updated: row.updated_at || Date.now()
-      }
-
-      if (row.started_at !== null) item.startedAt = row.started_at
-      if (row.completed_at !== null) item.completedAt = row.completed_at
-
-      return await validateData<QueueItem>(item, QueueItemSchema as any, `existing queue item ${item.id}`)
-    } catch (error: any) {
-      console.error('Error checking for existing queue item:', error)
-      // Don't throw error - return null to allow creation
-      return null
-    }
-  }
-
-  async createQueueItem(item: Omit<QueueItem, 'id' | 'created' | 'updated'>): Promise<QueueItem> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-      const now = Date.now()
-
-      // Position is optional - only set for manual ordering (Kanban boards)
-      // For priority-based queues, position should remain NULL
-      let position = item.position
-      // Remove auto-assignment - let the caller decide if they want positions
-      // This allows priority-based queues to work correctly
-
-      // Use INSERT OR IGNORE to handle duplicates atomically
-      const insertQuery = database.prepare(`
-        INSERT OR IGNORE INTO ${QUEUE_ITEMS_TABLE} (
-          queue_id, ticket_id, task_id, status, priority, position,
-          estimated_processing_time, actual_processing_time, agent_id,
-          error_message, retry_count, max_retries, timeout_at,
-          started_at, completed_at, created_at, updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-
-      const result = insertQuery.run(
-        item.queueId,
-        item.ticketId || null,
-        item.taskId || null,
-        item.status || 'queued',
-        item.priority || 0,
-        position ?? null,
-        item.estimatedProcessingTime ?? null,
-        item.actualProcessingTime ?? null,
-        item.agentId ?? null,
-        item.errorMessage ?? null,
-        item.retryCount || 0,
-        item.maxRetries || 3,
-        item.timeoutAt ?? null,
-        item.startedAt ?? null,
-        item.completedAt ?? null,
-        now,
-        now
-      )
-
-      // Check if insert was successful or ignored due to duplicate
-      if (result.changes === 0) {
-        // Item already exists - fetch and return the existing one
-        const existingQuery = database.prepare(`
-          SELECT 
-            id, queue_id, ticket_id, task_id, status, priority, position,
-            estimated_processing_time, actual_processing_time, agent_id,
-            error_message, retry_count, max_retries, timeout_at,
-            started_at, completed_at, created_at, updated_at
-          FROM ${QUEUE_ITEMS_TABLE}
-          WHERE queue_id = ? 
-            AND ticket_id ${item.ticketId ? '= ?' : 'IS NULL'}
-            AND task_id ${item.taskId ? '= ?' : 'IS NULL'}
-            AND status NOT IN ('completed', 'failed', 'cancelled', 'timeout')
-        `)
-
-        const params = [item.queueId]
-        if (item.ticketId) params.push(item.ticketId)
-        if (item.taskId) params.push(item.taskId)
-
-        const existingRow = existingQuery.get(...params) as any
-        if (!existingRow) {
-          // This shouldn't happen, but handle gracefully
-          throw new ApiError(409, 'Queue item already exists but could not be retrieved', 'DUPLICATE_QUEUE_ITEM')
-        }
-
-        const existingItem: any = {
-          id: existingRow.id,
-          queueId: existingRow.queue_id,
-          ticketId: existingRow.ticket_id,
-          taskId: existingRow.task_id,
-          status: (existingRow.status as QueueItemStatus) || 'queued',
-          priority: existingRow.priority ?? 0,
-          position: existingRow.position,
-          estimatedProcessingTime: existingRow.estimated_processing_time ?? null,
-          actualProcessingTime: existingRow.actual_processing_time ?? null,
-          agentId: existingRow.agent_id ?? null,
-          errorMessage: existingRow.error_message ?? null,
-          retryCount: existingRow.retry_count || 0,
-          maxRetries: existingRow.max_retries || 3,
-          timeoutAt: existingRow.timeout_at ?? null,
-          created: existingRow.created_at || Date.now(),
-          updated: existingRow.updated_at || Date.now()
-        }
-
-        if (existingRow.started_at !== null) existingItem.startedAt = existingRow.started_at
-        if (existingRow.completed_at !== null) existingItem.completedAt = existingRow.completed_at
-
-        console.log(
-          `[Queue Storage] Returning existing queue item ${existingItem.id} for ticket ${item.ticketId} task ${item.taskId}`
-        )
-        return await validateData<QueueItem>(
-          existingItem,
-          QueueItemSchema as any,
-          `existing queue item ${existingItem.id}`
-        )
-      }
-
-      // New item was created successfully
-      const newItem: any = {
-        id: result.lastInsertRowid as number,
-        queueId: item.queueId,
-        ticketId: item.ticketId || null,
-        taskId: item.taskId || null,
-        status: item.status || 'queued',
-        priority: item.priority || 0,
-        position: position ?? null,
-        estimatedProcessingTime: item.estimatedProcessingTime ?? null,
-        actualProcessingTime: item.actualProcessingTime ?? null,
-        agentId: item.agentId ?? null,
-        errorMessage: item.errorMessage ?? null,
-        retryCount: item.retryCount || 0,
-        maxRetries: item.maxRetries || 3,
-        timeoutAt: item.timeoutAt ?? null,
-        created: now,
-        updated: now
-      }
-
-      // Only add optional fields if they have values
-      if (item.startedAt) newItem.startedAt = item.startedAt
-      if (item.completedAt) newItem.completedAt = item.completedAt
-
-      return await validateData<QueueItem>(newItem, QueueItemSchema as any, 'new queue item')
-    } catch (error: any) {
-      console.error('Error creating queue item:', error)
-      const errorDetails = {
-        queueId: item.queueId,
-        ticketId: item.ticketId,
-        taskId: item.taskId,
-        errorMessage: error.message,
-        errorCode: error.code
-      }
-
-      if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
-        throw new ApiError(400, 'Invalid ticket or task ID', 'INVALID_REFERENCE', errorDetails)
-      }
-
-      throw new ApiError(500, `Failed to create queue item: ${error.message}`, 'DB_WRITE_ERROR', errorDetails)
-    }
-  }
-
-  async updateQueueItem(
-    itemId: number,
-    updates: Partial<Omit<QueueItem, 'id' | 'queueId' | 'ticketId' | 'taskId' | 'created' | 'updated'>>
-  ): Promise<QueueItem> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-      const now = Date.now()
-
-      // Build dynamic update query
-      const updateFields: string[] = ['updated_at = ?']
-      const updateValues: any[] = [now]
-
-      if (updates.status !== undefined) {
-        updateFields.push('status = ?')
-        updateValues.push(updates.status)
-
-        // Auto-set timestamps based on status
-        if (updates.status === 'in_progress' && !updates.startedAt) {
-          updateFields.push('started_at = ?')
-          updateValues.push(now)
-        }
-        if (
-          (updates.status === 'completed' || updates.status === 'failed' || updates.status === 'cancelled') &&
-          !updates.completedAt
-        ) {
-          updateFields.push('completed_at = ?')
-          updateValues.push(now)
-        }
-      }
-      if (updates.priority !== undefined) {
-        updateFields.push('priority = ?')
-        updateValues.push(updates.priority)
-      }
-      if (updates.agentId !== undefined) {
-        updateFields.push('agent_id = ?')
-        updateValues.push(updates.agentId)
-      }
-      if (updates.errorMessage !== undefined) {
-        updateFields.push('error_message = ?')
-        updateValues.push(updates.errorMessage)
-      }
-      if (updates.retryCount !== undefined) {
-        updateFields.push('retry_count = ?')
-        updateValues.push(updates.retryCount)
-      }
-      if (updates.maxRetries !== undefined) {
-        updateFields.push('max_retries = ?')
-        updateValues.push(updates.maxRetries)
-      }
-      if (updates.timeoutAt !== undefined) {
-        updateFields.push('timeout_at = ?')
-        updateValues.push(updates.timeoutAt)
-      }
-      if (updates.startedAt !== undefined) {
-        updateFields.push('started_at = ?')
-        updateValues.push(updates.startedAt)
-      }
-      if (updates.completedAt !== undefined) {
-        updateFields.push('completed_at = ?')
-        updateValues.push(updates.completedAt)
-      }
-      if (updates.actualProcessingTime !== undefined) {
-        updateFields.push('actual_processing_time = ?')
-        updateValues.push(updates.actualProcessingTime)
-      }
-      // Auto-calculate actual processing time when completing
-      if (updates.status === 'completed' && updates.actualProcessingTime === undefined) {
-        // Get current item to check if it has started_at
-        const currentItem = database
-          .prepare(
-            `
-          SELECT started_at FROM ${QUEUE_ITEMS_TABLE} WHERE id = ?
-        `
-          )
-          .get(itemId) as any
-
-        if (currentItem?.started_at) {
-          const actualTime = now - currentItem.started_at
-          updateFields.push('actual_processing_time = ?')
-          updateValues.push(actualTime)
-        }
-      }
-
-      updateValues.push(itemId)
-
-      const updateQuery = database.prepare(`
-        UPDATE ${QUEUE_ITEMS_TABLE}
-        SET ${updateFields.join(', ')}
-        WHERE id = ?
-      `)
-
-      updateQuery.run(...updateValues)
-
-      const updatedItem = await this.readQueueItem(itemId)
-      if (!updatedItem) {
-        throw new ApiError(404, `Queue item ${itemId} not found`, 'QUEUE_ITEM_NOT_FOUND')
-      }
-
-      return updatedItem
-    } catch (error: any) {
-      if (error instanceof ApiError) throw error
-      console.error(`Error updating queue item ${itemId}:`, error)
-      throw new ApiError(500, `Failed to update queue item ${itemId}`, 'DB_WRITE_ERROR')
-    }
-  }
-
-  async deleteQueueItem(itemId: number): Promise<boolean> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      const deleteQuery = database.prepare(`
-        DELETE FROM ${QUEUE_ITEMS_TABLE}
-        WHERE id = ?
-      `)
-
-      const result = deleteQuery.run(itemId)
-      return result.changes > 0
-    } catch (error: any) {
-      console.error(`Error deleting queue item ${itemId}:`, error)
-      throw new ApiError(500, `Failed to delete queue item ${itemId}`, 'DB_DELETE_ERROR')
-    }
-  }
+  // === Queue Items Methods Removed ===
+  // All queue_items table operations have been removed.
+  // Queue state is now managed directly in tickets and tasks tables using queue fields.
 
   // === Queue Statistics ===
 
-  async getQueueStats(queueId: number): Promise<{
+  // Note: getQueueStats method removed - statistics are now computed from tickets/tasks tables directly
+
+  // Get queue statistics from tickets and tasks tables
+  async getEnhancedQueueStats(queueId: number): Promise<{
     totalItems: number
     queuedItems: number
     inProgressItems: number
@@ -708,234 +246,88 @@ class QueueStorage {
     failedItems: number
     cancelledItems: number
     averageProcessingTime: number | null
+    ticketCount: number
+    taskCount: number
+    uniqueTickets: number
   }> {
     try {
       const db = this.getDb()
       const database = db.getDatabase()
 
-      const statsQuery = database.prepare(`
+      // Get stats from the tickets table
+      const ticketStatsQuery = database.prepare(`
         SELECT 
-          COUNT(*) as total_items,
-          SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END) as queued_items,
-          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_items,
-          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_items,
-          SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_items,
-          SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_items,
+          COUNT(*) as total_tickets,
+          SUM(CASE WHEN queue_status = 'queued' OR queue_status IS NULL THEN 1 ELSE 0 END) as queued_tickets,
+          SUM(CASE WHEN queue_status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tickets,
+          SUM(CASE WHEN queue_status = 'completed' THEN 1 ELSE 0 END) as completed_tickets,
+          SUM(CASE WHEN queue_status = 'failed' THEN 1 ELSE 0 END) as failed_tickets,
+          SUM(CASE WHEN queue_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_tickets,
           AVG(CASE 
-            WHEN status = 'completed' AND started_at IS NOT NULL AND completed_at IS NOT NULL 
-            THEN completed_at - started_at 
+            WHEN queue_status = 'completed' AND queue_started_at IS NOT NULL AND queue_completed_at IS NOT NULL 
+            THEN queue_completed_at - queue_started_at 
             ELSE NULL 
           END) as avg_processing_time
-        FROM ${QUEUE_ITEMS_TABLE}
+        FROM tickets
         WHERE queue_id = ?
       `)
 
-      const stats = statsQuery.get(queueId) as any
+      const ticketStats = ticketStatsQuery.get(queueId) as any
+
+      // Get stats from the tasks table
+      const taskStatsQuery = database.prepare(`
+        SELECT 
+          COUNT(*) as total_tasks,
+          SUM(CASE WHEN queue_status = 'queued' OR queue_status IS NULL THEN 1 ELSE 0 END) as queued_tasks,
+          SUM(CASE WHEN queue_status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks,
+          SUM(CASE WHEN queue_status = 'completed' THEN 1 ELSE 0 END) as completed_tasks,
+          SUM(CASE WHEN queue_status = 'failed' THEN 1 ELSE 0 END) as failed_tasks,
+          SUM(CASE WHEN queue_status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_tasks,
+          AVG(CASE 
+            WHEN queue_status = 'completed' AND queue_started_at IS NOT NULL AND queue_completed_at IS NOT NULL 
+            THEN queue_completed_at - queue_started_at 
+            ELSE NULL 
+          END) as avg_task_processing_time
+        FROM ticket_tasks
+        WHERE queue_id = ?
+      `)
+
+      const taskStats = taskStatsQuery.get(queueId) as any
+
+      // Combine stats from tickets and tasks
+      const totalTickets = ticketStats?.total_tickets || 0
+      const totalTasks = taskStats?.total_tasks || 0
+
+      // Calculate average processing time from both sources
+      let avgProcessingTime = null
+      if (ticketStats?.avg_processing_time || taskStats?.avg_task_processing_time) {
+        const times = [ticketStats?.avg_processing_time, taskStats?.avg_task_processing_time].filter(Boolean)
+        avgProcessingTime = times.reduce((a, b) => a + b, 0) / times.length
+      }
 
       return {
-        totalItems: stats.total_items || 0,
-        queuedItems: stats.queued_items || 0,
-        inProgressItems: stats.in_progress_items || 0,
-        completedItems: stats.completed_items || 0,
-        failedItems: stats.failed_items || 0,
-        cancelledItems: stats.cancelled_items || 0,
-        averageProcessingTime: stats.avg_processing_time
+        totalItems: totalTickets + totalTasks,
+        queuedItems: (ticketStats?.queued_tickets || 0) + (taskStats?.queued_tasks || 0),
+        inProgressItems: (ticketStats?.in_progress_tickets || 0) + (taskStats?.in_progress_tasks || 0),
+        completedItems: (ticketStats?.completed_tickets || 0) + (taskStats?.completed_tasks || 0),
+        failedItems: (ticketStats?.failed_tickets || 0) + (taskStats?.failed_tasks || 0),
+        cancelledItems: (ticketStats?.cancelled_tickets || 0) + (taskStats?.cancelled_tasks || 0),
+        averageProcessingTime: avgProcessingTime,
+        ticketCount: totalTickets,
+        taskCount: totalTasks,
+        uniqueTickets: totalTickets
       }
     } catch (error: any) {
-      console.error(`Error getting queue stats for queue ${queueId}:`, error)
-      throw new ApiError(500, `Failed to get queue stats for queue ${queueId}`, 'DB_READ_ERROR')
+      console.error(`Error getting enhanced queue stats for queue ${queueId}:`, error)
+      throw new ApiError(500, `Failed to get enhanced queue stats for queue ${queueId}`, 'DB_READ_ERROR')
     }
   }
 
   // === Utility Methods ===
-
-  async getNextQueueItem(queueId: number, agentId?: string): Promise<QueueItem | null> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      // Get the next queued item with highest priority
-      const query = database.prepare(`
-        SELECT 
-          id, queue_id, ticket_id, task_id, status, priority, position,
-          estimated_processing_time, actual_processing_time, agent_id,
-          error_message, retry_count, max_retries, timeout_at,
-          started_at, completed_at, created_at, updated_at
-        FROM ${QUEUE_ITEMS_TABLE}
-        WHERE queue_id = ? AND status = 'queued'
-        ORDER BY position ASC, priority ASC, created_at ASC
-        LIMIT 1
-      `)
-
-      const row = query.get(queueId) as any
-      if (!row) return null
-
-      // Mark it as in_progress with the agent
-      await this.updateQueueItem(row.id, {
-        status: 'in_progress',
-        agentId: agentId || null,
-        startedAt: Date.now()
-      })
-
-      return await this.readQueueItem(row.id)
-    } catch (error: any) {
-      console.error(`Error getting next queue item for queue ${queueId}:`, error)
-      throw new ApiError(500, `Failed to get next queue item for queue ${queueId}`, 'DB_READ_ERROR')
-    }
-  }
-
-  async getCurrentAgents(queueId: number): Promise<string[]> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      const query = database.prepare(`
-        SELECT DISTINCT agent_id
-        FROM ${QUEUE_ITEMS_TABLE}
-        WHERE queue_id = ? AND status = 'in_progress' AND agent_id IS NOT NULL
-      `)
-
-      const rows = query.all(queueId) as any[]
-      return rows.map((row) => row.agent_id)
-    } catch (error: any) {
-      console.error(`Error getting current agents for queue ${queueId}:`, error)
-      throw new ApiError(500, `Failed to get current agents for queue ${queueId}`, 'DB_READ_ERROR')
-    }
-  }
+  // Note: getNextQueueItem and getCurrentAgents methods removed - operations now handled through tickets/tasks directly
 
   // === Kanban Operations ===
-
-  async bulkMoveItems(itemIds: number[], targetQueueId: number, positions?: number[]): Promise<void> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-      const now = Date.now()
-
-      // Use a transaction for bulk operations
-      const transaction = database.transaction(() => {
-        for (let i = 0; i < itemIds.length; i++) {
-          const itemId = itemIds[i]!
-          const position = positions?.[i]
-
-          if (position !== undefined) {
-            // Update with specific position
-            const updateQuery = database.prepare(`
-              UPDATE ${QUEUE_ITEMS_TABLE}
-              SET queue_id = ?, position = ?, updated_at = ?
-              WHERE id = ?
-            `)
-            updateQuery.run(targetQueueId, position, now, itemId)
-          } else {
-            // Get next position
-            const maxPositionQuery = database.prepare(`
-              SELECT MAX(position) as maxPos FROM ${QUEUE_ITEMS_TABLE} WHERE queue_id = ?
-            `)
-            const maxPosResult = maxPositionQuery.get(targetQueueId) as any
-            const nextPosition = (maxPosResult?.maxPos || 0) + 1
-
-            const updateQuery = database.prepare(`
-              UPDATE ${QUEUE_ITEMS_TABLE}
-              SET queue_id = ?, position = ?, updated_at = ?
-              WHERE id = ?
-            `)
-            updateQuery.run(targetQueueId, nextPosition, now, itemId)
-          }
-
-          // No need to update ticket/task tables - queue relationship is tracked in queue_items table only
-        }
-      })
-
-      transaction()
-    } catch (error: any) {
-      console.error('Error bulk moving items:', error)
-      throw new ApiError(500, 'Failed to bulk move items', 'DB_WRITE_ERROR')
-    }
-  }
-
-  async reorderQueueItems(queueId: number, itemIds: number[]): Promise<void> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-      const now = Date.now()
-
-      // Use a transaction for bulk operations
-      const transaction = database.transaction(() => {
-        for (let i = 0; i < itemIds.length; i++) {
-          const updateQuery = database.prepare(`
-            UPDATE ${QUEUE_ITEMS_TABLE}
-            SET position = ?, updated_at = ?
-            WHERE id = ? AND queue_id = ?
-          `)
-          updateQuery.run(i + 1, now, itemIds[i]!, queueId)
-        }
-      })
-
-      transaction()
-    } catch (error: any) {
-      console.error(`Error reordering queue ${queueId} items:`, error)
-      throw new ApiError(500, `Failed to reorder queue ${queueId} items`, 'DB_WRITE_ERROR')
-    }
-  }
-
-  async getUnqueuedItems(projectId: number): Promise<{ tickets: any[]; tasks: any[] }> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      // Get unqueued tickets - tickets that are not in any queue or have completed/failed status
-      const ticketsQuery = database.prepare(`
-        SELECT id, title, priority, created_at, estimated_hours
-        FROM tickets
-        WHERE project_id = ? 
-        AND NOT EXISTS (
-          SELECT 1 FROM ${QUEUE_ITEMS_TABLE} qi 
-          WHERE qi.ticket_id = tickets.id 
-          AND qi.status IN ('queued', 'in_progress')
-        )
-        ORDER BY priority ASC, created_at DESC
-      `)
-      const tickets = ticketsQuery.all(projectId) as any[]
-
-      // Get unqueued tasks - tasks that are not in any queue or have completed/failed status
-      const tasksQuery = database.prepare(`
-        SELECT tt.id, tt.content as title, tt.ticket_id, tt.estimated_hours, t.title as ticket_title
-        FROM ticket_tasks tt
-        JOIN tickets t ON tt.ticket_id = t.id
-        WHERE t.project_id = ?
-        AND NOT EXISTS (
-          SELECT 1 FROM ${QUEUE_ITEMS_TABLE} qi 
-          WHERE qi.task_id = tt.id 
-          AND qi.status IN ('queued', 'in_progress')
-        )
-        ORDER BY tt.created_at DESC
-      `)
-      const tasks = tasksQuery.all(projectId) as any[]
-
-      return { tickets, tasks }
-    } catch (error: any) {
-      console.error(`Error getting unqueued items for project ${projectId}:`, error)
-      throw new ApiError(500, `Failed to get unqueued items for project ${projectId}`, 'DB_READ_ERROR')
-    }
-  }
-
-  async updateQueueItemPosition(itemId: number, position: number): Promise<void> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-      const now = Date.now()
-
-      const updateQuery = database.prepare(`
-        UPDATE ${QUEUE_ITEMS_TABLE}
-        SET position = ?, updated_at = ?
-        WHERE id = ?
-      `)
-
-      updateQuery.run(position, now, itemId)
-    } catch (error: any) {
-      console.error(`Error updating queue item ${itemId} position:`, error)
-      throw new ApiError(500, `Failed to update queue item ${itemId} position`, 'DB_WRITE_ERROR')
-    }
-  }
+  // Note: Kanban operations removed - now handled through tickets/tasks tables directly
 }
 
 // Export singleton instance

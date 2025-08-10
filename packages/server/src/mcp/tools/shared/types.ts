@@ -234,3 +234,17 @@ export const JobManagerSchema = z.object({
   projectId: z.number().optional(),
   data: z.any().optional()
 })
+
+// Markdown Prompt Manager Types
+export enum MarkdownPromptManagerAction {
+  IMPORT_MARKDOWN = 'import_markdown',
+  EXPORT_MARKDOWN = 'export_markdown',
+  VALIDATE_MARKDOWN = 'validate_markdown',
+  BULK_IMPORT = 'bulk_import'
+}
+
+export const MarkdownPromptManagerSchema = z.object({
+  action: z.nativeEnum(MarkdownPromptManagerAction),
+  projectId: z.number().optional(),
+  data: z.any().optional()
+})

@@ -1,4 +1,4 @@
-import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw, Eye } from 'lucide-react'
+import { X, Copy, Check, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw, Eye } from 'lucide-react'
 import { Button } from '@promptliano/ui'
 import { cn } from '@/lib/utils'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -73,6 +73,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     const updateProjectTabState = useUpdateProjectTabState(projectTabId)
     const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
     const [openInEditMode, setOpenInEditMode] = useState(false)
+    const [copyAllStatus, setCopyAllStatus] = useState<'idle' | 'copying' | 'success'>('idle')
     const closeFileViewer = () => {
       setViewedFile(null)
       setOpenInEditMode(false)
@@ -101,7 +102,9 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     )
 
     const copyAllSelectedFiles = async () => {
-      if (!selectedFiles.length) return
+      if (!selectedFiles.length || copyAllStatus === 'copying') return
+
+      setCopyAllStatus('copying')
       let combined = ''
       selectedFiles.forEach((id) => {
         const f = projectFileMap.get(id)
@@ -109,9 +112,19 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
           combined += `/* ${f.name} */\n${f.content ?? ''}\n\n`
         }
       })
-      await copyToClipboard(combined.trim(), {
-        successMessage: 'Copied all selected files content.'
-      })
+
+      try {
+        await navigator.clipboard.writeText(combined.trim())
+        setCopyAllStatus('success')
+
+        // Reset to idle after 2 seconds
+        setTimeout(() => setCopyAllStatus('idle'), 2000)
+      } catch (error) {
+        console.error('Failed to copy files:', error)
+        setCopyAllStatus('idle')
+        // Only show error toast for actual errors
+        toast.error('Failed to copy files to clipboard')
+      }
     }
 
     const handleCreateBookmark = () => {
@@ -353,9 +366,24 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end' className='w-48'>
-                <DropdownMenuItem onClick={copyAllSelectedFiles}>
-                  <Copy className='mr-2 h-4 w-4' />
-                  <span>Copy All Files</span>
+                <DropdownMenuItem
+                  onClick={copyAllSelectedFiles}
+                  disabled={copyAllStatus === 'copying'}
+                  className='transition-colors duration-200'
+                >
+                  <div className='flex items-center w-full'>
+                    {copyAllStatus === 'success' ? (
+                      <>
+                        <Check className='mr-2 h-4 w-4 text-green-500 animate-in zoom-in-50 duration-200' />
+                        <span className='text-green-600 dark:text-green-400'>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className='mr-2 h-4 w-4 transition-all duration-200' />
+                        <span>Copy All Files</span>
+                      </>
+                    )}
+                  </div>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem

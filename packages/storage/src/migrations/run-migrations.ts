@@ -20,6 +20,7 @@ import { queueActualProcessingTimeMigration } from './019-queue-actual-processin
 import { queuePerformanceIndexesMigration } from './020-queue-performance-indexes'
 import { fixQueueStatusValuesMigration } from './021-fix-queue-status-values'
 import { fixPriorityOrderingMigration } from './022-fix-priority-ordering'
+import { dropQueueItemsTableMigration } from './023-drop-queue-items-table'
 import type { Database } from 'bun:sqlite'
 
 interface Migration {
@@ -52,7 +53,8 @@ const migrations: Migration[] = [
   queueActualProcessingTimeMigration,
   queuePerformanceIndexesMigration,
   fixQueueStatusValuesMigration,
-  fixPriorityOrderingMigration
+  fixPriorityOrderingMigration,
+  dropQueueItemsTableMigration
 ]
 
 /**

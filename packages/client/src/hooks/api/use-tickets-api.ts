@@ -1,4 +1,4 @@
-// Last 5 changes: Created comprehensive ticket API hooks following Promptliano patterns
+// Last 5 changes: Created comprehensive ticket API hooks; Broadened invalidations; Wired flow invalidation on ticket complete; Added project-scoped invalidations; Invalidate flow + ticket detail on task update
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   CreateTicketBody,
@@ -39,12 +39,22 @@ export function useInvalidateTickets() {
       queryClient.invalidateQueries({ queryKey: TICKET_KEYS.all })
     },
 
-    // Invalidate all tickets for a specific project
+    // Invalidate all tickets for a specific project (any status/variant)
     invalidateProjectTickets: (projectId: number) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.list(projectId) })
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.withTasks(projectId) })
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.withCounts(projectId) })
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
+      // Broadly invalidate any tickets queries scoped to this project
+      queryClient.invalidateQueries({
+        queryKey: TICKET_KEYS.all,
+        exact: false,
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'tickets' &&
+          query.queryKey.some(
+            (key) =>
+              typeof key === 'object' && key !== null && 'projectId' in key && (key as any).projectId === projectId
+          )
+      })
+      // Also directly invalidate aggregate/project lists
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.projectTickets(projectId), exact: false })
     },
 
     // Invalidate specific ticket detail
@@ -186,9 +196,9 @@ export function useCreateTicket() {
 
 export function useUpdateTicket() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
+  const queryClient = useQueryClient()
 
-  const { invalidateProjectTickets, setTicketDetail } = useInvalidateTickets()
+  const { invalidateProjectTickets, setTicketDetail, invalidateTicketData } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: async ({ ticketId, data }: { ticketId: number; data: UpdateTicketBody }) => {
@@ -198,8 +208,30 @@ export function useUpdateTicket() {
     onSuccess: (ticket) => {
       // Update the specific ticket in cache
       setTicketDetail(ticket)
+
+      // Invalidate the ticket detail and tasks
+      invalidateTicketData(ticket.id)
+
       // Invalidate all ticket lists for the project
       invalidateProjectTickets(ticket.projectId)
+
+      // Also invalidate the specific ticket with tasks query
+      // This ensures the detail view updates immediately
+      queryClient.invalidateQueries({
+        queryKey: ['tickets', 'withTasks', { projectId: ticket.projectId }],
+        exact: false
+      })
+
+      // Invalidate any queries that might contain this ticket
+      queryClient.invalidateQueries({
+        queryKey: ['tickets'],
+        predicate: (query) => {
+          // Invalidate any query that might contain this ticket
+          return query.queryKey.some(
+            (key) => typeof key === 'object' && key !== null && 'projectId' in key && key.projectId === ticket.projectId
+          )
+        }
+      })
     },
     onError: commonErrorHandler
   })
@@ -208,7 +240,7 @@ export function useUpdateTicket() {
 export function useCompleteTicket() {
   const client = useApiClient()
   const queryClient = useQueryClient()
-  const { invalidateAllTickets } = useInvalidateTickets()
+  const { invalidateAllTickets, invalidateTicketData, invalidateProjectTickets } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: async (ticketId: number) => {
@@ -216,14 +248,18 @@ export function useCompleteTicket() {
       return response.data
     },
     onSuccess: (result) => {
-      // Invalidate all ticket-related queries
+      // Update the specific ticket
+      invalidateTicketData(result.ticket.id)
+      // Invalidate project-scoped ticket lists
+      invalidateProjectTickets(result.ticket.projectId)
+      // Invalidate all ticket queries (fallback)
       invalidateAllTickets()
-
-      // Also invalidate queue queries if the ticket was in a queue
-      if (result.ticket.queueId) {
-        queryClient.invalidateQueries({ queryKey: ['queues'] })
-        queryClient.invalidateQueries({ queryKey: ['queue-items'] })
-      }
+      // Also invalidate queue queries - completion may dequeue
+      queryClient.invalidateQueries({ queryKey: ['flow'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['queues'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['queue-items'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['queues-with-stats'], exact: false })
     },
     onError: commonErrorHandler
   })
@@ -276,6 +312,7 @@ export function useUpdateTask() {
   const client = useApiClient()
   // Client null check removed - handled by React Query
 
+  const queryClient = useQueryClient()
   const { invalidateTicketTasks, invalidateAllTickets } = useInvalidateTickets()
 
   return useMutation({
@@ -283,11 +320,26 @@ export function useUpdateTask() {
       const response = await client.tickets.updateTask(ticketId, taskId, data)
       return response.data
     },
-    onSuccess: (task) => {
+    onSuccess: (task, variables) => {
       // Invalidate tasks for this ticket
       invalidateTicketTasks(task.ticketId)
       // Invalidate all ticket queries to update counts
       invalidateAllTickets()
+      // Ensure ticket detail and flow/queue views refresh
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.detail(task.ticketId), exact: false })
+      // Invalidate withTasks queries that might contain this ticket's tasks
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.withTasks, exact: false })
+      // Invalidate flow queries
+      queryClient.invalidateQueries({ queryKey: ['flow'], exact: false })
+      // Force refetch of the specific task query
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(task.ticketId), refetchType: 'all' })
+
+      // Log for debugging
+      console.log('Task updated successfully:', {
+        taskId: task.id,
+        ticketId: task.ticketId,
+        updatedFields: variables.data
+      })
     },
     onError: commonErrorHandler
   })

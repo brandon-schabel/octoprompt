@@ -219,6 +219,21 @@ export class FlowService {
     return ticket
   }
 
+  async dequeueTicketWithTasks(ticketId: number): Promise<Ticket> {
+    // Dequeue the ticket
+    const ticket = await this.dequeueTicket(ticketId)
+
+    // Dequeue all its tasks
+    const tasks = await ticketStorage.readTasks(ticketId)
+    for (const task of Object.values(tasks)) {
+      if (task.queueId !== null) {
+        await this.dequeueTask(task.id)
+      }
+    }
+
+    return ticket
+  }
+
   async dequeueTask(taskId: number): Promise<TicketTask> {
     await ticketStorage.dequeueTask(taskId)
 
@@ -234,15 +249,61 @@ export class FlowService {
     itemType: 'ticket' | 'task',
     itemId: number,
     targetQueueId: number | null,
-    priority: number = 0
+    priority: number = 0,
+    includeTasks: boolean = false
   ): Promise<FlowItem> {
     if (itemType === 'ticket') {
       if (targetQueueId === null) {
-        const ticket = await this.dequeueTicket(itemId)
+        await this.dequeueTicketWithTasks(itemId)
+        const ticket = await ticketStorage.readTicket(itemId)
+        if (!ticket) {
+          throw new ApiError(404, `Ticket ${itemId} not found`, 'NOT_FOUND')
+        }
         return this.ticketToFlowItem(ticket)
       } else {
-        const ticket = await this.enqueueTicket(itemId, targetQueueId, priority)
-        return this.ticketToFlowItem(ticket)
+        // Moving to another queue
+        if (includeTasks) {
+          // First, get the ticket and all its tasks before any changes
+          const ticket = await ticketStorage.readTicket(itemId)
+          if (!ticket) {
+            throw new ApiError(404, `Ticket ${itemId} not found`, 'NOT_FOUND')
+          }
+
+          // Get all tasks for this ticket, regardless of queue status
+          const tasks = await ticketStorage.readTasks(itemId)
+          const taskList = Object.values(tasks)
+
+          // If ticket is already in a queue, dequeue it first
+          if (ticket.queueId) {
+            await this.dequeueTicket(itemId)
+          }
+
+          // Dequeue all tasks that are currently in any queue
+          for (const task of taskList) {
+            if (task.queueId !== null) {
+              await this.dequeueTask(task.id)
+            }
+          }
+
+          // Now enqueue the ticket to the new queue
+          await this.enqueueTicket(itemId, targetQueueId, priority)
+
+          // And enqueue all its tasks to the same queue
+          for (const task of taskList) {
+            await this.enqueueTask(task.id, targetQueueId, priority)
+          }
+
+          // Return the updated ticket
+          const updatedTicket = await ticketStorage.readTicket(itemId)
+          if (!updatedTicket) {
+            throw new ApiError(404, `Ticket ${itemId} not found after move`, 'NOT_FOUND')
+          }
+          return this.ticketToFlowItem(updatedTicket)
+        } else {
+          // Just move the ticket without tasks (existing behavior)
+          const ticket = await this.enqueueTicket(itemId, targetQueueId, priority)
+          return this.ticketToFlowItem(ticket)
+        }
       }
     } else {
       if (targetQueueId === null) {
@@ -311,6 +372,27 @@ export class FlowService {
     }
 
     return flowData
+  }
+
+  async reorderWithinQueue(
+    queueId: number,
+    items: Array<{ itemType: 'ticket' | 'task'; itemId: number; ticketId?: number }>
+  ): Promise<void> {
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i]
+      if (!it) continue
+      if (it.itemType === 'ticket') {
+        const ticket = await ticketStorage.readTicket(it.itemId)
+        if (ticket?.queueId === queueId) {
+          await ticketStorage.updateTicket(it.itemId, { queuePosition: i })
+        }
+      } else if (it.ticketId) {
+        const task = await ticketStorage.getTaskById(it.itemId)
+        if (task?.queueId === queueId) {
+          await ticketStorage.updateTask(it.ticketId, it.itemId, { queuePosition: i })
+        }
+      }
+    }
   }
 
   async getFlowItems(projectId: number): Promise<FlowItem[]> {

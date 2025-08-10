@@ -18,6 +18,7 @@ import { generateStructuredData } from './gen-ai-services'
 import { fileSuggestionStrategyService, FileSuggestionStrategyService } from './file-suggestion-strategy-service'
 import { z } from 'zod'
 import { listAgents } from './claude-agent-service'
+// Note: completeTicketQueueItems removed - queue state now managed directly on tickets/tasks
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {
@@ -265,6 +266,10 @@ export async function completeTicket(ticketId: number): Promise<{ ticket: Ticket
     }
   }
 
+  // Queue state is now managed directly on tickets/tasks
+  // When a ticket is completed, its queue_status is already updated above
+  // No need for separate queue_items operations
+
   return { ticket: updatedTicket, tasks: updatedTasks }
 }
 
@@ -339,6 +344,7 @@ export async function updateTask(ticketId: number, taskId: number, updates: Upda
     ...(updates.content !== undefined && { content: updates.content }),
     ...(updates.description !== undefined && { description: updates.description }),
     ...(updates.suggestedFileIds !== undefined && { suggestedFileIds: updates.suggestedFileIds }),
+    ...(updates.suggestedPromptIds !== undefined && { suggestedPromptIds: updates.suggestedPromptIds }),
     ...(updates.done !== undefined && { done: updates.done }),
     ...(updates.estimatedHours !== undefined && { estimatedHours: updates.estimatedHours }),
     ...(updates.dependencies !== undefined && { dependencies: updates.dependencies }),

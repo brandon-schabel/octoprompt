@@ -20,7 +20,7 @@ import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { SuggestedPromptsDialog } from '../suggest-prompts-dialog'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Binoculars, Bot, Copy, FileText, MessageCircleCode, Search, Lightbulb } from 'lucide-react'
+import { Binoculars, Bot, Copy, Check, FileText, MessageCircleCode, Search, Lightbulb } from 'lucide-react'
 import { useGetProjectSummary, useSuggestFiles } from '@/hooks/api/use-projects-api'
 import { useGetProjectPrompts, useSuggestPrompts } from '@/hooks/api/use-prompts-api'
 import { Prompt } from '@promptliano/schemas'
@@ -75,6 +75,7 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
   const findSuggestedPromptsMutation = useSuggestPrompts()
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showPromptSuggestions, setShowPromptSuggestions] = useState(false)
+  const [copyAllStatus, setCopyAllStatus] = useState<'idle' | 'copying' | 'success'>('idle')
 
   // Load the project's prompts
   const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId ?? -1)
@@ -121,11 +122,23 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
     })
   }
 
-  const handleCopyAll = () => {
-    copyToClipboard(buildFullProjectContext() ?? '', {
-      successMessage: 'All content copied',
-      errorMessage: 'Copy failed'
-    })
+  const handleCopyAll = async () => {
+    if (copyAllStatus === 'copying') return
+
+    setCopyAllStatus('copying')
+
+    try {
+      await navigator.clipboard.writeText(buildFullProjectContext() ?? '')
+      setCopyAllStatus('success')
+
+      // Reset to idle after 2 seconds
+      setTimeout(() => setCopyAllStatus('idle'), 2000)
+    } catch (error) {
+      console.error('Failed to copy:', error)
+      setCopyAllStatus('idle')
+      // Still use the toast for errors
+      toast.error('Failed to copy to clipboard')
+    }
   }
 
   const handleFindSuggestions = () => {
@@ -277,7 +290,9 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
                   </ul>
                 </div>
               </PromptlianoTooltip>
-              <div className='ml-auto text-xs text-muted-foreground'>{formatCompactTokenCount(totalTokens)} tokens</div>
+              <div className='ml-auto text-xs text-muted-foreground'>
+                {formatCompactTokenCount(totalTokens)} tokens in context
+              </div>
             </div>
 
             <div className='flex-1 min-h-0 flex flex-col'>
@@ -292,9 +307,25 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
               <div className='flex gap-2 mt-3 shrink-0 flex-wrap'>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button onClick={handleCopyAll} size='sm'>
-                      <Copy className='h-3.5 w-3.5 mr-1' />
-                      Copy All ({formatCompactTokenCount(totalTokens)} tokens)
+                    <Button
+                      onClick={handleCopyAll}
+                      size='sm'
+                      disabled={copyAllStatus === 'copying'}
+                      className='transition-colors duration-200 w-[100px]'
+                    >
+                      <div className='flex items-center justify-center w-full'>
+                        {copyAllStatus === 'success' ? (
+                          <>
+                            <Check className='h-3.5 w-3.5 mr-1 text-green-500 animate-in zoom-in-50 duration-200' />
+                            <span className='text-green-600 dark:text-green-400'>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className='h-3.5 w-3.5 mr-1 transition-all duration-200' />
+                            <span>Copy All</span>
+                          </>
+                        )}
+                      </div>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>

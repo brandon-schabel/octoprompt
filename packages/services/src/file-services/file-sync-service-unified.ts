@@ -18,10 +18,10 @@ import {
   bulkDeleteProjectFiles,
   type FileSyncData, // Interface from project-service
   listProjects,
-  fileIndexingService
-} from '@promptliano/services' // Adjusted path assuming this file is in services/file-services/
+  summarizeSingleFile
+} from '../project-service'
+import { fileIndexingService } from '../file-indexing-service'
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
-import { summarizeSingleFile } from '@promptliano/services'
 import { analyzeCodeImportsExports } from '../utils/code-analysis'
 import { createLogger } from '../utils/logger'
 
