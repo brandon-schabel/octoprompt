@@ -1,0 +1,56 @@
+{
+  "name": "@promptliano/prompt-engineer",
+  "version": "0.9.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./optimizers": {
+      "types": "./dist/optimizers/index.d.ts",
+      "import": "./dist/optimizers/index.js"
+    },
+    "./strategies": {
+      "types": "./dist/strategies/index.d.ts",
+      "import": "./dist/strategies/index.js"
+    },
+    "./analyzers": {
+      "types": "./dist/analyzers/index.d.ts",
+      "import": "./dist/analyzers/index.js"
+    }
+  },
+  "scripts": {
+    "build": "bun run build:clean && bun run build:ts",
+    "build:clean": "rm -rf dist",
+    "build:ts": "tsc",
+    "dev": "tsc --watch",
+    "test": "bun test",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:e2e": "bun test tests/e2e",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "test:ci": "bun test --ci",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@effect/platform": "^0.90.2",
+    "@effect/schema": "^0.75.5",
+    "effect": "^3.17.7",
+    "zod": "^3.25.56"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  },
+  "peerDependencies": {
+    "@promptliano/schemas": "workspace:*",
+    "@promptliano/shared": "workspace:*"
+  }
+}

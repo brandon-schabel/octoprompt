@@ -66,7 +66,10 @@ export async function parseMarkdownToPrompt(content: string): Promise<ParsedMark
     const parsed = matter(content, {
       // Use yaml.load which is safe by default in js-yaml 4+
       engines: {
-        yaml: (str) => yaml.load(str)
+        yaml: {
+          parse: (str: string) => yaml.load(str) as object,
+          stringify: (data: object) => yaml.dump(data)
+        }
       }
     })
 
@@ -754,11 +757,16 @@ async function updateTimestamps(promptId: number, created: number, updated: numb
     const db = promptStorage
     const allPrompts = await db.readPrompts()
 
-    if (allPrompts[String(promptId)]) {
+    const existingPrompt = allPrompts[String(promptId)]
+    if (existingPrompt) {
+      // Ensure all required fields are present
       allPrompts[String(promptId)] = {
-        ...allPrompts[String(promptId)],
+        name: existingPrompt.name || '',
+        content: existingPrompt.content || '',
+        id: existingPrompt.id || promptId,
         created,
-        updated
+        updated,
+        projectId: existingPrompt.projectId
       }
       await db.writePrompts(allPrompts)
     }

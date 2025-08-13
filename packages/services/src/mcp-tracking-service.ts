@@ -347,9 +347,10 @@ async function recordErrorPatternAsync(
   errorMessage: string
 ): Promise<void> {
   // Extract error pattern (first line, error type, etc.)
+  const errorParts = errorMessage.split(':')
   const errorPattern = {
     tool: toolName,
-    errorType: errorMessage.split(':')[0].substring(0, 50),
+    errorType: (errorParts[0] || errorMessage).substring(0, 50),
     message: errorMessage.substring(0, 100)
   }
 

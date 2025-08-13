@@ -32,8 +32,9 @@ export async function createQueue(data: CreateQueueBody): Promise<TaskQueue> {
     return queue
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error creating queue:', error)
-    throw new ApiError(500, 'Failed to create queue', 'QUEUE_CREATE_ERROR', { error })
+    throw new ApiError(500, 'Failed to create queue', 'QUEUE_CREATE_ERROR', { error: errorMessage })
   }
 }
 
@@ -77,8 +78,9 @@ export async function pauseQueue(queueId: number): Promise<TaskQueue> {
     return await queueStorage.updateQueue(queueId, { status: 'paused' })
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error pausing queue:', error)
-    throw new ApiError(500, 'Failed to pause queue', 'QUEUE_PAUSE_ERROR', { error })
+    throw new ApiError(500, 'Failed to pause queue', 'QUEUE_PAUSE_ERROR', { error: errorMessage })
   }
 }
 
@@ -95,8 +97,9 @@ export async function resumeQueue(queueId: number): Promise<TaskQueue> {
     return await queueStorage.updateQueue(queueId, { status: 'active' })
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error resuming queue:', error)
-    throw new ApiError(500, 'Failed to resume queue', 'QUEUE_RESUME_ERROR', { error })
+    throw new ApiError(500, 'Failed to resume queue', 'QUEUE_RESUME_ERROR', { error: errorMessage })
   }
 }
 
@@ -127,8 +130,9 @@ export async function enqueueTicket(ticketId: number, queueId: number, priority:
     return updatedTicket
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error enqueuing ticket:', error)
-    throw new ApiError(500, 'Failed to enqueue ticket', 'ENQUEUE_ERROR', { error })
+    throw new ApiError(500, 'Failed to enqueue ticket', 'ENQUEUE_ERROR', { error: errorMessage })
   }
 }
 
@@ -162,8 +166,9 @@ export async function enqueueTask(
     return updatedTask
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error enqueuing task:', error)
-    throw new ApiError(500, 'Failed to enqueue task', 'ENQUEUE_ERROR', { error })
+    throw new ApiError(500, 'Failed to enqueue task', 'ENQUEUE_ERROR', { error: errorMessage })
   }
 }
 
@@ -199,8 +204,9 @@ export async function enqueueTicketWithAllTasks(
     return { ticket, tasks: enqueuedTasks }
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error enqueuing ticket with tasks:', error)
-    throw new ApiError(500, 'Failed to enqueue ticket with tasks', 'ENQUEUE_TICKET_ERROR', { error })
+    throw new ApiError(500, 'Failed to enqueue ticket with tasks', 'ENQUEUE_TICKET_ERROR', { error: errorMessage })
   }
 }
 
@@ -233,8 +239,9 @@ export async function dequeueTicket(ticketId: number): Promise<Ticket> {
     return updatedTicket
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error dequeuing ticket:', error)
-    throw new ApiError(500, 'Failed to dequeue ticket', 'DEQUEUE_ERROR', { error })
+    throw new ApiError(500, 'Failed to dequeue ticket', 'DEQUEUE_ERROR', { error: errorMessage })
   }
 }
 
@@ -259,8 +266,9 @@ export async function dequeueTask(ticketId: number, taskId: number): Promise<Tic
     return updatedTask
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error dequeuing task:', error)
-    throw new ApiError(500, 'Failed to dequeue task', 'DEQUEUE_ERROR', { error })
+    throw new ApiError(500, 'Failed to dequeue task', 'DEQUEUE_ERROR', { error: errorMessage })
   }
 }
 
@@ -288,8 +296,9 @@ export async function dequeueTicketWithAllTasks(ticketId: number): Promise<{ tic
     return { ticket, tasks: dequeuedTasks }
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error dequeuing ticket with tasks:', error)
-    throw new ApiError(500, 'Failed to dequeue ticket with tasks', 'DEQUEUE_TICKET_ERROR', { error })
+    throw new ApiError(500, 'Failed to dequeue ticket with tasks', 'DEQUEUE_TICKET_ERROR', { error: errorMessage })
   }
 }
 
@@ -341,6 +350,11 @@ export async function getNextTaskFromQueue(
     // Try to get a ticket first
     if (queuedTickets.length > 0) {
       const ticket = queuedTickets[0]
+      
+      if (!ticket) {
+        console.warn('[Queue] Ticket array has length but first item is undefined')
+        return { type: 'none', item: null, message: 'No valid tickets available' }
+      }
 
       // Update ticket status to in_progress
       const updatedTicket = await ticketStorage.updateTicket(ticket.id, {
@@ -367,6 +381,11 @@ export async function getNextTaskFromQueue(
 
       if (queuedTasks.length > 0) {
         const task = queuedTasks[0]
+        
+        if (!task) {
+          console.warn('[Queue] Task array has length but first item is undefined')
+          continue
+        }
 
         // Update task status to in_progress
         const updatedTask = await ticketStorage.updateTask(ticket.id, task.id, {
@@ -382,8 +401,9 @@ export async function getNextTaskFromQueue(
     return { type: 'none', item: null, message: 'No tasks available' }
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error getting next task from queue:', error)
-    throw new ApiError(500, 'Failed to get next task from queue', 'QUEUE_PROCESS_ERROR', { error })
+    throw new ApiError(500, 'Failed to get next task from queue', 'QUEUE_PROCESS_ERROR', { error: errorMessage })
   }
 }
 
@@ -476,8 +496,9 @@ export async function moveItemToQueue(
     }
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error moving item to queue:', error)
-    throw new ApiError(500, 'Failed to move item to queue', 'MOVE_ERROR', { error })
+    throw new ApiError(500, 'Failed to move item to queue', 'MOVE_ERROR', { error: errorMessage })
   }
 }
 
@@ -528,8 +549,9 @@ export async function completeQueueItem(itemType: 'ticket' | 'task', itemId: num
     }
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error completing queue item:', error)
-    throw new ApiError(500, 'Failed to complete queue item', 'COMPLETE_ERROR', { error })
+    throw new ApiError(500, 'Failed to complete queue item', 'COMPLETE_ERROR', { error: errorMessage })
   }
 }
 
@@ -562,8 +584,9 @@ export async function failQueueItem(
     }
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error failing queue item:', error)
-    throw new ApiError(500, 'Failed to fail queue item', 'FAIL_ERROR', { error })
+    throw new ApiError(500, 'Failed to fail queue item', 'FAIL_ERROR', { error: errorMessage })
   }
 }
 
@@ -585,8 +608,9 @@ export async function getUnqueuedItems(projectId: number): Promise<{ tickets: Ti
     return { tickets: unqueuedTickets, tasks: unqueuedTasks }
   } catch (error) {
     if (error instanceof ApiError) throw error
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('Error getting unqueued items:', error)
-    throw new ApiError(500, 'Failed to get unqueued items', 'UNQUEUED_ITEMS_ERROR', { error })
+    throw new ApiError(500, 'Failed to get unqueued items', 'UNQUEUED_ITEMS_ERROR', { error: errorMessage })
   }
 }
 

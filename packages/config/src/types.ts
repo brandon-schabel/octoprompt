@@ -62,6 +62,10 @@ export interface FilesConfig {
   maxFileSizeForSummary: number
   maxTokensForSummary: number
   charsPerTokenEstimate: number
+  optimalTokensForBatch?: number
+  promptOverheadTokens?: number
+  responseBufferTokens?: number
+  maxFilesPerBatch?: number
 }
 
 export interface CorsConfig {

@@ -134,7 +134,14 @@ export class LMStudioProvider {
       // Parse JSON response
       let parsedObject: any
       try {
-        parsedObject = JSON.parse(content)
+        // Try to extract JSON from the content (LMStudio sometimes adds text before/after)
+        const jsonMatch = content.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          parsedObject = JSON.parse(jsonMatch[0])
+        } else {
+          // Fallback to direct parse if no JSON object found
+          parsedObject = JSON.parse(content)
+        }
       } catch (parseError) {
         if (this.debug) {
           console.error('[LMStudioProvider] Failed to parse JSON response:', content)

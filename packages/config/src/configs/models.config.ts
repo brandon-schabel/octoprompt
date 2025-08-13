@@ -3,13 +3,12 @@ import type { ModelConfig, ModelOptionsWithProvider } from '../types'
 export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
   frequencyPenalty: 0,
   presencePenalty: 0,
-  maxTokens: 20000,
+  maxTokens: 32000,
   temperature: 0.7,
   topP: 0,
   topK: 0,
   provider: 'lmstudio',
-  model: 'gpt-oss:20b'
-  // model: 'gemma3:1b'
+  model: 'gpt-oss:20b' // Using GPT-OSS-20B model
 }
 
 export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {

@@ -10,6 +10,7 @@ import {
   type HookListItem
 } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
+import { ensureString, ensureNumber } from '@promptliano/shared/src/utils/sqlite-converters'
 
 /**
  * Simplified Claude Hook Storage that matches Claude Code's exact format
@@ -31,7 +32,7 @@ export class ClaudeHookStorageSimple {
 
     try {
       await fs.access(filePath)
-      const content = await fs.readFile(filePath, 'utf-8')
+  const content = ensureString(await fs.readFile(filePath, 'utf-8'))
 
       if (!content.trim()) {
         return { hooks: {} }
@@ -223,9 +224,9 @@ export class ClaudeHookStorageSimple {
     }
 
     if (updates.timeout !== undefined) {
-      firstHook.timeout = updates.timeout
+  firstHook.timeout = ensureNumber(updates.timeout, 60)
     } else if (updates.timeout === null) {
-      firstHook.timeout = 60 // Use default timeout
+  firstHook.timeout = 60 // Use default timeout
     }
 
     await this.writeSettings(projectPath, settings)

@@ -3,6 +3,10 @@ import { z } from 'zod'
 import { TaskQueueSchema, type TaskQueue, type QueueStatus } from '@promptliano/schemas'
 import { normalizeToUnixMs } from '@promptliano/shared/src/utils/parse-timestamp'
 import { DatabaseManager, getDb } from './database-manager'
+import {
+  toNumber,
+  SqliteConverters
+} from '@promptliano/shared/src/utils/sqlite-converters'
 import { ApiError } from '@promptliano/shared'
 
 // Table names
@@ -57,8 +61,8 @@ class QueueStorage {
           maxParallelItems: row.max_parallel_items || 1,
           averageProcessingTime: row.average_processing_time ?? null,
           totalCompletedItems: row.total_completed_items || 0,
-          created: Number(row.created_at) || Date.now(),
-          updated: Number(row.updated_at) || Date.now()
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
 
         const validatedQueue = await validateData<TaskQueue>(queue, TaskQueueSchema as any, `queue ${queue.id}`)

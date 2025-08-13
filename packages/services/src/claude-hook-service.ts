@@ -5,7 +5,7 @@ import {
   type HookEvent,
   type HookListItem,
   type HookGenerationRequest,
-  type HookGenerationResponse,
+  HookGenerationResponseSchema,
   HookEventSchema,
   CreateHookRequestSchema,
   UpdateHookRequestSchema
@@ -185,7 +185,7 @@ class ClaudeHookService {
       suggestedEvent?: HookEvent
       examples?: string[]
     }
-  ): Promise<HookGenerationResponse['data']> {
+  ): Promise<z.infer<typeof HookGenerationResponseSchema>['data']> {
     try {
       const systemPrompt = `You are a Claude Code hook configuration generator. Generate safe, useful hook configurations based on user descriptions.
 
@@ -225,19 +225,19 @@ ${context?.examples ? `Examples:\n${context.examples.join('\n')}` : ''}`
 Return a safe, practical hook configuration.`
 
       const result = await generateStructuredData({
-        systemPrompt,
-        userPrompt,
+        prompt: userPrompt,
+        systemMessage: systemPrompt,
         schema: GeneratedHookConfigSchema,
-        model: 'gpt-4o-mini'
+        options: { provider: 'openai' }
       })
 
       return {
-        event: result.event,
-        matcher: result.matcher,
-        command: result.command,
-        timeout: result.timeout,
-        description: result.description,
-        security_warnings: result.security_warnings
+        event: result.object.event,
+        matcher: result.object.matcher,
+        command: result.object.command,
+        timeout: result.object.timeout,
+        description: result.object.description,
+        security_warnings: result.object.security_warnings
       }
     } catch (error) {
       throw new ApiError(

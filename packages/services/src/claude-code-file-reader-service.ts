@@ -200,12 +200,17 @@ export class ClaudeCodeFileReaderService {
       const firstMessage = sessionMessages[0]
       const lastMessage = sessionMessages[sessionMessages.length - 1]
       
+      if (!firstMessage || !lastMessage) {
+        continue
+      }
+      
       // Find the most recent git branch and cwd
       let gitBranch: string | undefined
       let cwd: string | undefined
       
       for (let i = sessionMessages.length - 1; i >= 0; i--) {
         const msg = sessionMessages[i]
+        if (!msg) continue
         if (!gitBranch && msg.gitBranch) gitBranch = msg.gitBranch
         if (!cwd && msg.cwd) cwd = msg.cwd
         if (gitBranch && cwd) break
@@ -305,8 +310,10 @@ export class ClaudeCodeFileReaderService {
       const sorted = [...messages].sort((a, b) => 
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       )
-      firstMessageTime = sorted[0].timestamp
-      lastMessageTime = sorted[sorted.length - 1].timestamp
+      const first = sorted[0]
+      const last = sorted[sorted.length - 1]
+      if (first) firstMessageTime = first.timestamp
+      if (last) lastMessageTime = last.timestamp
     }
     
     return {

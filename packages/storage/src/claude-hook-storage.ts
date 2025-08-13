@@ -7,11 +7,14 @@ import {
   HooksConfigurationSchema,
   HookEventSchema,
   MatcherGroupSchema,
+  HookConfigSchema,
+  HookConfigurationLevelSchema,
   type HooksConfiguration,
   type HookConfig,
   type HookEvent
 } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
+import { ensureString } from '@promptliano/shared/src/utils/sqlite-converters'
 
 // Storage schema for settings.json files
 // Claude Code format: { "hooks": { "EventName": [...] } }
@@ -83,7 +86,7 @@ export class ClaudeHookStorage {
   private async readSettingsFile(filePath: string): Promise<any> {
     try {
       await fs.access(filePath)
-      const content = await fs.readFile(filePath, 'utf-8')
+  const content = ensureString(await fs.readFile(filePath, 'utf-8'))
 
       if (!content.trim()) {
         return {}
@@ -154,7 +157,7 @@ export class ClaudeHookStorage {
         throw new ApiError(400, `Invalid configuration level: ${level}`)
     }
 
-    const settings = await this.readSettingsFile(filePath)
+  const settings = await this.readSettingsFile(filePath)
     // Return the hooks directly from settings, or empty hooks object
     return { hooks: settings.hooks || {} }
   }
@@ -186,7 +189,7 @@ export class ClaudeHookStorage {
     }
 
     // Read existing settings to preserve other configurations
-    const existingSettings = await this.readSettingsFile(filePath)
+  const existingSettings = await this.readSettingsFile(filePath)
 
     // Update hooks while preserving other settings
     const updatedSettings = {
@@ -296,6 +299,9 @@ export class ClaudeHookStorage {
     }
 
     const matcherGroup = matchers[matcherIndex]
+    if (!matcherGroup) {
+      throw new ApiError(404, 'Matcher group not found')
+    }
 
     // Update matcher pattern if provided
     if (hookData.matcher !== undefined) {
@@ -312,7 +318,7 @@ export class ClaudeHookStorage {
 
       // For simplicity, assume single hook per matcher group
       // In a more complex implementation, you might need to specify which hook in the group
-      if (matcherGroup.hooks.length > 0) {
+      if (matcherGroup.hooks && matcherGroup.hooks.length > 0) {
         matcherGroup.hooks[0] = validated.data
       } else {
         matcherGroup.hooks = [validated.data]

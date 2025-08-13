@@ -113,5 +113,16 @@ export type {
   UpdateHookRequest
 } from '@promptliano/schemas'
 export * from './src/parser-service'
-export * from './src/parsers'
+// Export parsers individually to avoid VSCodeSettings conflicts with mcp-installation-service
+export * from './src/parsers/base-parser'
+export * from './src/parsers/markdown-parser'
+export * from './src/parsers/json-parser'
+export * from './src/parsers/yaml-parser'
+export * from './src/parsers/claude-command-parser'
+export * from './src/parsers/cursor-config-parser'
+// VSCodeConfigParser exports VSCodeSettings which conflicts with mcp-installation-service
+// Export the parser class but use explicit re-export names for conflicting types
+export { VSCodeConfigParser } from './src/parsers/vscode-config-parser'
+export type { VSCodeSettings as ParserVSCodeSettings } from './src/parsers/vscode-config-parser'
+export { VSCodeSettingsSchema as ParserVSCodeSettingsSchema } from './src/parsers/vscode-config-parser'
 export * from './src/markdown-prompt-service'

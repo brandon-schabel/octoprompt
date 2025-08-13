@@ -38,9 +38,10 @@ export function createProviderKeyService() {
     // If this new key is set to default, unset other defaults for the same provider
     if (data.isDefault) {
       for (const keyId in allKeys) {
-        if (allKeys[keyId].provider === data.provider && allKeys[keyId].isDefault) {
-          allKeys[keyId].isDefault = false
-          allKeys[keyId].updated = now
+        const key = allKeys[keyId]
+        if (key && key.provider === data.provider && key.isDefault) {
+          key.isDefault = false
+          key.updated = now
         }
       }
     }
@@ -70,6 +71,11 @@ export function createProviderKeyService() {
       tag: encryptedData.tag,
       salt: encryptedData.salt,
       isDefault: data.isDefault ?? false,
+      isActive: data.isActive ?? true,
+      environment: data.environment ?? 'production',
+      description: data.description,
+      expiresAt: data.expiresAt,
+      lastUsed: data.lastUsed,
       created: now,
       updated: now
     }
@@ -198,13 +204,15 @@ export function createProviderKeyService() {
     // If this key is being set to default, unset other defaults for the same provider
     if (data.isDefault === true && existingKey.provider === (data.provider ?? existingKey.provider)) {
       for (const keyId in allKeys) {
+        const key = allKeys[keyId]
         if (
-          allKeys[keyId].id !== id &&
-          allKeys[keyId].provider === (data.provider ?? existingKey.provider) &&
-          allKeys[keyId].isDefault
+          key &&
+          key.id !== id &&
+          key.provider === (data.provider ?? existingKey.provider) &&
+          key.isDefault
         ) {
-          allKeys[keyId].isDefault = false
-          allKeys[keyId].updated = now
+          key.isDefault = false
+          key.updated = now
         }
       }
     }
@@ -391,9 +399,9 @@ export function createProviderKeyService() {
           // Return cached/estimated health status based on key data
           healthStatuses.push({
             provider,
-            status: key.isActive ? 'healthy' : 'unknown',
-            lastChecked: key.lastUsed || key.updated,
-            uptime: key.isActive ? 99.8 : 0, // Estimated uptime
+            status: (key.isActive ?? true) ? 'healthy' : 'unknown',
+            lastChecked: key.lastUsed ?? key.updated,
+            uptime: (key.isActive ?? true) ? 99.8 : 0, // Estimated uptime
             averageResponseTime: 1000, // Default estimate
             modelCount: 0 // Unknown without fresh check
           })

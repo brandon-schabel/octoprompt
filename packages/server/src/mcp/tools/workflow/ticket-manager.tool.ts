@@ -189,12 +189,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
                 throw createMCPError(MCPErrorCode.SERVICE_ERROR, error.message || 'Failed to generate tasks', {
                   ticketId,
                   code: error.code,
-                  originalError: error
+                  originalError: error.message || 'Unknown error'
                 })
               }
               throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to auto-generate tasks for ticket', {
                 ticketId,
-                originalError: error
+                originalError: error instanceof Error ? error.message : String(error)
               })
             }
           }
@@ -228,12 +228,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
                 throw createMCPError(MCPErrorCode.SERVICE_ERROR, error.message || 'Failed to suggest files', {
                   ticketId,
                   code: error.code,
-                  originalError: error
+                  originalError: error.message || 'Unknown error'
                 })
               }
               throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to suggest files for ticket', {
                 ticketId,
-                originalError: error
+                originalError: error instanceof Error ? error.message : String(error)
               })
             }
           }
@@ -265,7 +265,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               if (error instanceof MCPError) throw error
               throw createMCPError(MCPErrorCode.SEARCH_FAILED, 'Search operation failed', {
                 searchOptions,
-                originalError: error
+                originalError: error instanceof Error ? error.message : String(error)
               })
             }
           }

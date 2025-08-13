@@ -194,6 +194,9 @@ export class EnhancedSummarizationService {
         }
 
         const group = optimizedGroups[i]
+        if (!group) {
+          continue
+        }
 
         // Update progress
         fileSummarizationTracker.updateBatchProgress(batchId, {
@@ -292,7 +295,7 @@ export class EnhancedSummarizationService {
       const modelConfig = MODEL_CONFIGS[options.depth || 'standard']
 
       // Build context-aware prompt
-      const systemPrompt = options.groupAware ? this.buildGroupAwareSystemPrompt(options) : promptsMap.summarizeCode
+      const systemPrompt = options.groupAware ? this.buildGroupAwareSystemPrompt(options) : promptsMap.summarizationSteps
 
       const userPrompt = this.buildEnhancedUserPrompt(file, context, options)
 
@@ -332,7 +335,7 @@ export class EnhancedSummarizationService {
     const relatedFiles = groupFiles.map((f) => ({
       id: f.id,
       name: f.name,
-      summary: f.summary
+      summary: f.summary ?? undefined
     }))
 
     const relationships = (group.relationships || []).map((rel) => {
@@ -485,8 +488,11 @@ Provide a concise overview that captures:
       strategy: 'balanced',
       includeImports: true,
       includeExports: true,
+      progressive: false,
+      includeMetrics: false,
       groupAware: true,
-      includeRelationships: true
+      includeRelationships: true,
+      contextWindow: 3
     }
 
     // Use semaphore pattern for concurrency control
@@ -563,7 +569,7 @@ Provide summaries that are:
     if (options.includeExports && file.exports && file.exports.length > 0) {
       prompt += `\nExports:\n`
       file.exports.slice(0, 10).forEach((exp) => {
-        prompt += `- ${exp.name} (${exp.type})\n`
+        prompt += `- ${exp.source || exp.specifiers?.map(s => s.exported).join(', ') || 'export'} (${exp.type})\n`
       })
     }
 

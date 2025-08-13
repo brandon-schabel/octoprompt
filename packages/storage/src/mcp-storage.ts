@@ -13,6 +13,7 @@ import {
 import { StorageV2, MemoryAdapter } from './storage-v2'
 import { SQLiteDbManagerAdapter } from './sqlite-db-manager-adapter'
 import { ApiError } from '@promptliano/shared'
+import { ensureNumber } from '@promptliano/shared/src/utils/sqlite-converters'
 
 // Initialize StorageV2 instances for MCP data
 const isTest = process.env.NODE_ENV === 'test'
@@ -240,6 +241,6 @@ export const mcpStorage = {
 
   // Utility
   generateId(): number {
-    return Date.now()
+  return ensureNumber(Date.now())
   }
 }

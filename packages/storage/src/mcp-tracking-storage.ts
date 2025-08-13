@@ -12,6 +12,15 @@ import {
   mcpToolExecutionSchema,
   mcpToolStatisticsSchema
 } from '@promptliano/schemas'
+import {
+  toNumber,
+  toString,
+  ensureNumber,
+  ensureString,
+  fromJson,
+  toJson
+} from '@promptliano/shared/src/utils/sqlite-converters'
+import { ApiError } from '@promptliano/shared'
 
 export class MCPTrackingStorage {
   private db: Database
@@ -26,15 +35,28 @@ export class MCPTrackingStorage {
 
   async createExecution(data: CreateMCPToolExecution): Promise<MCPToolExecution> {
     const id = this.dbManager.generateUniqueId('mcp_tool_executions_v2')
-    const execution: MCPToolExecution = {
-      id,
-      ...data,
+    const preliminary: Partial<MCPToolExecution> = {
+      id: ensureNumber(id),
+      toolName: ensureString(data.toolName),
+      projectId: data.projectId ?? null,
+      userId: data.userId ?? null,
+      sessionId: data.sessionId ?? null,
+      startedAt: ensureNumber(data.startedAt),
       completedAt: null,
       durationMs: null,
+      status: data.status,
       errorMessage: null,
       errorCode: null,
-      outputSize: null
+      inputParams: data.inputParams ?? null,
+      outputSize: null,
+      metadata: data.metadata ?? null
     }
+
+    const validation = await mcpToolExecutionSchema.safeParseAsync(preliminary)
+    if (!validation.success) {
+      throw new ApiError(400, 'Invalid MCP tool execution data', 'VALIDATION_ERROR')
+    }
+    const execution = validation.data
 
     const stmt = this.db.prepare(`
       INSERT INTO mcp_tool_executions_v2 (
@@ -50,15 +72,15 @@ export class MCPTrackingStorage {
       execution.projectId ?? null,
       execution.userId ?? null,
       execution.sessionId ?? null,
-      execution.startedAt,
-      execution.completedAt,
-      execution.durationMs,
-      execution.status,
-      execution.errorMessage,
-      execution.errorCode,
-      execution.inputParams ?? null,
-      execution.outputSize,
-      execution.metadata ?? null
+  execution.startedAt,
+  execution.completedAt ?? null,
+  execution.durationMs ?? null,
+  execution.status,
+  execution.errorMessage ?? null,
+  execution.errorCode ?? null,
+  execution.inputParams ?? null,
+  execution.outputSize ?? null,
+  execution.metadata ?? null
     )
 
     return execution
@@ -118,7 +140,7 @@ export class MCPTrackingStorage {
     const row = stmt.get(id) as any
     if (!row) return null
 
-    return this.rowToExecution(row)
+  return this.rowToExecution(row)
   }
 
   async queryExecutions(query: MCPExecutionQuery): Promise<{
@@ -179,7 +201,7 @@ export class MCPTrackingStorage {
     `)
 
     const rows = stmt.all(...values, query.limit, query.offset) as any[]
-    const executions = rows.map((row) => this.rowToExecution(row))
+  const executions = rows.map((row) => this.rowToExecution(row))
 
     return { executions, total }
   }
@@ -223,7 +245,12 @@ export class MCPTrackingStorage {
         existing.id
       )
 
-      return { ...stats, id: existing.id }
+      const preliminary: Partial<MCPToolStatistics> = { ...stats, id: existing.id }
+      const validation = await mcpToolStatisticsSchema.safeParseAsync(preliminary)
+      if (!validation.success) {
+        throw new ApiError(400, 'Invalid MCP tool statistics data', 'VALIDATION_ERROR')
+      }
+      return validation.data
     } else {
       // Insert new
       const id = this.dbManager.generateUniqueId('mcp_tool_statistics')
@@ -255,7 +282,12 @@ export class MCPTrackingStorage {
         stats.metadata ?? null
       )
 
-      return { ...stats, id }
+      const preliminary: Partial<MCPToolStatistics> = { ...stats, id }
+      const validation = await mcpToolStatisticsSchema.safeParseAsync(preliminary)
+      if (!validation.success) {
+        throw new ApiError(400, 'Invalid MCP tool statistics data', 'VALIDATION_ERROR')
+      }
+      return validation.data
     }
   }
 
@@ -423,43 +455,53 @@ export class MCPTrackingStorage {
   // --- Utility Methods ---
 
   private rowToExecution(row: any): MCPToolExecution {
-    return {
-      id: row.id,
-      toolName: row.tool_name,
+    const preliminary: Partial<MCPToolExecution> = {
+      id: toNumber(row.id),
+      toolName: toString(row.tool_name),
       projectId: row.project_id,
       userId: row.user_id,
       sessionId: row.session_id,
-      startedAt: row.started_at,
-      completedAt: row.completed_at,
-      durationMs: row.duration_ms,
+      startedAt: toNumber(row.started_at),
+      completedAt: row.completed_at ?? null,
+      durationMs: row.duration_ms ?? null,
       status: row.status,
-      errorMessage: row.error_message,
-      errorCode: row.error_code,
-      inputParams: row.input_params,
-      outputSize: row.output_size,
-      metadata: row.metadata
+      errorMessage: row.error_message ?? null,
+      errorCode: row.error_code ?? null,
+      inputParams: row.input_params ?? null,
+      outputSize: row.output_size ?? null,
+      metadata: row.metadata ?? null
     }
+    const parsed = mcpToolExecutionSchema.safeParse(preliminary)
+    if (!parsed.success) {
+      throw new ApiError(500, 'Failed to parse MCP tool execution row', 'DB_PARSE_ERROR')
+    }
+    return parsed.data
   }
 
   private rowToStatistics(row: any): MCPToolStatistics {
-    return {
-      id: row.id,
-      toolName: row.tool_name,
+    const preliminary: Partial<MCPToolStatistics> = {
+      id: toNumber(row.id),
+      toolName: toString(row.tool_name),
       projectId: row.project_id,
-      periodStart: row.period_start,
-      periodEnd: row.period_end,
+      periodStart: toNumber(row.period_start),
+      periodEnd: toNumber(row.period_end),
       periodType: row.period_type,
-      executionCount: row.execution_count,
-      successCount: row.success_count,
-      errorCount: row.error_count,
-      timeoutCount: row.timeout_count,
-      totalDurationMs: row.total_duration_ms,
-      avgDurationMs: row.avg_duration_ms,
-      minDurationMs: row.min_duration_ms,
-      maxDurationMs: row.max_duration_ms,
-      totalOutputSize: row.total_output_size,
-      metadata: row.metadata
+      executionCount: toNumber(row.execution_count),
+      successCount: toNumber(row.success_count),
+      errorCount: toNumber(row.error_count),
+      timeoutCount: toNumber(row.timeout_count),
+      totalDurationMs: toNumber(row.total_duration_ms),
+      avgDurationMs: toNumber(row.avg_duration_ms),
+      minDurationMs: row.min_duration_ms ?? null,
+      maxDurationMs: row.max_duration_ms ?? null,
+      totalOutputSize: toNumber(row.total_output_size),
+      metadata: row.metadata ?? null
     }
+    const parsed = mcpToolStatisticsSchema.safeParse(preliminary)
+    if (!parsed.success) {
+      throw new ApiError(500, 'Failed to parse MCP tool statistics row', 'DB_PARSE_ERROR')
+    }
+    return parsed.data
   }
 
   // --- Chain Tracking ---

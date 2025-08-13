@@ -14,6 +14,8 @@ import {
   MAX_FILE_SIZE_FOR_SUMMARY,
   MAX_TOKENS_FOR_SUMMARY,
   CHARS_PER_TOKEN_ESTIMATE,
+  PROMPT_OVERHEAD_TOKENS,
+  RESPONSE_BUFFER_TOKENS,
   MEDIUM_MODEL_CONFIG
 } from '@promptliano/config'
 import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/config'
@@ -38,7 +40,11 @@ import { getActiveTab } from './active-tab-service'
 import { listPromptsByProject } from './prompt-service'
 import { getProjectStatistics } from './project-statistics-service'
 import { getProjectGitStatus, getCurrentBranch } from './git-service'
-import { fileSummarizationTracker, getSummarizationStats } from './file-summarization-tracker'
+import { fileSummarizationTracker } from './file-summarization-tracker'
+import { SummarizationPrompts, selectPromptStrategy, type SummarizationContext } from './prompt-templates/summarization-prompts'
+import { SmartTruncation } from './utils/smart-truncation'
+import { summarizationCache } from './caching/summarization-cache'
+import { summarizationMetrics } from './metrics/summarization-metrics'
 
 const logger = createLogger('ProjectService')
 
@@ -773,6 +779,36 @@ export async function validateFilePaths(
 
 /** Summarizes a single file if it meets conditions and updates the project's file storage. */
 export async function summarizeSingleFile(file: ProjectFile, force: boolean = false): Promise<ProjectFile | null> {
+  const startTime = Date.now()
+  
+  // Check cache first (unless force is true)
+  if (!force) {
+    const cached = summarizationCache.get(file)
+    if (cached) {
+      logger.debug(`Using cached summary for file ${file.path}`)
+      
+      // Record cache hit metrics
+      summarizationMetrics.recordFileMetrics(file, {
+        tokensUsed: 0,
+        tokensAvailable: MAX_TOKENS_FOR_SUMMARY,
+        processingTime: Date.now() - startTime,
+        cacheHit: true,
+        truncated: cached.truncated || false,
+        promptStrategy: 'cached',
+        modelUsed: 'cache'
+      })
+      
+      // Update the file with cached summary if needed
+      if (file.summary !== cached.summary) {
+        return await projectStorage.updateProjectFile(file.projectId, file.id, {
+          summary: cached.summary,
+          summaryLastUpdated: cached.timestamp
+        })
+      }
+      return file
+    }
+  }
+  
   // Check if file needs summarization based on timestamp
   const summarizationCheck = needsResummarization(file.summaryLastUpdated, force)
 
@@ -802,44 +838,44 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
     return null
   }
 
-  // Estimate token count and check if content is too long
-  const estimatedTokens = Math.ceil(fileContent.length / CHARS_PER_TOKEN_ESTIMATE)
-  if (estimatedTokens > MAX_TOKENS_FOR_SUMMARY) {
-    console.warn(
-      `[SummarizeSingleFile] File ${file.path} (ID: ${file.id}) content is too long (estimated ${estimatedTokens} tokens), truncating for summarization.`
-    )
-    // Truncate content to fit within token limit
-    const maxChars = MAX_TOKENS_FOR_SUMMARY * CHARS_PER_TOKEN_ESTIMATE
-    const truncatedContent = fileContent.substring(0, maxChars) + '\n\n[... content truncated for summarization ...]'
-    return summarizeTruncatedFile(file, truncatedContent)
+  // Smart truncation to optimize token usage
+  const truncationResult = SmartTruncation.truncate(fileContent, {
+    maxTokens: MAX_TOKENS_FOR_SUMMARY - PROMPT_OVERHEAD_TOKENS - RESPONSE_BUFFER_TOKENS,
+    preserveImports: true,
+    preserveExports: true,
+    preserveClasses: true,
+    preserveFunctions: true
+  })
+
+  // Build context for summarization
+  const context: SummarizationContext = {
+    fileType: file.extension,
+    importsContext: file.imports?.length
+      ? `The file imports from: ${[...new Set(file.imports.map((i) => i.source))].join(', ')}`
+      : undefined,
+    exportsContext: file.exports?.length
+      ? `The file exports: ${file.exports
+          .map((e) => {
+            if (e.type === 'default') return 'default export'
+            if (e.type === 'all') return `all from ${e.source}`
+            return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+          })
+          .join(', ')}`
+      : undefined,
+    wasTruncated: truncationResult.wasTruncated || fileContent.includes(FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX)
   }
 
-  // Check if content was already truncated during file sync
-  const wasTruncatedDuringSync = fileContent.includes(FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX)
+  // Select best prompt strategy based on file characteristics
+  const promptConfig = selectPromptStrategy(file, context)
+  
+  // Create a modified file object with truncated content
+  const truncatedFile: ProjectFile = {
+    ...file,
+    content: truncationResult.content
+  }
 
-  const importsContext = file.imports?.length
-    ? `The file imports from: ${[...new Set(file.imports.map((i) => i.source))].join(', ')}`
-    : ''
-
-  const exportsContext = file.exports?.length
-    ? `The file exports: ${file.exports
-        .map((e) => {
-          if (e.type === 'default') return 'default export'
-          if (e.type === 'all') return `all from ${e.source}`
-          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
-        })
-        .join(', ')}`
-    : ''
-
-  const systemPrompt = `
-  ## You are a coding assistant specializing in concise code summaries.
-  1. Provide a short overview of what the file does.
-  2. Outline main exports (functions/classes).
-  3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
-  ${importsContext ? `4. ${importsContext}` : ''}
-  ${exportsContext ? `5. ${exportsContext}` : ''}
-  ${wasTruncatedDuringSync ? '6. Note: This file was truncated for summarization, so the summary may be incomplete.' : ''}
-  `
+  // Generate optimized prompt
+  const prompt = SummarizationPrompts.getOptimizedPrompt(truncatedFile, context, promptConfig)
 
   const cfg = LOW_MODEL_CONFIG
   const provider = (cfg.provider as APIProviders) || 'openrouter'
@@ -862,14 +898,14 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
     let summary: string
 
     try {
-      // Try structured data generation first
+      // Try structured data generation first with the optimized prompt
       const result = await generateStructuredData({
-        prompt: fileContent,
+        prompt: prompt,
         options: options,
         schema: z.object({
           summary: z.string()
         }),
-        systemMessage: systemPrompt
+        systemMessage: '' // System message is now included in the prompt
       })
       summary = result.object.summary
     } catch (structuredError: any) {
@@ -886,12 +922,10 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
           structuredError
         )
 
-        // Fallback to text generation
+        // Fallback to text generation with optimized prompt
         const textResult = await generateSingleText({
-          prompt: fileContent,
-          systemMessage:
-            systemPrompt +
-            '\n\nIMPORTANT: Return ONLY the summary text, no JSON formatting, no markdown, just plain text.',
+          prompt: prompt,
+          systemMessage: 'Return ONLY the summary text, no JSON formatting, no markdown, just plain text.',
           options: cfg
         })
 
@@ -902,14 +936,53 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
       }
     }
 
-    const trimmedSummary = summary.trim()
+    // Clean up and enhance summary
+    let trimmedSummary = summary.trim()
+    
+    // Add truncation info if applicable
+    if (truncationResult.wasTruncated) {
+      const truncationInfo = SmartTruncation.getTruncationSummary(truncationResult)
+      trimmedSummary += `\n\n[${truncationInfo}]`
+    }
 
     const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
       summary: trimmedSummary,
       summaryLastUpdated: Date.now()
     })
 
+    // Cache the summary for future use
+    summarizationCache.set(file, trimmedSummary, {
+      tokenCount: SmartTruncation.estimateTokens(truncationResult.content),
+      truncated: truncationResult.wasTruncated
+    })
+    
+    // Record metrics
+    const processingTime = Date.now() - startTime
+    const tokensUsed = SmartTruncation.estimateTokens(truncationResult.content)
+    
+    summarizationMetrics.recordFileMetrics(file, {
+      tokensUsed,
+      tokensAvailable: MAX_TOKENS_FOR_SUMMARY,
+      processingTime,
+      cacheHit: false,
+      truncated: truncationResult.wasTruncated,
+      promptStrategy: promptConfig.format,
+      modelUsed: cfg.model
+    })
+
     logger.info(`Successfully summarized and updated file: ${file.path} in project ${file.projectId}`)
+    
+    // Log detailed metrics for monitoring
+    logger.debug(`Summarization metrics for ${file.path}:`, {
+      originalTokens: truncationResult.wasTruncated ? SmartTruncation.estimateTokens(fileContent) : 0,
+      truncatedTokens: tokensUsed,
+      wasTruncated: truncationResult.wasTruncated,
+      promptStrategy: promptConfig.format,
+      preservedSections: truncationResult.wasTruncated ? truncationResult.preservedSections : ['full'],
+      processingTime: `${processingTime}ms`,
+      cached: true
+    })
+    
     return updatedFile
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -1513,4 +1586,11 @@ export async function getProjectOverview(projectId: number): Promise<string> {
       'PROJECT_OVERVIEW_FAILED'
     )
   }
+}
+
+/**
+ * Get summarization statistics for a project (wrapper for backward compatibility)
+ */
+export async function getSummarizationStats(projectId: number) {
+  return await fileSummarizationTracker.getSummarizationStats(projectId)
 }

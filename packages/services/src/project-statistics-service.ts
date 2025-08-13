@@ -322,7 +322,7 @@ function calculateActivityStats(files: any[], tickets: Ticket[]): ProjectStatist
   const creationTrend: ProjectStatistics['activityStats']['creationTrend'] = []
   for (let i = 6; i >= 0; i--) {
     const date = new Date(now - i * 24 * 60 * 60 * 1000)
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = date.toISOString().split('T')[0] || date.toDateString()
 
     // Count items created on this day
     const dayStart = date.setHours(0, 0, 0, 0)

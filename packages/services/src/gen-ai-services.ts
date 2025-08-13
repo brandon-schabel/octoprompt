@@ -375,7 +375,7 @@ export async function generateSingleText({
         return text
       },
       {
-        maxAttempts: 3,
+        maxRetries: 3,
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateSingleText')
@@ -479,25 +479,38 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
 
     try {
       // Create a prompt that instructs the model to output JSON
-      // Get example structure from the schema
-      const schemaKeys = schema._def.shape ? Object.keys(schema._def.shape) : []
-      const exampleStructure = schemaKeys.reduce((acc: any, key: string) => {
-        const fieldDef = schema._def.shape?.[key]
-        if (fieldDef?._def?.typeName === 'ZodString') {
-          acc[key] = 'string value here'
-        } else if (fieldDef?._def?.typeName === 'ZodNumber') {
-          acc[key] = 0
-        } else if (fieldDef?._def?.typeName === 'ZodBoolean') {
-          acc[key] = false
-        } else if (fieldDef?._def?.typeName === 'ZodArray') {
-          acc[key] = []
-        } else if (fieldDef?._def?.typeName === 'ZodObject') {
-          acc[key] = {}
-        } else {
-          acc[key] = null
+      // Get example structure from the schema using a safer approach
+      const exampleStructure: any = {}
+      try {
+        // Try to parse a minimal example to understand the structure
+        const testObj = schema.safeParse({})
+        if (!testObj.success && testObj.error) {
+          // Extract field names from error messages
+          for (const issue of testObj.error.issues) {
+            if (issue.path.length > 0 && issue.path[0] !== undefined) {
+              const fieldName = issue.path[0].toString()
+              if (issue.code === 'invalid_type') {
+                if (issue.expected === 'string') {
+                  exampleStructure[fieldName] = 'string value here'
+                } else if (issue.expected === 'number') {
+                  exampleStructure[fieldName] = 0
+                } else if (issue.expected === 'boolean') {
+                  exampleStructure[fieldName] = false
+                } else if (issue.expected === 'array') {
+                  exampleStructure[fieldName] = []
+                } else if (issue.expected === 'object') {
+                  exampleStructure[fieldName] = {}
+                } else {
+                  exampleStructure[fieldName] = null
+                }
+              }
+            }
+          }
         }
-        return acc
-      }, {})
+      } catch (e) {
+        // Fallback to empty object if schema introspection fails
+        console.warn('Could not introspect schema for example structure')
+      }
 
       const jsonPrompt = `${systemMessage ? systemMessage + '\n\n' : ''}${prompt}
 
@@ -639,7 +652,7 @@ Start your response with { and end with }`
         return result
       },
       {
-        maxAttempts: 3,
+        maxRetries: 3,
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateStructuredData')

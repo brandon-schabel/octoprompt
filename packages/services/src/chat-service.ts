@@ -118,9 +118,13 @@ export function createChatService() {
     if (!allChats[chatId]) {
       throw new ApiError(404, `Chat with ID ${chatId} not found for timestamp update.`, 'CHAT_NOT_FOUND')
     }
-    allChats[chatId].updated = normalizeToUnixMs(new Date())
+    const chat = allChats[chatId]
+    if (!chat) {
+      throw new ApiError(404, `Chat with ID ${chatId} not found for timestamp update.`, 'CHAT_NOT_FOUND')
+    }
+    chat.updated = normalizeToUnixMs(new Date())
     try {
-      ChatSchema.parse(allChats[chatId]) // Re-validate before writing
+      ChatSchema.parse(chat) // Re-validate before writing
       await chatStorage.writeChats(allChats)
     } catch (error) {
       if (error instanceof ZodError) {
@@ -201,11 +205,19 @@ export function createChatService() {
       )
     }
 
-    chatMessages[messageId].content = content
-    // chatMessages[messageId].updated = new Date().toISOString(); // If messages had an updatedAt field
+    const message = chatMessages[messageId]
+    if (!message) {
+      throw new ApiError(
+        404,
+        `Message with ID ${messageId} not found in chat ${chatId} for content update.`,
+        'MESSAGE_NOT_FOUND'
+      )
+    }
+    message.content = content
+    // message.updated = new Date().toISOString(); // If messages had an updatedAt field
 
     try {
-      ChatMessageSchema.parse(chatMessages[messageId]) // Re-validate before writing
+      ChatMessageSchema.parse(message) // Re-validate before writing
     } catch (error) {
       if (error instanceof ZodError) {
         console.error(
@@ -251,11 +263,15 @@ export function createChatService() {
       throw new ApiError(404, `Chat with ID ${chatId} not found for update.`, 'CHAT_NOT_FOUND')
     }
 
-    allChats[chatId].title = title
-    allChats[chatId].updated = normalizeToUnixMs(new Date())
+    const chat = allChats[chatId]
+    if (!chat) {
+      throw new ApiError(404, `Chat with ID ${chatId} not found for update.`, 'CHAT_NOT_FOUND')
+    }
+    chat.title = title
+    chat.updated = normalizeToUnixMs(new Date())
 
     try {
-      ChatSchema.parse(allChats[chatId])
+      ChatSchema.parse(chat)
     } catch (error) {
       if (error instanceof ZodError) {
         console.error(`Validation failed updating chat ${chatId}: ${error.message}`, error.flatten().fieldErrors)
@@ -269,7 +285,7 @@ export function createChatService() {
       throw error
     }
     await chatStorage.writeChats(allChats)
-    return allChats[chatId]
+    return chat
   }
 
   async function deleteChat(chatId: number): Promise<void> {

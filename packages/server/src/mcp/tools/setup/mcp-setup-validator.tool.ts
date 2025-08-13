@@ -86,7 +86,8 @@ export const mcpSetupValidatorTool: MCPToolDefinition = {
                 details: hasPromptliano ? '' : 'No Promptliano server found in config'
               })
             } catch (e) {
-              checks.push({ name: 'Valid JSON', status: '❌', details: e.message })
+              const errorMessage = e instanceof Error ? e.message : String(e)
+              checks.push({ name: 'Valid JSON', status: '❌', details: errorMessage })
             }
             // Check 4: Node modules installed (if project path provided)
             if (projectPath) {
@@ -169,7 +170,7 @@ export const mcpSetupValidatorTool: MCPToolDefinition = {
               }
             }
             const relevantDiagnoses =
-              symptoms.length > 0 ? symptoms.map((s) => diagnoses[s]).filter(Boolean) : Object.values(diagnoses)
+              symptoms.length > 0 ? symptoms.map((s: string) => diagnoses[s as keyof typeof diagnoses]).filter(Boolean) : Object.values(diagnoses)
             return {
               content: [
                 {
@@ -178,8 +179,8 @@ export const mcpSetupValidatorTool: MCPToolDefinition = {
                     'Diagnostic Results:\n\n' +
                     relevantDiagnoses
                       .map(
-                        (d) =>
-                          `**${d.issue}**\n` + 'Possible solutions:\n' + d.solutions.map((s) => `- ${s}`).join('\n')
+                        (d: { issue: string; solutions: string[] }) =>
+                          `**${d.issue}**\n` + 'Possible solutions:\n' + d.solutions.map((s: string) => `- ${s}`).join('\n')
                       )
                       .join('\n\n')
                 }

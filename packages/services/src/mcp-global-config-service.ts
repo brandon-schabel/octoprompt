@@ -3,6 +3,7 @@
 // No project-specific IDs or paths in global configs
 
 import * as fs from 'fs/promises'
+import * as fsSync from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import { z } from 'zod'
@@ -50,7 +51,7 @@ export type GlobalMCPState = z.infer<typeof GlobalMCPStateSchema>
 export class MCPGlobalConfigService extends EventEmitter {
   private configPath: string
   private stateCache: GlobalMCPState | null = null
-  private fileWatcher: fs.FSWatcher | null = null
+  private fileWatcher: fsSync.FSWatcher | null = null
 
   constructor() {
     super()
@@ -258,7 +259,7 @@ export class MCPGlobalConfigService extends EventEmitter {
     }
 
     try {
-      this.fileWatcher = fs.watch(this.configPath, async (eventType) => {
+      this.fileWatcher = fsSync.watch(this.configPath, async (eventType) => {
         if (eventType === 'change') {
           logger.info('Global MCP config file changed')
 

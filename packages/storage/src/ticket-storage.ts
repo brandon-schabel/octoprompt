@@ -4,6 +4,15 @@ import { TicketSchema, TicketTaskSchema, type Ticket, type TicketTask } from '@p
 import { normalizeToUnixMs } from '@promptliano/shared/src/utils/parse-timestamp'
 import { DatabaseManager, getDb } from './database-manager'
 import { ApiError } from '@promptliano/shared'
+import {
+  toBoolean,
+  toNumber,
+  toString,
+  toArray,
+  fromBoolean,
+  fromArray,
+  SqliteConverters
+} from '@promptliano/shared/src/utils/sqlite-converters'
 
 // Table names for database storage
 const TICKETS_TABLE = 'tickets'
@@ -32,17 +41,72 @@ async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: s
   return validationResult.data
 }
 
-/**
- * Safely parse JSON with fallback value and error logging.
- */
-function safeJsonParse<T>(json: string | null | undefined, fallback: T, context?: string): T {
-  if (!json) return fallback
+// Note: Now using centralized SqliteConverters instead of local helper functions
+// The toArray, toString, toNumber, and toBoolean functions from SqliteConverters
+// provide consistent type conversion across the storage layer
 
-  try {
-    return JSON.parse(json)
-  } catch (error) {
-    console.warn(`Failed to parse JSON${context ? ` for ${context}` : ''}: ${json}`, error)
-    return fallback
+/**
+ * Convert database row to Ticket object with proper type conversions
+ */
+function rowToTicket(row: any): Partial<Ticket> {
+  return {
+    id: toNumber(row.id),
+    projectId: toNumber(row.project_id),
+    title: toString(row.title),
+    overview: toString(row.overview),
+    status: row.status as ('open' | 'in_progress' | 'closed') || 'open',
+    priority: row.priority as ('low' | 'normal' | 'high') || 'normal', 
+    suggestedFileIds: toArray(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
+    suggestedAgentIds: toArray(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
+    suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
+    // Queue fields
+    queueId: row.queue_id || undefined,
+    queuePosition: row.queue_position || undefined,
+    queueStatus: row.queue_status || undefined,
+    queuePriority: toNumber(row.queue_priority, 0),
+    queuedAt: row.queued_at || undefined,
+    queueStartedAt: row.queue_started_at || undefined,
+    queueCompletedAt: row.queue_completed_at || undefined,
+    queueAgentId: row.queue_agent_id || undefined,
+    queueErrorMessage: row.queue_error_message || undefined,
+    estimatedProcessingTime: row.estimated_processing_time || undefined,
+    actualProcessingTime: row.actual_processing_time || undefined,
+    created: toNumber(row.created_at, Date.now()),
+    updated: toNumber(row.updated_at, Date.now())
+  }
+}
+
+/**
+ * Convert database row to TicketTask object with proper type conversions
+ */
+function rowToTask(row: any): Partial<TicketTask> {
+  return {
+    id: toNumber(row.id),
+    ticketId: toNumber(row.ticket_id),
+    content: toString(row.content),
+    description: toString(row.description),
+    suggestedFileIds: toArray(row.suggested_file_ids, [], 'task.suggestedFileIds'),
+    done: toBoolean(row.done),
+    orderIndex: toNumber(row.order_index),
+    estimatedHours: row.estimated_hours,
+    dependencies: toArray(row.dependencies, [], 'task.dependencies'),
+    tags: toArray(row.tags, [], 'task.tags'),
+    agentId: row.agent_id,
+    suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
+    // Queue fields
+    queueId: row.queue_id || undefined,
+    queuePosition: row.queue_position || undefined,
+    queueStatus: row.queue_status || undefined,
+    queuePriority: toNumber(row.queue_priority, 0),
+    queuedAt: row.queued_at || undefined,
+    queueStartedAt: row.queue_started_at || undefined,
+    queueCompletedAt: row.queue_completed_at || undefined,
+    queueAgentId: row.queue_agent_id || undefined,
+    queueErrorMessage: row.queue_error_message || undefined,
+    estimatedProcessingTime: row.estimated_processing_time || undefined,
+    actualProcessingTime: row.actual_processing_time || undefined,
+    created: toNumber(row.created_at, Date.now()),
+    updated: toNumber(row.updated_at, Date.now())
   }
 }
 
@@ -82,31 +146,7 @@ class TicketStorage {
       // Convert rows to TicketsStorage
       const ticketsStorage: TicketsStorage = {}
       for (const row of rows) {
-        const ticket = {
-          id: row.id,
-          projectId: row.project_id,
-          title: row.title,
-          overview: row.overview,
-          status: row.status,
-          priority: row.priority,
-          suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
-          suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
-          suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
-          // Queue fields
-          queueId: row.queue_id || undefined,
-          queuePosition: row.queue_position || undefined,
-          queueStatus: row.queue_status || undefined,
-          queuePriority: row.queue_priority ?? 0,
-          queuedAt: row.queued_at || undefined,
-          queueStartedAt: row.queue_started_at || undefined,
-          queueCompletedAt: row.queue_completed_at || undefined,
-          queueAgentId: row.queue_agent_id || undefined,
-          queueErrorMessage: row.queue_error_message || undefined,
-          estimatedProcessingTime: row.estimated_processing_time || undefined,
-          actualProcessingTime: row.actual_processing_time || undefined,
-          created: Number(row.created_at) || Date.now(),
-          updated: Number(row.updated_at) || Date.now()
-        }
+        const ticket = rowToTicket(row)
 
         // Validate the ticket
         const validatedTicket = await validateData(ticket, TicketSchema, `ticket ${ticket.id} in project ${projectId}`)
@@ -162,9 +202,9 @@ class TicketStorage {
             ticket.overview || '',
             ticket.status || 'open',
             ticket.priority || 'normal',
-            JSON.stringify(ticket.suggestedFileIds || []),
-            JSON.stringify(ticket.suggestedAgentIds || []),
-            JSON.stringify(ticket.suggestedPromptIds || []),
+            fromArray(ticket.suggestedFileIds),
+            fromArray(ticket.suggestedAgentIds),
+            fromArray(ticket.suggestedPromptIds),
             ticket.created || now,
             ticket.updated || now
           )
@@ -210,9 +250,9 @@ class TicketStorage {
         overview: row.overview || '',
         status: row.status || 'open',
         priority: row.priority || 'normal',
-        suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
-        suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
-        suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
+        suggestedFileIds: toArray(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
+        suggestedAgentIds: toArray(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
+        suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
         // Queue fields
         queueId: row.queue_id || undefined,
         queuePosition: row.queue_position || undefined,
@@ -264,34 +304,7 @@ class TicketStorage {
       // Convert rows to TicketTasksStorage
       const tasksStorage: TicketTasksStorage = {}
       for (const row of rows) {
-        const task = {
-          id: row.id,
-          ticketId: row.ticket_id,
-          content: row.content,
-          description: row.description,
-          suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'task.suggestedFileIds'),
-          done: Boolean(row.done),
-          orderIndex: row.order_index,
-          estimatedHours: row.estimated_hours,
-          dependencies: safeJsonParse(row.dependencies, [], 'task.dependencies'),
-          tags: safeJsonParse(row.tags, [], 'task.tags'),
-          agentId: row.agent_id,
-          suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
-          // Queue fields
-          queueId: row.queue_id || undefined,
-          queuePosition: row.queue_position || undefined,
-          queueStatus: row.queue_status || undefined,
-          queuePriority: row.queue_priority ?? 0,
-          queuedAt: row.queued_at || undefined,
-          queueStartedAt: row.queue_started_at || undefined,
-          queueCompletedAt: row.queue_completed_at || undefined,
-          queueAgentId: row.queue_agent_id || undefined,
-          queueErrorMessage: row.queue_error_message || undefined,
-          estimatedProcessingTime: row.estimated_processing_time || undefined,
-          actualProcessingTime: row.actual_processing_time || undefined,
-          created: Number(row.created_at) || Date.now(),
-          updated: Number(row.updated_at) || Date.now()
-        }
+        const task = rowToTask(row)
 
         // Validate each task
         const validatedTask = await validateData(task, TicketTaskSchema, `task ${task.id} in ticket ${ticketId}`)
@@ -349,14 +362,14 @@ class TicketStorage {
             task.ticketId,
             task.content,
             task.description || '',
-            JSON.stringify(task.suggestedFileIds || []),
-            task.done ? 1 : 0,
+            fromArray(task.suggestedFileIds),
+            fromBoolean(task.done),
             task.orderIndex,
             task.estimatedHours || null,
-            JSON.stringify(task.dependencies || []),
-            JSON.stringify(task.tags || []),
+            fromArray(task.dependencies),
+            fromArray(task.tags),
             task.agentId || null,
-            JSON.stringify(task.suggestedPromptIds || []),
+            fromArray(task.suggestedPromptIds),
             task.created || now,
             task.updated || now
           )
@@ -497,15 +510,15 @@ class TicketStorage {
         const ticket = {
           id: row.id,
           projectId: row.project_id,
-          title: row.title,
-          overview: row.overview,
-          status: row.status,
-          priority: row.priority,
-          suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
-          suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
-          suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
-          created: Number(row.created_at) || Date.now(),
-          updated: Number(row.updated_at) || Date.now()
+          title: row.title || '',
+          overview: row.overview || '',
+          status: row.status || 'open',
+          priority: row.priority || 'normal',
+          suggestedFileIds: toArray(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
+          suggestedAgentIds: toArray(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
+          suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
         const validated = await validateData(ticket, TicketSchema, `ticket ${ticket.id}`)
         validatedTickets.push(validated)
@@ -567,14 +580,14 @@ class TicketStorage {
         ticketId: row.ticket_id,
         content: row.content,
         description: row.description || '',
-        suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'task.suggestedFileIds'),
-        done: Boolean(row.done),
+        suggestedFileIds: toArray(row.suggested_file_ids, [], 'task.suggestedFileIds'),
+        done: toBoolean(row.done),
         orderIndex: row.order_index,
         estimatedHours: row.estimated_hours,
-        dependencies: safeJsonParse(row.dependencies, [], 'task.dependencies'),
-        tags: safeJsonParse(row.tags, [], 'task.tags'),
+        dependencies: toArray(row.dependencies, [], 'task.dependencies'),
+        tags: toArray(row.tags, [], 'task.tags'),
         agentId: row.agent_id,
-        suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
+        suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
         // Queue fields
         queueId: row.queue_id || undefined,
         queuePosition: row.queue_position || undefined,
@@ -587,8 +600,8 @@ class TicketStorage {
         queueErrorMessage: row.queue_error_message || undefined,
         estimatedProcessingTime: row.estimated_processing_time || undefined,
         actualProcessingTime: row.actual_processing_time || undefined,
-        created: Number(row.created_at) || Date.now(),
-        updated: Number(row.updated_at) || Date.now()
+        created: toNumber(row.created_at, Date.now()),
+        updated: toNumber(row.updated_at, Date.now())
       }
 
       // Validate the task data
@@ -867,9 +880,9 @@ class TicketStorage {
         overview: row.overview || '',
         status: row.status || 'open',
         priority: row.priority || 'normal',
-        suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
-        suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
-        suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
+        suggestedFileIds: toArray(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
+        suggestedAgentIds: toArray(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
+        suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
         // Queue fields
         queueId: row.queue_id || undefined,
         queuePosition: row.queue_position || undefined,
@@ -1033,7 +1046,7 @@ class TicketStorage {
       }
       if (updates.done !== undefined) {
         updateFields.push('done = ?')
-        updateValues.push(updates.done ? 1 : 0)
+        updateValues.push(fromBoolean(updates.done))
       }
 
       updateValues.push(taskId)
@@ -1249,9 +1262,9 @@ class TicketStorage {
           overview: row.overview,
           status: row.status,
           priority: row.priority,
-          suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
-          suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
-          suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
+          suggestedFileIds: toArray(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
+          suggestedAgentIds: toArray(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
+          suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
           queueId: row.queue_id,
           queuePosition: row.queue_position,
           queueStatus: row.queue_status,
@@ -1263,8 +1276,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message,
           estimatedProcessingTime: row.estimated_processing_time,
           actualProcessingTime: row.actual_processing_time,
-          created: Number(row.created_at) || Date.now(),
-          updated: Number(row.updated_at) || Date.now()
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
         tickets.push(await validateData(ticket as any, TicketSchema, `ticket ${ticket.id}`))
       }
@@ -1276,14 +1289,14 @@ class TicketStorage {
           ticketId: row.ticket_id,
           content: row.content,
           description: row.description,
-          suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'task.suggestedFileIds'),
-          done: Boolean(row.done),
+          suggestedFileIds: toArray(row.suggested_file_ids, [], 'task.suggestedFileIds'),
+          done: toBoolean(row.done),
           orderIndex: row.order_index,
           estimatedHours: row.estimated_hours,
-          dependencies: safeJsonParse(row.dependencies, [], 'task.dependencies'),
-          tags: safeJsonParse(row.tags, [], 'task.tags'),
+          dependencies: toArray(row.dependencies, [], 'task.dependencies'),
+          tags: toArray(row.tags, [], 'task.tags'),
           agentId: row.agent_id,
-          suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
+          suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
           queueId: row.queue_id,
           queuePosition: row.queue_position,
           queueStatus: row.queue_status,
@@ -1295,8 +1308,8 @@ class TicketStorage {
           queueErrorMessage: row.queue_error_message,
           estimatedProcessingTime: row.estimated_processing_time,
           actualProcessingTime: row.actual_processing_time,
-          created: Number(row.created_at) || Date.now(),
-          updated: Number(row.updated_at) || Date.now()
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
         tasks.push(await validateData(task as any, TicketTaskSchema, `task ${task.id}`))
       }
@@ -1360,11 +1373,11 @@ class TicketStorage {
           overview: row.overview,
           status: row.status,
           priority: row.priority,
-          suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
-          suggestedAgentIds: safeJsonParse(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
-          suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
-          created: Number(row.created_at) || Date.now(),
-          updated: Number(row.updated_at) || Date.now()
+          suggestedFileIds: toArray(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
+          suggestedAgentIds: toArray(row.suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
+          suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
         tickets.push(await validateData(ticket as any, TicketSchema, `ticket ${ticket.id}`))
       }
@@ -1376,16 +1389,16 @@ class TicketStorage {
           ticketId: row.ticket_id,
           content: row.content,
           description: row.description,
-          suggestedFileIds: safeJsonParse(row.suggested_file_ids, [], 'task.suggestedFileIds'),
-          done: Boolean(row.done),
+          suggestedFileIds: toArray(row.suggested_file_ids, [], 'task.suggestedFileIds'),
+          done: toBoolean(row.done),
           orderIndex: row.order_index,
           estimatedHours: row.estimated_hours,
-          dependencies: safeJsonParse(row.dependencies, [], 'task.dependencies'),
-          tags: safeJsonParse(row.tags, [], 'task.tags'),
+          dependencies: toArray(row.dependencies, [], 'task.dependencies'),
+          tags: toArray(row.tags, [], 'task.tags'),
           agentId: row.agent_id,
-          suggestedPromptIds: safeJsonParse(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
-          created: Number(row.created_at) || Date.now(),
-          updated: Number(row.updated_at) || Date.now()
+          suggestedPromptIds: toArray(row.suggested_prompt_ids, [], 'task.suggestedPromptIds'),
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
         tasks.push(await validateData(task as any, TicketTaskSchema, `task ${task.id}`))
       }
@@ -1476,9 +1489,9 @@ class TicketStorage {
             overview: row.overview,
             status: row.ticket_status,
             priority: row.ticket_priority,
-            suggestedFileIds: safeJsonParse(row.ticket_suggested_file_ids, [], 'ticket.suggestedFileIds'),
-            suggestedAgentIds: safeJsonParse(row.ticket_suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
-            suggestedPromptIds: safeJsonParse(row.ticket_suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
+            suggestedFileIds: toArray(row.ticket_suggested_file_ids, [], 'ticket.suggestedFileIds'),
+            suggestedAgentIds: toArray(row.ticket_suggested_agent_ids, [], 'ticket.suggestedAgentIds'),
+            suggestedPromptIds: toArray(row.ticket_suggested_prompt_ids, [], 'ticket.suggestedPromptIds'),
             queueId: row.ticket_queue_id || undefined,
             queuePosition: row.ticket_queue_position || undefined,
             queueStatus: row.ticket_queue_status || undefined,
@@ -1507,14 +1520,14 @@ class TicketStorage {
             ticketId: ticketId,
             content: row.task_content,
             description: row.task_description,
-            suggestedFileIds: safeJsonParse(row.task_suggested_file_ids, [], 'task.suggestedFileIds'),
-            done: Boolean(row.task_done),
+            suggestedFileIds: toArray(row.task_suggested_file_ids, [], 'task.suggestedFileIds'),
+            done: toBoolean(row.task_done),
             orderIndex: row.task_order_index,
             estimatedHours: row.task_estimated_hours,
-            dependencies: safeJsonParse(row.task_dependencies, [], 'task.dependencies'),
-            tags: safeJsonParse(row.task_tags, [], 'task.tags'),
+            dependencies: toArray(row.task_dependencies, [], 'task.dependencies'),
+            tags: toArray(row.task_tags, [], 'task.tags'),
             agentId: row.task_agent_id,
-            suggestedPromptIds: safeJsonParse(row.task_suggested_prompt_ids, [], 'task.suggestedPromptIds'),
+            suggestedPromptIds: toArray(row.task_suggested_prompt_ids, [], 'task.suggestedPromptIds'),
             queueId: row.task_queue_id || undefined,
             queuePosition: row.task_queue_position || undefined,
             queueStatus: row.task_queue_status || undefined,

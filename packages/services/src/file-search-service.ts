@@ -43,9 +43,9 @@ export interface SearchStats {
  */
 export class FileSearchService {
   private db: Database
-  private searchCacheStmt: Statement
-  private insertCacheStmt: Statement
-  private updateCacheHitStmt: Statement
+  private searchCacheStmt!: Statement
+  private insertCacheStmt!: Statement
+  private updateCacheHitStmt!: Statement
 
   // Cache configuration
   private readonly CACHE_TTL = 5 * 60 * 1000 // 5 minutes
@@ -431,7 +431,7 @@ export class FileSearchService {
     const testMatch = this.db
       .prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE file_search_fts MATCH ?')
       .get(ftsQuery) as any
-    console.log(`[FileSearchService] Direct FTS5 match test (no project filter): ${testMatch.count} results`)
+    console.log(`[FileSearchService] Direct FTS5 match test (no project filter): ${testMatch?.count || 0} results`)
 
     // Get initial results from FTS5
     // Note: Cannot use UNINDEXED columns in WHERE clause with FTS5
@@ -591,24 +591,24 @@ export class FileSearchService {
     }
 
     for (let j = 0; j <= qLen; j++) {
-      matrix[0][j] = j
+      matrix[0]![j] = j
     }
 
     for (let i = 1; i <= tLen; i++) {
       for (let j = 1; j <= qLen; j++) {
         if (text[i - 1] === query[j - 1]) {
-          matrix[i][j] = matrix[i - 1][j - 1]
+          matrix[i]![j] = matrix[i - 1]![j - 1]!
         } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1, // substitution
-            matrix[i][j - 1] + 1, // insertion
-            matrix[i - 1][j] + 1 // deletion
+          matrix[i]![j] = Math.min(
+            matrix[i - 1]![j - 1]! + 1, // substitution
+            matrix[i]![j - 1]! + 1, // insertion
+            matrix[i - 1]![j]! + 1 // deletion
           )
         }
       }
     }
 
-    const distance = matrix[tLen][qLen]
+    const distance = matrix[tLen]![qLen]!
     return 1 - distance / Math.max(qLen, tLen)
   }
 
@@ -773,12 +773,15 @@ export class FileSearchService {
         name: ftsData.name,
         extension: ftsData.extension,
         content: ftsData.content,
-        type: 'file',
         size: metadata?.file_size || 0,
         created: metadata?.created_at || Date.now(),
         updated: metadata?.updated_at || Date.now(),
-        permissions: 'rw-r--r--',
-        depth: ftsData.path.split('/').length - 1
+        summary: null,
+        summaryLastUpdated: null,
+        meta: null,
+        checksum: null,
+        imports: null,
+        exports: null
       }
     } catch (error) {
       console.error(`Error getting file data for ID ${fileId}:`, error)
@@ -818,7 +821,7 @@ export class FileSearchService {
     while ((index = lowerContent.indexOf(lowerQuery, index)) !== -1) {
       const linesBefore = content.substring(0, index).split('\n')
       const line = linesBefore.length
-      const column = linesBefore[linesBefore.length - 1].length + 1
+      const column = (linesBefore[linesBefore.length - 1] || '').length + 1
       matches.push({
         line,
         column,
@@ -1003,13 +1006,13 @@ export class FileSearchService {
     sampleFTSRows: any[]
     sampleMetadataRows: any[]
   }> {
-    const ftsCount = (this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts').get() as any).count
+    const ftsCount = (this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts').get() as any)?.count || 0
     const projectFTSCount = (
       this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE project_id = ?').get(projectId) as any
-    ).count
+    )?.count || 0
     const metadataCount = (
       this.db.prepare('SELECT COUNT(*) as count FROM file_search_metadata WHERE project_id = ?').get(projectId) as any
-    ).count
+    )?.count || 0
 
     const sampleFTSRows = this.db
       .prepare('SELECT file_id, project_id, path, name FROM file_search_fts WHERE project_id = ? LIMIT 5')
@@ -1045,7 +1048,7 @@ export class FileSearchService {
 
         // Keep only most recent entries if over limit
         const count = this.db.prepare('SELECT COUNT(*) as count FROM search_cache').get() as any
-        if (count?.count > this.MAX_CACHE_SIZE) {
+        if (count?.count && count.count > this.MAX_CACHE_SIZE) {
           this.db
             .prepare(
               `

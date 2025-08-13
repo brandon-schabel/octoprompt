@@ -67,7 +67,7 @@ export const mcpCompatibilityCheckerTool: MCPToolDefinition = {
             const issues: string[] = []
             const warnings: string[] = []
             // Check editor compatibility
-            const editorReq = requirements[editor.toLowerCase()]
+            const editorReq: { minVersion: string; mcpSupport: boolean; extension?: string } | undefined = requirements[editor.toLowerCase() as keyof typeof requirements]
             if (!editorReq) {
               issues.push(`Editor '${editor}' is not supported`)
             } else {
@@ -138,8 +138,9 @@ export const mcpCompatibilityCheckerTool: MCPToolDefinition = {
               'array',
               '[{editor: "cursor", version: "0.42.3", os: "darwin"}]'
             )
-            const results = environments.map((env) => {
-              const compatible = env.version >= requirements[env.editor]?.minVersion
+            const results = environments.map((env: { editor: string; version: string; os: string }) => {
+              const editorReq = requirements[env.editor?.toLowerCase() as keyof typeof requirements]
+              const compatible = editorReq ? env.version >= editorReq.minVersion : false
               return `${env.editor} v${env.version} on ${env.os}: ${compatible ? '✅' : '❌'}`
             })
             return {

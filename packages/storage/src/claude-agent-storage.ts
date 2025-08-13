@@ -3,6 +3,24 @@ import * as path from 'path'
 import { z, ZodError } from 'zod'
 import { ClaudeAgentSchema, type ClaudeAgent } from '@promptliano/schemas'
 import { toPosixPath, joinPosix, MarkdownParser } from '@promptliano/services'
+import { ensureString, ensureNumber } from '@promptliano/shared/src/utils/sqlite-converters'
+
+// Allowed agent colors (must match ClaudeAgentSchema enum values)
+const ALLOWED_AGENT_COLORS = new Set<ClaudeAgent['color']>([
+  'blue',
+  'green',
+  'red',
+  'yellow',
+  'purple',
+  'cyan',
+  'orange',
+  'pink'
+])
+
+function normalizeAgentColor(color: string | undefined): ClaudeAgent['color'] | undefined {
+  const c = (color || 'blue').toLowerCase() as ClaudeAgent['color']
+  return ALLOWED_AGENT_COLORS.has(c) ? c : 'blue'
+}
 
 // Storage schemas
 export const ClaudeAgentsStorageSchema = z.record(z.string(), ClaudeAgentSchema)
@@ -156,18 +174,23 @@ export const claudeAgentStorage = {
           // Generate ID from filename (without .md extension)
           const agentId = file.slice(0, -3)
 
-          const agent: ClaudeAgent = {
-            id: agentId, // Use filename without .md as ID
-            name: frontmatter.name,
-            description: frontmatter.description,
-            color: (frontmatter.color as any) || 'blue',
+          const preliminary: Partial<ClaudeAgent> = {
+            id: ensureString(agentId),
+            name: ensureString(frontmatter.name),
+            description: ensureString(frontmatter.description),
+            color: normalizeAgentColor(frontmatter.color as any),
             filePath: toPosixPath(filePath),
-            content: body,
-            created: stats.birthtime.getTime(),
-            updated: stats.mtime.getTime()
+            content: ensureString(body || ''),
+            created: ensureNumber(stats.birthtime.getTime()),
+            updated: ensureNumber(stats.mtime.getTime())
           }
 
-          agents[agentId] = agent
+          const validation = await ClaudeAgentSchema.safeParseAsync(preliminary)
+          if (!validation.success) {
+            console.error(`Validation failed for agent ${agentId}:`, validation.error.issues)
+          } else {
+            agents[agentId] = validation.data
+          }
         } catch (error) {
           console.error(`Error parsing agent file ${file}:`, error)
         }
@@ -193,14 +216,27 @@ export const claudeAgentStorage = {
 
     await fs.writeFile(filePath, content, 'utf-8')
 
-    // Update the agent with the correct file path
-    agent.filePath = toPosixPath(filePath)
-    agent.updated = Date.now()
+    // Build updated agent object and validate
+    const stats = await fs.stat(filePath)
+    const preliminary: Partial<ClaudeAgent> = {
+      id: ensureString(agent.id),
+      name: ensureString(agent.name),
+      description: ensureString(agent.description),
+      color: normalizeAgentColor(agent.color),
+      filePath: toPosixPath(filePath),
+      content: ensureString(agent.content || ''),
+      created: ensureNumber(agent.created || stats.birthtime.getTime()),
+      updated: ensureNumber(stats.mtime.getTime())
+    }
+    const validation = await ClaudeAgentSchema.safeParseAsync(preliminary)
+    if (!validation.success) {
+      throw new Error(`Validation failed when writing agent ${agentId}: ${validation.error.message}`)
+    }
 
     // Clear cache for this project
     agentCache.delete(projectPath)
 
-    return agent
+    return validation.data
   },
 
   /** Delete an agent file */

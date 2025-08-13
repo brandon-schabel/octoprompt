@@ -5,12 +5,12 @@ import type { ParserOptions, ParseResult } from './base-parser'
 import { ParseError } from '@promptliano/shared'
 
 export interface MarkdownParserOptions extends ParserOptions {
-  markedOptions?: marked.MarkedOptions
+  markedOptions?: any // Use any to avoid marked type export issues
   matterOptions?: matter.GrayMatterOption<string, any>
 }
 
 export class MarkdownParser<TFrontmatter = any> extends BaseParser<TFrontmatter> {
-  private markedOptions: marked.MarkedOptions
+  private markedOptions: any // Use any to avoid marked type export issues
   private matterOptions: matter.GrayMatterOption<string, any>
 
   constructor(options: MarkdownParserOptions = {}) {

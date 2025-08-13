@@ -31,6 +31,6 @@ export const providersConfig: ProviderConfig = {
     baseURL: getEnvVar('OLLAMA_BASE_URL', 'http://localhost:11434')
   },
   lmstudio: {
-    baseURL: getEnvVar('LMSTUDIO_BASE_URL', 'http://localhost:1234/v1')
+    baseURL: getEnvVar('LMSTUDIO_BASE_URL', 'http://192.168.1.38:1234/v1')
   }
 }
