@@ -7,7 +7,6 @@ import { tabManagerTool, jobManagerTool } from './ui'
 import { aiAssistantTool, agentManagerTool } from './content'
 import { projectManagerTool, promptManagerTool, markdownPromptManagerTool } from './project'
 import { ticketManagerTool, taskManagerTool, queueManagerTool, queueProcessorTool } from './workflow'
-import { fileSummarizationManagerTool } from './analysis'
 import { gitManagerTool } from './git'
 
 // Import the command manager tool from parent directory
@@ -30,8 +29,6 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   // Content tools
   aiAssistantTool,
   agentManagerTool,
-  // Analysis tools
-  fileSummarizationManagerTool,
   // Website tools
   documentationSearchTool,
   websiteDemoRunnerTool,
