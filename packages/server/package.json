@@ -1,6 +1,6 @@
 {
   "name": "@promptliano/server",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "module": "server.ts",
   "scripts": {
     "test": "bun test src/",
