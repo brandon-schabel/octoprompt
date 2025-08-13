@@ -6,13 +6,13 @@ export const LOCAL_MODEL_TEST_CONFIG = {
   // LMStudio connection settings
   baseUrl: process.env.LMSTUDIO_BASE_URL || 'http://192.168.1.38:1234/v1',
   model: 'openai/gpt-oss-20b',
-  
+
   // Test timeouts (AI responses can be slow)
   timeouts: {
-    singleFile: 30000,      // 30 seconds for single file
-    batchFiles: 60000,      // 60 seconds for batch
-    projectSummary: 90000,  // 90 seconds for full project
-    default: 20000          // 20 seconds default
+    singleFile: 30000, // 30 seconds for single file
+    batchFiles: 60000, // 60 seconds for batch
+    projectSummary: 90000, // 90 seconds for full project
+    default: 20000 // 20 seconds default
   },
 
   // Retry configuration for network issues
@@ -26,16 +26,16 @@ export const LOCAL_MODEL_TEST_CONFIG = {
   // Test model configuration (extends LOW_MODEL_CONFIG)
   modelOptions: {
     ...LOW_MODEL_CONFIG,
-    temperature: 0.3,  // Lower for consistent test results
-    maxTokens: 1000    // Smaller for faster tests
+    temperature: 0.3, // Lower for consistent test results
+    maxTokens: 1000 // Smaller for faster tests
   } as AiSdkOptions,
 
   // Performance thresholds for benchmarking
   performance: {
     maxResponseTime: {
-      singleFile: 10000,     // 10s max for single file
-      batchFiles: 30000,     // 30s max for batch
-      projectSummary: 60000  // 60s max for project
+      singleFile: 10000, // 10s max for single file
+      batchFiles: 30000, // 30s max for batch
+      projectSummary: 60000 // 60s max for project
     },
     minTokensPerSecond: 10,
     maxTokenUsage: {
@@ -60,15 +60,12 @@ export async function isLMStudioAvailable(): Promise<boolean> {
     const baseUrl = LOCAL_MODEL_TEST_CONFIG.baseUrl.replace(/\/v1$/, '')
     const response = await fetch(`${baseUrl}/v1/models`)
     if (!response.ok) return false
-    
+
     const data = await response.json()
     const models = data.data || []
-    
+
     // Check if our target model is loaded
-    return models.some((m: any) => 
-      m.id === LOCAL_MODEL_TEST_CONFIG.model || 
-      m.id.includes('gpt-oss')
-    )
+    return models.some((m: any) => m.id === LOCAL_MODEL_TEST_CONFIG.model || m.id.includes('gpt-oss'))
   } catch (error) {
     console.warn('LMStudio not available:', error)
     return false
@@ -86,13 +83,15 @@ export function requireLMStudio() {
 }
 
 // Test data factory for creating mock files
-export function createMockFile(overrides: Partial<{
-  name: string
-  path: string
-  content: string
-  type: string
-  size: number
-}> = {}) {
+export function createMockFile(
+  overrides: Partial<{
+    name: string
+    path: string
+    content: string
+    type: string
+    size: number
+  }> = {}
+) {
   const defaults = {
     name: 'test-file.ts',
     path: 'src/test-file.ts',
@@ -119,11 +118,11 @@ export function createLargeFile(sizeInKB: number = 100) {
   const chunks: string[] = []
   const chunkSize = 1024 // 1KB chunks
   const targetSize = sizeInKB * 1024
-  
+
   // Generate realistic code content
   let currentSize = 0
   let classCounter = 0
-  
+
   while (currentSize < targetSize) {
     const chunk = `
 export class GeneratedClass${classCounter++} {
@@ -157,7 +156,7 @@ export class GeneratedClass${classCounter++} {
     chunks.push(chunk)
     currentSize += chunk.length
   }
-  
+
   return {
     name: 'large-file.ts',
     path: 'src/large-file.ts',
@@ -176,7 +175,7 @@ export const edgeCaseFiles = {
     type: 'typescript',
     size: 0
   },
-  
+
   whitespaceOnly: {
     name: 'whitespace.ts',
     path: 'src/whitespace.ts',
@@ -184,7 +183,7 @@ export const edgeCaseFiles = {
     type: 'typescript',
     size: 10
   },
-  
+
   commentsOnly: {
     name: 'comments.ts',
     path: 'src/comments.ts',
@@ -197,7 +196,7 @@ export const edgeCaseFiles = {
     type: 'typescript',
     size: 100
   },
-  
+
   malformed: {
     name: 'malformed.ts',
     path: 'src/malformed.ts',
@@ -208,11 +207,11 @@ export const edgeCaseFiles = {
     type: 'typescript',
     size: 80
   },
-  
+
   binary: {
     name: 'image.png',
     path: 'assets/image.png',
-    content: Buffer.from([0x89, 0x50, 0x4E, 0x47]).toString(),
+    content: Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString(),
     type: 'binary',
     size: 4
   }
@@ -221,7 +220,7 @@ export const edgeCaseFiles = {
 // Multi-language test corpus
 export const multiLanguageFiles = {
   typescript: createMockFile({ name: 'example.ts', type: 'typescript' }),
-  
+
   javascript: {
     name: 'example.js',
     path: 'src/example.js',
@@ -236,7 +235,7 @@ module.exports = { processData }`,
     type: 'javascript',
     size: 150
   },
-  
+
   python: {
     name: 'example.py',
     path: 'src/example.py',
@@ -256,7 +255,7 @@ class DataProcessor:
     type: 'python',
     size: 250
   },
-  
+
   rust: {
     name: 'example.rs',
     path: 'src/example.rs',

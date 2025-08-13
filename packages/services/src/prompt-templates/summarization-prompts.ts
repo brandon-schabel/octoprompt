@@ -43,10 +43,14 @@ ${context.wasTruncated ? '- Note: File was truncated for analysis' : ''}
 6. **Patterns**: Identify design patterns and architectural decisions
 7. **Relationships**: How this file connects to the system
 
-${context.relatedFiles && context.relatedFiles.length > 0 ? `
+${
+  context.relatedFiles && context.relatedFiles.length > 0
+    ? `
 ## Related Files Context:
-${context.relatedFiles.map(f => `- ${f.name}: ${f.summary || 'No summary available'}`).join('\n')}
-` : ''}
+${context.relatedFiles.map((f) => `- ${f.name}: ${f.summary || 'No summary available'}`).join('\n')}
+`
+    : ''
+}
 
 ## Output Format (use exactly this structure):
 PURPOSE: <one line description>
@@ -120,7 +124,7 @@ Summary:`
    */
   static getFewShotPrompt(file: ProjectFile, context: SummarizationContext): string {
     const examples = this.getFewShotExamples(file.extension || '')
-    
+
     return `You are an expert code analyst. Here are examples of high-quality summaries for similar files:
 
 ${examples}
@@ -233,12 +237,16 @@ Total Files: ${files.length}
 ${context.projectContext ? `Project Context: ${context.projectContext}` : ''}
 
 ## Files to Analyze:
-${files.map((f, i) => `
+${files
+  .map(
+    (f, i) => `
 ### File ${i + 1}: ${f.path}
 - Type: ${f.extension}
 - Size: ${f.size} bytes
 - Preview: ${f.content?.substring(0, 500)}...
-`).join('\n')}
+`
+  )
+  .join('\n')}
 
 ## Analysis Tasks:
 1. Identify the collective purpose of these files
@@ -258,11 +266,7 @@ Then provide an overall summary of how these files work together.`
   /**
    * Generate a context-aware prompt with token optimization
    */
-  static getOptimizedPrompt(
-    file: ProjectFile,
-    context: SummarizationContext,
-    config: PromptConfig
-  ): string {
+  static getOptimizedPrompt(file: ProjectFile, context: SummarizationContext, config: PromptConfig): string {
     // Select prompt strategy based on configuration
     if (config.useChainOfThought) {
       return this.getChainOfThoughtPrompt(file, context)
@@ -330,7 +334,7 @@ Provide an updated comprehensive summary.`
       '.json': 'Describe configuration structure and important settings.'
     }
 
-    const suffix = Object.keys(specializedPrompts).find(ext => file.path.endsWith(ext))
+    const suffix = Object.keys(specializedPrompts).find((ext) => file.path.endsWith(ext))
     const specialization = suffix ? specializedPrompts[suffix] : ''
 
     return `Analyze this ${file.extension} file with special attention:
@@ -346,11 +350,7 @@ Provide a comprehensive summary that captures the file's specific purpose and ch
   /**
    * Generate a prompt for incremental updates
    */
-  static getIncrementalPrompt(
-    file: ProjectFile,
-    previousSummary: string,
-    changes: string[]
-  ): string {
+  static getIncrementalPrompt(file: ProjectFile, previousSummary: string, changes: string[]): string {
     return `Update the existing summary based on file changes.
 
 File: ${file.path}
@@ -402,10 +402,7 @@ Provide:
 /**
  * Helper function to select the best prompt strategy
  */
-export function selectPromptStrategy(
-  file: ProjectFile,
-  context: SummarizationContext
-): PromptConfig {
+export function selectPromptStrategy(file: ProjectFile, context: SummarizationContext): PromptConfig {
   const fileSize = file.size || 0
   const hasRelatedFiles = context.relatedFiles && context.relatedFiles.length > 0
 

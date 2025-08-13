@@ -67,7 +67,8 @@ export const mcpCompatibilityCheckerTool: MCPToolDefinition = {
             const issues: string[] = []
             const warnings: string[] = []
             // Check editor compatibility
-            const editorReq: { minVersion: string; mcpSupport: boolean; extension?: string } | undefined = requirements[editor.toLowerCase() as keyof typeof requirements]
+            const editorReq: { minVersion: string; mcpSupport: boolean; extension?: string } | undefined =
+              requirements[editor.toLowerCase() as keyof typeof requirements]
             if (!editorReq) {
               issues.push(`Editor '${editor}' is not supported`)
             } else {

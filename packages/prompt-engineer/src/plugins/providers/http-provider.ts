@@ -4,12 +4,7 @@
  */
 
 import { Effect, Stream, Schema, pipe, Schedule, Duration, Ref } from 'effect'
-import type { 
-  ProviderPlugin, 
-  GenerationOptions, 
-  GenerationResult,
-  ProviderError as ProviderErrorType
-} from '../types'
+import type { ProviderPlugin, GenerationOptions, GenerationResult, ProviderError as ProviderErrorType } from '../types'
 import { ProviderError, ValidationError } from '../types'
 
 interface HTTPProviderConfig {
@@ -43,16 +38,19 @@ export class HTTPProviderPlugin implements ProviderPlugin {
   readonly name: string
   readonly version = '1.0.0'
   readonly capabilities = ['streaming', 'retry', 'rate-limiting']
-  
+
   private config: HTTPProviderConfig
   private rateLimitState: Ref.Ref<RateLimitState>
-  
+
   constructor(config: HTTPProviderConfig) {
-    this.name = config.endpoint.includes('openai') ? 'http-openai' :
-                 config.endpoint.includes('anthropic') ? 'http-anthropic' :
-                 config.endpoint.includes('cohere') ? 'http-cohere' :
-                 'http-provider'
-    
+    this.name = config.endpoint.includes('openai')
+      ? 'http-openai'
+      : config.endpoint.includes('anthropic')
+        ? 'http-anthropic'
+        : config.endpoint.includes('cohere')
+          ? 'http-cohere'
+          : 'http-provider'
+
     this.config = {
       timeout: 30000, // 30 seconds default
       retryConfig: {
@@ -64,7 +62,7 @@ export class HTTPProviderPlugin implements ProviderPlugin {
       },
       ...config
     }
-    
+
     this.rateLimitState = Ref.unsafeMake({
       requests: 0,
       tokens: 0,
@@ -73,80 +71,80 @@ export class HTTPProviderPlugin implements ProviderPlugin {
   }
 
   initialize(): Effect.Effect<void, ProviderError> {
-    return Effect.gen(function* (_) {
-      // Test connection
-      const testResponse = yield* _(
-        this.testConnection().pipe(
-          Effect.catchAll((error) => 
-            Effect.succeed(false) // Connection test failed, but initialization continues
+    return Effect.gen(
+      function* (_) {
+        // Test connection
+        const testResponse = yield* _(
+          this.testConnection().pipe(
+            Effect.catchAll(
+              (error) => Effect.succeed(false) // Connection test failed, but initialization continues
+            )
           )
         )
-      )
-      
-      if (!testResponse) {
-        console.warn(`HTTP Provider: Unable to verify connection to ${this.config.endpoint}`)
-      }
-    }.bind(this))
+
+        if (!testResponse) {
+          console.warn(`HTTP Provider: Unable to verify connection to ${this.config.endpoint}`)
+        }
+      }.bind(this)
+    )
   }
 
-  generate(
-    prompt: string,
-    options?: GenerationOptions
-  ): Effect.Effect<GenerationResult, ProviderError> {
-    return Effect.gen(function* (_) {
-      // Check rate limits
-      yield* _(this.checkRateLimit(prompt))
-      
-      // Prepare request
-      const requestBody = this.prepareRequest(prompt, options)
-      
-      // Make HTTP request with retry
-      const response = yield* _(
-        this.makeRequest(requestBody).pipe(
-          Effect.retry(this.getRetrySchedule()),
-          Effect.timeout(Duration.millis(this.config.timeout!))
+  generate(prompt: string, options?: GenerationOptions): Effect.Effect<GenerationResult, ProviderError> {
+    return Effect.gen(
+      function* (_) {
+        // Check rate limits
+        yield* _(this.checkRateLimit(prompt))
+
+        // Prepare request
+        const requestBody = this.prepareRequest(prompt, options)
+
+        // Make HTTP request with retry
+        const response = yield* _(
+          this.makeRequest(requestBody).pipe(
+            Effect.retry(this.getRetrySchedule()),
+            Effect.timeout(Duration.millis(this.config.timeout!))
+          )
         )
-      )
-      
-      // Transform response
-      const result = this.transformResponse(response)
-      
-      // Update rate limit counters
-      yield* _(this.updateRateLimits(result))
-      
-      return result
-    }.bind(this))
+
+        // Transform response
+        const result = this.transformResponse(response)
+
+        // Update rate limit counters
+        yield* _(this.updateRateLimits(result))
+
+        return result
+      }.bind(this)
+    )
   }
 
-  stream(
-    prompt: string,
-    options?: GenerationOptions
-  ): Stream.Stream<string, ProviderError> {
-    return Stream.gen(function* (_) {
-      // Check rate limits
-      yield* _(Stream.fromEffect(this.checkRateLimit(prompt)))
-      
-      // Prepare request for streaming
-      const requestBody = {
-        ...this.prepareRequest(prompt, options),
-        stream: true
-      }
-      
-      // Make streaming request
-      const response = yield* _(Stream.fromEffect(
-        this.makeStreamingRequest(requestBody)
-      ))
-      
-      // Process SSE stream
-      yield* _(this.processSSEStream(response))
-    }.bind(this)).pipe(
-      Stream.catchAll((error) => 
-        Stream.fail(new ProviderError({
-          provider: this.name,
-          message: `Stream error: ${error}`,
-          code: 'STREAM_ERROR',
-          retryable: false
-        }))
+  stream(prompt: string, options?: GenerationOptions): Stream.Stream<string, ProviderError> {
+    return Stream.gen(
+      function* (_) {
+        // Check rate limits
+        yield* _(Stream.fromEffect(this.checkRateLimit(prompt)))
+
+        // Prepare request for streaming
+        const requestBody = {
+          ...this.prepareRequest(prompt, options),
+          stream: true
+        }
+
+        // Make streaming request
+        const response = yield* _(Stream.fromEffect(this.makeStreamingRequest(requestBody)))
+
+        // Process SSE stream
+        yield* _(this.processSSEStream(response))
+      }.bind(this)
+    ).pipe(
+      Stream.catchAll((error) =>
+        Stream.fail(
+          new ProviderError({
+            provider: this.name,
+            message: `Stream error: ${error}`,
+            code: 'STREAM_ERROR',
+            retryable: false
+          })
+        )
       )
     )
   }
@@ -156,42 +154,47 @@ export class HTTPProviderPlugin implements ProviderPlugin {
     schema: Schema.Schema<T, any>,
     options?: GenerationOptions
   ): Effect.Effect<T, ProviderError | ValidationError> {
-    return Effect.gen(function* (_) {
-      // Generate with JSON mode hint
-      const jsonPrompt = `${prompt}\n\nRespond with valid JSON that matches the expected schema.`
-      const jsonOptions = {
-        ...options,
-        responseFormat: { type: 'json_object' } // OpenAI-style JSON mode
-      }
-      
-      const result = yield* _(this.generate(jsonPrompt, jsonOptions))
-      
-      // Try to parse JSON from response
-      const jsonText = this.extractJSON(result.text)
-      const parsed = yield* _(
-        Effect.try({
-          try: () => JSON.parse(jsonText),
-          catch: (error) => new ValidationError({
-            field: 'response',
-            message: `Failed to parse JSON: ${error}`,
-            value: jsonText
+    return Effect.gen(
+      function* (_) {
+        // Generate with JSON mode hint
+        const jsonPrompt = `${prompt}\n\nRespond with valid JSON that matches the expected schema.`
+        const jsonOptions = {
+          ...options,
+          responseFormat: { type: 'json_object' } // OpenAI-style JSON mode
+        }
+
+        const result = yield* _(this.generate(jsonPrompt, jsonOptions))
+
+        // Try to parse JSON from response
+        const jsonText = this.extractJSON(result.text)
+        const parsed = yield* _(
+          Effect.try({
+            try: () => JSON.parse(jsonText),
+            catch: (error) =>
+              new ValidationError({
+                field: 'response',
+                message: `Failed to parse JSON: ${error}`,
+                value: jsonText
+              })
           })
-        })
-      )
-      
-      // Validate against schema
-      return yield* _(
-        Schema.decodeUnknown(schema)(parsed).pipe(
-          Effect.catchAll((error) => 
-            Effect.fail(new ValidationError({
-              field: 'response',
-              message: `Schema validation failed: ${error}`,
-              value: parsed
-            }))
+        )
+
+        // Validate against schema
+        return yield* _(
+          Schema.decodeUnknown(schema)(parsed).pipe(
+            Effect.catchAll((error) =>
+              Effect.fail(
+                new ValidationError({
+                  field: 'response',
+                  message: `Schema validation failed: ${error}`,
+                  value: parsed
+                })
+              )
+            )
           )
         )
-      )
-    }.bind(this))
+      }.bind(this)
+    )
   }
 
   // Helper methods
@@ -205,12 +208,13 @@ export class HTTPProviderPlugin implements ProviderPlugin {
         })
         return response.ok || response.status === 401 // 401 means auth works but no key
       },
-      catch: (error) => new ProviderError({
-        provider: this.name,
-        message: `Connection test failed: ${error}`,
-        code: 'CONNECTION_ERROR',
-        retryable: false
-      })
+      catch: (error) =>
+        new ProviderError({
+          provider: this.name,
+          message: `Connection test failed: ${error}`,
+          code: 'CONNECTION_ERROR',
+          retryable: false
+        })
     })
   }
 
@@ -218,13 +222,11 @@ export class HTTPProviderPlugin implements ProviderPlugin {
     if (this.config.requestTransform) {
       return this.config.requestTransform(prompt, options)
     }
-    
+
     // Default OpenAI-style request
     return {
       model: options?.model || this.config.model || 'gpt-3.5-turbo',
-      messages: [
-        { role: 'user', content: prompt }
-      ],
+      messages: [{ role: 'user', content: prompt }],
       temperature: options?.temperature,
       max_tokens: options?.maxTokens,
       top_p: options?.topP,
@@ -242,20 +244,21 @@ export class HTTPProviderPlugin implements ProviderPlugin {
           headers: this.getHeaders(),
           body: JSON.stringify(body)
         })
-        
+
         if (!response.ok) {
           const error = await response.text()
           throw new Error(`HTTP ${response.status}: ${error}`)
         }
-        
+
         return response.json()
       },
-      catch: (error: any) => new ProviderError({
-        provider: this.name,
-        message: `Request failed: ${error.message}`,
-        code: error.message.includes('429') ? 'RATE_LIMIT' : 'REQUEST_ERROR',
-        retryable: error.message.includes('429') || error.message.includes('500')
-      })
+      catch: (error: any) =>
+        new ProviderError({
+          provider: this.name,
+          message: `Request failed: ${error.message}`,
+          code: error.message.includes('429') ? 'RATE_LIMIT' : 'REQUEST_ERROR',
+          retryable: error.message.includes('429') || error.message.includes('500')
+        })
     })
   }
 
@@ -267,24 +270,25 @@ export class HTTPProviderPlugin implements ProviderPlugin {
           headers: this.getHeaders(),
           body: JSON.stringify(body)
         })
-        
+
         if (!response.ok) {
           const error = await response.text()
           throw new Error(`HTTP ${response.status}: ${error}`)
         }
-        
+
         if (!response.body) {
           throw new Error('No response body for streaming')
         }
-        
+
         return response.body
       },
-      catch: (error: any) => new ProviderError({
-        provider: this.name,
-        message: `Streaming request failed: ${error.message}`,
-        code: 'STREAM_REQUEST_ERROR',
-        retryable: false
-      })
+      catch: (error: any) =>
+        new ProviderError({
+          provider: this.name,
+          message: `Streaming request failed: ${error.message}`,
+          code: 'STREAM_REQUEST_ERROR',
+          retryable: false
+        })
     })
   }
 
@@ -293,20 +297,20 @@ export class HTTPProviderPlugin implements ProviderPlugin {
       const reader = stream.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
-      
+
       const read = async () => {
         try {
           const { done, value } = await reader.read()
-          
+
           if (done) {
             emit.end()
             return
           }
-          
+
           buffer += decoder.decode(value, { stream: true })
           const lines = buffer.split('\n')
           buffer = lines.pop() || ''
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6)
@@ -314,7 +318,7 @@ export class HTTPProviderPlugin implements ProviderPlugin {
                 emit.end()
                 return
               }
-              
+
               try {
                 const parsed = JSON.parse(data)
                 const chunk = this.extractStreamChunk(parsed)
@@ -326,18 +330,20 @@ export class HTTPProviderPlugin implements ProviderPlugin {
               }
             }
           }
-          
+
           read()
         } catch (error) {
-          emit.fail(new ProviderError({
-            provider: this.name,
-            message: `Stream processing error: ${error}`,
-            code: 'STREAM_PROCESS_ERROR',
-            retryable: false
-          }))
+          emit.fail(
+            new ProviderError({
+              provider: this.name,
+              message: `Stream processing error: ${error}`,
+              code: 'STREAM_PROCESS_ERROR',
+              retryable: false
+            })
+          )
         }
       }
-      
+
       read()
     })
   }
@@ -346,30 +352,29 @@ export class HTTPProviderPlugin implements ProviderPlugin {
     if (this.config.streamTransform) {
       return this.config.streamTransform(data)
     }
-    
+
     // Default OpenAI-style extraction
-    return data.choices?.[0]?.delta?.content || 
-           data.choices?.[0]?.text ||
-           data.content || 
-           null
+    return data.choices?.[0]?.delta?.content || data.choices?.[0]?.text || data.content || null
   }
 
   private transformResponse(response: any): GenerationResult {
     if (this.config.responseTransform) {
       return this.config.responseTransform(response)
     }
-    
+
     // Default OpenAI-style response
     const choice = response.choices?.[0]
     const text = choice?.message?.content || choice?.text || ''
-    
+
     return {
       text,
-      usage: response.usage ? {
-        promptTokens: response.usage.prompt_tokens,
-        completionTokens: response.usage.completion_tokens,
-        totalTokens: response.usage.total_tokens
-      } : undefined,
+      usage: response.usage
+        ? {
+            promptTokens: response.usage.prompt_tokens,
+            completionTokens: response.usage.completion_tokens,
+            totalTokens: response.usage.total_tokens
+          }
+        : undefined,
       finishReason: choice?.finish_reason as any,
       model: response.model
     }
@@ -381,13 +386,13 @@ export class HTTPProviderPlugin implements ProviderPlugin {
     if (jsonMatch) {
       return jsonMatch[0]
     }
-    
+
     // Try array format
     const arrayMatch = text.match(/\[[\s\S]*\]/)
     if (arrayMatch) {
       return arrayMatch[0]
     }
-    
+
     // Assume entire response is JSON
     return text
   }
@@ -397,7 +402,7 @@ export class HTTPProviderPlugin implements ProviderPlugin {
       'Content-Type': 'application/json',
       ...this.config.headers
     }
-    
+
     if (this.config.apiKey) {
       // Try common auth header patterns
       if (this.config.endpoint.includes('openai')) {
@@ -412,7 +417,7 @@ export class HTTPProviderPlugin implements ProviderPlugin {
         headers['Authorization'] = `Bearer ${this.config.apiKey}`
       }
     }
-    
+
     return headers
   }
 
@@ -420,59 +425,73 @@ export class HTTPProviderPlugin implements ProviderPlugin {
     if (!this.config.rateLimit) {
       return Effect.succeed(undefined)
     }
-    
-    return Effect.gen(function* (_) {
-      const now = Date.now()
-      const state = yield* _(Ref.get(this.rateLimitState))
-      
-      // Reset window if needed
-      if (now - state.windowStart > 60000) {
-        yield* _(Ref.set(this.rateLimitState, {
-          requests: 0,
-          tokens: 0,
-          windowStart: now
-        }))
-        return
-      }
-      
-      // Check limits
-      const { requestsPerMinute, tokensPerMinute } = this.config.rateLimit
-      
-      if (requestsPerMinute && state.requests >= requestsPerMinute) {
-        const waitTime = 60000 - (now - state.windowStart)
-        return yield* _(Effect.fail(new ProviderError({
-          provider: this.name,
-          message: `Rate limit exceeded. Wait ${Math.ceil(waitTime / 1000)}s`,
-          code: 'RATE_LIMIT',
-          retryable: true
-        })))
-      }
-      
-      const estimatedTokens = Math.ceil(prompt.length / 4)
-      if (tokensPerMinute && state.tokens + estimatedTokens > tokensPerMinute) {
-        const waitTime = 60000 - (now - state.windowStart)
-        return yield* _(Effect.fail(new ProviderError({
-          provider: this.name,
-          message: `Token limit exceeded. Wait ${Math.ceil(waitTime / 1000)}s`,
-          code: 'TOKEN_LIMIT',
-          retryable: true
-        })))
-      }
-      
-      // Update counters
-      yield* _(Ref.update(this.rateLimitState, (s) => ({
-        ...s,
-        requests: s.requests + 1,
-        tokens: s.tokens + estimatedTokens
-      })))
-    }.bind(this))
+
+    return Effect.gen(
+      function* (_) {
+        const now = Date.now()
+        const state = yield* _(Ref.get(this.rateLimitState))
+
+        // Reset window if needed
+        if (now - state.windowStart > 60000) {
+          yield* _(
+            Ref.set(this.rateLimitState, {
+              requests: 0,
+              tokens: 0,
+              windowStart: now
+            })
+          )
+          return
+        }
+
+        // Check limits
+        const { requestsPerMinute, tokensPerMinute } = this.config.rateLimit
+
+        if (requestsPerMinute && state.requests >= requestsPerMinute) {
+          const waitTime = 60000 - (now - state.windowStart)
+          return yield* _(
+            Effect.fail(
+              new ProviderError({
+                provider: this.name,
+                message: `Rate limit exceeded. Wait ${Math.ceil(waitTime / 1000)}s`,
+                code: 'RATE_LIMIT',
+                retryable: true
+              })
+            )
+          )
+        }
+
+        const estimatedTokens = Math.ceil(prompt.length / 4)
+        if (tokensPerMinute && state.tokens + estimatedTokens > tokensPerMinute) {
+          const waitTime = 60000 - (now - state.windowStart)
+          return yield* _(
+            Effect.fail(
+              new ProviderError({
+                provider: this.name,
+                message: `Token limit exceeded. Wait ${Math.ceil(waitTime / 1000)}s`,
+                code: 'TOKEN_LIMIT',
+                retryable: true
+              })
+            )
+          )
+        }
+
+        // Update counters
+        yield* _(
+          Ref.update(this.rateLimitState, (s) => ({
+            ...s,
+            requests: s.requests + 1,
+            tokens: s.tokens + estimatedTokens
+          }))
+        )
+      }.bind(this)
+    )
   }
 
   private updateRateLimits(result: GenerationResult): Effect.Effect<void, never> {
     if (!this.config.rateLimit || !result.usage) {
       return Effect.succeed(undefined)
     }
-    
+
     return Ref.update(this.rateLimitState, (state) => ({
       ...state,
       tokens: state.tokens + (result.usage?.totalTokens || 0)
@@ -481,7 +500,7 @@ export class HTTPProviderPlugin implements ProviderPlugin {
 
   private getRetrySchedule() {
     const config = this.config.retryConfig!
-    
+
     return Schedule.exponential(Duration.millis(config.initialDelay!), config.backoffFactor!).pipe(
       Schedule.either(Schedule.spaced(Duration.millis(config.maxDelay!))),
       Schedule.whileInput<any, ProviderError>((error) => error.retryable),

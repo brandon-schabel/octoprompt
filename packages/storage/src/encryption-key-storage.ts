@@ -68,8 +68,8 @@ export class EncryptionKeyStorage {
     const keyPath = this.getKeyPath()
     if (fs.existsSync(keyPath)) {
       try {
-  this.encryptionKey = ensureString(fs.readFileSync(keyPath, 'utf-8').trim())
-  return this.encryptionKey
+        this.encryptionKey = ensureString(fs.readFileSync(keyPath, 'utf-8').trim())
+        return this.encryptionKey
       } catch (error) {
         console.error('Failed to read encryption key:', error)
         throw new Error('Failed to read encryption key from storage')

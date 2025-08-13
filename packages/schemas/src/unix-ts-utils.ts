@@ -74,12 +74,9 @@ export const unixTimestampSchema = z.preprocess(
       // The cast is now safer because we've handled null/undefined
       return toMillisecondTimestamp(rawValue as string | number | Date)
     } catch (error) {
-      // Re-throw the original error. Zod will catch it and create a ZodError.
-      if (error instanceof Error) {
-        throw error
-      }
-      // Fallback if the caught error is not an Error instance
-      throw new Error('Failed to parse timestamp during preprocess')
+      // Return an invalid value to let Zod handle the error
+      // This ensures safeParse catches the error properly
+      return rawValue
     }
   },
   z

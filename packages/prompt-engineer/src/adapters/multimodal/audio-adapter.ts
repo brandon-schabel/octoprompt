@@ -170,9 +170,9 @@ export class AudioAdapter {
     readonly cacheResults: boolean
     readonly defaultLanguage: string
   }
-  
+
   private cache: Map<string, AudioAnalysisResult> = new Map()
-  
+
   constructor(config?: Partial<typeof AudioAdapter.prototype.config>) {
     this.config = {
       maxAudioSize: 100 * 1024 * 1024, // 100MB
@@ -191,26 +191,26 @@ export class AudioAdapter {
    * Process audio and extract metadata
    */
   processAudio(audio: Buffer): Effect.Effect<AudioMetadata, Error> {
-    return Effect.gen(function* (_) {
-      // Validate audio size
-      if (audio.length > this.config.maxAudioSize) {
-        return yield* _(Effect.fail(new Error(
-          `Audio size ${audio.length} exceeds maximum ${this.config.maxAudioSize}`
-        )))
-      }
-      
-      // Extract metadata (simplified - would use ffprobe or similar in production)
-      const metadata = yield* _(this.extractMetadata(audio))
-      
-      // Validate format
-      if (!this.config.supportedFormats.includes(metadata.format)) {
-        return yield* _(Effect.fail(new Error(
-          `Unsupported audio format: ${metadata.format}`
-        )))
-      }
-      
-      return metadata
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        // Validate audio size
+        if (audio.length > this.config.maxAudioSize) {
+          return yield* _(
+            Effect.fail(new Error(`Audio size ${audio.length} exceeds maximum ${this.config.maxAudioSize}`))
+          )
+        }
+
+        // Extract metadata (simplified - would use ffprobe or similar in production)
+        const metadata = yield* _(this.extractMetadata(audio))
+
+        // Validate format
+        if (!this.config.supportedFormats.includes(metadata.format)) {
+          return yield* _(Effect.fail(new Error(`Unsupported audio format: ${metadata.format}`)))
+        }
+
+        return metadata
+      }.bind(this)
+    )
   }
 
   /**
@@ -224,122 +224,125 @@ export class AudioAdapter {
       speakerLabels?: boolean
     }
   ): Effect.Effect<TranscriptionResult, Error> {
-    return Effect.gen(function* (_) {
-      if (!this.config.enableTranscription) {
-        return yield* _(Effect.fail(new Error('Transcription is disabled')))
-      }
-      
-      const metadata = yield* _(this.processAudio(audio))
-      
-      // Perform transcription (simplified - would use Whisper or similar)
-      const transcript = yield* _(this.performTranscription(
-        audio,
-        options?.language || this.config.defaultLanguage,
-        options?.timestamps ?? true
-      ))
-      
-      // Add speaker labels if requested and diarization is enabled
-      if (options?.speakerLabels && this.config.enableDiarization) {
-        const speakers = yield* _(this.performDiarization(audio))
-        transcript.words = this.assignSpeakerLabels(transcript.words, speakers)
-      }
-      
-      return transcript
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        if (!this.config.enableTranscription) {
+          return yield* _(Effect.fail(new Error('Transcription is disabled')))
+        }
+
+        const metadata = yield* _(this.processAudio(audio))
+
+        // Perform transcription (simplified - would use Whisper or similar)
+        const transcript = yield* _(
+          this.performTranscription(
+            audio,
+            options?.language || this.config.defaultLanguage,
+            options?.timestamps ?? true
+          )
+        )
+
+        // Add speaker labels if requested and diarization is enabled
+        if (options?.speakerLabels && this.config.enableDiarization) {
+          const speakers = yield* _(this.performDiarization(audio))
+          transcript.words = this.assignSpeakerLabels(transcript.words, speakers)
+        }
+
+        return transcript
+      }.bind(this)
+    )
   }
 
   /**
    * Perform comprehensive audio analysis
    */
   analyzeAudio(audio: Buffer): Effect.Effect<AudioAnalysisResult, Error> {
-    return Effect.gen(function* (_) {
-      // Check cache
-      const cacheKey = this.getCacheKey(audio)
-      if (this.config.cacheResults && this.cache.has(cacheKey)) {
-        return this.cache.get(cacheKey)!
-      }
-      
-      // Process audio
-      const metadata = yield* _(this.processAudio(audio))
-      
-      // Parallel analysis tasks
-      const tasks: Effect.Effect<any, Error>[] = [
-        this.detectSegments(audio),
-        this.assessQuality(audio),
-        this.detectLanguage(audio)
-      ]
-      
-      if (this.config.enableTranscription) {
-        tasks.push(this.transcribe(audio))
-      }
-      
-      if (this.config.enableDiarization) {
-        tasks.push(this.performDiarization(audio))
-      }
-      
-      if (this.config.enableEmotionDetection) {
-        tasks.push(this.detectEmotions(audio))
-      }
-      
-      if (this.config.enableMusicAnalysis) {
-        tasks.push(this.analyzeMusic(audio))
-      }
-      
-      tasks.push(this.detectSoundEvents(audio))
-      
-      const results = yield* _(Effect.all(tasks))
-      
-      const result: AudioAnalysisResult = {
-        metadata,
-        segments: results[0],
-        quality: results[1],
-        language: results[2],
-        transcript: this.config.enableTranscription ? results[3] : undefined,
-        speakers: this.config.enableDiarization ? 
-          results[this.config.enableTranscription ? 4 : 3] : undefined,
-        emotions: this.config.enableEmotionDetection ?
-          results[this.config.enableTranscription ? 
-            (this.config.enableDiarization ? 5 : 4) : 3] : undefined,
-        music: this.config.enableMusicAnalysis ?
-          results[results.length - 2] : undefined,
-        soundEvents: results[results.length - 1]
-      }
-      
-      // Cache result
-      if (this.config.cacheResults) {
-        this.cache.set(cacheKey, result)
-      }
-      
-      return result
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        // Check cache
+        const cacheKey = this.getCacheKey(audio)
+        if (this.config.cacheResults && this.cache.has(cacheKey)) {
+          return this.cache.get(cacheKey)!
+        }
+
+        // Process audio
+        const metadata = yield* _(this.processAudio(audio))
+
+        // Parallel analysis tasks
+        const tasks: Effect.Effect<any, Error>[] = [
+          this.detectSegments(audio),
+          this.assessQuality(audio),
+          this.detectLanguage(audio)
+        ]
+
+        if (this.config.enableTranscription) {
+          tasks.push(this.transcribe(audio))
+        }
+
+        if (this.config.enableDiarization) {
+          tasks.push(this.performDiarization(audio))
+        }
+
+        if (this.config.enableEmotionDetection) {
+          tasks.push(this.detectEmotions(audio))
+        }
+
+        if (this.config.enableMusicAnalysis) {
+          tasks.push(this.analyzeMusic(audio))
+        }
+
+        tasks.push(this.detectSoundEvents(audio))
+
+        const results = yield* _(Effect.all(tasks))
+
+        const result: AudioAnalysisResult = {
+          metadata,
+          segments: results[0],
+          quality: results[1],
+          language: results[2],
+          transcript: this.config.enableTranscription ? results[3] : undefined,
+          speakers: this.config.enableDiarization ? results[this.config.enableTranscription ? 4 : 3] : undefined,
+          emotions: this.config.enableEmotionDetection
+            ? results[this.config.enableTranscription ? (this.config.enableDiarization ? 5 : 4) : 3]
+            : undefined,
+          music: this.config.enableMusicAnalysis ? results[results.length - 2] : undefined,
+          soundEvents: results[results.length - 1]
+        }
+
+        // Cache result
+        if (this.config.cacheResults) {
+          this.cache.set(cacheKey, result)
+        }
+
+        return result
+      }.bind(this)
+    )
   }
 
   /**
    * Answer questions about audio
    */
   queryAudio(context: AudioPromptContext): Effect.Effect<string, Error> {
-    return Effect.gen(function* (_) {
-      const analysis = yield* _(this.analyzeAudio(context.audio))
-      
-      // Process the query based on the prompt
-      const response = yield* _(this.processAudioQuery(
-        analysis,
-        context.prompt,
-        context.focusTime,
-        context.previousContext
-      ))
-      
-      // Format output
-      if (context.outputFormat === 'json') {
-        return JSON.stringify(response, null, 2)
-      } else if (context.outputFormat === 'structured') {
-        return this.formatStructuredResponse(response)
-      } else if (context.outputFormat === 'timed' && analysis.transcript) {
-        return this.formatTimedTranscript(analysis.transcript)
-      } else {
-        return typeof response === 'string' ? response : String(response)
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const analysis = yield* _(this.analyzeAudio(context.audio))
+
+        // Process the query based on the prompt
+        const response = yield* _(
+          this.processAudioQuery(analysis, context.prompt, context.focusTime, context.previousContext)
+        )
+
+        // Format output
+        if (context.outputFormat === 'json') {
+          return JSON.stringify(response, null, 2)
+        } else if (context.outputFormat === 'structured') {
+          return this.formatStructuredResponse(response)
+        } else if (context.outputFormat === 'timed' && analysis.transcript) {
+          return this.formatTimedTranscript(analysis.transcript)
+        } else {
+          return typeof response === 'string' ? response : String(response)
+        }
+      }.bind(this)
+    )
   }
 
   /**
@@ -349,159 +352,155 @@ export class AudioAdapter {
     audio1: Buffer,
     audio2: Buffer,
     aspects?: ('content' | 'quality' | 'speakers' | 'emotion')[]
-  ): Effect.Effect<{
-    similarity: number
-    differences: string[]
-    analysis: {
-      audio1: AudioAnalysisResult
-      audio2: AudioAnalysisResult
-    }
-  }, Error> {
-    return Effect.gen(function* (_) {
-      const [analysis1, analysis2] = yield* _(Effect.all([
-        this.analyzeAudio(audio1),
-        this.analyzeAudio(audio2)
-      ]))
-      
-      const aspectsToCompare = aspects || ['content', 'quality']
-      const similarities: number[] = []
-      const differences: string[] = []
-      
-      if (aspectsToCompare.includes('content') && analysis1.transcript && analysis2.transcript) {
-        const contentSim = this.compareTranscripts(analysis1.transcript, analysis2.transcript)
-        similarities.push(contentSim.similarity)
-        differences.push(...contentSim.differences)
+  ): Effect.Effect<
+    {
+      similarity: number
+      differences: string[]
+      analysis: {
+        audio1: AudioAnalysisResult
+        audio2: AudioAnalysisResult
       }
-      
-      if (aspectsToCompare.includes('quality')) {
-        const qualitySim = this.compareQuality(analysis1.quality, analysis2.quality)
-        similarities.push(qualitySim.similarity)
-        differences.push(...qualitySim.differences)
-      }
-      
-      if (aspectsToCompare.includes('speakers') && analysis1.speakers && analysis2.speakers) {
-        const speakerSim = this.compareSpeakers(analysis1.speakers, analysis2.speakers)
-        similarities.push(speakerSim.similarity)
-        differences.push(...speakerSim.differences)
-      }
-      
-      if (aspectsToCompare.includes('emotion') && analysis1.emotions && analysis2.emotions) {
-        const emotionSim = this.compareEmotions(analysis1.emotions, analysis2.emotions)
-        similarities.push(emotionSim.similarity)
-        differences.push(...emotionSim.differences)
-      }
-      
-      const overallSimilarity = similarities.length > 0 ?
-        similarities.reduce((a, b) => a + b, 0) / similarities.length : 0
-      
-      return {
-        similarity: overallSimilarity,
-        differences,
-        analysis: { audio1: analysis1, audio2: analysis2 }
-      }
-    }.bind(this))
+    },
+    Error
+  > {
+    return Effect.gen(
+      function* (_) {
+        const [analysis1, analysis2] = yield* _(Effect.all([this.analyzeAudio(audio1), this.analyzeAudio(audio2)]))
+
+        const aspectsToCompare = aspects || ['content', 'quality']
+        const similarities: number[] = []
+        const differences: string[] = []
+
+        if (aspectsToCompare.includes('content') && analysis1.transcript && analysis2.transcript) {
+          const contentSim = this.compareTranscripts(analysis1.transcript, analysis2.transcript)
+          similarities.push(contentSim.similarity)
+          differences.push(...contentSim.differences)
+        }
+
+        if (aspectsToCompare.includes('quality')) {
+          const qualitySim = this.compareQuality(analysis1.quality, analysis2.quality)
+          similarities.push(qualitySim.similarity)
+          differences.push(...qualitySim.differences)
+        }
+
+        if (aspectsToCompare.includes('speakers') && analysis1.speakers && analysis2.speakers) {
+          const speakerSim = this.compareSpeakers(analysis1.speakers, analysis2.speakers)
+          similarities.push(speakerSim.similarity)
+          differences.push(...speakerSim.differences)
+        }
+
+        if (aspectsToCompare.includes('emotion') && analysis1.emotions && analysis2.emotions) {
+          const emotionSim = this.compareEmotions(analysis1.emotions, analysis2.emotions)
+          similarities.push(emotionSim.similarity)
+          differences.push(...emotionSim.differences)
+        }
+
+        const overallSimilarity =
+          similarities.length > 0 ? similarities.reduce((a, b) => a + b, 0) / similarities.length : 0
+
+        return {
+          similarity: overallSimilarity,
+          differences,
+          analysis: { audio1: analysis1, audio2: analysis2 }
+        }
+      }.bind(this)
+    )
   }
 
   /**
    * Transform audio
    */
-  transformAudio(
-    audio: Buffer,
-    options: AudioTransformOptions
-  ): Effect.Effect<Buffer, Error> {
-    return Effect.gen(function* (_) {
-      let result = audio
-      
-      // Apply transformations (simplified - would use ffmpeg in production)
-      if (options.trimSilence) {
-        result = yield* _(this.trimSilence(result))
-      }
-      
-      if (options.normalizeVolume) {
-        result = yield* _(this.normalizeVolume(result))
-      }
-      
-      if (options.removeNoise) {
-        result = yield* _(this.removeNoise(result))
-      }
-      
-      if (options.changeTempo) {
-        result = yield* _(this.changeTempo(result, options.changeTempo))
-      }
-      
-      if (options.changePitch) {
-        result = yield* _(this.changePitch(result, options.changePitch))
-      }
-      
-      if (options.resample) {
-        result = yield* _(this.resample(result, options.resample))
-      }
-      
-      if (options.format) {
-        result = yield* _(this.convertFormat(result, options.format))
-      }
-      
-      return result
-    }.bind(this))
+  transformAudio(audio: Buffer, options: AudioTransformOptions): Effect.Effect<Buffer, Error> {
+    return Effect.gen(
+      function* (_) {
+        let result = audio
+
+        // Apply transformations (simplified - would use ffmpeg in production)
+        if (options.trimSilence) {
+          result = yield* _(this.trimSilence(result))
+        }
+
+        if (options.normalizeVolume) {
+          result = yield* _(this.normalizeVolume(result))
+        }
+
+        if (options.removeNoise) {
+          result = yield* _(this.removeNoise(result))
+        }
+
+        if (options.changeTempo) {
+          result = yield* _(this.changeTempo(result, options.changeTempo))
+        }
+
+        if (options.changePitch) {
+          result = yield* _(this.changePitch(result, options.changePitch))
+        }
+
+        if (options.resample) {
+          result = yield* _(this.resample(result, options.resample))
+        }
+
+        if (options.format) {
+          result = yield* _(this.convertFormat(result, options.format))
+        }
+
+        return result
+      }.bind(this)
+    )
   }
 
   /**
    * Generate audio from text
    */
-  generateSpeech(
-    text: string,
-    options?: AudioGenerationOptions
-  ): Effect.Effect<Buffer, Error> {
-    return Effect.gen(function* (_) {
-      // Simplified TTS generation
-      const config = {
-        voice: options?.voice || 'default',
-        speed: options?.speed || 1.0,
-        pitch: options?.pitch || 0,
-        emotion: options?.emotion || 'neutral',
-        style: options?.style || 'conversational',
-        language: options?.language || this.config.defaultLanguage
-      }
-      
-      // Generate speech (would use TTS service in production)
-      const audio = yield* _(this.synthesizeSpeech(text, config))
-      
-      return audio
-    }.bind(this))
+  generateSpeech(text: string, options?: AudioGenerationOptions): Effect.Effect<Buffer, Error> {
+    return Effect.gen(
+      function* (_) {
+        // Simplified TTS generation
+        const config = {
+          voice: options?.voice || 'default',
+          speed: options?.speed || 1.0,
+          pitch: options?.pitch || 0,
+          emotion: options?.emotion || 'neutral',
+          style: options?.style || 'conversational',
+          language: options?.language || this.config.defaultLanguage
+        }
+
+        // Generate speech (would use TTS service in production)
+        const audio = yield* _(this.synthesizeSpeech(text, config))
+
+        return audio
+      }.bind(this)
+    )
   }
 
   /**
    * Stream process multiple audio files
    */
-  streamProcessAudio(
-    audioFiles: Stream.Stream<Buffer, never>
-  ): Stream.Stream<AudioAnalysisResult, Error> {
+  streamProcessAudio(audioFiles: Stream.Stream<Buffer, never>): Stream.Stream<AudioAnalysisResult, Error> {
     return pipe(
       audioFiles,
-      Stream.mapEffect(audio => this.analyzeAudio(audio))
+      Stream.mapEffect((audio) => this.analyzeAudio(audio))
     )
   }
 
   /**
    * Extract audio snippets based on timestamps
    */
-  extractSnippet(
-    audio: Buffer,
-    start: number,
-    end: number
-  ): Effect.Effect<Buffer, Error> {
-    return Effect.gen(function* (_) {
-      const metadata = yield* _(this.processAudio(audio))
-      
-      if (start < 0 || end > metadata.duration) {
-        return yield* _(Effect.fail(new Error('Invalid time range')))
-      }
-      
-      // Extract snippet (would use ffmpeg in production)
-      const snippet = yield* _(this.extractAudioSegment(audio, start, end))
-      
-      return snippet
-    }.bind(this))
+  extractSnippet(audio: Buffer, start: number, end: number): Effect.Effect<Buffer, Error> {
+    return Effect.gen(
+      function* (_) {
+        const metadata = yield* _(this.processAudio(audio))
+
+        if (start < 0 || end > metadata.duration) {
+          return yield* _(Effect.fail(new Error('Invalid time range')))
+        }
+
+        // Extract snippet (would use ffmpeg in production)
+        const snippet = yield* _(this.extractAudioSegment(audio, start, end))
+
+        return snippet
+      }.bind(this)
+    )
   }
 
   // Private helper methods
@@ -529,13 +528,15 @@ export class AudioAdapter {
     return Effect.succeed({
       text: 'This is a sample transcription of the audio content.',
       confidence: 0.95,
-      words: timestamps ? [
-        { word: 'This', start: 0, end: 0.3, confidence: 0.98 },
-        { word: 'is', start: 0.3, end: 0.5, confidence: 0.99 },
-        { word: 'a', start: 0.5, end: 0.6, confidence: 0.99 },
-        { word: 'sample', start: 0.6, end: 1.0, confidence: 0.95 },
-        { word: 'transcription', start: 1.0, end: 1.8, confidence: 0.93 }
-      ] : [],
+      words: timestamps
+        ? [
+            { word: 'This', start: 0, end: 0.3, confidence: 0.98 },
+            { word: 'is', start: 0.3, end: 0.5, confidence: 0.99 },
+            { word: 'a', start: 0.5, end: 0.6, confidence: 0.99 },
+            { word: 'sample', start: 0.6, end: 1.0, confidence: 0.95 },
+            { word: 'transcription', start: 1.0, end: 1.8, confidence: 0.93 }
+          ]
+        : [],
       paragraphs: ['This is a sample transcription of the audio content.'],
       language
     })
@@ -594,7 +595,7 @@ export class AudioAdapter {
       {
         speakerId: 'speaker2',
         segments: [
-          { start: 10, end: 30, confidence: 0.90 },
+          { start: 10, end: 30, confidence: 0.9 },
           { start: 60, end: 80, confidence: 0.85 }
         ],
         gender: 'female' as const,
@@ -679,17 +680,10 @@ export class AudioAdapter {
     })
   }
 
-  private assignSpeakerLabels(
-    words: WordTiming[],
-    speakers: SpeakerDiarization[]
-  ): WordTiming[] {
-    return words.map(word => {
-      const speaker = speakers.find(s =>
-        s.segments.some(seg =>
-          word.start >= seg.start && word.end <= seg.end
-        )
-      )
-      
+  private assignSpeakerLabels(words: WordTiming[], speakers: SpeakerDiarization[]): WordTiming[] {
+    return words.map((word) => {
+      const speaker = speakers.find((s) => s.segments.some((seg) => word.start >= seg.start && word.end <= seg.end))
+
       return {
         ...word,
         speaker: speaker?.speakerId
@@ -705,43 +699,41 @@ export class AudioAdapter {
   ): Effect.Effect<any, never> {
     // Simplified query processing
     const lowerPrompt = prompt.toLowerCase()
-    
+
     if (lowerPrompt.includes('transcribe') || lowerPrompt.includes('transcript')) {
       return Effect.succeed(analysis.transcript?.text || 'No transcript available')
     }
-    
+
     if (lowerPrompt.includes('speaker') && analysis.speakers) {
       return Effect.succeed(`Detected ${analysis.speakers.length} speakers`)
     }
-    
+
     if (lowerPrompt.includes('emotion') && analysis.emotions) {
       const emotions = analysis.emotions[0]
       return Effect.succeed(`Dominant emotion: ${emotions.dominantEmotion}`)
     }
-    
+
     if (lowerPrompt.includes('music') && analysis.music) {
       return Effect.succeed(`Genre: ${analysis.music.genre?.join(', ')}, Tempo: ${analysis.music.tempo} BPM`)
     }
-    
+
     if (lowerPrompt.includes('quality')) {
       return Effect.succeed(`Audio quality score: ${analysis.quality.overallQuality.toFixed(2)}`)
     }
-    
+
     return Effect.succeed(analysis.transcript?.text || 'Audio processed successfully')
   }
 
   private formatStructuredResponse(response: any): string {
     if (typeof response === 'string') return response
-    
+
     return Object.entries(response)
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n')
   }
 
   private formatTimedTranscript(transcript: TranscriptionResult): string {
-    return transcript.words
-      .map(w => `[${w.start.toFixed(2)}s] ${w.word}`)
-      .join(' ')
+    return transcript.words.map((w) => `[${w.start.toFixed(2)}s] ${w.word}`).join(' ')
   }
 
   private getCacheKey(audio: Buffer): string {
@@ -754,24 +746,24 @@ export class AudioAdapter {
     t2: TranscriptionResult
   ): { similarity: number; differences: string[] } {
     const differences: string[] = []
-    
+
     // Simple text similarity
     const words1 = t1.text.toLowerCase().split(/\s+/)
     const words2 = t2.text.toLowerCase().split(/\s+/)
-    
-    const intersection = words1.filter(w => words2.includes(w))
+
+    const intersection = words1.filter((w) => words2.includes(w))
     const union = new Set([...words1, ...words2])
-    
+
     const similarity = intersection.length / union.size
-    
+
     if (similarity < 0.7) {
       differences.push('Different transcription content')
     }
-    
+
     if (t1.language !== t2.language) {
       differences.push(`Different languages: ${t1.language} vs ${t2.language}`)
     }
-    
+
     return { similarity, differences }
   }
 
@@ -780,23 +772,21 @@ export class AudioAdapter {
     q2: AudioQualityMetrics
   ): { similarity: number; differences: string[] } {
     const differences: string[] = []
-    
+
     const metrics = ['clarity', 'distortion', 'overallQuality'] as const
-    const diffs = metrics.map(metric =>
-      Math.abs(q1[metric] - q2[metric])
-    )
-    
+    const diffs = metrics.map((metric) => Math.abs(q1[metric] - q2[metric]))
+
     const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length
     const similarity = 1 - avgDiff
-    
+
     if (avgDiff > 0.3) {
       differences.push('Significant quality differences')
     }
-    
+
     if (q1.clipping !== q2.clipping) {
       differences.push('Different clipping status')
     }
-    
+
     return { similarity, differences }
   }
 
@@ -805,37 +795,34 @@ export class AudioAdapter {
     s2: SpeakerDiarization[]
   ): { similarity: number; differences: string[] } {
     const differences: string[] = []
-    
+
     if (s1.length !== s2.length) {
       differences.push(`Different speaker count: ${s1.length} vs ${s2.length}`)
     }
-    
+
     const similarity = Math.min(s1.length, s2.length) / Math.max(s1.length, s2.length)
-    
+
     return { similarity, differences }
   }
 
-  private compareEmotions(
-    e1: EmotionAnalysis[],
-    e2: EmotionAnalysis[]
-  ): { similarity: number; differences: string[] } {
+  private compareEmotions(e1: EmotionAnalysis[], e2: EmotionAnalysis[]): { similarity: number; differences: string[] } {
     const differences: string[] = []
-    
-    const emotions1 = e1.map(e => e.dominantEmotion)
-    const emotions2 = e2.map(e => e.dominantEmotion)
-    
-    const common = emotions1.filter(e => emotions2.includes(e))
+
+    const emotions1 = e1.map((e) => e.dominantEmotion)
+    const emotions2 = e2.map((e) => e.dominantEmotion)
+
+    const common = emotions1.filter((e) => emotions2.includes(e))
     const similarity = common.length / Math.max(emotions1.length, emotions2.length)
-    
+
     if (similarity < 0.5) {
       differences.push('Different emotional content')
     }
-    
+
     return { similarity, differences }
   }
 
   // Transformation methods (simplified - would use ffmpeg in production)
-  
+
   private trimSilence(audio: Buffer): Effect.Effect<Buffer, never> {
     return Effect.succeed(audio)
   }
@@ -869,12 +856,8 @@ export class AudioAdapter {
     return Effect.succeed(Buffer.from('synthesized audio'))
   }
 
-  private extractAudioSegment(
-    audio: Buffer,
-    start: number,
-    end: number
-  ): Effect.Effect<Buffer, never> {
-    return Effect.succeed(audio.slice(0, Math.floor(audio.length * (end - start) / 180)))
+  private extractAudioSegment(audio: Buffer, start: number, end: number): Effect.Effect<Buffer, never> {
+    return Effect.succeed(audio.slice(0, Math.floor((audio.length * (end - start)) / 180)))
   }
 }
 

@@ -7,6 +7,7 @@ The SQLite Type Converters utility provides a centralized, consistent way to con
 ## Why We Need Type Converters
 
 SQLite has only 5 storage classes:
+
 - `NULL` - null values
 - `INTEGER` - signed integers
 - `REAL` - floating point numbers
@@ -15,14 +16,14 @@ SQLite has only 5 storage classes:
 
 TypeScript has a richer type system that includes booleans, arrays, objects, and more. This mismatch requires careful conversion:
 
-| TypeScript Type | SQLite Storage | Conversion Required |
-|----------------|----------------|-------------------|
-| `boolean` | `INTEGER` (0/1) | Yes |
-| `number` | `INTEGER` or `REAL` | Handle null |
-| `string` | `TEXT` | Handle null |
-| `array` | `TEXT` (JSON) | Parse/stringify |
-| `object` | `TEXT` (JSON) | Parse/stringify |
-| `Date` | `INTEGER` (Unix ms) | Convert timestamp |
+| TypeScript Type | SQLite Storage      | Conversion Required |
+| --------------- | ------------------- | ------------------- |
+| `boolean`       | `INTEGER` (0/1)     | Yes                 |
+| `number`        | `INTEGER` or `REAL` | Handle null         |
+| `string`        | `TEXT`              | Handle null         |
+| `array`         | `TEXT` (JSON)       | Parse/stringify     |
+| `object`        | `TEXT` (JSON)       | Parse/stringify     |
+| `Date`          | `INTEGER` (Unix ms) | Convert timestamp   |
 
 ## Installation & Import
 
@@ -52,17 +53,17 @@ Convert between SQLite INTEGER (0/1) and TypeScript boolean:
 
 ```typescript
 // SQLite to TypeScript
-toBoolean(1)              // true
-toBoolean(0)              // false
-toBoolean('1')            // true
-toBoolean('true')         // true
-toBoolean(null)           // false (default fallback)
-toBoolean(null, true)     // true (custom fallback)
+toBoolean(1) // true
+toBoolean(0) // false
+toBoolean('1') // true
+toBoolean('true') // true
+toBoolean(null) // false (default fallback)
+toBoolean(null, true) // true (custom fallback)
 
 // TypeScript to SQLite
-fromBoolean(true)         // 1
-fromBoolean(false)        // 0
-fromBoolean(null)         // 0
+fromBoolean(true) // 1
+fromBoolean(false) // 0
+fromBoolean(null) // 0
 ```
 
 ### Number Converters
@@ -71,17 +72,17 @@ Handle numeric values with null safety:
 
 ```typescript
 // SQLite to TypeScript
-toNumber(42)              // 42
-toNumber('42')            // 42
-toNumber(null)            // 0 (default fallback)
-toNumber(null, -1)        // -1 (custom fallback)
-toNumber('invalid')       // 0
-toNumber(NaN, 100)        // 100
+toNumber(42) // 42
+toNumber('42') // 42
+toNumber(null) // 0 (default fallback)
+toNumber(null, -1) // -1 (custom fallback)
+toNumber('invalid') // 0
+toNumber(NaN, 100) // 100
 
 // TypeScript to SQLite
-fromNumber(42)            // 42
-fromNumber(null)          // null
-fromNumber(NaN)           // null
+fromNumber(42) // 42
+fromNumber(null) // null
+fromNumber(NaN) // null
 ```
 
 ### String Converters
@@ -90,14 +91,14 @@ Convert text values with proper null handling:
 
 ```typescript
 // SQLite to TypeScript
-toString('hello')         // 'hello'
-toString(42)              // '42'
-toString(null)            // '' (default fallback)
+toString('hello') // 'hello'
+toString(42) // '42'
+toString(null) // '' (default fallback)
 toString(null, 'default') // 'default'
 
 // TypeScript to SQLite
-fromString('hello')       // 'hello'
-fromString(null)          // null
+fromString('hello') // 'hello'
+fromString(null) // null
 ```
 
 ### Array Converters
@@ -106,16 +107,16 @@ Handle JSON arrays stored as TEXT:
 
 ```typescript
 // SQLite to TypeScript
-toArray('[1,2,3]')        // [1, 2, 3]
-toArray('[]')             // []
-toArray(null)             // []
-toArray('invalid')        // [] (fallback on parse error)
-toArray(null, [1])        // [1] (custom fallback)
+toArray('[1,2,3]') // [1, 2, 3]
+toArray('[]') // []
+toArray(null) // []
+toArray('invalid') // [] (fallback on parse error)
+toArray(null, [1]) // [1] (custom fallback)
 
 // TypeScript to SQLite
-fromArray([1, 2, 3])      // '[1,2,3]'
-fromArray([])             // '[]'
-fromArray(null)           // '[]'
+fromArray([1, 2, 3]) // '[1,2,3]'
+fromArray([]) // '[]'
+fromArray(null) // '[]'
 ```
 
 ### Object Converters
@@ -124,16 +125,16 @@ Handle JSON objects stored as TEXT:
 
 ```typescript
 // SQLite to TypeScript
-toObject('{"key":"value"}')     // { key: 'value' }
-toObject('{}')                   // {}
-toObject(null)                   // {}
-toObject('invalid')              // {} (fallback on parse error)
-toObject(null, { default: 1 })  // { default: 1 }
+toObject('{"key":"value"}') // { key: 'value' }
+toObject('{}') // {}
+toObject(null) // {}
+toObject('invalid') // {} (fallback on parse error)
+toObject(null, { default: 1 }) // { default: 1 }
 
 // TypeScript to SQLite
-fromObject({ key: 'value' })     // '{"key":"value"}'
-fromObject({})                   // '{}'
-fromObject(null)                 // '{}'
+fromObject({ key: 'value' }) // '{"key":"value"}'
+fromObject({}) // '{}'
+fromObject(null) // '{}'
 ```
 
 ### Timestamp Converters
@@ -142,15 +143,15 @@ Convert Unix timestamps with automatic seconds-to-milliseconds detection:
 
 ```typescript
 // SQLite to TypeScript
-toTimestamp(1609459200000)       // 1609459200000 (already in ms)
-toTimestamp(1609459200)          // 1609459200000 (converted from seconds)
-toTimestamp(null)                // Date.now() (default)
-toTimestamp(null, 0)             // 0 (custom fallback)
+toTimestamp(1609459200000) // 1609459200000 (already in ms)
+toTimestamp(1609459200) // 1609459200000 (converted from seconds)
+toTimestamp(null) // Date.now() (default)
+toTimestamp(null, 0) // 0 (custom fallback)
 
 // TypeScript to SQLite
-fromTimestamp(1609459200000)     // 1609459200000
-fromTimestamp(new Date())        // date.getTime()
-fromTimestamp(null)              // null
+fromTimestamp(1609459200000) // 1609459200000
+fromTimestamp(new Date()) // date.getTime()
+fromTimestamp(null) // null
 ```
 
 ## Utility Functions
@@ -158,12 +159,12 @@ fromTimestamp(null)              // null
 ### Type Guards
 
 ```typescript
-isNullish(null)          // true
-isNullish(undefined)      // true
-isNullish(0)             // false
+isNullish(null) // true
+isNullish(undefined) // true
+isNullish(0) // false
 
-isValidJson('{"valid":true}')  // true
-isValidJson('{broken')          // false
+isValidJson('{"valid":true}') // true
+isValidJson('{broken') // false
 ```
 
 ### Ensure Functions
@@ -171,9 +172,9 @@ isValidJson('{broken')          // false
 Convenience wrappers with default fallbacks:
 
 ```typescript
-ensureString(value)       // Alias for toString(value, '')
-ensureNumber(value)       // Alias for toNumber(value, 0)
-ensureBoolean(value)      // Alias for toBoolean(value, false)
+ensureString(value) // Alias for toString(value, '')
+ensureNumber(value) // Alias for toNumber(value, 0)
+ensureBoolean(value) // Alias for toBoolean(value, false)
 ```
 
 ### Batch Operations
@@ -187,7 +188,7 @@ const rows = [
   { id: 2, done: 0, name: 'Task 2' }
 ]
 
-const tasks = batchConvert(rows, row => ({
+const tasks = batchConvert(rows, (row) => ({
   id: row.id,
   done: toBoolean(row.done),
   name: row.name
@@ -196,8 +197,9 @@ const tasks = batchConvert(rows, row => ({
 // Convert rows to record/map structure
 const tasksMap = rowsToRecord(
   rows,
-  row => row.id,              // Key extractor
-  row => ({                    // Value converter
+  (row) => row.id, // Key extractor
+  (row) => ({
+    // Value converter
     done: toBoolean(row.done),
     name: row.name
   })
@@ -281,13 +283,13 @@ tags: toArray(row.tags, [])
 
 ```typescript
 // Good - sensible defaults
-title: toString(row.title, '')           // Empty string for missing text
-count: toNumber(row.count, 0)           // Zero for missing numbers
-tags: toArray(row.tags, [])             // Empty array for missing arrays
+title: toString(row.title, '') // Empty string for missing text
+count: toNumber(row.count, 0) // Zero for missing numbers
+tags: toArray(row.tags, []) // Empty array for missing arrays
 
 // Bad - using wrong fallback types
-title: toString(row.title, null)        // Don't use null as fallback
-count: toNumber(row.count, -1)          // -1 might not make sense
+title: toString(row.title, null) // Don't use null as fallback
+count: toNumber(row.count, -1) // -1 might not make sense
 ```
 
 ### 2. Use Type-Specific Converters
@@ -297,7 +299,7 @@ count: toNumber(row.count, -1)          // -1 might not make sense
 items: toArray(row.items, [])
 
 // Bad - using generic JSON converter for arrays
-items: toJson(row.items, [])  // Works but less semantic
+items: toJson(row.items, []) // Works but less semantic
 ```
 
 ### 3. Handle Timestamps Correctly
@@ -307,7 +309,7 @@ items: toJson(row.items, [])  // Works but less semantic
 created: toTimestamp(row.created_at)
 
 // Bad - manual conversion without validation
-created: row.created_at * 1000  // Assumes seconds, might be wrong
+created: row.created_at * 1000 // Assumes seconds, might be wrong
 ```
 
 ### 4. Batch Process When Possible
@@ -329,7 +331,7 @@ The converters use a **fallback pattern** rather than throwing errors. This ensu
 
 ```typescript
 // Will not throw, returns fallback
-const tags = toArray('invalid json', [])  // Returns []
+const tags = toArray('invalid json', []) // Returns []
 
 // With context for debugging
 const tags = toArray(row.tags, [], 'ticket.tags')
@@ -346,6 +348,7 @@ The converters are designed to be lightweight with minimal overhead:
 - **Minimal object creation**: Reuses fallback values
 
 Benchmark results show negligible performance impact:
+
 - Boolean conversion: ~0.001ms per call
 - JSON parsing: ~0.01ms for small objects
 - Batch conversion of 1000 rows: ~5ms
@@ -383,6 +386,7 @@ bun test packages/shared/src/utils/sqlite-converters.test.ts
 ```
 
 Tests cover:
+
 - All converter functions
 - Edge cases (null, undefined, invalid input)
 - Type coercion scenarios
@@ -394,18 +398,22 @@ Tests cover:
 ### Common Issues
 
 **Issue**: Boolean values not converting correctly
+
 - **Cause**: SQLite stores booleans as 0/1 integers
 - **Solution**: Always use `toBoolean()` for database values
 
 **Issue**: JSON parse errors in production
+
 - **Cause**: Malformed JSON in database
 - **Solution**: Converters return fallback values, check logs for warnings
 
 **Issue**: Timestamps off by factor of 1000
+
 - **Cause**: Mixing seconds and milliseconds
 - **Solution**: Use `toTimestamp()` which auto-detects format
 
 **Issue**: Arrays/objects stored as `[object Object]`
+
 - **Cause**: Not using `fromArray()`/`fromObject()` when storing
 - **Solution**: Always use `from*` converters for database writes
 
@@ -422,6 +430,7 @@ When adding new converters:
 ## Summary
 
 The SQLite Type Converters provide:
+
 - ✅ **Consistent** type conversion across the storage layer
 - ✅ **Type-safe** handling of SQLite's limited type system
 - ✅ **Tested** with 100% code coverage

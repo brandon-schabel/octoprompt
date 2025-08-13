@@ -14,14 +14,14 @@ export const TEST_PROMPTS = {
   algorithmic: {
     palindrome: `Implement a function to find the longest palindromic substring in a given string.
 The function should handle edge cases like empty strings and single characters.`,
-    
+
     binarySearch: `Implement a binary search algorithm. The function should take 
 a sorted array and a target value. If the target is found, 
 return its index. Otherwise, return -1.`,
-    
+
     fibonacci: `Write an efficient function to calculate the nth Fibonacci number.
 Consider both recursive and iterative approaches, and optimize for performance.`,
-    
+
     quickSort: `Implement the QuickSort algorithm with the following requirements:
 1. Choose a good pivot selection strategy
 2. Handle arrays with duplicate values
@@ -33,10 +33,10 @@ Consider both recursive and iterative approaches, and optimize for performance.`
   decisionMaking: {
     architecture: `Should we migrate our monolithic application to microservices?
 Consider factors like team size, technical debt, and scalability needs.`,
-    
+
     technology: `Choose between React and Vue for a new enterprise web application.
 Consider developer experience, ecosystem, performance, and long-term maintenance.`,
-    
+
     deployment: `Decide whether to use Kubernetes or traditional VMs for deployment.
 Factor in complexity, scalability, cost, and team expertise.`
   },
@@ -48,7 +48,7 @@ Then, validate all the required fields.
 If validation passes, process each item in the list.
 For each item, apply the transformation and store the result.
 Finally, generate a summary report.`,
-    
+
     apiDesign: `Design a RESTful API for a task management system with the following requirements:
 - User authentication and authorization
 - CRUD operations for tasks
@@ -56,7 +56,7 @@ Finally, generate a summary report.`,
 - Real-time updates via WebSockets
 - Rate limiting and caching strategies
 - Comprehensive error handling`,
-    
+
     systemDesign: `Design a distributed caching system that:
 1. Supports multiple cache eviction policies (LRU, LFU, FIFO)
 2. Handles cache invalidation across nodes
@@ -131,11 +131,11 @@ Finally, generate a summary report.`,
 export function getRandomPrompt(): string {
   const categories = Object.values(TEST_PROMPTS)
   const category = categories[Math.floor(Math.random() * categories.length)]
-  
+
   if (typeof category === 'object' && !Array.isArray(category)) {
     const prompts = Object.values(category)
     const prompt = prompts[Math.floor(Math.random() * prompts.length)]
-    
+
     if (typeof prompt === 'string') {
       return prompt
     } else if (typeof prompt === 'object' && 'prompt' in prompt) {
@@ -144,7 +144,7 @@ export function getRandomPrompt(): string {
       return prompt.description
     }
   }
-  
+
   return TEST_PROMPTS.simple.sorting
 }
 

@@ -295,7 +295,9 @@ export class EnhancedSummarizationService {
       const modelConfig = MODEL_CONFIGS[options.depth || 'standard']
 
       // Build context-aware prompt
-      const systemPrompt = options.groupAware ? this.buildGroupAwareSystemPrompt(options) : promptsMap.summarizationSteps
+      const systemPrompt = options.groupAware
+        ? this.buildGroupAwareSystemPrompt(options)
+        : promptsMap.summarizationSteps
 
       const userPrompt = this.buildEnhancedUserPrompt(file, context, options)
 
@@ -569,7 +571,7 @@ Provide summaries that are:
     if (options.includeExports && file.exports && file.exports.length > 0) {
       prompt += `\nExports:\n`
       file.exports.slice(0, 10).forEach((exp) => {
-        prompt += `- ${exp.source || exp.specifiers?.map(s => s.exported).join(', ') || 'export'} (${exp.type})\n`
+        prompt += `- ${exp.source || exp.specifiers?.map((s) => s.exported).join(', ') || 'export'} (${exp.type})\n`
       })
     }
 

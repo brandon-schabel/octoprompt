@@ -216,14 +216,14 @@ class DataProcessor:
 export function createLargeProjectFile(sizeInKB: number = 100): ProjectFile {
   const lines: string[] = []
   const targetLines = Math.floor((sizeInKB * 1024) / 80) // Assuming ~80 chars per line
-  
+
   // Add imports at the top
   lines.push(`import { Component, Injectable, OnInit } from '@angular/core'`)
   lines.push(`import { HttpClient } from '@angular/common/http'`)
   lines.push(`import { Observable, Subject, BehaviorSubject } from 'rxjs'`)
   lines.push(`import { map, filter, debounceTime } from 'rxjs/operators'`)
   lines.push('')
-  
+
   // Generate multiple classes
   for (let i = 0; i < targetLines / 50; i++) {
     lines.push(`@Injectable({ providedIn: 'root' })`)
@@ -269,9 +269,9 @@ export function createLargeProjectFile(sizeInKB: number = 100): ProjectFile {
     lines.push(`}`)
     lines.push('')
   }
-  
+
   const content = lines.join('\n')
-  
+
   return {
     id: 100,
     projectId: 1,
@@ -342,7 +342,7 @@ export const edgeCaseProjectFiles = {
     projectId: 1,
     path: 'assets/logo.png',
     name: 'logo.png',
-    content: Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]).toString('base64'),
+    content: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString('base64'),
     type: 'file',
     extension: '.png',
     created: Date.now(),
@@ -376,7 +376,7 @@ class Incomplete {
 // Batch of files for testing batch operations
 export function createBatchFiles(count: number = 10): ProjectFile[] {
   const files: ProjectFile[] = []
-  
+
   for (let i = 0; i < count; i++) {
     files.push({
       id: 100 + i,
@@ -404,13 +404,13 @@ export function batchFunction${i}(input: string): string {
 }`,
       type: 'file',
       extension: '.ts',
-      created: Date.now() - (i * 1000 * 60), // Different timestamps
-      updated: Date.now() - (i * 1000 * 30),
-      size: 300 + (i * 10),
+      created: Date.now() - i * 1000 * 60, // Different timestamps
+      updated: Date.now() - i * 1000 * 30,
+      size: 300 + i * 10,
       checksum: `mock-checksum-batch-${i}`
     } as ProjectFile)
   }
-  
+
   return files
 }
 
@@ -487,8 +487,6 @@ export class ServiceB {
       { source: './moduleA', specifiers: ['ModuleA'] },
       { source: '../database', specifiers: ['Database'] }
     ],
-    exports: [
-      { name: 'ServiceB', type: 'class' }
-    ]
+    exports: [{ name: 'ServiceB', type: 'class' }]
   } as ProjectFile
 }

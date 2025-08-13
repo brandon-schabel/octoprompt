@@ -1,5 +1,11 @@
 import { describe, test, expect, beforeEach } from 'bun:test'
-import { createContextOptimizer, TokenCounter, ContentPrioritizer, ContentChunker, ChunkingStrategy } from '../../../src/optimizers/context'
+import {
+  createContextOptimizer,
+  TokenCounter,
+  ContentPrioritizer,
+  ContentChunker,
+  ChunkingStrategy
+} from '../../../src/optimizers/context'
 import { E } from '../../../src/fp'
 import { TEST_PROMPTS } from '../../fixtures/prompts'
 import { EXPECTED_IMPROVEMENTS, validators } from '../../fixtures/expected-outputs'
@@ -40,11 +46,9 @@ describe('Context Optimizer', () => {
       if (E.isRight(result)) {
         const optimized = result.right
         const techniques = optimized.optimizationStrategy.techniques
-        expect(techniques.some(t =>
-          t.includes('prioritization') ||
-          t.includes('chunking') ||
-          t.includes('compression')
-        )).toBe(true)
+        expect(
+          techniques.some((t) => t.includes('prioritization') || t.includes('chunking') || t.includes('compression'))
+        ).toBe(true)
       }
     })
 
@@ -183,7 +187,7 @@ describe('Context Optimizer', () => {
         'WARNING: Security concern'
       ]
 
-      const scores = contents.map(c => ContentPrioritizer.scoreByImportance(c))
+      const scores = contents.map((c) => ContentPrioritizer.scoreByImportance(c))
 
       // Content with importance markers should score higher
       expect(scores[1]).toBeGreaterThan(scores[0]) // IMPORTANT
@@ -444,16 +448,13 @@ describe('Context Optimizer', () => {
         TEST_PROMPTS.complex.systemDesign
       ]
 
-      prompts.forEach(prompt => {
+      prompts.forEach((prompt) => {
         const result = optimizer.optimize(prompt)
 
         expect(E.isRight(result)).toBe(true)
         if (E.isRight(result)) {
           const optimized = result.right
-          expect(validators.validateImprovementScore(
-            optimized.improvementScore,
-            'context'
-          )).toBe(true)
+          expect(validators.validateImprovementScore(optimized.improvementScore, 'context')).toBe(true)
         }
       })
     })

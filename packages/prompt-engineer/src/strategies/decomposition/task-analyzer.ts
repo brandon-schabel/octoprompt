@@ -1,10 +1,5 @@
 import { E, A, O, pipe } from '../../fp'
-import {
-  type DecomposedTask,
-  type TaskGraph,
-  type TaskDependency,
-  type ComplexityScore
-} from '../../types'
+import { type DecomposedTask, type TaskGraph, type TaskDependency, type ComplexityScore } from '../../types'
 
 // ============================================================================
 // Task Analysis and Decomposition
@@ -29,7 +24,7 @@ const defaultConfig: TaskAnalysisConfig = {
 // ============================================================================
 
 export class TaskAnalyzer {
-  constructor(private config: TaskAnalysisConfig = defaultConfig) { }
+  constructor(private config: TaskAnalysisConfig = defaultConfig) {}
 
   // Analyze and decompose a complex task
   analyzeTask(taskDescription: string, depth: number = 0): E.Either<Error, DecomposedTask> {
@@ -50,7 +45,7 @@ export class TaskAnalyzer {
         estimatedComplexity: complexity.overall,
         suggestedAgent: this.suggestAgent(taskDescription),
         suggestedModel: this.suggestModel(complexity),
-        subtasks: subtasks.map(st => {
+        subtasks: subtasks.map((st) => {
           const result = this.analyzeTask(st, depth + 1)
           return E.isRight(result) ? result.right : this.createSimpleTask(st)
         })
@@ -98,21 +93,35 @@ export class TaskAnalyzer {
     const sequentialPattern = /(first|then|next|after that|finally),?\s+([^.]+)/gi
     while ((match = sequentialPattern.exec(description)) !== null) {
       const seg = match[2]?.trim()
-      if (seg && !subtasks.some(st => st.includes(seg))) subtasks.push(seg)
+      if (seg && !subtasks.some((st) => st.includes(seg))) subtasks.push(seg)
     }
 
     // Pattern 3: Action verbs at sentence start
     if (subtasks.length === 0) {
-      const sentences = description.split(/[.!?]+/).filter(s => s.trim())
+      const sentences = description.split(/[.!?]+/).filter((s) => s.trim())
       const actionVerbs = [
-        'implement', 'create', 'build', 'design', 'write', 'add',
-        'update', 'refactor', 'test', 'validate', 'check', 'ensure',
-        'setup', 'configure', 'install', 'deploy', 'migrate'
+        'implement',
+        'create',
+        'build',
+        'design',
+        'write',
+        'add',
+        'update',
+        'refactor',
+        'test',
+        'validate',
+        'check',
+        'ensure',
+        'setup',
+        'configure',
+        'install',
+        'deploy',
+        'migrate'
       ]
 
-      sentences.forEach(sentence => {
+      sentences.forEach((sentence) => {
         const trimmed = sentence.trim().toLowerCase()
-        if (actionVerbs.some(verb => trimmed.startsWith(verb))) {
+        if (actionVerbs.some((verb) => trimmed.startsWith(verb))) {
           subtasks.push(sentence.trim())
         }
       })
@@ -121,12 +130,13 @@ export class TaskAnalyzer {
     // Pattern 4: Split by "and" for compound tasks
     if (subtasks.length === 0 && description.includes(' and ')) {
       const parts = description.split(/\s+and\s+/i)
-      if (parts.length <= 4) { // Don't split if too many "and"s
-        subtasks.push(...parts.map(p => p.trim()))
+      if (parts.length <= 4) {
+        // Don't split if too many "and"s
+        subtasks.push(...parts.map((p) => p.trim()))
       }
     }
 
-    return subtasks.filter(st => st.length > this.config.minTaskSize)
+    return subtasks.filter((st) => st.length > this.config.minTaskSize)
   }
 
   // Extract dependencies from task description
@@ -143,7 +153,7 @@ export class TaskAnalyzer {
       /must\s+have\s+(.+?)(?:\.|,|$)/gi
     ]
 
-    depPatterns.forEach(pattern => {
+    depPatterns.forEach((pattern) => {
       let match
       while ((match = pattern.exec(description)) !== null) {
         dependencies.push(match[1].trim())
@@ -168,27 +178,18 @@ export class TaskAnalyzer {
     const conditionals = (description.match(/\b(if|when|unless|while|for)\b/gi) || []).length
 
     // Cognitive complexity (how hard for humans)
-    const cognitive = Math.min(10,
-      (sentences * 0.5) +
-      (technicalTerms * 0.3) +
-      (subtaskCount * 0.8)
-    )
+    const cognitive = Math.min(10, sentences * 0.5 + technicalTerms * 0.3 + subtaskCount * 0.8)
 
     // Computational complexity (how hard for LLMs)
-    const computational = Math.min(10,
-      (length / 100) +
-      (conditionals * 1.5) +
-      (subtaskCount * 0.5)
-    )
+    const computational = Math.min(10, length / 100 + conditionals * 1.5 + subtaskCount * 0.5)
 
     // Structural complexity
-    const structural = Math.min(10,
-      (subtaskCount * 1.2) +
-      (conditionals * 0.8) +
-      (this.extractDependencies(description).length * 0.5)
+    const structural = Math.min(
+      10,
+      subtaskCount * 1.2 + conditionals * 0.8 + this.extractDependencies(description).length * 0.5
     )
 
-    const overall = (cognitive * 0.3 + computational * 0.4 + structural * 0.3)
+    const overall = cognitive * 0.3 + computational * 0.4 + structural * 0.3
 
     return {
       cognitive: Number(cognitive.toFixed(2)),
@@ -201,15 +202,38 @@ export class TaskAnalyzer {
   // Count technical terms in description
   private countTechnicalTerms(description: string): number {
     const technicalTerms = [
-      'api', 'database', 'algorithm', 'function', 'class', 'interface',
-      'component', 'service', 'endpoint', 'schema', 'migration', 'deployment',
-      'authentication', 'authorization', 'encryption', 'cache', 'queue',
-      'async', 'promise', 'callback', 'stream', 'buffer', 'thread',
-      'microservice', 'container', 'kubernetes', 'docker', 'ci/cd'
+      'api',
+      'database',
+      'algorithm',
+      'function',
+      'class',
+      'interface',
+      'component',
+      'service',
+      'endpoint',
+      'schema',
+      'migration',
+      'deployment',
+      'authentication',
+      'authorization',
+      'encryption',
+      'cache',
+      'queue',
+      'async',
+      'promise',
+      'callback',
+      'stream',
+      'buffer',
+      'thread',
+      'microservice',
+      'container',
+      'kubernetes',
+      'docker',
+      'ci/cd'
     ]
 
     const lowerDesc = description.toLowerCase()
-    return technicalTerms.filter(term => lowerDesc.includes(term)).length
+    return technicalTerms.filter((term) => lowerDesc.includes(term)).length
   }
 
   // Check if task can be parallelized
@@ -219,17 +243,13 @@ export class TaskAnalyzer {
 
     // Check for sequential keywords
     const sequentialKeywords = ['then', 'after', 'before', 'first', 'finally', 'sequence']
-    const hasSequential = sequentialKeywords.some(kw =>
-      description.toLowerCase().includes(kw)
-    )
+    const hasSequential = sequentialKeywords.some((kw) => description.toLowerCase().includes(kw))
 
     if (hasSequential) return false
 
     // Check for parallelization hints
     const parallelKeywords = ['parallel', 'concurrent', 'simultaneous', 'independent']
-    const hasParallel = parallelKeywords.some(kw =>
-      description.toLowerCase().includes(kw)
-    )
+    const hasParallel = parallelKeywords.some((kw) => description.toLowerCase().includes(kw))
 
     return hasParallel || !hasSequential
   }
@@ -250,7 +270,7 @@ export class TaskAnalyzer {
     }
 
     for (const [agent, keywords] of Object.entries(agentMappings)) {
-      if (keywords.some(kw => lowerDesc.includes(kw))) {
+      if (keywords.some((kw) => lowerDesc.includes(kw))) {
         return agent
       }
     }
@@ -304,12 +324,12 @@ export class TaskGraphBuilder {
     this.flattenTasks(rootTask, nodes)
 
     // Build edges from dependencies
-    nodes.forEach(task => {
-      task.dependencies.forEach(dep => {
+    nodes.forEach((task) => {
+      task.dependencies.forEach((dep) => {
         // Try to find matching task
-        const depTask = nodes.find(n =>
-          n.title.toLowerCase().includes(dep.toLowerCase()) ||
-          n.description.toLowerCase().includes(dep.toLowerCase())
+        const depTask = nodes.find(
+          (n) =>
+            n.title.toLowerCase().includes(dep.toLowerCase()) || n.description.toLowerCase().includes(dep.toLowerCase())
         )
 
         if (depTask) {
@@ -324,7 +344,7 @@ export class TaskGraphBuilder {
 
       // Add parent-child relationships
       if (task.subtasks) {
-        task.subtasks.forEach(subtask => {
+        task.subtasks.forEach((subtask) => {
           edges.push({
             from: task.id,
             to: subtask.id,
@@ -353,7 +373,7 @@ export class TaskGraphBuilder {
   private flattenTasks(task: DecomposedTask, result: DecomposedTask[]): void {
     result.push(task)
     if (task.subtasks) {
-      task.subtasks.forEach(subtask => this.flattenTasks(subtask, result))
+      task.subtasks.forEach((subtask) => this.flattenTasks(subtask, result))
     }
   }
 
@@ -365,9 +385,7 @@ export class TaskGraphBuilder {
     const path: string[] = []
 
     // Find starting nodes (no incoming edges)
-    const startNodes = nodes.filter(node =>
-      !edges.some(edge => edge.to === node.id && edge.type === 'blocks')
-    )
+    const startNodes = nodes.filter((node) => !edges.some((edge) => edge.to === node.id && edge.type === 'blocks'))
 
     if (startNodes.length === 0) return []
 
@@ -387,7 +405,7 @@ export class TaskGraphBuilder {
           longestPath = [...currentPath]
         }
       } else {
-        neighbors.forEach(neighbor => {
+        neighbors.forEach((neighbor) => {
           dfs(neighbor, [...currentPath])
         })
       }
@@ -395,7 +413,7 @@ export class TaskGraphBuilder {
       visited.delete(nodeId)
     }
 
-    startNodes.forEach(node => {
+    startNodes.forEach((node) => {
       dfs(node.id, [])
     })
 
@@ -409,7 +427,7 @@ export class TaskGraphBuilder {
 
     // Build dependency map
     const dependencies = new Map<string, Set<string>>()
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         if (!dependencies.has(edge.to)) {
           dependencies.set(edge.to, new Set())
@@ -423,11 +441,11 @@ export class TaskGraphBuilder {
     while (assigned.size < nodes.length) {
       const currentGroup: string[] = []
 
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         if (!assigned.has(node.id)) {
           const deps = dependencies.get(node.id) || new Set()
           // Can add to current group if all dependencies are already assigned
-          if ([...deps].every(dep => assigned.has(dep))) {
+          if ([...deps].every((dep) => assigned.has(dep))) {
             currentGroup.push(node.id)
           }
         }
@@ -435,7 +453,7 @@ export class TaskGraphBuilder {
 
       if (currentGroup.length > 0) {
         groups.push(currentGroup)
-        currentGroup.forEach(id => assigned.add(id))
+        currentGroup.forEach((id) => assigned.add(id))
       } else {
         // Prevent infinite loop
         break
@@ -452,7 +470,7 @@ export class TaskGraphBuilder {
   private buildAdjacencyList(edges: TaskDependency[]): Map<string, string[]> {
     const adjList = new Map<string, string[]>()
 
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         if (!adjList.has(edge.from)) {
           adjList.set(edge.from, [])
@@ -479,7 +497,7 @@ export class TaskSimilarityCalculator {
     const words1 = new Set(desc1.split(/\s+/))
     const words2 = new Set(desc2.split(/\s+/))
 
-    const intersection = new Set([...words1].filter(w => words2.has(w)))
+    const intersection = new Set([...words1].filter((w) => words2.has(w)))
     const union = new Set([...words1, ...words2])
 
     const jaccard = intersection.size / union.size
@@ -502,7 +520,9 @@ export class TaskSimilarityCalculator {
     let maxLength = 0
     let endPos = 0
 
-    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0))
+    const dp: number[][] = Array(m + 1)
+      .fill(null)
+      .map(() => Array(n + 1).fill(0))
 
     for (let i = 1; i <= m; i++) {
       for (let j = 1; j <= n; j++) {

@@ -41,7 +41,11 @@ import { listPromptsByProject } from './prompt-service'
 import { getProjectStatistics } from './project-statistics-service'
 import { getProjectGitStatus, getCurrentBranch } from './git-service'
 import { fileSummarizationTracker } from './file-summarization-tracker'
-import { SummarizationPrompts, selectPromptStrategy, type SummarizationContext } from './prompt-templates/summarization-prompts'
+import {
+  SummarizationPrompts,
+  selectPromptStrategy,
+  type SummarizationContext
+} from './prompt-templates/summarization-prompts'
 import { SmartTruncation } from './utils/smart-truncation'
 import { summarizationCache } from './caching/summarization-cache'
 import { summarizationMetrics } from './metrics/summarization-metrics'
@@ -780,13 +784,13 @@ export async function validateFilePaths(
 /** Summarizes a single file if it meets conditions and updates the project's file storage. */
 export async function summarizeSingleFile(file: ProjectFile, force: boolean = false): Promise<ProjectFile | null> {
   const startTime = Date.now()
-  
+
   // Check cache first (unless force is true)
   if (!force) {
     const cached = summarizationCache.get(file)
     if (cached) {
       logger.debug(`Using cached summary for file ${file.path}`)
-      
+
       // Record cache hit metrics
       summarizationMetrics.recordFileMetrics(file, {
         tokensUsed: 0,
@@ -797,7 +801,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
         promptStrategy: 'cached',
         modelUsed: 'cache'
       })
-      
+
       // Update the file with cached summary if needed
       if (file.summary !== cached.summary) {
         return await projectStorage.updateProjectFile(file.projectId, file.id, {
@@ -808,7 +812,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
       return file
     }
   }
-  
+
   // Check if file needs summarization based on timestamp
   const summarizationCheck = needsResummarization(file.summaryLastUpdated, force)
 
@@ -867,7 +871,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   // Select best prompt strategy based on file characteristics
   const promptConfig = selectPromptStrategy(file, context)
-  
+
   // Create a modified file object with truncated content
   const truncatedFile: ProjectFile = {
     ...file,
@@ -938,7 +942,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
     // Clean up and enhance summary
     let trimmedSummary = summary.trim()
-    
+
     // Add truncation info if applicable
     if (truncationResult.wasTruncated) {
       const truncationInfo = SmartTruncation.getTruncationSummary(truncationResult)
@@ -955,11 +959,11 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
       tokenCount: SmartTruncation.estimateTokens(truncationResult.content),
       truncated: truncationResult.wasTruncated
     })
-    
+
     // Record metrics
     const processingTime = Date.now() - startTime
     const tokensUsed = SmartTruncation.estimateTokens(truncationResult.content)
-    
+
     summarizationMetrics.recordFileMetrics(file, {
       tokensUsed,
       tokensAvailable: MAX_TOKENS_FOR_SUMMARY,
@@ -971,7 +975,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
     })
 
     logger.info(`Successfully summarized and updated file: ${file.path} in project ${file.projectId}`)
-    
+
     // Log detailed metrics for monitoring
     logger.debug(`Summarization metrics for ${file.path}:`, {
       originalTokens: truncationResult.wasTruncated ? SmartTruncation.estimateTokens(fileContent) : 0,
@@ -982,7 +986,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
       processingTime: `${processingTime}ms`,
       cached: true
     })
-    
+
     return updatedFile
   } catch (error) {
     if (error instanceof ApiError) throw error

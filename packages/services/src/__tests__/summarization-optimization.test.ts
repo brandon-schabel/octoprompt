@@ -1,6 +1,10 @@
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { SmartTruncation } from '../utils/smart-truncation'
-import { SummarizationPrompts, selectPromptStrategy, type SummarizationContext } from '../prompt-templates/summarization-prompts'
+import {
+  SummarizationPrompts,
+  selectPromptStrategy,
+  type SummarizationContext
+} from '../prompt-templates/summarization-prompts'
 import { summarizationCache } from '../caching/summarization-cache'
 import { summarizationMetrics } from '../metrics/summarization-metrics'
 import { BatchSummarizationOptimizer } from '../file-services/batch-summarization-optimizer'
@@ -24,10 +28,10 @@ describe('Smart Truncation Service', () => {
     test('should adjust for code density', () => {
       const sparseCode = '    \n    \n    \n    ' // Lots of whitespace
       const denseCode = 'const a=1;const b=2;const c=3;' // Dense code
-      
+
       const sparseTokens = SmartTruncation.estimateTokens(sparseCode)
       const denseTokens = SmartTruncation.estimateTokens(denseCode)
-      
+
       // Dense code should have more tokens per character
       expect(denseTokens / denseCode.length).toBeGreaterThan(sparseTokens / sparseCode.length)
     })
@@ -37,7 +41,7 @@ describe('Smart Truncation Service', () => {
     test('should not truncate content that fits within limits', () => {
       const content = 'Small content that fits'
       const result = SmartTruncation.truncate(content, { maxTokens: 1000 })
-      
+
       expect(result.wasTruncated).toBe(false)
       expect(result.content).toBe(content)
       expect(result.preservedSections).toEqual(['full'])
@@ -52,12 +56,12 @@ import './styles.css'
 // Lots of code here...
 ${'x'.repeat(100000)}
       `
-      
-      const result = SmartTruncation.truncate(content, { 
+
+      const result = SmartTruncation.truncate(content, {
         maxTokens: 100,
-        preserveImports: true 
+        preserveImports: true
       })
-      
+
       expect(result.wasTruncated).toBe(true)
       expect(result.content).toContain('import React')
       expect(result.content).toContain('import { useState }')
@@ -78,12 +82,12 @@ export default class MainClass {
   constructor() {}
 }
       `
-      
+
       const result = SmartTruncation.truncate(content, {
         maxTokens: 200,
         preserveExports: true
       })
-      
+
       expect(result.wasTruncated).toBe(true)
       expect(result.content).toContain('export function publicFunction')
       expect(result.content).toContain('export default class MainClass')
@@ -104,14 +108,14 @@ function helperFunction() {
   // Helper code
 }
       `
-      
+
       const result = SmartTruncation.truncate(content, {
         maxTokens: 50,
         preserveImports: true,
         preserveExports: true,
         preserveClasses: true
       })
-      
+
       expect(result.content).toContain('import')
       expect(result.content).toContain('export class PublicAPI')
       expect(result.content).not.toContain('Low priority comment')
@@ -127,9 +131,9 @@ function helperFunction() {
         truncatedTokens: 300,
         preservedSections: ['imports', 'exports', 'class:MyClass']
       }
-      
+
       const summary = SmartTruncation.getTruncationSummary(result)
-      
+
       expect(summary).toContain('70%') // 70% reduction
       expect(summary).toContain('imports, exports, class:MyClass')
       expect(summary).toContain('1000 tokens')
@@ -155,9 +159,9 @@ describe('Summarization Prompts', () => {
     test('should select chain-of-thought for complex files', () => {
       const largeFile = { ...mockFile, size: 60000, path: '/src/user-service.ts' }
       const context: SummarizationContext = {}
-      
+
       const strategy = selectPromptStrategy(largeFile, context)
-      
+
       expect(strategy.useChainOfThought).toBe(true)
       expect(strategy.depth).toBe('detailed')
     })
@@ -165,9 +169,9 @@ describe('Summarization Prompts', () => {
     test('should select few-shot for common file types', () => {
       const tsxFile = { ...mockFile, extension: '.tsx' }
       const context: SummarizationContext = {}
-      
+
       const strategy = selectPromptStrategy(tsxFile, context)
-      
+
       expect(strategy.includeExamples).toBe(true)
       expect(strategy.format).toBe('structured')
     })
@@ -179,9 +183,9 @@ describe('Summarization Prompts', () => {
           { name: 'related2.ts', summary: 'Related file 2' }
         ]
       }
-      
+
       const strategy = selectPromptStrategy(mockFile, context)
-      
+
       expect(strategy.depth).toBe('standard')
     })
   })
@@ -193,9 +197,9 @@ describe('Summarization Prompts', () => {
         importsContext: 'Imports: react, lodash',
         exportsContext: 'Exports: MyComponent, utils'
       }
-      
+
       const prompt = SummarizationPrompts.getStructuredPrompt(mockFile, context)
-      
+
       expect(prompt).toContain('Code File Analysis Task')
       expect(prompt).toContain('PURPOSE:')
       expect(prompt).toContain('TYPE:')
@@ -207,9 +211,9 @@ describe('Summarization Prompts', () => {
       const context: SummarizationContext = {
         projectContext: 'E-commerce platform'
       }
-      
+
       const prompt = SummarizationPrompts.getChainOfThoughtPrompt(mockFile, context)
-      
+
       expect(prompt).toContain('Step 1:')
       expect(prompt).toContain('Step 2:')
       expect(prompt).toContain('E-commerce platform')
@@ -217,9 +221,9 @@ describe('Summarization Prompts', () => {
 
     test('should include few-shot examples', () => {
       const context: SummarizationContext = {}
-      
+
       const prompt = SummarizationPrompts.getFewShotPrompt(mockFile, context)
-      
+
       expect(prompt).toContain('Example')
       expect(prompt).toContain('PURPOSE:')
       expect(prompt).toContain('TYPE:')
@@ -243,15 +247,15 @@ describe('Summarization Cache', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     const summary = 'This is a test summary'
-    
+
     // Cache miss initially
     expect(summarizationCache.get(file)).toBeNull()
-    
+
     // Store in cache
     summarizationCache.set(file, summary, { tokenCount: 10 })
-    
+
     // Cache hit
     const cached = summarizationCache.get(file)
     expect(cached).not.toBeNull()
@@ -270,12 +274,12 @@ describe('Summarization Cache', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     summarizationCache.set(file, 'Original summary')
-    
+
     // Change content
     const modifiedFile = { ...file, content: 'modified content' }
-    
+
     // Should get cache miss due to content change
     expect(summarizationCache.get(modifiedFile)).toBeNull()
   })
@@ -291,17 +295,17 @@ describe('Summarization Cache', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     // Miss
     summarizationCache.get(file)
-    
+
     // Store
     summarizationCache.set(file, 'Summary')
-    
+
     // Hit
     summarizationCache.get(file)
     summarizationCache.get(file)
-    
+
     const stats = summarizationCache.getStats()
     expect(stats.totalEntries).toBe(1)
     expect(stats.hitRate).toBeGreaterThan(0.5) // 2 hits, 1 miss
@@ -319,7 +323,7 @@ describe('Summarization Cache', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     const file2: ProjectFile = {
       id: 2,
       projectId: 1,
@@ -330,13 +334,13 @@ describe('Summarization Cache', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     summarizationCache.set(file1, 'Summary 1')
     summarizationCache.set(file2, 'Summary 2')
-    
+
     const invalidated = summarizationCache.invalidateProject(1)
     expect(invalidated).toBe(2)
-    
+
     expect(summarizationCache.get(file1)).toBeNull()
     expect(summarizationCache.get(file2)).toBeNull()
   })
@@ -358,7 +362,7 @@ describe('Summarization Metrics', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     summarizationMetrics.recordFileMetrics(file, {
       tokensUsed: 500,
       tokensAvailable: 1000,
@@ -368,7 +372,7 @@ describe('Summarization Metrics', () => {
       promptStrategy: 'structured',
       modelUsed: 'gpt-oss-20b'
     })
-    
+
     const metrics = summarizationMetrics.getProjectMetrics(1)
     expect(metrics.totalFiles).toBe(1)
     expect(metrics.totalTokensUsed).toBe(500)
@@ -387,7 +391,7 @@ describe('Summarization Metrics', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     // Simulate using fewer tokens than old limit
     summarizationMetrics.recordFileMetrics(file, {
       tokensUsed: 5000,
@@ -398,7 +402,7 @@ describe('Summarization Metrics', () => {
       promptStrategy: 'structured',
       modelUsed: 'gpt-oss-20b'
     })
-    
+
     const metrics = summarizationMetrics.getProjectMetrics(1)
     // Old limit was 8000, we used 5000, saved 3000
     expect(metrics.tokensSaved).toBe(3000)
@@ -416,7 +420,7 @@ describe('Summarization Metrics', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     // Simulate poor performance
     for (let i = 0; i < 10; i++) {
       summarizationMetrics.recordFileMetrics(file, {
@@ -429,19 +433,19 @@ describe('Summarization Metrics', () => {
         modelUsed: 'gpt-oss-20b'
       })
     }
-    
+
     const recommendations = summarizationMetrics.getOptimizationRecommendations(1)
-    
+
     expect(recommendations.length).toBeGreaterThan(0)
-    expect(recommendations.some(r => r.includes('Low token utilization'))).toBe(true)
-    expect(recommendations.some(r => r.includes('Low cache hit rate'))).toBe(true)
-    expect(recommendations.some(r => r.includes('Slow average processing time'))).toBe(true)
+    expect(recommendations.some((r) => r.includes('Low token utilization'))).toBe(true)
+    expect(recommendations.some((r) => r.includes('Low cache hit rate'))).toBe(true)
+    expect(recommendations.some((r) => r.includes('Slow average processing time'))).toBe(true)
   })
 })
 
 describe('Batch Summarization Optimizer', () => {
   const optimizer = new BatchSummarizationOptimizer()
-  
+
   test('should create optimized batches', async () => {
     const files: ProjectFile[] = [
       {
@@ -475,12 +479,12 @@ describe('Batch Summarization Optimizer', () => {
         updated: Date.now()
       }
     ]
-    
+
     const batches = await optimizer.createOptimizedBatches(1, files, {
       maxFilesPerBatch: 2,
       groupingStrategy: 'directory'
     })
-    
+
     expect(batches.length).toBeGreaterThan(0)
     expect(batches[0].files.length).toBeLessThanOrEqual(2)
     expect(batches[0].estimatedTokens).toBeGreaterThan(0)
@@ -488,7 +492,7 @@ describe('Batch Summarization Optimizer', () => {
 
   test('should calculate optimal batch configuration', () => {
     const config = BatchSummarizationOptimizer.calculateOptimalBatchConfig(100, 5000)
-    
+
     expect(config.maxFilesPerBatch).toBeGreaterThan(0)
     expect(config.maxTokensPerBatch).toBe(25000) // OPTIMAL_TOKENS_FOR_BATCH
     expect(config.groupingStrategy).toBeDefined()
@@ -499,18 +503,18 @@ describe('Batch Summarization Optimizer', () => {
 describe('Integration Tests', () => {
   test('should optimize token usage compared to old system', () => {
     const largeContent = 'x'.repeat(120000) // ~30k tokens
-    
+
     // Old system would truncate to 8k tokens
     const oldMaxChars = 8000 * 4
     const oldContent = largeContent.substring(0, oldMaxChars)
     const oldTokens = Math.ceil(oldContent.length / 4)
-    
+
     // New system with smart truncation
     const newResult = SmartTruncation.truncate(largeContent, {
       maxTokens: MAX_TOKENS_FOR_SUMMARY - PROMPT_OVERHEAD_TOKENS - RESPONSE_BUFFER_TOKENS
     })
     const newTokens = SmartTruncation.estimateTokens(newResult.content)
-    
+
     // Should use significantly more tokens
     expect(newTokens).toBeGreaterThan(oldTokens * 2)
     expect(newTokens).toBeLessThanOrEqual(MAX_TOKENS_FOR_SUMMARY)
@@ -534,20 +538,20 @@ export function helperFunction() {
   return 'helper'
 }
     `
-    
+
     const result = SmartTruncation.truncate(content, {
       maxTokens: 500,
       preserveImports: true,
       preserveExports: true,
       preserveClasses: true
     })
-    
+
     // Should preserve all important parts
     expect(result.content).toContain('import React')
     expect(result.content).toContain('export class MainComponent')
     expect(result.content).toContain('export function helperFunction')
     expect(result.wasTruncated).toBe(true)
-    
+
     // Should indicate truncation
     const summary = SmartTruncation.getTruncationSummary(result)
     expect(summary).toContain('truncated')

@@ -350,7 +350,7 @@ export async function getNextTaskFromQueue(
     // Try to get a ticket first
     if (queuedTickets.length > 0) {
       const ticket = queuedTickets[0]
-      
+
       if (!ticket) {
         console.warn('[Queue] Ticket array has length but first item is undefined')
         return { type: 'none', item: null, message: 'No valid tickets available' }
@@ -381,7 +381,7 @@ export async function getNextTaskFromQueue(
 
       if (queuedTasks.length > 0) {
         const task = queuedTasks[0]
-        
+
         if (!task) {
           console.warn('[Queue] Task array has length but first item is undefined')
           continue

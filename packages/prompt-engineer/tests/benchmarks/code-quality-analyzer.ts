@@ -173,19 +173,14 @@ export interface QualityRecommendation {
 export class CodeQualityAnalyzer {
   private sourceFile?: ts.SourceFile
   private program?: ts.Program
-  
+
   /**
    * Analyze code quality from string
    */
   analyze(code: string, fileName: string = 'temp.ts'): CodeAnalysisResult {
     // Create TypeScript source file
-    this.sourceFile = ts.createSourceFile(
-      fileName,
-      code,
-      ts.ScriptTarget.Latest,
-      true
-    )
-    
+    this.sourceFile = ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true)
+
     // Analyze different aspects
     const ast = this.analyzeAST()
     const security = this.analyzeSecurity(code)
@@ -193,7 +188,7 @@ export class CodeQualityAnalyzer {
     const testability = this.analyzeTestability()
     const smells = this.detectCodeSmells()
     const cognitive = this.analyzeCognitiveComplexity()
-    
+
     // Generate recommendations
     const recommendations = this.generateRecommendations({
       ast,
@@ -203,7 +198,7 @@ export class CodeQualityAnalyzer {
       smells,
       cognitive
     })
-    
+
     // Calculate overall score
     const overallScore = this.calculateOverallScore({
       security: security.score,
@@ -212,7 +207,7 @@ export class CodeQualityAnalyzer {
       complexity: cognitive.score,
       smells: smells.length
     })
-    
+
     return {
       ast,
       security,
@@ -224,7 +219,7 @@ export class CodeQualityAnalyzer {
       overallScore
     }
   }
-  
+
   /**
    * Analyze AST structure
    */
@@ -232,26 +227,26 @@ export class CodeQualityAnalyzer {
     if (!this.sourceFile) {
       throw new Error('Source file not initialized')
     }
-    
+
     const functions: FunctionMetrics[] = []
     const classes: ClassMetrics[] = []
     const imports: ImportMetrics[] = []
     const exports: ExportMetrics[] = []
-    
+
     let nodeCount = 0
     let maxDepth = 0
     let currentDepth = 0
     const depthMap = new Map<number, number>()
-    
+
     // Visit all nodes
     const visit = (node: ts.Node) => {
       nodeCount++
       currentDepth++
       maxDepth = Math.max(maxDepth, currentDepth)
-      
+
       // Count nodes at each depth
       depthMap.set(currentDepth, (depthMap.get(currentDepth) || 0) + 1)
-      
+
       // Analyze specific node types
       if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) {
         functions.push(this.analyzeFunctionNode(node))
@@ -264,21 +259,21 @@ export class CodeQualityAnalyzer {
         const exportMetric = this.analyzeExportNode(node)
         if (exportMetric) exports.push(exportMetric)
       }
-      
+
       ts.forEachChild(node, visit)
       currentDepth--
     }
-    
+
     visit(this.sourceFile)
-    
+
     // Calculate breadth (max nodes at any depth)
     const breadth = Math.max(...Array.from(depthMap.values()))
-    
+
     // Calculate complexity
     const cyclomatic = this.calculateCyclomaticComplexity(this.sourceFile)
     const cognitive = this.calculateCognitiveScore(this.sourceFile)
     const structural = Math.log2(nodeCount) * (maxDepth / 10)
-    
+
     return {
       nodes: nodeCount,
       depth: maxDepth,
@@ -294,7 +289,7 @@ export class CodeQualityAnalyzer {
       }
     }
   }
-  
+
   /**
    * Analyze function node
    */
@@ -306,7 +301,7 @@ export class CodeQualityAnalyzer {
     const returns = this.countReturns(node)
     const asyncOperations = this.countAsyncOperations(node)
     const errorHandling = this.hasErrorHandling(node)
-    
+
     return {
       name,
       parameters,
@@ -317,7 +312,7 @@ export class CodeQualityAnalyzer {
       errorHandling
     }
   }
-  
+
   /**
    * Analyze class node
    */
@@ -326,30 +321,30 @@ export class CodeQualityAnalyzer {
     let methods = 0
     let properties = 0
     const inheritance: string[] = []
-    
+
     // Count members
-    node.members.forEach(member => {
+    node.members.forEach((member) => {
       if (ts.isMethodDeclaration(member)) {
         methods++
       } else if (ts.isPropertyDeclaration(member)) {
         properties++
       }
     })
-    
+
     // Check inheritance
     if (node.heritageClauses) {
-      node.heritageClauses.forEach(clause => {
-        clause.types.forEach(type => {
+      node.heritageClauses.forEach((clause) => {
+        clause.types.forEach((type) => {
           inheritance.push(type.expression.getText())
         })
       })
     }
-    
+
     // Calculate coupling and cohesion (simplified)
     const coupling = this.calculateCoupling(node)
     const cohesion = this.calculateCohesion(node)
     const size = methods + properties
-    
+
     return {
       name,
       methods,
@@ -360,41 +355,41 @@ export class CodeQualityAnalyzer {
       size
     }
   }
-  
+
   /**
    * Analyze import node
    */
   private analyzeImportNode(node: ts.ImportDeclaration): ImportMetrics | null {
     const moduleSpecifier = node.moduleSpecifier
     if (!ts.isStringLiteral(moduleSpecifier)) return null
-    
+
     const module = moduleSpecifier.text
     const isExternal = !module.startsWith('.') && !module.startsWith('/')
-    
+
     let type: 'default' | 'named' | 'namespace' = 'named'
     const items: string[] = []
-    
+
     if (node.importClause) {
       if (node.importClause.name) {
         type = 'default'
         items.push(node.importClause.name.getText())
       }
-      
+
       if (node.importClause.namedBindings) {
         if (ts.isNamespaceImport(node.importClause.namedBindings)) {
           type = 'namespace'
           items.push(node.importClause.namedBindings.name.getText())
         } else if (ts.isNamedImports(node.importClause.namedBindings)) {
-          node.importClause.namedBindings.elements.forEach(element => {
+          node.importClause.namedBindings.elements.forEach((element) => {
             items.push(element.name.getText())
           })
         }
       }
     }
-    
+
     return { module, type, items, isExternal }
   }
-  
+
   /**
    * Analyze export node
    */
@@ -406,10 +401,10 @@ export class CodeQualityAnalyzer {
         isReexport: false
       }
     }
-    
+
     if (ts.isExportDeclaration(node)) {
       const isReexport = !!node.moduleSpecifier
-      
+
       if (node.exportClause && ts.isNamedExports(node.exportClause)) {
         // For simplicity, take first export
         const firstExport = node.exportClause.elements[0]
@@ -422,16 +417,16 @@ export class CodeQualityAnalyzer {
         }
       }
     }
-    
+
     return null
   }
-  
+
   /**
    * Analyze security vulnerabilities
    */
   private analyzeSecurity(code: string): SecurityAnalysis {
     const vulnerabilities: SecurityVulnerability[] = []
-    
+
     // Check for common security issues
     const securityPatterns = [
       {
@@ -498,7 +493,7 @@ export class CodeQualityAnalyzer {
         owasp: 'A07:2021'
       }
     ]
-    
+
     // Find vulnerabilities
     const lines = code.split('\n')
     for (const pattern of securityPatterns) {
@@ -516,13 +511,13 @@ export class CodeQualityAnalyzer {
         })
       }
     }
-    
+
     // Calculate OWASP scores
     const owasp = this.calculateOWASPScores(vulnerabilities)
-    
+
     // Group by CWE
     const cweGroups = new Map<string, CWEAnalysis>()
-    vulnerabilities.forEach(vuln => {
+    vulnerabilities.forEach((vuln) => {
       if (vuln.cwe) {
         const existing = cweGroups.get(vuln.cwe) || {
           id: vuln.cwe,
@@ -531,20 +526,17 @@ export class CodeQualityAnalyzer {
           instances: 0
         }
         existing.instances++
-        existing.severity = Math.max(
-          existing.severity,
-          this.severityToNumber(vuln.severity)
-        )
+        existing.severity = Math.max(existing.severity, this.severityToNumber(vuln.severity))
         cweGroups.set(vuln.cwe, existing)
       }
     })
-    
+
     const cwe = Array.from(cweGroups.values())
-    
+
     // Calculate security score
     const score = this.calculateSecurityScore(vulnerabilities)
     const level = this.getSecurityLevel(score)
-    
+
     return {
       vulnerabilities,
       score,
@@ -553,53 +545,50 @@ export class CodeQualityAnalyzer {
       cwe
     }
   }
-  
+
   /**
    * Analyze maintainability metrics
    */
   private analyzeMaintainability(code: string): MaintainabilityMetrics {
     const lines = code.split('\n')
-    const loc = lines.filter(line => line.trim().length > 0).length
-    
+    const loc = lines.filter((line) => line.trim().length > 0).length
+
     // Halstead metrics (simplified)
     const operators = code.match(/[+\-*/%=<>!&|^~?:,;(){}[\]]/g) || []
     const operands = code.match(/\b\w+\b/g) || []
-    
+
     const n1 = new Set(operators).size // Unique operators
     const n2 = new Set(operands).size // Unique operands
     const N1 = operators.length // Total operators
     const N2 = operands.length // Total operands
-    
+
     const vocabulary = n1 + n2
     const length = N1 + N2
     const volume = length * Math.log2(vocabulary || 1)
-    
+
     // Calculate complexity (cyclomatic)
     const complexity = this.calculateCyclomaticComplexity(this.sourceFile!)
-    
+
     // Calculate effort
     const difficulty = (n1 / 2) * (N2 / (n2 || 1))
     const effort = difficulty * volume
-    
+
     // Calculate maintainability index
     // MI = 171 - 5.2 * ln(V) - 0.23 * CC - 16.2 * ln(LOC)
     const index = Math.max(
       0,
-      Math.min(
-        100,
-        171 - 5.2 * Math.log(volume || 1) - 0.23 * complexity - 16.2 * Math.log(loc || 1)
-      )
+      Math.min(100, 171 - 5.2 * Math.log(volume || 1) - 0.23 * complexity - 16.2 * Math.log(loc || 1))
     )
-    
+
     // Time to understand (in minutes, estimated)
     const timeToUnderstand = effort / 18000 // Stroud number
-    
+
     // Technical debt (in hours, estimated)
-    const technicalDebt = (100 - index) * loc / 1000
-    
+    const technicalDebt = ((100 - index) * loc) / 1000
+
     // Code churn (simplified - would need git history)
     const codeChurn = 0
-    
+
     return {
       index,
       volume,
@@ -610,7 +599,7 @@ export class CodeQualityAnalyzer {
       codeChurn
     }
   }
-  
+
   /**
    * Analyze testability metrics
    */
@@ -625,65 +614,65 @@ export class CodeQualityAnalyzer {
         controllability: 0
       }
     }
-    
+
     let coverage = 50 // Base coverage
     let mockability = 50
     let isolationScore = 50
     let assertability = 50
     let observability = 50
     let controllability = 50
-    
+
     // Check for test-friendly patterns
     const code = this.sourceFile.getText()
-    
+
     // Dependency injection increases mockability
     if (code.includes('constructor(')) {
       mockability += 10
     }
-    
+
     // Interfaces increase mockability
     if (code.includes('interface ')) {
       mockability += 10
     }
-    
+
     // Pure functions increase testability
     if (code.includes('export function')) {
       isolationScore += 10
       assertability += 10
     }
-    
+
     // Return types increase assertability
     if (code.includes(': ')) {
       assertability += 10
     }
-    
+
     // Logging increases observability
     if (code.includes('console.') || code.includes('logger.')) {
       observability += 10
     }
-    
+
     // Error handling increases observability
     if (code.includes('try') && code.includes('catch')) {
       observability += 10
     }
-    
+
     // Parameters increase controllability
     if (code.match(/function.*\(.*\)/g)) {
       controllability += 10
     }
-    
+
     // Async code decreases testability slightly
     if (code.includes('async') || code.includes('await')) {
       coverage -= 5
       isolationScore -= 5
     }
-    
+
     // Global state decreases testability
     if (code.includes('global') || code.includes('window.')) {
       isolationScore -= 10
       mockability -= 10
     }
-    
+
     return {
       coverage: Math.max(0, Math.min(100, coverage)),
       mockability: Math.max(0, Math.min(100, mockability)),
@@ -693,19 +682,19 @@ export class CodeQualityAnalyzer {
       controllability: Math.max(0, Math.min(100, controllability))
     }
   }
-  
+
   /**
    * Detect code smells
    */
   private detectCodeSmells(): CodeSmell[] {
     if (!this.sourceFile) return []
-    
+
     const smells: CodeSmell[] = []
     const code = this.sourceFile.getText()
     const lines = code.split('\n')
-    
+
     // Long method smell
-    this.sourceFile.forEachChild(node => {
+    this.sourceFile.forEachChild((node) => {
       if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) {
         const funcLines = this.countLines(node)
         if (funcLines > 50) {
@@ -717,7 +706,7 @@ export class CodeQualityAnalyzer {
             refactoringSuggestion: 'Extract smaller methods or use composition'
           })
         }
-        
+
         // Too many parameters
         if (node.parameters.length > 4) {
           smells.push({
@@ -729,7 +718,7 @@ export class CodeQualityAnalyzer {
           })
         }
       }
-      
+
       // Large class smell
       if (ts.isClassDeclaration(node)) {
         const classLines = this.countLines(node)
@@ -744,13 +733,13 @@ export class CodeQualityAnalyzer {
         }
       }
     })
-    
+
     // Duplicate code smell (simplified)
     const duplicateThreshold = 10
     for (let i = 0; i < lines.length - duplicateThreshold; i++) {
       const block = lines.slice(i, i + duplicateThreshold).join('\n')
       const remaining = lines.slice(i + duplicateThreshold).join('\n')
-      
+
       if (remaining.includes(block) && block.trim().length > 100) {
         smells.push({
           type: 'Duplicate Code',
@@ -762,7 +751,7 @@ export class CodeQualityAnalyzer {
         break // Only report first occurrence
       }
     }
-    
+
     // Magic numbers
     const magicNumbers = code.match(/\b\d{2,}\b/g) || []
     if (magicNumbers.length > 3) {
@@ -774,7 +763,7 @@ export class CodeQualityAnalyzer {
         refactoringSuggestion: 'Extract constants with meaningful names'
       })
     }
-    
+
     // Deep nesting
     let maxNesting = 0
     let currentNesting = 0
@@ -786,7 +775,7 @@ export class CodeQualityAnalyzer {
         currentNesting--
       }
     }
-    
+
     if (maxNesting > 4) {
       smells.push({
         type: 'Deep Nesting',
@@ -796,10 +785,10 @@ export class CodeQualityAnalyzer {
         refactoringSuggestion: 'Use early returns or extract nested logic'
       })
     }
-    
+
     return smells
   }
-  
+
   /**
    * Analyze cognitive complexity
    */
@@ -815,7 +804,7 @@ export class CodeQualityAnalyzer {
         details: []
       }
     }
-    
+
     let score = 0
     let nesting = 0
     let conditions = 0
@@ -823,7 +812,7 @@ export class CodeQualityAnalyzer {
     let sequences = 0
     let recursion = 0
     const details: ComplexityDetail[] = []
-    
+
     const analyze = (node: ts.Node, depth: number = 0) => {
       // Increment for control flow
       if (ts.isIfStatement(node)) {
@@ -862,7 +851,7 @@ export class CodeQualityAnalyzer {
           reason: 'Exception handling'
         })
       }
-      
+
       // Check for logical operators
       if (ts.isBinaryExpression(node)) {
         const op = node.operatorToken.getText()
@@ -877,25 +866,25 @@ export class CodeQualityAnalyzer {
           })
         }
       }
-      
+
       // Track nesting
-      const increasesNesting = 
+      const increasesNesting =
         ts.isIfStatement(node) ||
         ts.isForStatement(node) ||
         ts.isWhileStatement(node) ||
         ts.isDoStatement(node) ||
         ts.isSwitchStatement(node)
-      
+
       if (increasesNesting) {
         nesting = Math.max(nesting, depth + 1)
       }
-      
+
       // Recurse
-      ts.forEachChild(node, child => analyze(child, increasesNesting ? depth + 1 : depth))
+      ts.forEachChild(node, (child) => analyze(child, increasesNesting ? depth + 1 : depth))
     }
-    
+
     analyze(this.sourceFile)
-    
+
     return {
       score,
       nesting,
@@ -906,16 +895,16 @@ export class CodeQualityAnalyzer {
       details
     }
   }
-  
+
   /**
    * Generate quality recommendations
    */
   private generateRecommendations(analysis: Partial<CodeAnalysisResult>): QualityRecommendation[] {
     const recommendations: QualityRecommendation[] = []
-    
+
     // Security recommendations
     if (analysis.security && analysis.security.vulnerabilities.length > 0) {
-      const critical = analysis.security.vulnerabilities.filter(v => v.severity === 'critical')
+      const critical = analysis.security.vulnerabilities.filter((v) => v.severity === 'critical')
       if (critical.length > 0) {
         recommendations.push({
           category: 'security',
@@ -926,7 +915,7 @@ export class CodeQualityAnalyzer {
         })
       }
     }
-    
+
     // Maintainability recommendations
     if (analysis.maintainability && analysis.maintainability.index < 50) {
       recommendations.push({
@@ -937,7 +926,7 @@ export class CodeQualityAnalyzer {
         effort: 'high'
       })
     }
-    
+
     // Complexity recommendations
     if (analysis.cognitive && analysis.cognitive.score > 15) {
       recommendations.push({
@@ -948,7 +937,7 @@ export class CodeQualityAnalyzer {
         effort: 'medium'
       })
     }
-    
+
     // Code smell recommendations
     if (analysis.smells && analysis.smells.length > 5) {
       recommendations.push({
@@ -959,7 +948,7 @@ export class CodeQualityAnalyzer {
         effort: 'low'
       })
     }
-    
+
     // Testability recommendations
     if (analysis.testability && analysis.testability.coverage < 60) {
       recommendations.push({
@@ -970,17 +959,17 @@ export class CodeQualityAnalyzer {
         effort: 'medium'
       })
     }
-    
+
     return recommendations
   }
-  
+
   // ============================================================================
   // Helper Methods
   // ============================================================================
-  
+
   private calculateCyclomaticComplexity(node: ts.Node): number {
     let complexity = 1
-    
+
     const visit = (n: ts.Node) => {
       if (
         ts.isIfStatement(n) ||
@@ -1000,29 +989,29 @@ export class CodeQualityAnalyzer {
           complexity++
         }
       }
-      
+
       ts.forEachChild(n, visit)
     }
-    
+
     if (node) visit(node)
-    
+
     return complexity
   }
-  
+
   private calculateCognitiveScore(node: ts.Node): number {
     // Simplified cognitive complexity
     return this.calculateCyclomaticComplexity(node) * 1.5
   }
-  
+
   private countLines(node: ts.Node): number {
     const text = node.getText()
     return text.split('\n').length
   }
-  
+
   private calculateNodeComplexity(node: ts.Node): number {
     return this.calculateCyclomaticComplexity(node)
   }
-  
+
   private countReturns(node: ts.Node): number {
     let count = 0
     const visit = (n: ts.Node) => {
@@ -1032,7 +1021,7 @@ export class CodeQualityAnalyzer {
     visit(node)
     return count
   }
-  
+
   private countAsyncOperations(node: ts.Node): number {
     let count = 0
     const visit = (n: ts.Node) => {
@@ -1042,7 +1031,7 @@ export class CodeQualityAnalyzer {
     visit(node)
     return count
   }
-  
+
   private hasErrorHandling(node: ts.Node): boolean {
     let hasHandling = false
     const visit = (n: ts.Node) => {
@@ -1052,7 +1041,7 @@ export class CodeQualityAnalyzer {
     visit(node)
     return hasHandling
   }
-  
+
   private calculateCoupling(node: ts.ClassDeclaration): number {
     // Count external references (simplified)
     let coupling = 0
@@ -1068,12 +1057,12 @@ export class CodeQualityAnalyzer {
     visit(node)
     return Math.min(coupling, 100)
   }
-  
+
   private calculateCohesion(node: ts.ClassDeclaration): number {
     // Simplified cohesion (100 - coupling/2)
     return Math.max(0, 100 - this.calculateCoupling(node) / 2)
   }
-  
+
   private getLineColumn(text: string, index: number): CodeLocation {
     const lines = text.substring(0, index).split('\n')
     return {
@@ -1081,19 +1070,19 @@ export class CodeQualityAnalyzer {
       column: lines[lines.length - 1].length
     }
   }
-  
+
   private getNodeLocation(node: ts.Node): CodeLocation {
     if (!this.sourceFile) {
       return { line: 0, column: 0 }
     }
-    
+
     const { line, character } = this.sourceFile.getLineAndCharacterOfPosition(node.getStart())
     return {
       line: line + 1,
       column: character
     }
   }
-  
+
   private calculateOWASPScores(vulnerabilities: SecurityVulnerability[]): OWASPAnalysis {
     const scores: OWASPAnalysis = {
       injectionRisk: 0,
@@ -1107,10 +1096,10 @@ export class CodeQualityAnalyzer {
       componentsRisk: 0,
       loggingIssues: 0
     }
-    
-    vulnerabilities.forEach(vuln => {
+
+    vulnerabilities.forEach((vuln) => {
       const score = this.severityToNumber(vuln.severity)
-      
+
       switch (vuln.owasp) {
         case 'A03:2021':
           scores.injectionRisk += score
@@ -1140,33 +1129,40 @@ export class CodeQualityAnalyzer {
           break
       }
     })
-    
+
     return scores
   }
-  
+
   private severityToNumber(severity: string): number {
     switch (severity) {
-      case 'critical': return 10
-      case 'high': return 7
-      case 'medium': return 4
-      case 'major': return 4
-      case 'low': return 2
-      case 'minor': return 1
-      default: return 0
+      case 'critical':
+        return 10
+      case 'high':
+        return 7
+      case 'medium':
+        return 4
+      case 'major':
+        return 4
+      case 'low':
+        return 2
+      case 'minor':
+        return 1
+      default:
+        return 0
     }
   }
-  
+
   private calculateSecurityScore(vulnerabilities: SecurityVulnerability[]): number {
     if (vulnerabilities.length === 0) return 100
-    
+
     let totalPenalty = 0
-    vulnerabilities.forEach(vuln => {
+    vulnerabilities.forEach((vuln) => {
       totalPenalty += this.severityToNumber(vuln.severity)
     })
-    
+
     return Math.max(0, 100 - totalPenalty)
   }
-  
+
   private getSecurityLevel(score: number): 'safe' | 'low' | 'medium' | 'high' | 'critical' {
     if (score >= 90) return 'safe'
     if (score >= 70) return 'low'
@@ -1174,7 +1170,7 @@ export class CodeQualityAnalyzer {
     if (score >= 30) return 'high'
     return 'critical'
   }
-  
+
   private calculateOverallScore(metrics: {
     security: number
     maintainability: number
@@ -1190,11 +1186,11 @@ export class CodeQualityAnalyzer {
       complexity: 0.15,
       smells: 0.1
     }
-    
+
     // Normalize complexity and smells (inverse)
     const normalizedComplexity = Math.max(0, 100 - metrics.complexity * 2)
     const normalizedSmells = Math.max(0, 100 - metrics.smells * 10)
-    
+
     return (
       metrics.security * weights.security +
       metrics.maintainability * weights.maintainability +

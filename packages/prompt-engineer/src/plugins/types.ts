@@ -9,17 +9,14 @@ import { Context, Effect, Layer, Stream, Schema } from 'effect'
 // Core Plugin Types
 // ============================================================================
 
-export class PluginError extends Schema.TaggedError<PluginError>("PluginError")(
-  "PluginError",
-  {
-    plugin: Schema.String,
-    reason: Schema.String,
-    recoverable: Schema.Boolean
-  }
-) {}
+export class PluginError extends Schema.TaggedError<PluginError>('PluginError')('PluginError', {
+  plugin: Schema.String,
+  reason: Schema.String,
+  recoverable: Schema.Boolean
+}) {}
 
-export class PluginNotFoundError extends Schema.TaggedError<PluginNotFoundError>("PluginNotFoundError")(
-  "PluginNotFoundError", 
+export class PluginNotFoundError extends Schema.TaggedError<PluginNotFoundError>('PluginNotFoundError')(
+  'PluginNotFoundError',
   {
     pluginName: Schema.String,
     availablePlugins: Schema.Array(Schema.String)
@@ -38,24 +35,18 @@ export interface PromptEngineerPlugin {
 // Provider Plugin Interface
 // ============================================================================
 
-export class ProviderError extends Schema.TaggedError<ProviderError>("ProviderError")(
-  "ProviderError",
-  {
-    provider: Schema.String,
-    message: Schema.String,
-    code: Schema.optional(Schema.String),
-    retryable: Schema.Boolean
-  }
-) {}
+export class ProviderError extends Schema.TaggedError<ProviderError>('ProviderError')('ProviderError', {
+  provider: Schema.String,
+  message: Schema.String,
+  code: Schema.optional(Schema.String),
+  retryable: Schema.Boolean
+}) {}
 
-export class ValidationError extends Schema.TaggedError<ValidationError>("ValidationError")(
-  "ValidationError",
-  {
-    field: Schema.String,
-    message: Schema.String,
-    value: Schema.Unknown
-  }
-) {}
+export class ValidationError extends Schema.TaggedError<ValidationError>('ValidationError')('ValidationError', {
+  field: Schema.String,
+  message: Schema.String,
+  value: Schema.Unknown
+}) {}
 
 export interface GenerationOptions {
   readonly model?: string
@@ -81,16 +72,10 @@ export interface GenerationResult {
 }
 
 export interface ProviderPlugin extends PromptEngineerPlugin {
-  readonly generate: (
-    prompt: string, 
-    options?: GenerationOptions
-  ) => Effect.Effect<GenerationResult, ProviderError>
-  
-  readonly stream?: (
-    prompt: string, 
-    options?: GenerationOptions
-  ) => Stream.Stream<string, ProviderError>
-  
+  readonly generate: (prompt: string, options?: GenerationOptions) => Effect.Effect<GenerationResult, ProviderError>
+
+  readonly stream?: (prompt: string, options?: GenerationOptions) => Stream.Stream<string, ProviderError>
+
   readonly generateStructured?: <T>(
     prompt: string,
     schema: Schema.Schema<T, any>,
@@ -102,14 +87,11 @@ export interface ProviderPlugin extends PromptEngineerPlugin {
 // Storage Plugin Interface
 // ============================================================================
 
-export class StorageError extends Schema.TaggedError<StorageError>("StorageError")(
-  "StorageError",
-  {
-    operation: Schema.Literal('read', 'write', 'delete', 'clear'),
-    key: Schema.optional(Schema.String),
-    message: Schema.String
-  }
-) {}
+export class StorageError extends Schema.TaggedError<StorageError>('StorageError')('StorageError', {
+  operation: Schema.Literal('read', 'write', 'delete', 'clear'),
+  key: Schema.optional(Schema.String),
+  message: Schema.String
+}) {}
 
 export interface CacheEntry<T> {
   readonly value: T
@@ -131,14 +113,11 @@ export interface StoragePlugin extends PromptEngineerPlugin {
 // Dataset Plugin Interface
 // ============================================================================
 
-export class DatasetError extends Schema.TaggedError<DatasetError>("DatasetError")(
-  "DatasetError",
-  {
-    dataset: Schema.String,
-    operation: Schema.String,
-    message: Schema.String
-  }
-) {}
+export class DatasetError extends Schema.TaggedError<DatasetError>('DatasetError')('DatasetError', {
+  dataset: Schema.String,
+  operation: Schema.String,
+  message: Schema.String
+}) {}
 
 export interface BenchmarkTask {
   readonly id: string
@@ -192,15 +171,13 @@ export interface PluginRegistry {
   readonly register: (plugin: PromptEngineerPlugin) => Effect.Effect<void, PluginError>
   readonly unregister: (name: string) => Effect.Effect<void, PluginNotFoundError>
   readonly get: (name: string) => Effect.Effect<PromptEngineerPlugin, PluginNotFoundError>
-  readonly getByType: <T extends PromptEngineerPlugin>(
-    type: PluginType
-  ) => Effect.Effect<readonly T[], never>
+  readonly getByType: <T extends PromptEngineerPlugin>(type: PluginType) => Effect.Effect<readonly T[], never>
   readonly list: () => Effect.Effect<readonly PromptEngineerPlugin[], never>
   readonly has: (name: string) => Effect.Effect<boolean, never>
   readonly clear: () => Effect.Effect<void, never>
 }
 
-export const PluginRegistryTag = Context.GenericTag<PluginRegistry>("PluginRegistry")
+export const PluginRegistryTag = Context.GenericTag<PluginRegistry>('PluginRegistry')
 
 export type PluginType = 'provider' | 'storage' | 'dataset' | 'monitoring' | 'custom'
 
@@ -256,20 +233,12 @@ export interface PluginManifest {
 // ============================================================================
 
 export interface PluginManager {
-  readonly loadPlugin: (
-    path: string | PromptEngineerPlugin
-  ) => Effect.Effect<void, PluginError>
-  readonly loadPlugins: (
-    paths: readonly (string | PromptEngineerPlugin)[]
-  ) => Effect.Effect<void, PluginError>
+  readonly loadPlugin: (path: string | PromptEngineerPlugin) => Effect.Effect<void, PluginError>
+  readonly loadPlugins: (paths: readonly (string | PromptEngineerPlugin)[]) => Effect.Effect<void, PluginError>
   readonly initializeAll: () => Effect.Effect<void, PluginError>
   readonly cleanupAll: () => Effect.Effect<void, never>
-  readonly getPlugin: <T extends PromptEngineerPlugin>(
-    name: string
-  ) => Effect.Effect<T, PluginNotFoundError>
-  readonly getPlugins: <T extends PromptEngineerPlugin>(
-    type?: PluginType
-  ) => Effect.Effect<readonly T[], never>
+  readonly getPlugin: <T extends PromptEngineerPlugin>(name: string) => Effect.Effect<T, PluginNotFoundError>
+  readonly getPlugins: <T extends PromptEngineerPlugin>(type?: PluginType) => Effect.Effect<readonly T[], never>
 }
 
-export const PluginManagerTag = Context.GenericTag<PluginManager>("PluginManager")
+export const PluginManagerTag = Context.GenericTag<PluginManager>('PluginManager')

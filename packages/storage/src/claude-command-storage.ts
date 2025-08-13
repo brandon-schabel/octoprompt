@@ -10,11 +10,7 @@ import {
 import { toPosixPath } from '@promptliano/services'
 import { ClaudeCommandParser } from '@promptliano/services'
 import { SecurePathValidator } from '@promptliano/shared'
-import {
-  ensureString,
-  ensureNumber,
-  toNumber
-} from '@promptliano/shared/src/utils/sqlite-converters'
+import { ensureString, ensureNumber, toNumber } from '@promptliano/shared/src/utils/sqlite-converters'
 import { homedir } from 'os'
 
 // Storage schema for commands (indexed by command key)

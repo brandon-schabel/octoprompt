@@ -190,18 +190,18 @@ describe('SqliteConverters', () => {
         const originalWarn = console.warn
         let warnCalled = false
         let warnMessage = ''
-        
+
         // Mock console.warn
         console.warn = (msg: string) => {
           warnCalled = true
           warnMessage = msg
         }
-        
+
         toJson('invalid', {}, 'test.field')
-        
+
         expect(warnCalled).toBe(true)
         expect(warnMessage).toContain('Failed to parse JSON for test.field')
-        
+
         // Restore original console.warn
         console.warn = originalWarn
       })
@@ -225,19 +225,19 @@ describe('SqliteConverters', () => {
       test('handles circular references', () => {
         const obj: any = { key: 'value' }
         obj.circular = obj
-        
+
         // Store original console.warn
         const originalWarn = console.warn
         let warnCalled = false
-        
+
         // Mock console.warn
         console.warn = () => {
           warnCalled = true
         }
-        
+
         expect(fromJson(obj)).toBe(null)
         expect(warnCalled).toBe(true)
-        
+
         // Restore original console.warn
         console.warn = originalWarn
       })
@@ -354,7 +354,7 @@ describe('SqliteConverters', () => {
         const fallback = 1000000000000
         expect(toTimestamp(null, fallback)).toBe(fallback)
         expect(toTimestamp(undefined, fallback)).toBe(fallback)
-        
+
         // Without explicit fallback, uses Date.now()
         const before = Date.now()
         const result = toTimestamp(null)
@@ -458,7 +458,7 @@ describe('SqliteConverters', () => {
 
     test('validates with custom validator', () => {
       const isStringArray = (value: any): value is string[] => {
-        return Array.isArray(value) && value.every(v => typeof v === 'string')
+        return Array.isArray(value) && value.every((v) => typeof v === 'string')
       }
 
       expect(safeJsonParse('["a","b"]', [], isStringArray)).toEqual(['a', 'b'])
@@ -501,8 +501,8 @@ describe('SqliteConverters', () => {
 
         const result = rowsToRecord(
           rows,
-          row => row.id,
-          row => ({ name: row.name, value: row.value })
+          (row) => row.id,
+          (row) => ({ name: row.name, value: row.value })
         )
 
         expect(result).toEqual({
@@ -520,13 +520,13 @@ describe('SqliteConverters', () => {
 
         const result = rowsToRecord(
           rows,
-          row => row.key,
-          row => row.data
+          (row) => row.key,
+          (row) => row.data
         )
 
         expect(result).toEqual({
-          'a': 'alpha',
-          'b': 'beta'
+          a: 'alpha',
+          b: 'beta'
         })
       })
     })

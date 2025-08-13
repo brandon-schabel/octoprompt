@@ -86,7 +86,7 @@ export class ClaudeHookStorage {
   private async readSettingsFile(filePath: string): Promise<any> {
     try {
       await fs.access(filePath)
-  const content = ensureString(await fs.readFile(filePath, 'utf-8'))
+      const content = ensureString(await fs.readFile(filePath, 'utf-8'))
 
       if (!content.trim()) {
         return {}
@@ -157,7 +157,7 @@ export class ClaudeHookStorage {
         throw new ApiError(400, `Invalid configuration level: ${level}`)
     }
 
-  const settings = await this.readSettingsFile(filePath)
+    const settings = await this.readSettingsFile(filePath)
     // Return the hooks directly from settings, or empty hooks object
     return { hooks: settings.hooks || {} }
   }
@@ -189,7 +189,7 @@ export class ClaudeHookStorage {
     }
 
     // Read existing settings to preserve other configurations
-  const existingSettings = await this.readSettingsFile(filePath)
+    const existingSettings = await this.readSettingsFile(filePath)
 
     // Update hooks while preserving other settings
     const updatedSettings = {

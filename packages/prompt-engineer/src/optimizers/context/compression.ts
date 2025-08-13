@@ -23,7 +23,7 @@ export class TextCompressor {
   static lightCompress(text: string): CompressionResult {
     const original = text
     const originalTokens = TokenCounter.count(original)
-    
+
     let compressed = text
       // Remove multiple spaces
       .replace(/[ \t]+/g, ' ')
@@ -37,14 +37,14 @@ export class TextCompressor {
       .replace(/```[\s\S]*?```/g, (match) => {
         return match.replace(/\n\s*\n/g, '\n')
       })
-    
+
     const compressedTokens = TokenCounter.count(compressed)
-    
+
     return {
       compressed,
       originalTokens,
       compressedTokens,
-      compressionRatio: 1 - (compressedTokens / originalTokens),
+      compressionRatio: 1 - compressedTokens / originalTokens,
       technique: 'light'
     }
   }
@@ -53,10 +53,10 @@ export class TextCompressor {
   static moderateCompress(text: string): CompressionResult {
     const original = text
     const originalTokens = TokenCounter.count(original)
-    
+
     // Start with light compression
     let compressed = this.lightCompress(text).compressed
-    
+
     // Additional moderate compressions
     compressed = compressed
       // Simplify verbose phrases
@@ -70,10 +70,10 @@ export class TextCompressor {
       .replace(/as a result of/gi, 'because')
       .replace(/is able to/gi, 'can')
       .replace(/has the ability to/gi, 'can')
-      
+
       // Remove filler words
       .replace(/\b(very|really|actually|basically|essentially|simply|just)\b/gi, '')
-      
+
       // Compress lists
       .replace(/(\n\s*[-*]\s+[^\n]+){4,}/g, (match) => {
         const items = match.trim().split('\n')
@@ -88,32 +88,28 @@ export class TextCompressor {
         }
         return match
       })
-      
+
       // Simplify code examples
       .replace(/```[\s\S]*?```/g, (match) => {
         const lines = match.split('\n')
         if (lines.length > 20) {
           // Keep first 10 and last 5 lines of code
-          const compressed = [
-            ...lines.slice(0, 10),
-            '// ... code omitted for brevity ...',
-            ...lines.slice(-5)
-          ]
+          const compressed = [...lines.slice(0, 10), '// ... code omitted for brevity ...', ...lines.slice(-5)]
           return compressed.join('\n')
         }
         return match
       })
-    
+
     // Clean up any double spaces created
     compressed = compressed.replace(/\s+/g, ' ').trim()
-    
+
     const compressedTokens = TokenCounter.count(compressed)
-    
+
     return {
       compressed,
       originalTokens,
       compressedTokens,
-      compressionRatio: 1 - (compressedTokens / originalTokens),
+      compressionRatio: 1 - compressedTokens / originalTokens,
       technique: 'moderate'
     }
   }
@@ -122,61 +118,61 @@ export class TextCompressor {
   static aggressiveCompress(text: string): CompressionResult {
     const original = text
     const originalTokens = TokenCounter.count(original)
-    
+
     // Extract key information
     const keyPoints: string[] = []
-    
+
     // Extract headings
     const headings = text.match(/^#+\s+.+$/gm) || []
     keyPoints.push(...headings.slice(0, 5)) // Keep top 5 headings
-    
+
     // Extract TODO/IMPORTANT items
     const important = text.match(/.*(TODO|FIXME|IMPORTANT|WARNING|CRITICAL).*/gi) || []
     keyPoints.push(...important.slice(0, 3))
-    
+
     // Extract function/class definitions
     const definitions = text.match(/^(export\s+)?(function|class|interface|type)\s+\w+/gm) || []
     keyPoints.push(...definitions.slice(0, 10))
-    
+
     // Extract first sentence of each paragraph
     const paragraphs = text.split(/\n\n+/)
     const firstSentences = paragraphs
-      .map(p => {
+      .map((p) => {
         const sentence = p.match(/^[^.!?]+[.!?]/)
         return sentence ? sentence[0] : null
       })
       .filter(Boolean)
       .slice(0, 5) as string[]
     keyPoints.push(...firstSentences)
-    
+
     // Extract bullet points (max 5)
     const bullets = text.match(/^\s*[-*]\s+[^\n]+/gm) || []
     keyPoints.push(...bullets.slice(0, 5))
-    
+
     // Extract code block signatures (not full blocks)
     const codeBlocks = text.match(/```[\s\S]*?```/g) || []
-    codeBlocks.slice(0, 3).forEach(block => {
+    codeBlocks.slice(0, 3).forEach((block) => {
       const firstLine = block.split('\n')[1]
       if (firstLine) {
         keyPoints.push('Code: ' + firstLine.substring(0, 50) + '...')
       }
     })
-    
+
     // Build compressed version
     let compressed = 'KEY POINTS:\n' + keyPoints.join('\n')
-    
+
     // Add summary if original was very long
     if (originalTokens > 1000) {
       compressed = 'SUMMARY (aggressive compression applied):\n' + compressed
     }
-    
+
     const compressedTokens = TokenCounter.count(compressed)
-    
+
     return {
       compressed,
       originalTokens,
       compressedTokens,
-      compressionRatio: 1 - (compressedTokens / originalTokens),
+      compressionRatio: 1 - compressedTokens / originalTokens,
       technique: 'aggressive'
     }
   }
@@ -184,7 +180,7 @@ export class TextCompressor {
   // Intelligent compression based on content type
   static intelligentCompress(text: string, targetTokens: number): CompressionResult {
     const originalTokens = TokenCounter.count(text)
-    
+
     // If already within target, no compression needed
     if (originalTokens <= targetTokens) {
       return {
@@ -195,18 +191,18 @@ export class TextCompressor {
         technique: 'none'
       }
     }
-    
+
     // Try progressively more aggressive compression
     const compressionLevels: CompressionLevel[] = ['light', 'moderate', 'aggressive']
-    
+
     for (const level of compressionLevels) {
       const result = this.compress(text, level)
-      
+
       if (result.compressedTokens <= targetTokens) {
         return result
       }
     }
-    
+
     // If even aggressive isn't enough, truncate
     const aggressiveResult = this.aggressiveCompress(text)
     if (aggressiveResult.compressedTokens > targetTokens) {
@@ -215,11 +211,11 @@ export class TextCompressor {
         compressed: truncated,
         originalTokens,
         compressedTokens: TokenCounter.count(truncated),
-        compressionRatio: 1 - (TokenCounter.count(truncated) / originalTokens),
+        compressionRatio: 1 - TokenCounter.count(truncated) / originalTokens,
         technique: 'aggressive+truncation'
       }
     }
-    
+
     return aggressiveResult
   }
 
@@ -255,7 +251,7 @@ export class SpecializedCompressor {
   static compressCode(code: string): CompressionResult {
     const original = code
     const originalTokens = TokenCounter.count(original)
-    
+
     let compressed = code
       // Remove comments (except important ones)
       .replace(/\/\*[\s\S]*?\*\//g, (match) => {
@@ -265,18 +261,18 @@ export class SpecializedCompressor {
         return ''
       })
       .replace(/\/\/(?!.*(?:TODO|FIXME|IMPORTANT)).*$/gm, '')
-      
+
       // Remove empty lines
       .replace(/^\s*\n/gm, '')
-      
+
       // Compress whitespace in code
       .replace(/\{\s+\}/g, '{}')
       .replace(/\[\s+\]/g, '[]')
       .replace(/\(\s+\)/g, '()')
-      
+
       // Remove unnecessary semicolons (in languages that don't require them)
       .replace(/;\s*\n\s*}/g, '\n}')
-      
+
       // Compress import statements
       .replace(/(import\s+\{[^}]+\}\s+from\s+['"][^'"]+['"];?\s*\n)+/g, (match) => {
         const imports = match.trim().split('\n')
@@ -285,14 +281,14 @@ export class SpecializedCompressor {
         }
         return match
       })
-    
+
     const compressedTokens = TokenCounter.count(compressed)
-    
+
     return {
       compressed,
       originalTokens,
       compressedTokens,
-      compressionRatio: 1 - (compressedTokens / originalTokens),
+      compressionRatio: 1 - compressedTokens / originalTokens,
       technique: 'code-specific'
     }
   }
@@ -301,11 +297,11 @@ export class SpecializedCompressor {
   static compressMarkdown(markdown: string): CompressionResult {
     const original = markdown
     const originalTokens = TokenCounter.count(original)
-    
+
     let compressed = markdown
       // Remove image descriptions (keep links)
       .replace(/!\[([^\]]*)\]\([^)]+\)/g, '[image]')
-      
+
       // Compress tables
       .replace(/\|.+\|\n\|[-:\s|]+\|\n(\|.+\|\n){3,}/g, (match) => {
         const rows = match.trim().split('\n')
@@ -314,26 +310,26 @@ export class SpecializedCompressor {
         }
         return match
       })
-      
+
       // Remove blockquotes
       .replace(/^>\s+.+$/gm, '')
-      
+
       // Compress links (keep text, remove URLs)
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      
+
       // Remove horizontal rules
       .replace(/^[-*_]{3,}$/gm, '')
-      
+
       // Compress nested lists
       .replace(/^(\s{2,})[-*]\s+/gm, '  - ')
-    
+
     const compressedTokens = TokenCounter.count(compressed)
-    
+
     return {
       compressed,
       originalTokens,
       compressedTokens,
-      compressionRatio: 1 - (compressedTokens / originalTokens),
+      compressionRatio: 1 - compressedTokens / originalTokens,
       technique: 'markdown-specific'
     }
   }
@@ -342,14 +338,14 @@ export class SpecializedCompressor {
   static compressJSON(json: string): CompressionResult {
     const original = json
     const originalTokens = TokenCounter.count(original)
-    
+
     try {
       const parsed = JSON.parse(json)
-      
+
       // Remove null values
       const removeNulls = (obj: any): any => {
         if (Array.isArray(obj)) {
-          return obj.map(removeNulls).filter(v => v !== null)
+          return obj.map(removeNulls).filter((v) => v !== null)
         } else if (obj !== null && typeof obj === 'object') {
           return Object.entries(obj)
             .filter(([_, v]) => v !== null)
@@ -357,18 +353,18 @@ export class SpecializedCompressor {
         }
         return obj
       }
-      
+
       const cleaned = removeNulls(parsed)
-      
+
       // Minify JSON
       const compressed = JSON.stringify(cleaned)
       const compressedTokens = TokenCounter.count(compressed)
-      
+
       return {
         compressed,
         originalTokens,
         compressedTokens,
-        compressionRatio: 1 - (compressedTokens / originalTokens),
+        compressionRatio: 1 - compressedTokens / originalTokens,
         technique: 'json-minification'
       }
     } catch {
@@ -389,7 +385,7 @@ export class SpecializedCompressor {
     const isCode = /^(import|export|function|class|const|let|var)\s/m.test(content)
     const isMarkdown = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s/m.test(content)
     const isJSON = /^\s*[\{\[]/.test(content) && /[\}\]]\s*$/.test(content)
-    
+
     // Apply specialized compression based on type
     if (isJSON) {
       return this.compressJSON(content)
@@ -427,32 +423,29 @@ export class CompressionPipeline {
   }
 
   removeWhitespace(): this {
-    return this.addStage(text => text.replace(/\s+/g, ' ').trim())
+    return this.addStage((text) => text.replace(/\s+/g, ' ').trim())
   }
 
   removeComments(): this {
-    return this.addStage(text => 
-      text.replace(/\/\*[\s\S]*?\*\//g, '')
-          .replace(/\/\/.*$/gm, '')
-    )
+    return this.addStage((text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, ''))
   }
 
   abbreviate(): this {
     const abbreviations: Record<string, string> = {
-      'function': 'fn',
-      'return': 'ret',
-      'const': 'c',
-      'let': 'l',
-      'variable': 'var',
-      'parameter': 'param',
-      'argument': 'arg',
-      'object': 'obj',
-      'string': 'str',
-      'number': 'num',
-      'boolean': 'bool'
+      function: 'fn',
+      return: 'ret',
+      const: 'c',
+      let: 'l',
+      variable: 'var',
+      parameter: 'param',
+      argument: 'arg',
+      object: 'obj',
+      string: 'str',
+      number: 'num',
+      boolean: 'bool'
     }
-    
-    return this.addStage(text => {
+
+    return this.addStage((text) => {
       let result = text
       Object.entries(abbreviations).forEach(([full, abbr]) => {
         result = result.replace(new RegExp(`\\b${full}\\b`, 'gi'), abbr)
@@ -463,19 +456,19 @@ export class CompressionPipeline {
 
   execute(text: string): CompressionResult {
     const originalTokens = TokenCounter.count(text)
-    
+
     let compressed = text
     for (const stage of this.stages) {
       compressed = stage(compressed)
     }
-    
+
     const compressedTokens = TokenCounter.count(compressed)
-    
+
     return {
       compressed,
       originalTokens,
       compressedTokens,
-      compressionRatio: 1 - (compressedTokens / originalTokens),
+      compressionRatio: 1 - compressedTokens / originalTokens,
       technique: 'pipeline'
     }
   }

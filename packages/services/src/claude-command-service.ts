@@ -57,11 +57,14 @@ export async function createCommand(projectPath: string, data: CreateClaudeComma
   }
 }
 
-export async function listCommands(projectPath: string, query: SearchCommandsQuery = {
-  includeGlobal: true,
-  limit: 20,
-  offset: 0
-}): Promise<ClaudeCommand[]> {
+export async function listCommands(
+  projectPath: string,
+  query: SearchCommandsQuery = {
+    includeGlobal: true,
+    limit: 20,
+    offset: 0
+  }
+): Promise<ClaudeCommand[]> {
   try {
     const allCommands = await claudeCommandStorage.readCommands(projectPath, query.includeGlobal !== false)
 

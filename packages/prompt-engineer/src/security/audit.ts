@@ -111,20 +111,22 @@ export class AuditLogger {
   private metrics: Ref.Ref<AuditMetrics>
   private alertQueue: Queue.Queue<AuditEvent>
   private exportTimer: NodeJS.Timeout | null = null
-  
-  constructor(config: AuditConfig = {
-    maxEvents: 10000,
-    retentionDays: 30,
-    logLevel: 'info',
-    enableStackTrace: false,
-    enableMetrics: true,
-    exportFormat: 'json'
-  }) {
+
+  constructor(
+    config: AuditConfig = {
+      maxEvents: 10000,
+      retentionDays: 30,
+      logLevel: 'info',
+      enableStackTrace: false,
+      enableMetrics: true,
+      exportFormat: 'json'
+    }
+  ) {
     this.config = config
     this.events = Ref.unsafeMake(Chunk.empty())
     this.metrics = Ref.unsafeMake(this.initializeMetrics())
     this.alertQueue = Queue.unbounded<AuditEvent>()
-    
+
     // Start export timer if configured
     if (config.exportInterval && config.exportInterval > 0) {
       this.startExportTimer()
@@ -135,41 +137,45 @@ export class AuditLogger {
    * Log an audit event
    */
   log(event: Omit<AuditEvent, 'id' | 'timestamp'>): Effect.Effect<void, never> {
-    return Effect.gen(function* (_) {
-      const fullEvent: AuditEvent = {
-        ...event,
-        id: this.generateEventId(),
-        timestamp: new Date(),
-        stackTrace: this.config.enableStackTrace ? this.captureStackTrace() : undefined
-      }
-      
-      // Check severity level
-      if (!this.shouldLog(fullEvent.severity)) {
-        return
-      }
-      
-      // Add to events
-      yield* _(Ref.update(this.events, events => {
-        const updated = pipe(events, Chunk.prepend(fullEvent))
-        // Maintain max events
-        return Chunk.take(updated, this.config.maxEvents)
-      }))
-      
-      // Update metrics
-      if (this.config.enableMetrics) {
-        yield* _(this.updateMetrics(fullEvent))
-      }
-      
-      // Check for alerts
-      if (this.shouldAlert(fullEvent)) {
-        yield* _(Queue.offer(this.alertQueue, fullEvent))
-      }
-      
-      // Log to console in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[AUDIT] ${fullEvent.type}: ${fullEvent.details.action}`)
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const fullEvent: AuditEvent = {
+          ...event,
+          id: this.generateEventId(),
+          timestamp: new Date(),
+          stackTrace: this.config.enableStackTrace ? this.captureStackTrace() : undefined
+        }
+
+        // Check severity level
+        if (!this.shouldLog(fullEvent.severity)) {
+          return
+        }
+
+        // Add to events
+        yield* _(
+          Ref.update(this.events, (events) => {
+            const updated = pipe(events, Chunk.prepend(fullEvent))
+            // Maintain max events
+            return Chunk.take(updated, this.config.maxEvents)
+          })
+        )
+
+        // Update metrics
+        if (this.config.enableMetrics) {
+          yield* _(this.updateMetrics(fullEvent))
+        }
+
+        // Check for alerts
+        if (this.shouldAlert(fullEvent)) {
+          yield* _(Queue.offer(this.alertQueue, fullEvent))
+        }
+
+        // Log to console in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[AUDIT] ${fullEvent.type}: ${fullEvent.details.action}`)
+        }
+      }.bind(this)
+    )
   }
 
   /**
@@ -187,7 +193,7 @@ export class AuditLogger {
         prompt: result.original,
         sanitizedPrompt: result.sanitized,
         threats: result.threats,
-        modifications: result.modifications.map(m => m.reason),
+        modifications: result.modifications.map((m) => m.reason),
         riskScore: this.calculateRiskScore(result.riskLevel)
       }
     })
@@ -199,8 +205,7 @@ export class AuditLogger {
   logRCIAnalysis(result: RCIResult, userId?: string): Effect.Effect<void, never> {
     return this.log({
       type: 'rci_analysis',
-      severity: result.robustnessScore < 50 ? 'critical' : 
-                result.robustnessScore < 70 ? 'warning' : 'info',
+      severity: result.robustnessScore < 50 ? 'critical' : result.robustnessScore < 70 ? 'warning' : 'info',
       source: 'rci',
       userId,
       details: {
@@ -218,11 +223,7 @@ export class AuditLogger {
   /**
    * Log a threat detection
    */
-  logThreatDetection(
-    threat: SecurityThreat,
-    blocked: boolean,
-    userId?: string
-  ): Effect.Effect<void, never> {
+  logThreatDetection(threat: SecurityThreat, blocked: boolean, userId?: string): Effect.Effect<void, never> {
     return this.log({
       type: 'threat_detected',
       severity: threat.severity,
@@ -240,12 +241,7 @@ export class AuditLogger {
   /**
    * Log a jailbreak attempt
    */
-  logJailbreakAttempt(
-    prompt: string,
-    method: string,
-    blocked: boolean,
-    userId?: string
-  ): Effect.Effect<void, never> {
+  logJailbreakAttempt(prompt: string, method: string, blocked: boolean, userId?: string): Effect.Effect<void, never> {
     return this.log({
       type: 'jailbreak_attempt',
       severity: 'critical',
@@ -267,43 +263,43 @@ export class AuditLogger {
   /**
    * Get audit events
    */
-  getEvents(
-    filter?: {
-      type?: AuditEventType
-      severity?: string
-      userId?: string
-      startDate?: Date
-      endDate?: Date
-      limit?: number
-    }
-  ): Effect.Effect<AuditEvent[], never> {
-    return Effect.gen(function* (_) {
-      const events = yield* _(Ref.get(this.events))
-      let filtered = Chunk.toArray(events)
-      
-      if (filter) {
-        if (filter.type) {
-          filtered = filtered.filter(e => e.type === filter.type)
+  getEvents(filter?: {
+    type?: AuditEventType
+    severity?: string
+    userId?: string
+    startDate?: Date
+    endDate?: Date
+    limit?: number
+  }): Effect.Effect<AuditEvent[], never> {
+    return Effect.gen(
+      function* (_) {
+        const events = yield* _(Ref.get(this.events))
+        let filtered = Chunk.toArray(events)
+
+        if (filter) {
+          if (filter.type) {
+            filtered = filtered.filter((e) => e.type === filter.type)
+          }
+          if (filter.severity) {
+            filtered = filtered.filter((e) => e.severity === filter.severity)
+          }
+          if (filter.userId) {
+            filtered = filtered.filter((e) => e.userId === filter.userId)
+          }
+          if (filter.startDate) {
+            filtered = filtered.filter((e) => e.timestamp >= filter.startDate!)
+          }
+          if (filter.endDate) {
+            filtered = filtered.filter((e) => e.timestamp <= filter.endDate!)
+          }
+          if (filter.limit) {
+            filtered = filtered.slice(0, filter.limit)
+          }
         }
-        if (filter.severity) {
-          filtered = filtered.filter(e => e.severity === filter.severity)
-        }
-        if (filter.userId) {
-          filtered = filtered.filter(e => e.userId === filter.userId)
-        }
-        if (filter.startDate) {
-          filtered = filtered.filter(e => e.timestamp >= filter.startDate!)
-        }
-        if (filter.endDate) {
-          filtered = filtered.filter(e => e.timestamp <= filter.endDate!)
-        }
-        if (filter.limit) {
-          filtered = filtered.slice(0, filter.limit)
-        }
-      }
-      
-      return filtered
-    }.bind(this))
+
+        return filtered
+      }.bind(this)
+    )
   }
 
   /**
@@ -316,55 +312,56 @@ export class AuditLogger {
   /**
    * Generate audit report
    */
-  generateReport(
-    startDate: Date,
-    endDate: Date
-  ): Effect.Effect<AuditReport, never> {
-    return Effect.gen(function* (_) {
-      const events = yield* _(this.getEvents({ startDate, endDate }))
-      const metrics = yield* _(this.getMetrics())
-      
-      // Get critical events
-      const criticalEvents = events.filter(e => e.severity === 'critical')
-      
-      // Generate recommendations
-      const recommendations = this.generateRecommendations(events, metrics)
-      
-      // Check compliance
-      const complianceStatus = this.checkCompliance(events)
-      
-      return {
-        startDate,
-        endDate,
-        summary: metrics,
-        criticalEvents,
-        recommendations,
-        complianceStatus
-      }
-    }.bind(this))
+  generateReport(startDate: Date, endDate: Date): Effect.Effect<AuditReport, never> {
+    return Effect.gen(
+      function* (_) {
+        const events = yield* _(this.getEvents({ startDate, endDate }))
+        const metrics = yield* _(this.getMetrics())
+
+        // Get critical events
+        const criticalEvents = events.filter((e) => e.severity === 'critical')
+
+        // Generate recommendations
+        const recommendations = this.generateRecommendations(events, metrics)
+
+        // Check compliance
+        const complianceStatus = this.checkCompliance(events)
+
+        return {
+          startDate,
+          endDate,
+          summary: metrics,
+          criticalEvents,
+          recommendations,
+          complianceStatus
+        }
+      }.bind(this)
+    )
   }
 
   /**
    * Export audit logs
    */
   exportLogs(): Effect.Effect<string, never> {
-    return Effect.gen(function* (_) {
-      const events = yield* _(Ref.get(this.events))
-      
-      switch (this.config.exportFormat) {
-        case 'json':
-          return JSON.stringify(Chunk.toArray(events), null, 2)
-        
-        case 'csv':
-          return this.exportToCSV(Chunk.toArray(events))
-        
-        case 'syslog':
-          return this.exportToSyslog(Chunk.toArray(events))
-        
-        default:
-          return JSON.stringify(Chunk.toArray(events))
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const events = yield* _(Ref.get(this.events))
+
+        switch (this.config.exportFormat) {
+          case 'json':
+            return JSON.stringify(Chunk.toArray(events), null, 2)
+
+          case 'csv':
+            return this.exportToCSV(Chunk.toArray(events))
+
+          case 'syslog':
+            return this.exportToSyslog(Chunk.toArray(events))
+
+          default:
+            return JSON.stringify(Chunk.toArray(events))
+        }
+      }.bind(this)
+    )
   }
 
   /**
@@ -419,66 +416,62 @@ export class AuditLogger {
 
   private shouldAlert(event: AuditEvent): boolean {
     if (!this.config.alertThreshold) return false
-    
+
     if (event.severity === 'critical' && this.config.alertThreshold.critical > 0) {
       return true
     }
-    
+
     if (event.severity === 'error' && this.config.alertThreshold.high > 0) {
       return true
     }
-    
+
     // Alert on specific event types
-    const alertTypes: AuditEventType[] = [
-      'jailbreak_attempt',
-      'data_exfiltration_attempt',
-      'unauthorized_access'
-    ]
-    
+    const alertTypes: AuditEventType[] = ['jailbreak_attempt', 'data_exfiltration_attempt', 'unauthorized_access']
+
     return alertTypes.includes(event.type)
   }
 
   private updateMetrics(event: AuditEvent): Effect.Effect<void, never> {
-    return Ref.update(this.metrics, metrics => {
+    return Ref.update(this.metrics, (metrics) => {
       const updated = { ...metrics }
-      
+
       // Update counts
       updated.totalEvents++
-      
+
       // Update by type
       const typeCount = updated.eventsByType.get(event.type) || 0
       updated.eventsByType.set(event.type, typeCount + 1)
-      
+
       // Update by severity
       const severityCount = updated.eventsBySeverity.get(event.severity) || 0
       updated.eventsBySeverity.set(event.severity, severityCount + 1)
-      
+
       // Update threat metrics
       if (event.details.threats && event.details.threats.length > 0) {
         if (event.details.result === 'blocked') {
           updated.threatsBlocked++
         }
       }
-      
+
       // Update vulnerability metrics
       if (event.details.vulnerabilities && event.details.vulnerabilities.length > 0) {
         updated.vulnerabilitiesFound += event.details.vulnerabilities.length
       }
-      
+
       // Update risk score
       if (event.details.riskScore !== undefined) {
         const totalScore = updated.averageRiskScore * (updated.totalEvents - 1) + event.details.riskScore
         updated.averageRiskScore = totalScore / updated.totalEvents
       }
-      
+
       // Update recent alerts
       if (event.severity === 'critical' || event.severity === 'error') {
         updated.recentAlerts = [event, ...updated.recentAlerts.slice(0, 9)]
       }
-      
+
       // Update top threats
       updated.topThreats = this.calculateTopThreats(updated.eventsByType)
-      
+
       return updated
     })
   }
@@ -490,7 +483,7 @@ export class AuditLogger {
       'jailbreak_attempt',
       'data_exfiltration_attempt'
     ]
-    
+
     return Array.from(eventsByType.entries())
       .filter(([type]) => threatTypes.includes(type))
       .map(([type, count]) => ({ type, count }))
@@ -498,7 +491,9 @@ export class AuditLogger {
       .slice(0, 5)
   }
 
-  private getSeverityFromRisk(risk: 'safe' | 'low' | 'medium' | 'high' | 'critical'): 'info' | 'warning' | 'error' | 'critical' {
+  private getSeverityFromRisk(
+    risk: 'safe' | 'low' | 'medium' | 'high' | 'critical'
+  ): 'info' | 'warning' | 'error' | 'critical' {
     switch (risk) {
       case 'safe':
       case 'low':
@@ -514,73 +509,74 @@ export class AuditLogger {
 
   private calculateRiskScore(risk: 'safe' | 'low' | 'medium' | 'high' | 'critical'): number {
     switch (risk) {
-      case 'safe': return 0
-      case 'low': return 25
-      case 'medium': return 50
-      case 'high': return 75
-      case 'critical': return 100
+      case 'safe':
+        return 0
+      case 'low':
+        return 25
+      case 'medium':
+        return 50
+      case 'high':
+        return 75
+      case 'critical':
+        return 100
     }
   }
 
   private generateRecommendations(events: AuditEvent[], metrics: AuditMetrics): string[] {
     const recommendations: string[] = []
-    
+
     if (metrics.averageRiskScore > 70) {
       recommendations.push('High average risk score detected. Review security policies.')
     }
-    
+
     if (metrics.threatsBlocked > 100) {
       recommendations.push('High number of threats blocked. Consider implementing stricter input validation.')
     }
-    
-    const jailbreakAttempts = events.filter(e => e.type === 'jailbreak_attempt').length
+
+    const jailbreakAttempts = events.filter((e) => e.type === 'jailbreak_attempt').length
     if (jailbreakAttempts > 5) {
       recommendations.push('Multiple jailbreak attempts detected. Enhance prompt hardening.')
     }
-    
-    const criticalEvents = events.filter(e => e.severity === 'critical').length
+
+    const criticalEvents = events.filter((e) => e.severity === 'critical').length
     if (criticalEvents > 10) {
       recommendations.push('High number of critical events. Immediate security review recommended.')
     }
-    
+
     return recommendations
   }
 
   private checkCompliance(events: AuditEvent[]): ComplianceStatus {
     const violations: ComplianceViolation[] = []
-    
+
     // Check for unmitigated threats
-    const unmitigatedThreats = events.filter(e => 
-      e.details.threats && 
-      e.details.threats.length > 0 && 
-      !e.details.mitigationApplied
+    const unmitigatedThreats = events.filter(
+      (e) => e.details.threats && e.details.threats.length > 0 && !e.details.mitigationApplied
     )
-    
+
     if (unmitigatedThreats.length > 0) {
       violations.push({
         rule: 'THREAT_MITIGATION',
         description: 'Threats detected without mitigation',
         severity: 'high',
-        events: unmitigatedThreats.map(e => e.id),
+        events: unmitigatedThreats.map((e) => e.id),
         remediation: 'Enable automatic threat mitigation'
       })
     }
-    
+
     // Check for high-risk prompts
-    const highRiskPrompts = events.filter(e => 
-      e.details.riskScore && e.details.riskScore > 80
-    )
-    
+    const highRiskPrompts = events.filter((e) => e.details.riskScore && e.details.riskScore > 80)
+
     if (highRiskPrompts.length > 5) {
       violations.push({
         rule: 'RISK_THRESHOLD',
         description: 'Multiple high-risk prompts processed',
         severity: 'medium',
-        events: highRiskPrompts.map(e => e.id),
+        events: highRiskPrompts.map((e) => e.id),
         remediation: 'Implement stricter prompt validation'
       })
     }
-    
+
     return {
       compliant: violations.length === 0,
       violations,
@@ -591,7 +587,7 @@ export class AuditLogger {
 
   private exportToCSV(events: AuditEvent[]): string {
     const headers = ['ID', 'Timestamp', 'Type', 'Severity', 'Source', 'Action', 'Result', 'User']
-    const rows = events.map(e => [
+    const rows = events.map((e) => [
       e.id,
       e.timestamp.toISOString(),
       e.type,
@@ -601,17 +597,19 @@ export class AuditLogger {
       e.details.result,
       e.userId || ''
     ])
-    
-    return [headers, ...rows].map(row => row.join(',')).join('\n')
+
+    return [headers, ...rows].map((row) => row.join(',')).join('\n')
   }
 
   private exportToSyslog(events: AuditEvent[]): string {
-    return events.map(e => {
-      const priority = this.getSyslogPriority(e.severity)
-      const timestamp = e.timestamp.toISOString()
-      const message = `${e.type}: ${e.details.action} - ${e.details.result}`
-      return `<${priority}>${timestamp} ${e.source} ${message}`
-    }).join('\n')
+    return events
+      .map((e) => {
+        const priority = this.getSyslogPriority(e.severity)
+        const timestamp = e.timestamp.toISOString()
+        const message = `${e.type}: ${e.details.action} - ${e.details.result}`
+        return `<${priority}>${timestamp} ${e.source} ${message}`
+      })
+      .join('\n')
   }
 
   private getSyslogPriority(severity: string): number {
@@ -634,14 +632,16 @@ export class AuditLogger {
   }
 
   private performAutoExport(): Effect.Effect<void, never> {
-    return Effect.gen(function* (_) {
-      const exportData = yield* _(this.exportLogs())
-      
-      if (this.config.exportPath) {
-        // In a real implementation, write to file
-        console.log(`Exporting audit logs to ${this.config.exportPath}`)
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const exportData = yield* _(this.exportLogs())
+
+        if (this.config.exportPath) {
+          // In a real implementation, write to file
+          console.log(`Exporting audit logs to ${this.config.exportPath}`)
+        }
+      }.bind(this)
+    )
   }
 }
 

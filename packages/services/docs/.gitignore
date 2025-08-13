@@ -1,0 +1,11 @@
+# Generated API documentation
+api/
+api-markdown/
+
+# Temporary files
+*.tmp
+*.log
+
+# IDE files
+.DS_Store
+Thumbs.db

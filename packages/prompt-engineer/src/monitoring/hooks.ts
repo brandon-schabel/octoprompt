@@ -10,7 +10,7 @@ import type { OptimizedPrompt, PromptAnalysis } from '../types'
 // Event Types
 // ============================================================================
 
-export type MonitoringEventType = 
+export type MonitoringEventType =
   | 'optimization_start'
   | 'optimization_complete'
   | 'optimization_error'
@@ -87,13 +87,13 @@ export interface PromptEngineerMetrics {
   readonly cacheHits: Metric.Metric.Counter<number>
   readonly cacheMisses: Metric.Metric.Counter<number>
   readonly errors: Metric.Metric.Counter<number>
-  
+
   // Histograms
   readonly optimizationDuration: Metric.Metric.Histogram<number>
   readonly tokenReduction: Metric.Metric.Histogram<number>
   readonly improvementScore: Metric.Metric.Histogram<number>
   readonly cacheSize: Metric.Metric.Histogram<number>
-  
+
   // Gauges
   readonly activeOptimizations: Metric.Metric.Gauge<number>
   readonly cacheUtilization: Metric.Metric.Gauge<number>
@@ -114,7 +114,7 @@ export const createMetrics = (): PromptEngineerMetrics => ({
   errors: Metric.counter('prompt_engineer.errors.total', {
     description: 'Total number of errors'
   }),
-  
+
   // Histograms
   optimizationDuration: Metric.histogram('prompt_engineer.optimization.duration_ms', {
     description: 'Optimization duration in milliseconds',
@@ -132,7 +132,7 @@ export const createMetrics = (): PromptEngineerMetrics => ({
     description: 'Cache entry size in bytes',
     boundaries: [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000]
   }),
-  
+
   // Gauges
   activeOptimizations: Metric.gauge('prompt_engineer.optimizations.active', {
     description: 'Number of active optimizations'
@@ -155,11 +155,7 @@ export class MonitoringService {
   private events: Ref.Ref<MonitoringEvent[]>
   private maxEventHistory: number
 
-  constructor(
-    hooks: MonitoringHooks = {},
-    enableMetrics: boolean = true,
-    maxEventHistory: number = 1000
-  ) {
+  constructor(hooks: MonitoringHooks = {}, enableMetrics: boolean = true, maxEventHistory: number = 1000) {
     this.hooks = hooks
     this.metrics = createMetrics()
     this.events = Ref.unsafeMake<MonitoringEvent[]>([])
@@ -170,68 +166,72 @@ export class MonitoringService {
    * Record an event
    */
   recordEvent(event: MonitoringEvent): Effect.Effect<void, never> {
-    return Effect.gen(function* (_) {
-      // Store event in history
-      yield* _(Ref.update(this.events, (events) => {
-        const updated = [...events, event]
-        // Keep only the last N events
-        return updated.slice(-this.maxEventHistory)
-      }))
-      
-      // Call general event hook
-      if (this.hooks.onEvent) {
-        yield* _(this.hooks.onEvent(event))
-      }
-      
-      // Call specific hooks based on event type
-      switch (event.type) {
-        case 'optimization_start':
-          if (this.hooks.onOptimizationStart) {
-            yield* _(this.hooks.onOptimizationStart(event as OptimizationEvent))
-          }
-          yield* _(this.metrics.activeOptimizations.update(1))
-          break
-          
-        case 'optimization_complete':
-          if (this.hooks.onOptimizationComplete) {
-            yield* _(this.hooks.onOptimizationComplete(event as OptimizationEvent))
-          }
-          yield* _(this.metrics.activeOptimizations.update(-1))
-          yield* _(this.metrics.optimizationCount.update(1))
-          
-          if (event.duration) {
-            yield* _(this.metrics.optimizationDuration.update(event.duration))
-          }
-          
-          const optimizationData = event.data as any
-          if (optimizationData.result?.improvementScore) {
-            yield* _(this.metrics.improvementScore.update(optimizationData.result.improvementScore))
-          }
-          break
-          
-        case 'optimization_error':
-          if (this.hooks.onOptimizationError) {
-            yield* _(this.hooks.onOptimizationError(event as OptimizationEvent))
-          }
-          yield* _(this.metrics.activeOptimizations.update(-1))
-          yield* _(this.metrics.errors.update(1))
-          break
-          
-        case 'cache_hit':
-          if (this.hooks.onCacheHit) {
-            yield* _(this.hooks.onCacheHit(event as CacheEvent))
-          }
-          yield* _(this.metrics.cacheHits.update(1))
-          break
-          
-        case 'cache_miss':
-          if (this.hooks.onCacheMiss) {
-            yield* _(this.hooks.onCacheMiss(event as CacheEvent))
-          }
-          yield* _(this.metrics.cacheMisses.update(1))
-          break
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        // Store event in history
+        yield* _(
+          Ref.update(this.events, (events) => {
+            const updated = [...events, event]
+            // Keep only the last N events
+            return updated.slice(-this.maxEventHistory)
+          })
+        )
+
+        // Call general event hook
+        if (this.hooks.onEvent) {
+          yield* _(this.hooks.onEvent(event))
+        }
+
+        // Call specific hooks based on event type
+        switch (event.type) {
+          case 'optimization_start':
+            if (this.hooks.onOptimizationStart) {
+              yield* _(this.hooks.onOptimizationStart(event as OptimizationEvent))
+            }
+            yield* _(this.metrics.activeOptimizations.update(1))
+            break
+
+          case 'optimization_complete':
+            if (this.hooks.onOptimizationComplete) {
+              yield* _(this.hooks.onOptimizationComplete(event as OptimizationEvent))
+            }
+            yield* _(this.metrics.activeOptimizations.update(-1))
+            yield* _(this.metrics.optimizationCount.update(1))
+
+            if (event.duration) {
+              yield* _(this.metrics.optimizationDuration.update(event.duration))
+            }
+
+            const optimizationData = event.data as any
+            if (optimizationData.result?.improvementScore) {
+              yield* _(this.metrics.improvementScore.update(optimizationData.result.improvementScore))
+            }
+            break
+
+          case 'optimization_error':
+            if (this.hooks.onOptimizationError) {
+              yield* _(this.hooks.onOptimizationError(event as OptimizationEvent))
+            }
+            yield* _(this.metrics.activeOptimizations.update(-1))
+            yield* _(this.metrics.errors.update(1))
+            break
+
+          case 'cache_hit':
+            if (this.hooks.onCacheHit) {
+              yield* _(this.hooks.onCacheHit(event as CacheEvent))
+            }
+            yield* _(this.metrics.cacheHits.update(1))
+            break
+
+          case 'cache_miss':
+            if (this.hooks.onCacheMiss) {
+              yield* _(this.hooks.onCacheMiss(event as CacheEvent))
+            }
+            yield* _(this.metrics.cacheMisses.update(1))
+            break
+        }
+      }.bind(this)
+    )
   }
 
   /**
@@ -242,7 +242,7 @@ export class MonitoringService {
     stopAndRecord: (type: MonitoringEventType, data: Record<string, unknown>) => Effect.Effect<void, never>
   } {
     const startTime = Date.now()
-    
+
     return {
       stop: () => Date.now() - startTime,
       stopAndRecord: (type: MonitoringEventType, data: Record<string, unknown>) => {
@@ -272,24 +272,28 @@ export class MonitoringService {
     const startType = `${options.type || 'optimization'}_start` as MonitoringEventType
     const completeType = `${options.type || 'optimization'}_complete` as MonitoringEventType
     const errorType = `${options.type || 'optimization'}_error` as MonitoringEventType
-    
+
     return pipe(
       Effect.Do,
-      Effect.tap(() => this.recordEvent({
-        type: startType,
-        timestamp: Date.now(),
-        data: {
-          name: options.name,
-          ...options.metadata
-        }
-      })),
+      Effect.tap(() =>
+        this.recordEvent({
+          type: startType,
+          timestamp: Date.now(),
+          data: {
+            name: options.name,
+            ...options.metadata
+          }
+        })
+      ),
       Effect.flatMap(() => effect),
-      Effect.tap((result) => timer.stopAndRecord(completeType, {
-        name: options.name,
-        result,
-        ...options.metadata
-      })),
-      Effect.catchAll((error) => 
+      Effect.tap((result) =>
+        timer.stopAndRecord(completeType, {
+          name: options.name,
+          result,
+          ...options.metadata
+        })
+      ),
+      Effect.catchAll((error) =>
         pipe(
           timer.stopAndRecord(errorType, {
             name: options.name,
@@ -313,33 +317,35 @@ export class MonitoringService {
    * Get metrics snapshot
    */
   getMetricsSnapshot(): Effect.Effect<Record<string, number>, never> {
-    return Effect.gen(function* (_) {
-      const snapshot: Record<string, number> = {}
-      
-      // Get counter values
-      snapshot['optimizations.total'] = yield* _(Metric.value(this.metrics.optimizationCount))
-      snapshot['cache.hits'] = yield* _(Metric.value(this.metrics.cacheHits))
-      snapshot['cache.misses'] = yield* _(Metric.value(this.metrics.cacheMisses))
-      snapshot['errors.total'] = yield* _(Metric.value(this.metrics.errors))
-      
-      // Get gauge values
-      snapshot['optimizations.active'] = yield* _(Metric.value(this.metrics.activeOptimizations))
-      
-      // Calculate cache hit rate
-      const hits = snapshot['cache.hits']
-      const misses = snapshot['cache.misses']
-      const total = hits + misses
-      snapshot['cache.hit_rate'] = total > 0 ? (hits / total) * 100 : 0
-      
-      // Get memory usage
-      if (typeof process !== 'undefined' && process.memoryUsage) {
-        const memUsage = process.memoryUsage()
-        snapshot['memory.heap_used_mb'] = memUsage.heapUsed / 1024 / 1024
-        snapshot['memory.heap_total_mb'] = memUsage.heapTotal / 1024 / 1024
-      }
-      
-      return snapshot
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const snapshot: Record<string, number> = {}
+
+        // Get counter values
+        snapshot['optimizations.total'] = yield* _(Metric.value(this.metrics.optimizationCount))
+        snapshot['cache.hits'] = yield* _(Metric.value(this.metrics.cacheHits))
+        snapshot['cache.misses'] = yield* _(Metric.value(this.metrics.cacheMisses))
+        snapshot['errors.total'] = yield* _(Metric.value(this.metrics.errors))
+
+        // Get gauge values
+        snapshot['optimizations.active'] = yield* _(Metric.value(this.metrics.activeOptimizations))
+
+        // Calculate cache hit rate
+        const hits = snapshot['cache.hits']
+        const misses = snapshot['cache.misses']
+        const total = hits + misses
+        snapshot['cache.hit_rate'] = total > 0 ? (hits / total) * 100 : 0
+
+        // Get memory usage
+        if (typeof process !== 'undefined' && process.memoryUsage) {
+          const memUsage = process.memoryUsage()
+          snapshot['memory.heap_used_mb'] = memUsage.heapUsed / 1024 / 1024
+          snapshot['memory.heap_total_mb'] = memUsage.heapTotal / 1024 / 1024
+        }
+
+        return snapshot
+      }.bind(this)
+    )
   }
 
   /**
@@ -353,22 +359,24 @@ export class MonitoringService {
    * Export metrics for external monitoring systems
    */
   exportMetrics(format: 'prometheus' | 'json' = 'json'): Effect.Effect<string, never> {
-    return Effect.gen(function* (_) {
-      const snapshot = yield* _(this.getMetricsSnapshot())
-      
-      if (format === 'prometheus') {
-        // Format as Prometheus metrics
-        const lines: string[] = []
-        for (const [key, value] of Object.entries(snapshot)) {
-          const metricName = `prompt_engineer_${key.replace(/\./g, '_')}`
-          lines.push(`${metricName} ${value}`)
+    return Effect.gen(
+      function* (_) {
+        const snapshot = yield* _(this.getMetricsSnapshot())
+
+        if (format === 'prometheus') {
+          // Format as Prometheus metrics
+          const lines: string[] = []
+          for (const [key, value] of Object.entries(snapshot)) {
+            const metricName = `prompt_engineer_${key.replace(/\./g, '_')}`
+            lines.push(`${metricName} ${value}`)
+          }
+          return lines.join('\n')
+        } else {
+          // Format as JSON
+          return JSON.stringify(snapshot, null, 2)
         }
-        return lines.join('\n')
-      } else {
-        // Format as JSON
-        return JSON.stringify(snapshot, null, 2)
-      }
-    }.bind(this))
+      }.bind(this)
+    )
   }
 }
 

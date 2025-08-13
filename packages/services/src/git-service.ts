@@ -969,7 +969,8 @@ export async function getTags(projectId: number): Promise<GitTag[]> {
     ])
 
     return tags.all.map((tagLine) => {
-      const [name = '', commit = '', annotation = '', taggerName = '', taggerEmail = '', taggerDate = ''] = tagLine.split('\t')
+      const [name = '', commit = '', annotation = '', taggerName = '', taggerEmail = '', taggerDate = ''] =
+        tagLine.split('\t')
 
       const tag: GitTag = {
         name,
@@ -2196,8 +2197,8 @@ export async function getCommitDetail(
     for (const line of numstatLines) {
       const parts = line.split('\t')
       if (parts.length >= 3) {
-        const additions = (parts[0] === '-' || !parts[0]) ? 0 : parseInt(parts[0], 10) || 0
-        const deletions = (parts[1] === '-' || !parts[1]) ? 0 : parseInt(parts[1], 10) || 0
+        const additions = parts[0] === '-' || !parts[0] ? 0 : parseInt(parts[0], 10) || 0
+        const deletions = parts[1] === '-' || !parts[1] ? 0 : parseInt(parts[1], 10) || 0
         const filePath = parts[2] || ''
 
         // Determine file status

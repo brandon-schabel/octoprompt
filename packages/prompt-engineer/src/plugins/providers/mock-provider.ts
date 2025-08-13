@@ -4,12 +4,7 @@
  */
 
 import { Effect, Stream, Schema, pipe, Chunk } from 'effect'
-import type { 
-  ProviderPlugin, 
-  GenerationOptions, 
-  GenerationResult,
-  ProviderError as ProviderErrorType
-} from '../types'
+import type { ProviderPlugin, GenerationOptions, GenerationResult, ProviderError as ProviderErrorType } from '../types'
 import { ProviderError, ValidationError } from '../types'
 
 interface MockProviderConfig {
@@ -25,7 +20,7 @@ export class MockProviderPlugin implements ProviderPlugin {
   readonly name = 'mock-provider'
   readonly version = '1.0.0'
   readonly capabilities = ['streaming', 'structured-generation', 'deterministic']
-  
+
   private config: MockProviderConfig
   private callCount: number = 0
   private responses: Map<string, string>
@@ -39,7 +34,7 @@ export class MockProviderPlugin implements ProviderPlugin {
       mockModel: config.mockModel || 'mock-model-v1',
       ...config
     }
-    
+
     this.responses = config.responses || this.createDefaultResponses()
   }
 
@@ -47,68 +42,68 @@ export class MockProviderPlugin implements ProviderPlugin {
     return Effect.succeed(undefined)
   }
 
-  generate(
-    prompt: string,
-    options?: GenerationOptions
-  ): Effect.Effect<GenerationResult, ProviderError> {
-    return Effect.gen(function* (_) {
-      this.callCount++
-      
-      // Simulate delay
-      if (this.config.delay && this.config.delay > 0) {
-        yield* _(Effect.sleep(this.config.delay))
-      }
-      
-      // Simulate errors
-      if (this.config.errorRate && Math.random() < this.config.errorRate) {
-        return yield* _(Effect.fail(new ProviderError({
-          provider: this.name,
-          message: 'Simulated provider error',
-          code: 'MOCK_ERROR',
-          retryable: true
-        })))
-      }
-      
-      // Generate response
-      const response = this.generateResponse(prompt, options)
-      const tokens = this.estimateTokens(prompt, response)
-      
-      return {
-        text: response,
-        usage: {
-          promptTokens: tokens.prompt,
-          completionTokens: tokens.completion,
-          totalTokens: tokens.prompt + tokens.completion
-        },
-        finishReason: 'stop',
-        model: options?.model || this.config.mockModel
-      }
-    }.bind(this))
+  generate(prompt: string, options?: GenerationOptions): Effect.Effect<GenerationResult, ProviderError> {
+    return Effect.gen(
+      function* (_) {
+        this.callCount++
+
+        // Simulate delay
+        if (this.config.delay && this.config.delay > 0) {
+          yield* _(Effect.sleep(this.config.delay))
+        }
+
+        // Simulate errors
+        if (this.config.errorRate && Math.random() < this.config.errorRate) {
+          return yield* _(
+            Effect.fail(
+              new ProviderError({
+                provider: this.name,
+                message: 'Simulated provider error',
+                code: 'MOCK_ERROR',
+                retryable: true
+              })
+            )
+          )
+        }
+
+        // Generate response
+        const response = this.generateResponse(prompt, options)
+        const tokens = this.estimateTokens(prompt, response)
+
+        return {
+          text: response,
+          usage: {
+            promptTokens: tokens.prompt,
+            completionTokens: tokens.completion,
+            totalTokens: tokens.prompt + tokens.completion
+          },
+          finishReason: 'stop',
+          model: options?.model || this.config.mockModel
+        }
+      }.bind(this)
+    )
   }
 
-  stream(
-    prompt: string,
-    options?: GenerationOptions
-  ): Stream.Stream<string, ProviderError> {
+  stream(prompt: string, options?: GenerationOptions): Stream.Stream<string, ProviderError> {
     const response = this.generateResponse(prompt, options)
     const chunks = this.chunkResponse(response, this.config.streamChunkSize!)
-    
+
     // Create stream from chunks
     return pipe(
       Stream.fromIterable(chunks),
-      Stream.tap(() => 
-        this.config.delay 
-          ? Effect.sleep(Math.floor(this.config.delay / 10))
-          : Effect.succeed(undefined)
+      Stream.tap(() =>
+        this.config.delay ? Effect.sleep(Math.floor(this.config.delay / 10)) : Effect.succeed(undefined)
       ),
       Stream.catchAll(() => {
         if (this.config.errorRate && Math.random() < this.config.errorRate) {
-          return Stream.fail(new ProviderError({
-            provider: this.name,
-            message: 'Simulated stream error',
-            code: 'MOCK_STREAM_ERROR',
-            retryable: true
-          }))
+          return Stream.fail(
+            new ProviderError({
+              provider: this.name,
+              message: 'Simulated stream error',
+              code: 'MOCK_STREAM_ERROR',
+              retryable: true
+            })
+          )
         }
         return Stream.empty
       })
@@ -120,32 +115,36 @@ export class MockProviderPlugin implements ProviderPlugin {
     schema: Schema.Schema<T, any>,
     options?: GenerationOptions
   ): Effect.Effect<T, ProviderError | ValidationError> {
-    return Effect.gen(function* (_) {
-      // Generate JSON response
-      const jsonResponse = this.generateStructuredResponse(prompt, schema)
-      
-      // Parse and validate with schema
-      const parsed = yield* _(
-        Schema.decodeUnknown(schema)(jsonResponse).pipe(
-          Effect.catchAll((error) => 
-            Effect.fail(new ValidationError({
-              field: 'response',
-              message: `Schema validation failed: ${error}`,
-              value: jsonResponse
-            }))
+    return Effect.gen(
+      function* (_) {
+        // Generate JSON response
+        const jsonResponse = this.generateStructuredResponse(prompt, schema)
+
+        // Parse and validate with schema
+        const parsed = yield* _(
+          Schema.decodeUnknown(schema)(jsonResponse).pipe(
+            Effect.catchAll((error) =>
+              Effect.fail(
+                new ValidationError({
+                  field: 'response',
+                  message: `Schema validation failed: ${error}`,
+                  value: jsonResponse
+                })
+              )
+            )
           )
         )
-      )
-      
-      return parsed
-    }.bind(this))
+
+        return parsed
+      }.bind(this)
+    )
   }
 
   // Helper methods
 
   private createDefaultResponses(): Map<string, string> {
     const responses = new Map<string, string>()
-    
+
     // Common patterns
     responses.set('optimize', 'Here is an optimized version of your prompt with improved clarity and structure.')
     responses.set('explain', 'This works by breaking down the problem into smaller, manageable steps.')
@@ -157,7 +156,7 @@ export class MockProviderPlugin implements ProviderPlugin {
     responses.set('security', 'Security considerations include input validation and access control.')
     responses.set('performance', 'Performance can be improved through caching and optimization.')
     responses.set('architecture', 'The architecture follows established patterns and best practices.')
-    
+
     return responses
   }
 
@@ -168,7 +167,7 @@ export class MockProviderPlugin implements ProviderPlugin {
         return this.applyOptions(response, options)
       }
     }
-    
+
     // Generate deterministic response based on prompt
     const hash = this.hashString(prompt + this.config.deterministicSeed)
     const templates = [
@@ -178,47 +177,51 @@ export class MockProviderPlugin implements ProviderPlugin {
       `Implementing "${this.truncate(prompt, 50)}" effectively involves these key steps.`,
       `For "${this.truncate(prompt, 50)}", the recommended approach follows established patterns.`
     ]
-    
+
     const template = templates[hash % templates.length]
-    
+
     // Add more content based on options
     let response = template
-    
+
     if (options?.temperature && options.temperature > 0.7) {
       response += '\n\nAdditional creative considerations may apply.'
     }
-    
+
     if (options?.maxTokens && options.maxTokens > 100) {
-      response += '\n\n1. First, establish the foundation\n2. Then, build the core functionality\n3. Finally, optimize and refine'
+      response +=
+        '\n\n1. First, establish the foundation\n2. Then, build the core functionality\n3. Finally, optimize and refine'
     }
-    
+
     return response
   }
 
-  private generateStructuredResponse<T>(
-    prompt: string,
-    schema: Schema.Schema<T, any>
-  ): any {
+  private generateStructuredResponse<T>(prompt: string, schema: Schema.Schema<T, any>): any {
     // Generate mock structured data based on schema
     // This is a simplified version - real implementation would analyze the schema
-    
+
     const hash = this.hashString(prompt + JSON.stringify(schema))
-    
+
     // Common structured responses
     const structures = [
       { result: 'success', data: { value: 42, message: 'Processed successfully' } },
-      { status: 'complete', items: [{ id: 1, name: 'Item 1' }, { id: 2, name: 'Item 2' }] },
+      {
+        status: 'complete',
+        items: [
+          { id: 1, name: 'Item 1' },
+          { id: 2, name: 'Item 2' }
+        ]
+      },
       { type: 'response', content: 'Structured content', metadata: { timestamp: Date.now() } },
       { answer: 'The solution', confidence: 0.95, reasoning: ['Step 1', 'Step 2'] },
       { output: { text: 'Generated text', score: 85, tags: ['tag1', 'tag2'] } }
     ]
-    
+
     return structures[hash % structures.length]
   }
 
   private applyOptions(response: string, options?: GenerationOptions): string {
     if (!options) return response
-    
+
     // Apply temperature variations
     if (options.temperature !== undefined) {
       if (options.temperature < 0.3) {
@@ -227,7 +230,7 @@ export class MockProviderPlugin implements ProviderPlugin {
         response = response.replace(/will|must/g, 'might')
       }
     }
-    
+
     // Apply max tokens truncation
     if (options.maxTokens) {
       const maxChars = options.maxTokens * 4 // Rough approximation
@@ -235,7 +238,7 @@ export class MockProviderPlugin implements ProviderPlugin {
         response = response.substring(0, maxChars) + '...'
       }
     }
-    
+
     // Apply stop sequences
     if (options.stopSequences) {
       for (const stop of options.stopSequences) {
@@ -245,23 +248,26 @@ export class MockProviderPlugin implements ProviderPlugin {
         }
       }
     }
-    
+
     return response
   }
 
   private chunkResponse(response: string, chunkSize: number): string[] {
     const words = response.split(' ')
     const chunks: string[] = []
-    
+
     for (let i = 0; i < words.length; i += chunkSize) {
       const chunk = words.slice(i, Math.min(i + chunkSize, words.length))
       chunks.push(chunk.join(' ') + (i + chunkSize < words.length ? ' ' : ''))
     }
-    
+
     return chunks
   }
 
-  private estimateTokens(prompt: string, response: string): {
+  private estimateTokens(
+    prompt: string,
+    response: string
+  ): {
     prompt: number
     completion: number
   } {
@@ -275,7 +281,7 @@ export class MockProviderPlugin implements ProviderPlugin {
     let hash = 0
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
+      hash = (hash << 5) - hash + char
       hash = hash & hash // Convert to 32-bit integer
     }
     return Math.abs(hash)
@@ -348,18 +354,19 @@ export function createPredefinedMockProvider(
 /**
  * Create a mock provider that always fails
  */
-export function createFailingMockProvider(
-  errorMessage: string = 'Mock provider failure'
-): MockProviderPlugin {
+export function createFailingMockProvider(errorMessage: string = 'Mock provider failure'): MockProviderPlugin {
   const provider = new MockProviderPlugin({ errorRate: 1 })
-  
+
   // Override generate to always fail with specific message
-  provider.generate = () => Effect.fail(new ProviderError({
-    provider: 'mock-provider',
-    message: errorMessage,
-    code: 'MOCK_FAILURE',
-    retryable: false
-  }))
-  
+  provider.generate = () =>
+    Effect.fail(
+      new ProviderError({
+        provider: 'mock-provider',
+        message: errorMessage,
+        code: 'MOCK_FAILURE',
+        retryable: false
+      })
+    )
+
   return provider
 }

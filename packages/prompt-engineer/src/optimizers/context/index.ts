@@ -3,7 +3,7 @@ export {
   contextOptimizer,
   TokenCounter,
   ContentPrioritizer,
-  ContentChunker,
+  ContentChunker
 } from './context.optimizer'
 
 export {

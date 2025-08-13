@@ -286,12 +286,16 @@ Version Info:
             if (!file) {
               // Provide helpful error with available files hint
               const availablePaths = files.slice(0, 5).map((f) => f.path)
-              throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}. Available files: ${availablePaths.join(', ')} (${files.length} total files). Use browse_files action to explore available files`, {
-                requestedPath: filePath,
-                projectId: validProjectId,
-                tool: 'project_manager',
-                value: filePath
-              })
+              throw createMCPError(
+                MCPErrorCode.FILE_NOT_FOUND,
+                `File not found: ${filePath}. Available files: ${availablePaths.join(', ')} (${files.length} total files). Use browse_files action to explore available files`,
+                {
+                  requestedPath: filePath,
+                  projectId: validProjectId,
+                  tool: 'project_manager',
+                  value: filePath
+                }
+              )
             }
 
             // Check if it's an image file
@@ -337,12 +341,16 @@ Version Info:
             const file = files.find((f) => f.path === filePath)
             if (!file) {
               const availablePaths = files.slice(0, 5).map((f) => f.path)
-              throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}. Available files: ${availablePaths.join(', ')} (${files.length} total files)`, {
-                requestedPath: filePath,
-                projectId: validProjectId,
-                tool: 'project_manager',
-                value: filePath
-              })
+              throw createMCPError(
+                MCPErrorCode.FILE_NOT_FOUND,
+                `File not found: ${filePath}. Available files: ${availablePaths.join(', ')} (${files.length} total files)`,
+                {
+                  requestedPath: filePath,
+                  projectId: validProjectId,
+                  tool: 'project_manager',
+                  value: filePath
+                }
+              )
             }
 
             await updateFileContent(validProjectId, file.id, content)

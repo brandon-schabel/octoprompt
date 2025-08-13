@@ -41,20 +41,20 @@ Respond with a JSON object matching this format:
 
     const data = await response.json()
     console.log('Raw response:', JSON.stringify(data, null, 2))
-    
+
     if (data.choices?.[0]?.message?.content) {
       const content = data.choices[0].message.content
       console.log('\nContent:', content)
-      
+
       // Try to extract JSON
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         const jsonStr = jsonMatch[0]
         console.log('\nExtracted JSON:', jsonStr)
-        
+
         const parsed = JSON.parse(jsonStr)
         console.log('\nParsed:', parsed)
-        
+
         const validated = FileSummarySchema.parse(parsed)
         console.log('\nValidated:', validated)
       }

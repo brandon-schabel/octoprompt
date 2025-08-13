@@ -74,10 +74,7 @@ export class BenchmarkRunner {
   }
 
   // Run benchmark for a single optimizer
-  async runBenchmark(
-    optimizer: Optimizer,
-    suite: BenchmarkSuite
-  ): Promise<BenchmarkResult[]> {
+  async runBenchmark(optimizer: Optimizer, suite: BenchmarkSuite): Promise<BenchmarkResult[]> {
     const results: BenchmarkResult[] = []
 
     for (const prompt of suite.prompts) {
@@ -93,11 +90,7 @@ export class BenchmarkRunner {
   }
 
   // Benchmark a single prompt
-  private async benchmarkPrompt(
-    optimizer: Optimizer,
-    prompt: string,
-    suite: BenchmarkSuite
-  ): Promise<BenchmarkResult> {
+  private async benchmarkPrompt(optimizer: Optimizer, prompt: string, suite: BenchmarkSuite): Promise<BenchmarkResult> {
     // Warmup runs
     for (let i = 0; i < this.config.warmupRuns; i++) {
       await this.runOptimization(optimizer, prompt)
@@ -155,9 +148,10 @@ export class BenchmarkRunner {
     }
 
     // Calculate actual improvement
-    const actualImprovement = baseline.quality > 0
-      ? ((optimizedMetrics.quality - baseline.quality) / baseline.quality) * 100
-      : metrics.avgImprovementScore
+    const actualImprovement =
+      baseline.quality > 0
+        ? ((optimizedMetrics.quality - baseline.quality) / baseline.quality) * 100
+        : metrics.avgImprovementScore
 
     // Check if passes threshold
     const passesThreshold = Math.abs(actualImprovement - suite.expectedImprovement) <= suite.acceptableVariance
@@ -181,10 +175,7 @@ export class BenchmarkRunner {
   }
 
   // Run single optimization
-  private async runOptimization(
-    optimizer: Optimizer,
-    prompt: string
-  ): Promise<E.Either<Error, OptimizedPrompt>> {
+  private async runOptimization(optimizer: Optimizer, prompt: string): Promise<E.Either<Error, OptimizedPrompt>> {
     try {
       const r = await optimizer.optimizeAsync(prompt)()
       return r
@@ -213,11 +204,7 @@ export class BenchmarkRunner {
       const response = await this.llmProvider.complete(prompt)
       const responseTime = Date.now() - startTime
 
-      const quality = this.qualityMetrics.evaluateResponse(
-        prompt,
-        response,
-        'baseline'
-      )
+      const quality = this.qualityMetrics.evaluateResponse(prompt, response, 'baseline')
 
       return {
         quality,
@@ -339,8 +326,8 @@ export class BenchmarkRunner {
 
     // Summary
     const totalTests = results.length
-    const passed = results.filter(r => r.passesThreshold).length
-    const avgImprovement = this.average(results.map(r => r.actualImprovement))
+    const passed = results.filter((r) => r.passesThreshold).length
+    const avgImprovement = this.average(results.map((r) => r.actualImprovement))
 
     report += '## Summary\n'
     report += `- Total Tests: ${totalTests}\n`
@@ -371,9 +358,9 @@ export class BenchmarkRunner {
     report += '|-----------|----------------|--------------|-----------||\n'
 
     for (const [optimizer, optimizerResults] of Object.entries(byOptimizer)) {
-      const avgImp = this.average(optimizerResults.map(r => r.actualImprovement))
-      const avgDur = this.average(optimizerResults.map(r => r.metrics.avgDuration))
-      const passRate = (optimizerResults.filter(r => r.passesThreshold).length / optimizerResults.length) * 100
+      const avgImp = this.average(optimizerResults.map((r) => r.actualImprovement))
+      const avgDur = this.average(optimizerResults.map((r) => r.metrics.avgDuration))
+      const passRate = (optimizerResults.filter((r) => r.passesThreshold).length / optimizerResults.length) * 100
 
       report += `| ${optimizer} | ${avgImp.toFixed(2)}% | ${avgDur.toFixed(0)}ms | ${passRate.toFixed(1)}% |\n`
     }
@@ -383,12 +370,15 @@ export class BenchmarkRunner {
 
   // Group results by key
   private groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
-    return array.reduce((groups, item) => {
-      const group = String(item[key])
-      if (!groups[group]) groups[group] = []
-      groups[group].push(item)
-      return groups
-    }, {} as Record<string, T[]>)
+    return array.reduce(
+      (groups, item) => {
+        const group = String(item[key])
+        if (!groups[group]) groups[group] = []
+        groups[group].push(item)
+        return groups
+      },
+      {} as Record<string, T[]>
+    )
   }
 }
 

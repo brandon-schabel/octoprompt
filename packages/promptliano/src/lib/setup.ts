@@ -259,7 +259,7 @@ export class PromptlianoSetup {
         spinner.text = 'UI components ready, building client application...'
       } else {
         spinner.text = 'Building UI components...'
-        
+
         try {
           const uiBuildResult = execSync('bun run build', {
             cwd: uiPath,
@@ -267,7 +267,7 @@ export class PromptlianoSetup {
             encoding: 'utf-8'
           })
           logger.info('UI build output:', uiBuildResult)
-          
+
           // Verify UI build output
           if (existsSync(uiDistPath)) {
             logger.info('UI build successful, artifacts at:', uiDistPath)
@@ -341,7 +341,7 @@ export class PromptlianoSetup {
       } else if (uiBuildFailed) {
         successMessage = 'Promptliano built (UI build had issues but client built)'
       }
-      
+
       spinner.succeed(successMessage)
     } catch (error) {
       spinner.fail('Build failed')

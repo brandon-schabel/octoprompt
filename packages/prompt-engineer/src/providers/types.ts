@@ -39,25 +39,19 @@ export interface ModelCapabilities {
 // Provider Service
 // ============================================================================
 
-export class ProviderError extends Schema.TaggedError<ProviderError>("ProviderError")(
-  "ProviderError",
-  {
-    provider: Schema.String,
-    message: Schema.String,
-    code: Schema.optional(Schema.String),
-    retryable: Schema.Boolean,
-    status: Schema.optional(Schema.Number)
-  }
-) {}
+export class ProviderError extends Schema.TaggedError<ProviderError>('ProviderError')('ProviderError', {
+  provider: Schema.String,
+  message: Schema.String,
+  code: Schema.optional(Schema.String),
+  retryable: Schema.Boolean,
+  status: Schema.optional(Schema.Number)
+}) {}
 
-export class ValidationError extends Schema.TaggedError<ValidationError>("ValidationError")(
-  "ValidationError",
-  {
-    field: Schema.String,
-    message: Schema.String,
-    value: Schema.Unknown
-  }
-) {}
+export class ValidationError extends Schema.TaggedError<ValidationError>('ValidationError')('ValidationError', {
+  field: Schema.String,
+  message: Schema.String,
+  value: Schema.Unknown
+}) {}
 
 export interface GenerationOptions {
   readonly model?: string
@@ -129,12 +123,7 @@ export interface Message {
   readonly toolCallId?: string
 }
 
-export type MessageContent = 
-  | TextContent
-  | ImageContent
-  | AudioContent
-  | VideoContent
-  | ToolResultContent
+export type MessageContent = TextContent | ImageContent | AudioContent | VideoContent | ToolResultContent
 
 export interface TextContent {
   readonly type: 'text'
@@ -175,35 +164,35 @@ export interface ToolResultContent {
 export interface ProviderService {
   readonly name: string
   readonly models: readonly ModelInfo[]
-  
+
   readonly generate: (
     messages: readonly Message[],
     options?: GenerationOptions
   ) => Effect.Effect<GenerationResult, ProviderError>
-  
+
   readonly stream: (
     messages: readonly Message[],
     options?: GenerationOptions
   ) => Stream.Stream<StreamChunk, ProviderError>
-  
+
   readonly generateStructured: <T>(
     messages: readonly Message[],
     schema: Schema.Schema<T, any>,
     options?: GenerationOptions
   ) => Effect.Effect<T, ProviderError | ValidationError>
-  
+
   readonly generateWithTools: (
     messages: readonly Message[],
     tools: readonly ToolDefinition[],
     options?: GenerationOptions
   ) => Effect.Effect<GenerationResult, ProviderError>
-  
+
   readonly validateModel?: (modelId: string) => Effect.Effect<boolean, never>
   readonly estimateTokens?: (text: string) => Effect.Effect<number, never>
   readonly listModels?: () => Effect.Effect<readonly ModelInfo[], ProviderError>
 }
 
-export const ProviderServiceTag = Context.GenericTag<ProviderService>("ProviderService")
+export const ProviderServiceTag = Context.GenericTag<ProviderService>('ProviderService')
 
 // ============================================================================
 // Stream Types
@@ -223,23 +212,18 @@ export interface StreamChunk {
 // ============================================================================
 
 export interface ProviderRegistry {
-  readonly register: (
-    name: string,
-    provider: ProviderService
-  ) => Effect.Effect<void, ProviderError>
-  
-  readonly get: (
-    name: string
-  ) => Effect.Effect<ProviderService, ProviderError>
-  
+  readonly register: (name: string, provider: ProviderService) => Effect.Effect<void, ProviderError>
+
+  readonly get: (name: string) => Effect.Effect<ProviderService, ProviderError>
+
   readonly list: () => Effect.Effect<readonly string[], never>
-  
+
   readonly getDefault: () => Effect.Effect<ProviderService, ProviderError>
-  
+
   readonly setDefault: (name: string) => Effect.Effect<void, ProviderError>
 }
 
-export const ProviderRegistryTag = Context.GenericTag<ProviderRegistry>("ProviderRegistry")
+export const ProviderRegistryTag = Context.GenericTag<ProviderRegistry>('ProviderRegistry')
 
 // ============================================================================
 // Provider Configuration
@@ -272,12 +256,8 @@ export interface ProviderFactory<T extends ProviderConfig = ProviderConfig> {
   readonly name: string
   readonly version: string
   readonly supportedModels: readonly string[]
-  
-  readonly create: (
-    config: T
-  ) => Effect.Effect<ProviderService, ProviderError>
-  
-  readonly validateConfig: (
-    config: T
-  ) => Effect.Effect<boolean, ValidationError>
+
+  readonly create: (config: T) => Effect.Effect<ProviderService, ProviderError>
+
+  readonly validateConfig: (config: T) => Effect.Effect<boolean, ValidationError>
 }

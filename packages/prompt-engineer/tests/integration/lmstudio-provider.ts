@@ -22,11 +22,7 @@ export class LMStudioProvider implements SolutionGenerator<string> {
     return this.available
   }
 
-  async generate(
-    prompt: string,
-    temperature: number,
-    topP: number
-  ): Promise<string> {
+  async generate(prompt: string, temperature: number, topP: number): Promise<string> {
     if (!this.available) {
       throw new Error('LMStudio is not available. Please ensure it is running at ' + this.baseUrl)
     }
@@ -65,7 +61,7 @@ export class LMStudioProvider implements SolutionGenerator<string> {
       }
 
       const data = await response.json()
-      
+
       if (!data.choices || data.choices.length === 0) {
         throw new Error('No response from LMStudio')
       }
@@ -82,11 +78,7 @@ export class LMStudioProvider implements SolutionGenerator<string> {
   }
 
   // Stream generation for more advanced use cases
-  async *generateStream(
-    prompt: string,
-    temperature: number,
-    topP: number
-  ): AsyncGenerator<string, void, unknown> {
+  async *generateStream(prompt: string, temperature: number, topP: number): AsyncGenerator<string, void, unknown> {
     if (!this.available) {
       throw new Error('LMStudio is not available')
     }
@@ -129,7 +121,7 @@ export class LMStudioProvider implements SolutionGenerator<string> {
 
     while (true) {
       const { done, value } = await reader.read()
-      
+
       if (done) break
 
       buffer += decoder.decode(value, { stream: true })
@@ -139,7 +131,7 @@ export class LMStudioProvider implements SolutionGenerator<string> {
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const data = line.slice(6)
-          
+
           if (data === '[DONE]') {
             return
           }
@@ -147,7 +139,7 @@ export class LMStudioProvider implements SolutionGenerator<string> {
           try {
             const parsed = JSON.parse(data)
             const content = parsed.choices?.[0]?.delta?.content
-            
+
             if (content) {
               yield content
             }
@@ -170,7 +162,7 @@ export class LMStudioProvider implements SolutionGenerator<string> {
     }
 
     const response = await fetch(`${this.baseUrl}/models`)
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch model info')
     }
@@ -191,11 +183,11 @@ export class LMStudioProvider implements SolutionGenerator<string> {
 export async function createLMStudioProvider(): Promise<LMStudioProvider | null> {
   const provider = new LMStudioProvider()
   const available = await provider.initialize()
-  
+
   if (!available) {
     console.log('LMStudio is not available. Skipping LMStudio tests.')
     return null
   }
-  
+
   return provider
 }

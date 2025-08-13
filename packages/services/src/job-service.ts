@@ -337,7 +337,7 @@ export class JobQueueService extends EventEmitter {
         } else {
           // Handle retry logic
           const maxRetries = job.metadata?.maxRetries || handler.maxRetries || 0
-          
+
           // Get current retry count from database
           const retryStmt = this.db.prepare('SELECT retry_count FROM jobs WHERE id = ?')
           const retryRow = retryStmt.get(job.id) as any

@@ -1,9 +1,9 @@
 import type { ProjectFile, FileGroup } from '@promptliano/schemas'
-import { 
-  OPTIMAL_TOKENS_FOR_BATCH, 
+import {
+  OPTIMAL_TOKENS_FOR_BATCH,
   MAX_FILES_PER_BATCH,
   PROMPT_OVERHEAD_TOKENS,
-  RESPONSE_BUFFER_TOKENS 
+  RESPONSE_BUFFER_TOKENS
 } from '@promptliano/config'
 import { SmartTruncation } from '../utils/smart-truncation'
 import { createLogger } from '../utils/logger'
@@ -85,11 +85,7 @@ export class BatchSummarizationOptimizer {
     })
 
     // Optimize groups for token limits
-    const optimizedBatches = this.optimizeGroupsForTokens(
-      fileGroups,
-      filesToProcess,
-      maxTokensPerBatch
-    )
+    const optimizedBatches = this.optimizeGroupsForTokens(fileGroups, filesToProcess, maxTokensPerBatch)
 
     // Sort by priority
     optimizedBatches.sort((a, b) => b.priority - a.priority)
@@ -109,7 +105,7 @@ export class BatchSummarizationOptimizer {
     staleThresholdDays: number
   ): Promise<ProjectFile[]> {
     const needsSummarization: ProjectFile[] = []
-    const staleThreshold = Date.now() - (staleThresholdDays * 24 * 60 * 60 * 1000)
+    const staleThreshold = Date.now() - staleThresholdDays * 24 * 60 * 60 * 1000
 
     for (const file of files) {
       // Skip if no content
@@ -146,9 +142,9 @@ export class BatchSummarizationOptimizer {
   ): FileGroup[] {
     // Use the existing file grouping service
     const groups = fileGroupingService.groupFilesByStrategy(files, strategy as any, options)
-    
+
     // Enhance groups with relationship detection
-    return groups.map(group => this.enhanceGroupWithRelationships(group, files))
+    return groups.map((group) => this.enhanceGroupWithRelationships(group, files))
   }
 
   /**
@@ -156,7 +152,7 @@ export class BatchSummarizationOptimizer {
    */
   private enhanceGroupWithRelationships(group: FileGroup, allFiles: ProjectFile[]): FileGroup {
     const relationships: Array<{ sourceFileId: number; targetFileId: number; type: string }> = []
-    const fileMap = new Map(allFiles.map(f => [f.id, f]))
+    const fileMap = new Map(allFiles.map((f) => [f.id, f]))
     const groupFileIds = new Set(group.fileIds)
 
     // Detect import relationships
@@ -166,9 +162,8 @@ export class BatchSummarizationOptimizer {
 
       for (const imp of file.imports) {
         // Check if imported file is in the same group
-        const importedFile = allFiles.find(f => 
-          f.path.endsWith(imp.source) || 
-          f.path.includes(imp.source.replace(/^[.\/]+/, ''))
+        const importedFile = allFiles.find(
+          (f) => f.path.endsWith(imp.source) || f.path.includes(imp.source.replace(/^[.\/]+/, ''))
         )
 
         if (importedFile && groupFileIds.has(importedFile.id)) {
@@ -189,13 +184,12 @@ export class BatchSummarizationOptimizer {
       // Check if any other file in the group imports from this file
       for (const otherId of group.fileIds) {
         if (otherId === fileId) continue
-        
+
         const otherFile = fileMap.get(otherId)
         if (!otherFile?.imports) continue
 
-        const importsFromFile = otherFile.imports.some(imp => 
-          file.path.includes(imp.source) || 
-          imp.source.includes(file.name.replace(/\.[^.]+$/, ''))
+        const importsFromFile = otherFile.imports.some(
+          (imp) => file.path.includes(imp.source) || imp.source.includes(file.name.replace(/\.[^.]+$/, ''))
         )
 
         if (importsFromFile) {
@@ -218,18 +212,12 @@ export class BatchSummarizationOptimizer {
   /**
    * Optimize groups to fit within token limits
    */
-  private optimizeGroupsForTokens(
-    groups: FileGroup[],
-    files: ProjectFile[],
-    maxTokens: number
-  ): OptimizedBatch[] {
-    const fileMap = new Map(files.map(f => [f.id, f]))
+  private optimizeGroupsForTokens(groups: FileGroup[], files: ProjectFile[], maxTokens: number): OptimizedBatch[] {
+    const fileMap = new Map(files.map((f) => [f.id, f]))
     const optimizedBatches: OptimizedBatch[] = []
 
     for (const group of groups) {
-      const groupFiles = group.fileIds
-        .map(id => fileMap.get(id))
-        .filter((f): f is ProjectFile => f !== undefined)
+      const groupFiles = group.fileIds.map((id) => fileMap.get(id)).filter((f): f is ProjectFile => f !== undefined)
 
       // Estimate tokens for the group
       let currentBatch: ProjectFile[] = []
@@ -237,21 +225,18 @@ export class BatchSummarizationOptimizer {
 
       for (const file of groupFiles) {
         const fileTokens = this.estimateFileTokens(file)
-        
+
         if (currentTokens + fileTokens <= maxTokens) {
           currentBatch.push(file)
           currentTokens += fileTokens
         } else {
           // Create a batch with current files
           if (currentBatch.length > 0) {
-            optimizedBatches.push(this.createBatch(
-              group,
-              currentBatch,
-              currentTokens,
-              this.extractRelationships(group, currentBatch)
-            ))
+            optimizedBatches.push(
+              this.createBatch(group, currentBatch, currentTokens, this.extractRelationships(group, currentBatch))
+            )
           }
-          
+
           // Start new batch
           currentBatch = [file]
           currentTokens = PROMPT_OVERHEAD_TOKENS + RESPONSE_BUFFER_TOKENS + fileTokens
@@ -260,12 +245,9 @@ export class BatchSummarizationOptimizer {
 
       // Add remaining files
       if (currentBatch.length > 0) {
-        optimizedBatches.push(this.createBatch(
-          group,
-          currentBatch,
-          currentTokens,
-          this.extractRelationships(group, currentBatch)
-        ))
+        optimizedBatches.push(
+          this.createBatch(group, currentBatch, currentTokens, this.extractRelationships(group, currentBatch))
+        )
       }
     }
 
@@ -315,16 +297,16 @@ export class BatchSummarizationOptimizer {
     group: FileGroup,
     batchFiles: ProjectFile[]
   ): Array<{ source: string; target: string; type: string }> {
-    const batchFileIds = new Set(batchFiles.map(f => f.id))
+    const batchFileIds = new Set(batchFiles.map((f) => f.id))
     const relationships: Array<{ source: string; target: string; type: string }> = []
 
     if (!group.relationships) return relationships
 
     for (const rel of group.relationships) {
       if (batchFileIds.has(rel.sourceFileId) && batchFileIds.has(rel.targetFileId)) {
-        const sourceFile = batchFiles.find(f => f.id === rel.sourceFileId)
-        const targetFile = batchFiles.find(f => f.id === rel.targetFileId)
-        
+        const sourceFile = batchFiles.find((f) => f.id === rel.sourceFileId)
+        const targetFile = batchFiles.find((f) => f.id === rel.targetFileId)
+
         if (sourceFile && targetFile) {
           relationships.push({
             source: sourceFile.name,
@@ -381,11 +363,11 @@ export class BatchSummarizationOptimizer {
         try {
           // Process file summarization (would call the actual summarization function)
           logger.debug(`Processing file ${file.path} in batch ${batch.id}`)
-          
+
           // Track success
           result.successfulSummaries++
           result.processedFiles++
-          
+
           // Estimate tokens used (simplified)
           result.totalTokensUsed += this.estimateFileTokens(file)
         } catch (error) {
@@ -433,18 +415,12 @@ export class BatchSummarizationOptimizer {
   /**
    * Calculate optimal batch configuration for a project
    */
-  static calculateOptimalBatchConfig(
-    totalFiles: number,
-    averageFileSize: number
-  ): BatchOptimizationOptions {
+  static calculateOptimalBatchConfig(totalFiles: number, averageFileSize: number): BatchOptimizationOptions {
     // Estimate average tokens per file
     const avgTokensPerFile = Math.ceil(averageFileSize / 4)
-    
+
     // Calculate optimal batch size
-    const optimalBatchSize = Math.min(
-      MAX_FILES_PER_BATCH,
-      Math.floor(OPTIMAL_TOKENS_FOR_BATCH / avgTokensPerFile)
-    )
+    const optimalBatchSize = Math.min(MAX_FILES_PER_BATCH, Math.floor(OPTIMAL_TOKENS_FOR_BATCH / avgTokensPerFile))
 
     // Determine strategy based on project size
     let strategy: BatchOptimizationOptions['groupingStrategy'] = 'mixed'

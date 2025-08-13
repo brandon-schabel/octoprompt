@@ -15,13 +15,8 @@ import type {
   Message,
   ProviderError
 } from './types'
-import {
-  ProviderRegistryTag
-} from './types'
-import {
-  ProviderRegistryLive,
-  createMockProvider
-} from './abstraction'
+import { ProviderRegistryTag } from './types'
+import { ProviderRegistryLive, createMockProvider } from './abstraction'
 
 // ============================================================================
 // Provider Manager
@@ -29,30 +24,30 @@ import {
 
 export class ProviderManager {
   private registry: ProviderRegistry | null = null
-  
+
   /**
    * Initialize the provider manager
    */
   async initialize(providers?: Record<string, ProviderService>): Promise<void> {
-    const program = Effect.gen(function* (_) {
-      const layer = ProviderRegistryLive
-      const registry = yield* _(ProviderRegistryTag.pipe(
-        Effect.provide(layer)
-      ))
-      
-      this.registry = registry
-      
-      // Register initial providers if provided
-      if (providers) {
-        for (const [name, provider] of Object.entries(providers)) {
-          yield* _(registry.register(name, provider))
+    const program = Effect.gen(
+      function* (_) {
+        const layer = ProviderRegistryLive
+        const registry = yield* _(ProviderRegistryTag.pipe(Effect.provide(layer)))
+
+        this.registry = registry
+
+        // Register initial providers if provided
+        if (providers) {
+          for (const [name, provider] of Object.entries(providers)) {
+            yield* _(registry.register(name, provider))
+          }
         }
-      }
-    }.bind(this))
-    
+      }.bind(this)
+    )
+
     await Effect.runPromise(program)
   }
-  
+
   /**
    * Register a provider
    */
@@ -60,10 +55,10 @@ export class ProviderManager {
     if (!this.registry) {
       throw new Error('Provider manager not initialized')
     }
-    
+
     await Effect.runPromise(this.registry.register(name, provider))
   }
-  
+
   /**
    * Get a provider by name
    */
@@ -71,11 +66,9 @@ export class ProviderManager {
     if (!this.registry) {
       throw new Error('Provider manager not initialized')
     }
-    
-    const program = name
-      ? this.registry.get(name)
-      : this.registry.getDefault()
-    
+
+    const program = name ? this.registry.get(name) : this.registry.getDefault()
+
     return Effect.runPromise(
       pipe(
         program,
@@ -83,29 +76,26 @@ export class ProviderManager {
       )
     )
   }
-  
+
   /**
    * Generate text using a provider
    */
-  async generate(
-    messages: Message[],
-    options?: GenerationOptions & { provider?: string }
-  ): Promise<GenerationResult> {
+  async generate(messages: Message[], options?: GenerationOptions & { provider?: string }): Promise<GenerationResult> {
     if (!this.registry) {
       throw new Error('Provider manager not initialized')
     }
-    
+
     const program = Effect.gen(function* (_) {
       const provider = options?.provider
         ? yield* _(this.registry!.get(options.provider))
         : yield* _(this.registry!.getDefault())
-      
+
       return yield* _(provider.generate(messages, options))
     })
-    
+
     return Effect.runPromise(program)
   }
-  
+
   /**
    * List available providers
    */
@@ -113,10 +103,10 @@ export class ProviderManager {
     if (!this.registry) {
       return []
     }
-    
+
     return Effect.runPromise(this.registry.list())
   }
-  
+
   /**
    * Set default provider
    */
@@ -124,7 +114,7 @@ export class ProviderManager {
     if (!this.registry) {
       throw new Error('Provider manager not initialized')
     }
-    
+
     await Effect.runPromise(this.registry.setDefault(name))
   }
 }
@@ -148,9 +138,7 @@ export function getProviderManager(): ProviderManager {
 /**
  * Initialize the global provider manager
  */
-export async function initializeProviders(
-  providers?: Record<string, ProviderService>
-): Promise<ProviderManager> {
+export async function initializeProviders(providers?: Record<string, ProviderService>): Promise<ProviderManager> {
   const manager = getProviderManager()
   await manager.initialize(providers)
   return manager
@@ -179,10 +167,7 @@ export async function generateText(
   options?: GenerationOptions & { provider?: string }
 ): Promise<string> {
   const manager = getProviderManager()
-  const result = await manager.generate(
-    [{ role: 'user', content: prompt }],
-    options
-  )
+  const result = await manager.generate([{ role: 'user', content: prompt }], options)
   return result.text
 }
 

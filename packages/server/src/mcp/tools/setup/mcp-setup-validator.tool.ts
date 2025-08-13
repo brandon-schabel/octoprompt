@@ -54,12 +54,7 @@ export const mcpSetupValidatorTool: MCPToolDefinition = {
         const { action, data } = args
         switch (action) {
           case MCPSetupValidatorAction.VALIDATE: {
-            const configPath = validateDataField<string>(
-              data,
-              'configPath',
-              'string',
-              '"/Users/john/.cursor/mcp.json"'
-            )
+            const configPath = validateDataField<string>(data, 'configPath', 'string', '"/Users/john/.cursor/mcp.json"')
             const projectPath = data?.projectPath
             const checks = []
             // Check 1: Config file exists
@@ -170,7 +165,9 @@ export const mcpSetupValidatorTool: MCPToolDefinition = {
               }
             }
             const relevantDiagnoses =
-              symptoms.length > 0 ? symptoms.map((s: string) => diagnoses[s as keyof typeof diagnoses]).filter(Boolean) : Object.values(diagnoses)
+              symptoms.length > 0
+                ? symptoms.map((s: string) => diagnoses[s as keyof typeof diagnoses]).filter(Boolean)
+                : Object.values(diagnoses)
             return {
               content: [
                 {
@@ -180,7 +177,9 @@ export const mcpSetupValidatorTool: MCPToolDefinition = {
                     relevantDiagnoses
                       .map(
                         (d: { issue: string; solutions: string[] }) =>
-                          `**${d.issue}**\n` + 'Possible solutions:\n' + d.solutions.map((s: string) => `- ${s}`).join('\n')
+                          `**${d.issue}**\n` +
+                          'Possible solutions:\n' +
+                          d.solutions.map((s: string) => `- ${s}`).join('\n')
                       )
                       .join('\n\n')
                 }

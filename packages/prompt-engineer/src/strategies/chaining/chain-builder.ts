@@ -1,10 +1,5 @@
 import { E, TE, A, O, pipe } from '../../fp'
-import {
-  type PromptChain,
-  type ChainLink,
-  type ChainExecution,
-  type ChainResult
-} from '../../types'
+import { type PromptChain, type ChainLink, type ChainExecution, type ChainResult } from '../../types'
 
 // ============================================================================
 // Prompt Chain Building and Management
@@ -46,7 +41,7 @@ export class ChainBuilder {
     metadata: {}
   }
 
-  constructor(private config: ChainConfig = defaultConfig) { }
+  constructor(private config: ChainConfig = defaultConfig) {}
 
   // Add a link to the chain
   addLink(link: Omit<ChainLink, 'id'>): ChainBuilder {
@@ -59,12 +54,7 @@ export class ChainBuilder {
   }
 
   // Add a transformation link
-  transform(
-    name: string,
-    prompt: string,
-    transform: (input: any) => any,
-    dependencies?: string[]
-  ): ChainBuilder {
+  transform(name: string, prompt: string, transform: (input: any) => any, dependencies?: string[]): ChainBuilder {
     return this.addLink({
       name,
       prompt,
@@ -75,12 +65,7 @@ export class ChainBuilder {
   }
 
   // Add a generation link
-  generate(
-    name: string,
-    prompt: string,
-    model?: string,
-    dependencies?: string[]
-  ): ChainBuilder {
+  generate(name: string, prompt: string, model?: string, dependencies?: string[]): ChainBuilder {
     return this.addLink({
       name,
       prompt,
@@ -91,12 +76,7 @@ export class ChainBuilder {
   }
 
   // Add a validation link
-  validate(
-    name: string,
-    prompt: string,
-    validation: (result: any) => boolean,
-    dependencies?: string[]
-  ): ChainBuilder {
+  validate(name: string, prompt: string, validation: (result: any) => boolean, dependencies?: string[]): ChainBuilder {
     return this.addLink({
       name,
       prompt,
@@ -122,8 +102,8 @@ export class ChainBuilder {
       prompt: `Branch: ${name}`,
       type: 'branch',
       condition,
-      trueBranch: trueBranch.map(l => ({ ...l, id: this.generateLinkId() })),
-      falseBranch: falseBranch.map(l => ({ ...l, id: this.generateLinkId() })),
+      trueBranch: trueBranch.map((l) => ({ ...l, id: this.generateLinkId() })),
+      falseBranch: falseBranch.map((l) => ({ ...l, id: this.generateLinkId() })),
       dependencies: this.getLastLinkId()
     } as ChainLink)
 
@@ -146,7 +126,7 @@ export class ChainBuilder {
       prompt,
       type: 'loop',
       condition,
-      body: body.map(l => ({ ...l, id: this.generateLinkId() })),
+      body: body.map((l) => ({ ...l, id: this.generateLinkId() })),
       maxIterations,
       dependencies: this.getLastLinkId()
     } as ChainLink)
@@ -155,10 +135,7 @@ export class ChainBuilder {
   }
 
   // Add parallel execution
-  parallel(
-    name: string,
-    links: ChainLink[]
-  ): ChainBuilder {
+  parallel(name: string, links: ChainLink[]): ChainBuilder {
     const parallelId = this.generateLinkId()
 
     this.links.push({
@@ -166,7 +143,7 @@ export class ChainBuilder {
       name,
       prompt: `Parallel: ${name}`,
       type: 'parallel',
-      parallelLinks: links.map(l => ({ ...l, id: this.generateLinkId() })),
+      parallelLinks: links.map((l) => ({ ...l, id: this.generateLinkId() })),
       dependencies: this.getLastLinkId()
     } as ChainLink)
 
@@ -236,7 +213,7 @@ export class ChainValidator {
     }
 
     // Validate individual links
-    chain.links.forEach(link => {
+    chain.links.forEach((link) => {
       const linkErrors = this.validateLink(link)
       errors.push(...linkErrors)
     })
@@ -253,7 +230,7 @@ export class ChainValidator {
       visited.add(linkId)
       recStack.add(linkId)
 
-      const link = chain.links.find(l => l.id === linkId)
+      const link = chain.links.find((l) => l.id === linkId)
       if (!link) return false
 
       const nextLinks = this.getNextLinks(link, chain)
@@ -284,7 +261,7 @@ export class ChainValidator {
     const queue: string[] = []
 
     // Find starting links (no dependencies)
-    chain.links.forEach(link => {
+    chain.links.forEach((link) => {
       if (!link.dependencies || link.dependencies.length === 0) {
         queue.push(link.id)
       }
@@ -297,7 +274,7 @@ export class ChainValidator {
 
       reachable.add(linkId)
 
-      const link = chain.links.find(l => l.id === linkId)
+      const link = chain.links.find((l) => l.id === linkId)
       if (link) {
         const nextLinks = this.getNextLinks(link, chain)
         queue.push(...nextLinks)
@@ -305,19 +282,17 @@ export class ChainValidator {
     }
 
     // Find unreachable
-    return chain.links
-      .filter(link => !reachable.has(link.id))
-      .map(link => link.id)
+    return chain.links.filter((link) => !reachable.has(link.id)).map((link) => link.id)
   }
 
   // Find missing dependencies
   private findMissingDependencies(chain: PromptChain): string[] {
-    const linkIds = new Set(chain.links.map(l => l.id))
+    const linkIds = new Set(chain.links.map((l) => l.id))
     const missing: string[] = []
 
-    chain.links.forEach(link => {
+    chain.links.forEach((link) => {
       if (link.dependencies) {
-        link.dependencies.forEach(depId => {
+        link.dependencies.forEach((depId) => {
           if (!linkIds.has(depId)) {
             missing.push(depId)
           }
@@ -387,7 +362,7 @@ export class ChainValidator {
     const next: string[] = []
 
     // Find links that depend on this one
-    chain.links.forEach(l => {
+    chain.links.forEach((l) => {
       if (l.dependencies && l.dependencies.includes(link.id)) {
         next.push(l.id)
       }
@@ -395,16 +370,16 @@ export class ChainValidator {
 
     // Add branch/loop/parallel children
     if (link.type === 'branch') {
-      if (link.trueBranch) next.push(...link.trueBranch.map(l => l.id))
-      if (link.falseBranch) next.push(...link.falseBranch.map(l => l.id))
+      if (link.trueBranch) next.push(...link.trueBranch.map((l) => l.id))
+      if (link.falseBranch) next.push(...link.falseBranch.map((l) => l.id))
     }
 
     if (link.type === 'loop' && link.body) {
-      next.push(...link.body.map(l => l.id))
+      next.push(...link.body.map((l) => l.id))
     }
 
     if (link.type === 'parallel' && link.parallelLinks) {
-      next.push(...link.parallelLinks.map(l => l.id))
+      next.push(...link.parallelLinks.map((l) => l.id))
     }
 
     return next
@@ -441,13 +416,13 @@ export class ChainOptimizer {
     const resultUsed = new Set<string>()
 
     // Track which links are actually used
-    chain.links.forEach(link => {
+    chain.links.forEach((link) => {
       if (link.dependencies) {
-        link.dependencies.forEach(dep => used.add(dep))
+        link.dependencies.forEach((dep) => used.add(dep))
       }
 
       // Check if link result is used in prompts
-      chain.links.forEach(other => {
+      chain.links.forEach((other) => {
         if (other.prompt.includes(`{{${link.id}}}`)) {
           resultUsed.add(link.id)
         }
@@ -455,11 +430,8 @@ export class ChainOptimizer {
     })
 
     // Keep only used links or terminal links
-    const filtered = chain.links.filter(link =>
-      used.has(link.id) ||
-      resultUsed.has(link.id) ||
-      !link.dependencies ||
-      link.dependencies.length === 0
+    const filtered = chain.links.filter(
+      (link) => used.has(link.id) || resultUsed.has(link.id) || !link.dependencies || link.dependencies.length === 0
     )
 
     return { ...chain, links: filtered }
@@ -480,9 +452,11 @@ export class ChainOptimizer {
 
         while (j < chain.links.length) {
           const next = chain.links[j]
-          if (next.type === 'transform' &&
+          if (
+            next.type === 'transform' &&
             next.dependencies?.length === 1 &&
-            next.dependencies[0] === sequence[sequence.length - 1].id) {
+            next.dependencies[0] === sequence[sequence.length - 1].id
+          ) {
             sequence.push(next)
             j++
           } else {
@@ -494,12 +468,12 @@ export class ChainOptimizer {
           // Merge transforms
           const mergedLink: ChainLink = {
             id: sequence[0].id,
-            name: `Merged: ${sequence.map(s => s.name).join(' -> ')}`,
-            prompt: sequence.map(s => s.prompt).join('\n'),
+            name: `Merged: ${sequence.map((s) => s.name).join(' -> ')}`,
+            prompt: sequence.map((s) => s.prompt).join('\n'),
             type: 'transform',
             transform: (input: any) => {
               let result = input
-              sequence.forEach(s => {
+              sequence.forEach((s) => {
                 if (s.transform) result = s.transform(result)
               })
               return result
@@ -526,12 +500,12 @@ export class ChainOptimizer {
     const dependencyGroups = this.findIndependentGroups(chain)
     const optimized: ChainLink[] = []
 
-    dependencyGroups.forEach(group => {
+    dependencyGroups.forEach((group) => {
       if (group.length > 1) {
         // Create parallel link for independent links
         const parallelLink: ChainLink = {
           id: `parallel_${Date.now()}`,
-          name: `Parallel: ${group.map(l => l.name).join(', ')}`,
+          name: `Parallel: ${group.map((l) => l.name).join(', ')}`,
           prompt: 'Parallel execution',
           type: 'parallel',
           parallelLinks: group,
@@ -553,7 +527,7 @@ export class ChainOptimizer {
 
     // Build dependency map
     const dependsOn = new Map<string, Set<string>>()
-    chain.links.forEach(link => {
+    chain.links.forEach((link) => {
       if (link.dependencies) {
         dependsOn.set(link.id, new Set(link.dependencies))
       } else {
@@ -565,10 +539,10 @@ export class ChainOptimizer {
     while (processed.size < chain.links.length) {
       const currentGroup: ChainLink[] = []
 
-      chain.links.forEach(link => {
+      chain.links.forEach((link) => {
         if (!processed.has(link.id)) {
           const deps = dependsOn.get(link.id) || new Set()
-          if ([...deps].every(d => processed.has(d))) {
+          if ([...deps].every((d) => processed.has(d))) {
             currentGroup.push(link)
           }
         }
@@ -576,7 +550,7 @@ export class ChainOptimizer {
 
       if (currentGroup.length > 0) {
         groups.push(currentGroup)
-        currentGroup.forEach(link => processed.add(link.id))
+        currentGroup.forEach((link) => processed.add(link.id))
       } else {
         break // Prevent infinite loop
       }
@@ -590,7 +564,7 @@ export class ChainOptimizer {
     if (group.length === 0) return []
 
     const allDeps = group
-      .flatMap(link => link.dependencies || [])
+      .flatMap((link) => link.dependencies || [])
       .filter((dep, index, self) => self.indexOf(dep) === index)
 
     return allDeps
@@ -598,11 +572,13 @@ export class ChainOptimizer {
 
   // Optimize branch conditions
   private optimizeBranches(chain: PromptChain): PromptChain {
-    const optimized = chain.links.map(link => {
+    const optimized = chain.links.map((link) => {
       if (link.type === 'branch') {
         // Check for empty branches
-        if ((!link.trueBranch || link.trueBranch.length === 0) &&
-          (!link.falseBranch || link.falseBranch.length === 0)) {
+        if (
+          (!link.trueBranch || link.trueBranch.length === 0) &&
+          (!link.falseBranch || link.falseBranch.length === 0)
+        ) {
           // Convert to simple link
           return {
             ...link,
@@ -611,8 +587,11 @@ export class ChainOptimizer {
         }
 
         // Check for identical branches
-        if (link.trueBranch && link.falseBranch &&
-          JSON.stringify(link.trueBranch) === JSON.stringify(link.falseBranch)) {
+        if (
+          link.trueBranch &&
+          link.falseBranch &&
+          JSON.stringify(link.trueBranch) === JSON.stringify(link.falseBranch)
+        ) {
           // Remove branch, just execute the content
           return {
             ...link,

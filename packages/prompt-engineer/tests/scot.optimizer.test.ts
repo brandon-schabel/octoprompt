@@ -47,9 +47,7 @@ describe('SCoT Optimizer', () => {
       if (E.isRight(result)) {
         const analysis = result.right
         expect(analysis.structure.branches.length).toBeGreaterThan(0)
-        const authBranch = analysis.structure.branches.find(b =>
-          b.condition.includes('authenticated')
-        )
+        const authBranch = analysis.structure.branches.find((b) => b.condition.includes('authenticated'))
         expect(authBranch).toBeDefined()
       }
     })

@@ -7,7 +7,7 @@ describe('SmartTruncation', () => {
     test('estimates tokens for simple text', () => {
       const text = 'Hello world'
       const tokens = SmartTruncation.estimateTokens(text)
-      
+
       // ~11 chars / 4 = ~3 tokens
       expect(tokens).toBeGreaterThan(1)
       expect(tokens).toBeLessThan(5)
@@ -16,16 +16,15 @@ describe('SmartTruncation', () => {
     test('adjusts for whitespace density', () => {
       const dense = 'abcdefghijklmnop'
       const sparse = 'a b c d e f g h '
-      
-      expect(SmartTruncation.estimateTokens(dense))
-        .toBeGreaterThan(SmartTruncation.estimateTokens(sparse))
+
+      expect(SmartTruncation.estimateTokens(dense)).toBeGreaterThan(SmartTruncation.estimateTokens(sparse))
     })
 
     test('handles code with newlines', () => {
       const code = `function test() {
         return true;
       }`
-      
+
       const tokens = SmartTruncation.estimateTokens(code)
       expect(tokens).toBeGreaterThan(5)
       expect(tokens).toBeLessThan(20)
@@ -38,7 +37,7 @@ describe('SmartTruncation', () => {
     test('handles very long text', () => {
       const longText = 'a'.repeat(10000)
       const tokens = SmartTruncation.estimateTokens(longText)
-      
+
       expect(tokens).toBeGreaterThan(2000)
       expect(tokens).toBeLessThan(3000)
     })
@@ -49,7 +48,7 @@ describe('SmartTruncation', () => {
       test('returns content as-is when under limit', () => {
         const content = 'Short content'
         const result = SmartTruncation.truncate(content, { maxTokens: 1000 })
-        
+
         expect(result.content).toBe(content)
         expect(result.wasTruncated).toBe(false)
         expect(result.originalTokens).toBe(result.truncatedTokens)
@@ -59,12 +58,12 @@ describe('SmartTruncation', () => {
       test('handles custom token estimator', () => {
         const content = 'Test content'
         const customEstimator = (text: string) => text.length // Simple estimator
-        
+
         const result = SmartTruncation.truncate(content, {
           maxTokens: 100,
           tokenEstimator: customEstimator
         })
-        
+
         expect(result.wasTruncated).toBe(false)
         expect(result.originalTokens).toBe(12)
       })
@@ -78,9 +77,9 @@ import React from 'react';
 function test() {
   return true;
 }`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 20 })
-        
+
         expect(result.wasTruncated).toBe(true)
         expect(result.content).toContain('import')
         expect(result.preservedSections).toContain('imports')
@@ -92,12 +91,12 @@ function test() {
 export function test() {
   return true;
 }`
-        
+
         const result = SmartTruncation.truncate(content, {
           maxTokens: 15,
           preserveImports: false
         })
-        
+
         expect(result.preservedSections).not.toContain('imports')
       })
 
@@ -109,11 +108,11 @@ export function publicFunc() {
 }
 
 export default class MyClass {}`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 30 })
-        
+
         expect(result.content).toContain('export')
-        expect(result.preservedSections.some(s => s.includes('export'))).toBe(true)
+        expect(result.preservedSections.some((s) => s.includes('export'))).toBe(true)
       })
 
       test('preserves classes', () => {
@@ -127,9 +126,9 @@ export default class MyClass {}`
   
   private method2() {}
 }`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 50 })
-        
+
         expect(result.content).toContain('class MyClass')
         expect(result.content).toContain('constructor')
         expect(result.preservedSections).toContain('class:MyClass')
@@ -148,11 +147,11 @@ function helper() {
 const arrow = async () => {
   return await something();
 }`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 40 })
-        
+
         expect(result.content).toContain('function important')
-        expect(result.preservedSections.some(s => s.includes('function'))).toBe(true)
+        expect(result.preservedSections.some((s) => s.includes('function'))).toBe(true)
       })
 
       test('preserves interfaces and types', () => {
@@ -167,9 +166,9 @@ type Config = {
 }
 
 const implementation = 'very long ' + ${'code '.repeat(100)}`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 40 })
-        
+
         expect(result.content).toContain('interface User')
         expect(result.content).toContain('type Config')
       })
@@ -186,25 +185,25 @@ const buggy = true;
 
 // Regular comment
 const normal = false;`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 40 })
-        
+
         expect(result.content).toContain('Important JSDoc')
         expect(result.content).toContain('TODO')
-        expect(result.preservedSections.some(s => s.includes('comment'))).toBe(true)
+        expect(result.preservedSections.some((s) => s.includes('comment'))).toBe(true)
       })
 
       test('skips comments when disabled', () => {
         const content = `// TODO: Important note
 /** JSDoc */
 function test() {}`
-        
+
         const result = SmartTruncation.truncate(content, {
           maxTokens: 10,
           preserveComments: false
         })
-        
-        expect(result.preservedSections.filter(s => s.includes('comment'))).toHaveLength(0)
+
+        expect(result.preservedSections.filter((s) => s.includes('comment'))).toHaveLength(0)
       })
     })
 
@@ -217,9 +216,9 @@ import { critical } from 'module';
 export { important } from 'exports';
 
 class MediumPriority {}`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 20 })
-        
+
         expect(result.content).toContain('import')
         expect(result.content).toContain('export')
         expect(result.content).not.toContain('lowPriority')
@@ -236,9 +235,9 @@ function medium() {
 
 // Low priority
 const x = 1;`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 60 })
-        
+
         expect(result.content).toContain('import')
         expect(result.content).toContain('class Important')
         expect(result.content).toContain('function medium')
@@ -248,9 +247,9 @@ const x = 1;`
         const content = `import { required } from 'module';
 
 const longContent = \`${'x'.repeat(1000)}\`;`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 50 })
-        
+
         expect(result.content).toContain('import')
         expect(result.content).toContain('... (content truncated)')
         expect(result.preservedSections).toContain('other:truncated')
@@ -258,9 +257,9 @@ const longContent = \`${'x'.repeat(1000)}\`;`
 
       test('adds truncation marker when content is cut', () => {
         const content = Array(100).fill('function test() { return true; }').join('\n')
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 50 })
-        
+
         expect(result.content).toContain('// ... additional content truncated for summarization ...')
       })
     })
@@ -268,7 +267,7 @@ const longContent = \`${'x'.repeat(1000)}\`;`
     describe('edge cases', () => {
       test('handles empty content', () => {
         const result = SmartTruncation.truncate('', { maxTokens: 100 })
-        
+
         expect(result.content).toBe('')
         expect(result.wasTruncated).toBe(false)
         expect(result.originalTokens).toBe(0)
@@ -278,10 +277,10 @@ const longContent = \`${'x'.repeat(1000)}\`;`
         const malformed = `class Unclosed {
   method() {
     // Missing closing braces`
-        
+
         // Should not throw
         const result = SmartTruncation.truncate(malformed, { maxTokens: 20 })
-        
+
         expect(result.wasTruncated).toBe(true)
         expect(result.content).toBeDefined()
       })
@@ -297,10 +296,10 @@ const longContent = \`${'x'.repeat(1000)}\`;`
     }
   }
 }`
-        
+
         // Should not hang or throw
         const result = SmartTruncation.truncate(nested, { maxTokens: 30 })
-        
+
         expect(result.wasTruncated).toBe(true)
         expect(result.content).toContain('function')
       })
@@ -312,9 +311,9 @@ const longContent = \`${'x'.repeat(1000)}\`;`
   three,
   four
 } from 'module';`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 20 })
-        
+
         expect(result.content).toContain('export')
         expect(result.content).toContain('one')
         expect(result.content).toContain('four')
@@ -326,9 +325,9 @@ const func2 = async (param) => {
   return await something();
 };
 export const func3 = (a, b) => a + b;`
-        
+
         const result = SmartTruncation.truncate(content, { maxTokens: 30 })
-        
+
         // Arrow functions should be detected
         expect(result.wasTruncated).toBe(true)
       })
@@ -336,7 +335,7 @@ export const func3 = (a, b) => a + b;`
       test('handles maxTokens = 0', () => {
         const content = 'Some content'
         const result = SmartTruncation.truncate(content, { maxTokens: 0 })
-        
+
         expect(result.wasTruncated).toBe(true)
         expect(result.content).toContain('// ... additional content truncated')
       })
@@ -379,9 +378,9 @@ export const Modal: React.FC<Props> = ({ title, onClose }) => {
 };
 
 export default Modal;`
-        
+
         const result = SmartTruncation.truncate(component, { maxTokens: 100 })
-        
+
         expect(result.wasTruncated).toBe(true)
         expect(result.content).toContain('import React')
         expect(result.content).toContain('interface Props')
@@ -416,9 +415,9 @@ export class UserService {
     return true;
   }
 }`
-        
+
         const result = SmartTruncation.truncate(service, { maxTokens: 80 })
-        
+
         expect(result.wasTruncated).toBe(true)
         expect(result.content).toContain('import')
         expect(result.content).toContain('export class UserService')
@@ -437,9 +436,9 @@ export class UserService {
         truncatedTokens: 100,
         preservedSections: ['full']
       }
-      
+
       const summary = SmartTruncation.getTruncationSummary(result)
-      
+
       expect(summary).toBe('Full file content preserved.')
     })
 
@@ -451,9 +450,9 @@ export class UserService {
         truncatedTokens: 400,
         preservedSections: ['imports', 'exports']
       }
-      
+
       const summary = SmartTruncation.getTruncationSummary(result)
-      
+
       expect(summary).toContain('60%')
       expect(summary).toContain('imports, exports')
       expect(summary).toContain('~1000 tokens')
@@ -468,9 +467,9 @@ export class UserService {
         truncatedTokens: 99,
         preservedSections: []
       }
-      
+
       const summary = SmartTruncation.getTruncationSummary(result)
-      
+
       expect(summary).toContain('1%')
     })
 
@@ -482,35 +481,39 @@ export class UserService {
         truncatedTokens: 50,
         preservedSections: ['imports', 'class:MyClass', 'function:test', 'other:truncated']
       }
-      
+
       const summary = SmartTruncation.getTruncationSummary(result)
-      
+
       expect(summary).toContain('imports, class:MyClass, function:test, other:truncated')
     })
   })
 
   describe('performance', () => {
     test('handles large files efficiently', () => {
-      const largeFile = Array(1000).fill(`
+      const largeFile = Array(1000)
+        .fill(
+          `
 function component${Math.random()}() {
   const state = useState();
   return <div>${'content '.repeat(50)}</div>;
-}`).join('\n')
-      
+}`
+        )
+        .join('\n')
+
       const startTime = performance.now()
       const result = SmartTruncation.truncate(largeFile, { maxTokens: 500 })
       const endTime = performance.now()
-      
+
       expect(result.wasTruncated).toBe(true)
       expect(endTime - startTime).toBeLessThan(500) // Should be reasonably fast
     })
 
     test('token estimation is consistent', () => {
       const text = 'Consistent text for testing'
-      
+
       const estimate1 = SmartTruncation.estimateTokens(text)
       const estimate2 = SmartTruncation.estimateTokens(text)
-      
+
       expect(estimate1).toBe(estimate2)
     })
 
@@ -519,10 +522,10 @@ function component${Math.random()}() {
 export class Test {
   method() { return true; }
 }`
-      
+
       const result1 = SmartTruncation.truncate(content, { maxTokens: 30 })
       const result2 = SmartTruncation.truncate(content, { maxTokens: 30 })
-      
+
       expect(result1.content).toBe(result2.content)
       expect(result1.truncatedTokens).toBe(result2.truncatedTokens)
       expect(result1.preservedSections).toEqual(result2.preservedSections)
@@ -536,7 +539,7 @@ export { c } from 'd';
 class MyClass {}
 function myFunc() {}
 // TODO: Important`
-      
+
       const result = SmartTruncation.truncate(content, {
         maxTokens: 100,
         preserveImports: true,
@@ -545,7 +548,7 @@ function myFunc() {}
         preserveFunctions: true,
         preserveComments: true
       })
-      
+
       expect(result.content).toContain('import')
       expect(result.content).toContain('export')
       expect(result.content).toContain('class')
@@ -558,7 +561,7 @@ function myFunc() {}
 export class Test {}
 // TODO: Fix
 Other content here`
-      
+
       const result = SmartTruncation.truncate(content, {
         maxTokens: 10,
         preserveImports: false,
@@ -567,9 +570,9 @@ Other content here`
         preserveFunctions: false,
         preserveComments: false
       })
-      
+
       // Should only have 'other' content
-      expect(result.preservedSections.every(s => s === 'other' || s === 'other:truncated')).toBe(true)
+      expect(result.preservedSections.every((s) => s === 'other' || s === 'other:truncated')).toBe(true)
     })
   })
 })

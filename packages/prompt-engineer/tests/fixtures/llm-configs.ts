@@ -65,21 +65,21 @@ export async function isLMStudioAvailable(): Promise<boolean> {
     const response = await fetch(`${LMSTUDIO_CONFIG.baseUrl}/models`, {
       signal: AbortSignal.timeout(5000)
     })
-    
+
     if (!response.ok) {
       console.log('LMStudio not responding correctly:', response.status)
       return false
     }
-    
+
     const data = await response.json()
     const models = data.data || []
-    
+
     // Check if any model is loaded
     if (models.length === 0) {
       console.log('No models loaded in LMStudio')
       return false
     }
-    
+
     console.log('LMStudio available with models:', models.map((m: any) => m.id).join(', '))
     return true
   } catch (error) {
@@ -103,31 +103,31 @@ export function isProviderConfigured(provider: 'openai' | 'anthropic'): boolean 
 // Get active test configuration
 export async function getTestConfig(): Promise<TestLLMConfig> {
   // Priority order: LMStudio > OpenAI > Anthropic > Mock
-  
+
   if (await isLMStudioAvailable()) {
     console.log('Using LMStudio for testing')
     return LMSTUDIO_CONFIG
   }
-  
+
   if (isProviderConfigured('openai')) {
     console.log('Using OpenAI for testing')
     return OPENAI_CONFIG
   }
-  
+
   if (isProviderConfigured('anthropic')) {
     console.log('Using Anthropic for testing')
     return ANTHROPIC_CONFIG
   }
-  
+
   console.log('Using mock provider for testing')
   return MOCK_CONFIG
 }
 
 // Test timeout configurations
 export const TEST_TIMEOUTS = {
-  unit: 5000,        // 5 seconds for unit tests
+  unit: 5000, // 5 seconds for unit tests
   integration: 30000, // 30 seconds for integration tests
-  e2e: 60000,        // 60 seconds for end-to-end tests
+  e2e: 60000, // 60 seconds for end-to-end tests
   performance: 120000 // 2 minutes for performance tests
 }
 
@@ -139,9 +139,11 @@ export const RETRY_CONFIG = {
   backoffFactor: 2,
   shouldRetry: (error: any) => {
     // Retry on network errors or timeouts
-    return error.code === 'ECONNREFUSED' || 
-           error.code === 'ETIMEDOUT' ||
-           error.message?.includes('timeout') ||
-           error.message?.includes('rate limit')
+    return (
+      error.code === 'ECONNREFUSED' ||
+      error.code === 'ETIMEDOUT' ||
+      error.message?.includes('timeout') ||
+      error.message?.includes('rate limit')
+    )
   }
 }

@@ -88,7 +88,10 @@ export const createSCoTOptimizer = (config?: Partial<SCoTConfig>): Optimizer => 
       if (hasKeyword || hasNumbering) {
         steps.push({
           order: order++,
-          description: sentence.trim().replace(/^\s*\d+[\.\)]\s*/, '').replace(/^\s*[a-z][\.\)]\s*/i, ''),
+          description: sentence
+            .trim()
+            .replace(/^\s*\d+[\.\)]\s*/, '')
+            .replace(/^\s*[a-z][\.\)]\s*/i, ''),
           dependencies: extractDependencies(sentence),
           output: extractOutput(sentence),
           estimatedTokens: Math.ceil(sentence.length / 4)
@@ -257,10 +260,7 @@ export const createSCoTOptimizer = (config?: Partial<SCoTConfig>): Optimizer => 
   ): ComplexityScore => {
     const cognitive = Math.min(10, sequences.length * 0.5 + branches.length * 1.5 + loops.length * 2)
     const computational = Math.min(10, sequences.length * 0.3 + branches.length * 1 + loops.length * 2.5)
-    const structural = Math.min(
-      10,
-      (sequences.length + branches.length + loops.length + dataFlow.length) / 2
-    )
+    const structural = Math.min(10, (sequences.length + branches.length + loops.length + dataFlow.length) / 2)
     const overall = (cognitive * 0.3 + computational * 0.4 + structural * 0.3) / 1
 
     return {
@@ -317,8 +317,7 @@ export const createSCoTOptimizer = (config?: Partial<SCoTConfig>): Optimizer => 
 
     const languageSpecific: Record<string, string> = {
       python: 'Follow PEP 8, use type hints, leverage Python idioms like comprehensions and context managers.',
-      typescript:
-        'Use strict TypeScript, prefer const assertions, discriminated unions, and functional patterns.',
+      typescript: 'Use strict TypeScript, prefer const assertions, discriminated unions, and functional patterns.',
       javascript: 'Follow modern ES6+ patterns, use const/let appropriately, handle async operations properly.',
       rust: 'Ensure memory safety, use idiomatic Rust patterns, handle Result/Option types correctly.',
       go: 'Follow Go conventions, handle errors explicitly, use goroutines and channels appropriately.',
@@ -341,7 +340,7 @@ export const createSCoTOptimizer = (config?: Partial<SCoTConfig>): Optimizer => 
     // Add constraints if present
     if (problem.constraints && problem.constraints.length > 0) {
       prompt += `CONSTRAINTS:\n`
-      problem.constraints.forEach((c) => prompt += `- ${c}\n`)
+      problem.constraints.forEach((c) => (prompt += `- ${c}\n`))
       prompt += '\n'
     }
 

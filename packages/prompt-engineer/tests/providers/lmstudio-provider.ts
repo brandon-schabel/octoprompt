@@ -16,7 +16,7 @@ export interface LMStudioProvider {
 
 export function createLMStudioProvider(config: LMStudioConfig): LMStudioProvider {
   const baseURL = config.endpoint.replace(/\/$/, '')
-  
+
   return {
     async complete(prompt: string): Promise<string> {
       try {
@@ -33,11 +33,11 @@ export function createLMStudioProvider(config: LMStudioConfig): LMStudioProvider
             stream: false
           })
         })
-        
+
         if (!response.ok) {
           throw new Error(`LMStudio error: ${response.statusText}`)
         }
-        
+
         const data = await response.json()
         return data.choices?.[0]?.text || ''
       } catch (error) {
@@ -45,7 +45,7 @@ export function createLMStudioProvider(config: LMStudioConfig): LMStudioProvider
         return `Mock response for: ${prompt.substring(0, 50)}...`
       }
     },
-    
+
     async chat(messages: Array<{ role: string; content: string }>): Promise<string> {
       try {
         const response = await fetch(`${baseURL}/v1/chat/completions`, {
@@ -61,11 +61,11 @@ export function createLMStudioProvider(config: LMStudioConfig): LMStudioProvider
             stream: false
           })
         })
-        
+
         if (!response.ok) {
           throw new Error(`LMStudio error: ${response.statusText}`)
         }
-        
+
         const data = await response.json()
         return data.choices?.[0]?.message?.content || ''
       } catch (error) {
@@ -82,8 +82,8 @@ export function createMockProvider(): LMStudioProvider {
   return {
     async complete(prompt: string): Promise<string> {
       // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       // Generate response based on prompt content
       if (prompt.includes('sort')) {
         return 'To sort an array, you can use the quicksort algorithm with O(n log n) average complexity.'
@@ -94,23 +94,23 @@ export function createMockProvider(): LMStudioProvider {
       if (prompt.includes('algorithm')) {
         return 'When implementing algorithms, consider time and space complexity, edge cases, and optimization opportunities.'
       }
-      
+
       return `Processed: ${prompt.substring(0, 100)}...`
     },
-    
+
     async chat(messages: Array<{ role: string; content: string }>): Promise<string> {
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const lastMessage = messages[messages.length - 1]
       const content = lastMessage?.content || ''
-      
+
       if (content.includes('optimize')) {
         return 'Optimization involves improving performance through better algorithms, caching, and reducing redundant operations.'
       }
       if (content.includes('test')) {
         return 'Testing should include unit tests, integration tests, and edge case validation.'
       }
-      
+
       return `Chat response: ${content.substring(0, 100)}...`
     }
   }

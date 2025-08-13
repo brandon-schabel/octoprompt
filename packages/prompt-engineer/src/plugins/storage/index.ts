@@ -36,7 +36,7 @@ export function createAutoStorage(preferredStorage?: 'memory' | 'file' | 'indexe
         break
     }
   }
-  
+
   // Auto-detect based on environment
   if (typeof window !== 'undefined' && window.indexedDB) {
     // Browser environment - use IndexedDB
@@ -59,154 +59,148 @@ export class TieredStoragePlugin implements StoragePlugin {
   readonly name = 'tiered-storage'
   readonly version = '1.0.0'
   readonly capabilities = ['fallback', 'tiered']
-  
+
   private storages: StoragePlugin[]
-  
+
   constructor(storages: StoragePlugin[]) {
     if (storages.length === 0) {
       throw new Error('At least one storage plugin is required')
     }
     this.storages = storages
   }
-  
+
   initialize(): Effect.Effect<void, any> {
-    return Effect.gen(function* (_) {
-      // Try to initialize each storage, keep the ones that succeed
-      const initialized: StoragePlugin[] = []
-      
-      for (const storage of this.storages) {
-        const result = yield* _(
-          storage.initialize().pipe(
-            Effect.map(() => storage),
-            Effect.catchAll(() => Effect.succeed(null))
+    return Effect.gen(
+      function* (_) {
+        // Try to initialize each storage, keep the ones that succeed
+        const initialized: StoragePlugin[] = []
+
+        for (const storage of this.storages) {
+          const result = yield* _(
+            storage.initialize().pipe(
+              Effect.map(() => storage),
+              Effect.catchAll(() => Effect.succeed(null))
+            )
           )
-        )
-        
-        if (result) {
-          initialized.push(result)
+
+          if (result) {
+            initialized.push(result)
+          }
         }
-      }
-      
-      if (initialized.length === 0) {
-        return yield* _(Effect.fail(new Error('No storage plugins could be initialized')))
-      }
-      
-      this.storages = initialized
-    }.bind(this))
+
+        if (initialized.length === 0) {
+          return yield* _(Effect.fail(new Error('No storage plugins could be initialized')))
+        }
+
+        this.storages = initialized
+      }.bind(this)
+    )
   }
-  
+
   cleanup(): Effect.Effect<void, never> {
-    return Effect.gen(function* (_) {
-      for (const storage of this.storages) {
-        if (storage.cleanup) {
-          yield* _(storage.cleanup())
+    return Effect.gen(
+      function* (_) {
+        for (const storage of this.storages) {
+          if (storage.cleanup) {
+            yield* _(storage.cleanup())
+          }
         }
-      }
-    }.bind(this))
+      }.bind(this)
+    )
   }
-  
+
   get<T>(key: string): Effect.Effect<any, any> {
-    return Effect.gen(function* (_) {
-      for (const storage of this.storages) {
-        const result = yield* _(
-          storage.get<T>(key).pipe(
-            Effect.catchAll(() => Effect.succeed(null))
-          )
-        )
-        
-        if (result !== null) {
-          return result
+    return Effect.gen(
+      function* (_) {
+        for (const storage of this.storages) {
+          const result = yield* _(storage.get<T>(key).pipe(Effect.catchAll(() => Effect.succeed(null))))
+
+          if (result !== null) {
+            return result
+          }
         }
-      }
-      
-      return null
-    }.bind(this))
+
+        return null
+      }.bind(this)
+    )
   }
-  
+
   set<T>(key: string, value: T, ttl?: number): Effect.Effect<void, any> {
-    return Effect.gen(function* (_) {
-      // Write to all storages in parallel
-      const results = yield* _(
-        Effect.all(
-          this.storages.map(storage => 
-            storage.set(key, value, ttl).pipe(
-              Effect.catchAll(() => Effect.succeed(undefined))
-            )
-          ),
-          { concurrency: 'unbounded' }
+    return Effect.gen(
+      function* (_) {
+        // Write to all storages in parallel
+        const results = yield* _(
+          Effect.all(
+            this.storages.map((storage) =>
+              storage.set(key, value, ttl).pipe(Effect.catchAll(() => Effect.succeed(undefined)))
+            ),
+            { concurrency: 'unbounded' }
+          )
         )
-      )
-    }.bind(this))
+      }.bind(this)
+    )
   }
-  
+
   delete(key: string): Effect.Effect<void, any> {
-    return Effect.gen(function* (_) {
-      // Delete from all storages in parallel
-      yield* _(
-        Effect.all(
-          this.storages.map(storage => 
-            storage.delete(key).pipe(
-              Effect.catchAll(() => Effect.succeed(undefined))
-            )
-          ),
-          { concurrency: 'unbounded' }
+    return Effect.gen(
+      function* (_) {
+        // Delete from all storages in parallel
+        yield* _(
+          Effect.all(
+            this.storages.map((storage) => storage.delete(key).pipe(Effect.catchAll(() => Effect.succeed(undefined)))),
+            { concurrency: 'unbounded' }
+          )
         )
-      )
-    }.bind(this))
+      }.bind(this)
+    )
   }
-  
+
   clear(): Effect.Effect<void, any> {
-    return Effect.gen(function* (_) {
-      // Clear all storages in parallel
-      yield* _(
-        Effect.all(
-          this.storages.map(storage => 
-            storage.clear().pipe(
-              Effect.catchAll(() => Effect.succeed(undefined))
-            )
-          ),
-          { concurrency: 'unbounded' }
+    return Effect.gen(
+      function* (_) {
+        // Clear all storages in parallel
+        yield* _(
+          Effect.all(
+            this.storages.map((storage) => storage.clear().pipe(Effect.catchAll(() => Effect.succeed(undefined)))),
+            { concurrency: 'unbounded' }
+          )
         )
-      )
-    }.bind(this))
+      }.bind(this)
+    )
   }
-  
+
   has(key: string): Effect.Effect<boolean, any> {
-    return Effect.gen(function* (_) {
-      for (const storage of this.storages) {
-        const result = yield* _(
-          storage.has(key).pipe(
-            Effect.catchAll(() => Effect.succeed(false))
-          )
-        )
-        
-        if (result) {
-          return true
+    return Effect.gen(
+      function* (_) {
+        for (const storage of this.storages) {
+          const result = yield* _(storage.has(key).pipe(Effect.catchAll(() => Effect.succeed(false))))
+
+          if (result) {
+            return true
+          }
         }
-      }
-      
-      return false
-    }.bind(this))
+
+        return false
+      }.bind(this)
+    )
   }
-  
+
   keys(): Effect.Effect<readonly string[], any> {
-    return Effect.gen(function* (_) {
-      const allKeys = new Set<string>()
-      
-      for (const storage of this.storages) {
-        const keys = yield* _(
-          storage.keys().pipe(
-            Effect.catchAll(() => Effect.succeed([]))
-          )
-        )
-        
-        for (const key of keys) {
-          allKeys.add(key)
+    return Effect.gen(
+      function* (_) {
+        const allKeys = new Set<string>()
+
+        for (const storage of this.storages) {
+          const keys = yield* _(storage.keys().pipe(Effect.catchAll(() => Effect.succeed([]))))
+
+          for (const key of keys) {
+            allKeys.add(key)
+          }
         }
-      }
-      
-      return Array.from(allKeys)
-    }.bind(this))
+
+        return Array.from(allKeys)
+      }.bind(this)
+    )
   }
 }
 

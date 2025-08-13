@@ -131,11 +131,7 @@ describe('Self-Consistency Optimizer', () => {
         timeoutMs: 1000
       })
 
-      mockGenerator.setResponses(TEST_PROMPTS.simple.sorting, [
-        'Solution 1',
-        'Solution 2',
-        'Solution 3'
-      ])
+      mockGenerator.setResponses(TEST_PROMPTS.simple.sorting, ['Solution 1', 'Solution 2', 'Solution 3'])
 
       const result = await customOptimizer.optimizeAsync(TEST_PROMPTS.simple.sorting)()
 
@@ -296,16 +292,13 @@ describe('Self-Consistency Optimizer', () => {
         TEST_PROMPTS.complex.systemDesign
       ]
 
-      prompts.forEach(prompt => {
+      prompts.forEach((prompt) => {
         const result = optimizer.optimize(prompt)
 
         expect(E.isRight(result)).toBe(true)
         if (E.isRight(result)) {
           const optimized = result.right
-          expect(validators.validateImprovementScore(
-            optimized.improvementScore,
-            'selfConsistency'
-          )).toBe(true)
+          expect(validators.validateImprovementScore(optimized.improvementScore, 'selfConsistency')).toBe(true)
         }
       })
     })

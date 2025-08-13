@@ -5,6 +5,7 @@ This directory contains comprehensive tests for API endpoints that use local AI 
 ## Overview
 
 The test suite validates:
+
 - File summarization with LMStudio (gpt-oss:20b model)
 - Smart truncation for large files
 - Batch processing capabilities
@@ -139,23 +140,27 @@ import { validateAIResponse } from './utils/ai-test-helpers'
 
 describe('My AI Feature', () => {
   let lmstudioAvailable = false
-  
+
   beforeAll(async () => {
     lmstudioAvailable = await isLMStudioAvailable()
   })
-  
-  test('should process with AI', async () => {
-    if (lmstudioAvailable) {
-      // Real AI call
-      const result = await myAIFunction()
-      const validation = validateAIResponse(result)
-      expect(validation.isValid).toBe(true)
-    } else {
-      // Mock response
-      const result = generateMockResponse()
-      expect(result).toBeDefined()
-    }
-  }, LOCAL_MODEL_TEST_CONFIG.timeouts.default)
+
+  test(
+    'should process with AI',
+    async () => {
+      if (lmstudioAvailable) {
+        // Real AI call
+        const result = await myAIFunction()
+        const validation = validateAIResponse(result)
+        expect(validation.isValid).toBe(true)
+      } else {
+        // Mock response
+        const result = generateMockResponse()
+        expect(result).toBeDefined()
+      }
+    },
+    LOCAL_MODEL_TEST_CONFIG.timeouts.default
+  )
 })
 ```
 
@@ -184,7 +189,7 @@ export const myTestFile = {
 // In validators/my-validator.ts
 export function validateMyFeature(response: string): ValidationResult {
   const issues: Issue[] = []
-  
+
   // Your validation logic
   if (!response.includes('required-element')) {
     issues.push({
@@ -192,7 +197,7 @@ export function validateMyFeature(response: string): ValidationResult {
       message: 'Missing required element'
     })
   }
-  
+
   return {
     valid: issues.length === 0,
     issues
@@ -249,20 +254,20 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v1
-    
-    - name: Install dependencies
-      run: bun install
-    
-    - name: Run tests with mocks
-      run: bun run test-local-models.ts --mock
-      env:
-        SKIP_LMSTUDIO_TESTS: true
+      - uses: actions/checkout@v3
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests with mocks
+        run: bun run test-local-models.ts --mock
+        env:
+          SKIP_LMSTUDIO_TESTS: true
 ```
 
 ### Local CI Testing
@@ -297,6 +302,7 @@ When adding new AI-powered features:
 ## Support
 
 For issues or questions:
+
 - Check the troubleshooting section above
 - Review existing test implementations
 - Consult the main project documentation

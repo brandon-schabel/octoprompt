@@ -241,6 +241,6 @@ export const mcpStorage = {
 
   // Utility
   generateId(): number {
-  return ensureNumber(Date.now())
+    return ensureNumber(Date.now())
   }
 }

@@ -95,7 +95,7 @@ export class MCPProjectConfigService extends EventEmitter {
     for (let i = 0; i < CONFIG_FILE_NAMES.length; i++) {
       const configFileName = CONFIG_FILE_NAMES[i]
       if (!configFileName) continue
-      
+
       const configPath = path.join(projectPath, configFileName)
       const exists = await this.fileExists(configPath)
 
@@ -378,7 +378,7 @@ export class MCPProjectConfigService extends EventEmitter {
 
     // Define normalizedCwd in the correct scope
     const normalizedCwd = toPosixPath(promptlianoPath)
-    
+
     if (!foundRoot) {
       // Fallback: if we're in packages/server, go up two levels
       if (normalizedCwd.includes('packages/server')) {

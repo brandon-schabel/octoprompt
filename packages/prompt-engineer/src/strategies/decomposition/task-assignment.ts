@@ -1,8 +1,5 @@
 import { E, A, pipe } from '../../fp'
-import {
-  type DecomposedTask,
-  type TaskGraph
-} from '../../types'
+import { type DecomposedTask, type TaskGraph } from '../../types'
 
 // ============================================================================
 // Task Assignment and Agent Matching
@@ -149,7 +146,7 @@ export class AgentRegistry {
         specializations: ['vercel-ai', 'streaming', 'tool-calling'],
         complexity: { min: 3, max: 8 },
         speed: 'medium',
-        reliability: 0.90
+        reliability: 0.9
       },
       {
         id: 'tanstack-router-expert',
@@ -189,7 +186,7 @@ export class AgentRegistry {
       }
     ]
 
-    defaultAgents.forEach(agent => {
+    defaultAgents.forEach((agent) => {
       this.agents.set(agent.id, agent)
     })
   }
@@ -211,19 +208,15 @@ export class AgentRegistry {
 
   // Find agents matching capabilities
   findAgentsByCapabilities(capabilities: string[]): AgentProfile[] {
-    return this.getAllAgents().filter(agent =>
-      capabilities.some(cap =>
-        agent.capabilities.includes(cap) ||
-        agent.specializations.includes(cap)
-      )
+    return this.getAllAgents().filter((agent) =>
+      capabilities.some((cap) => agent.capabilities.includes(cap) || agent.specializations.includes(cap))
     )
   }
 
   // Find agents for complexity range
   findAgentsByComplexity(complexity: number): AgentProfile[] {
-    return this.getAllAgents().filter(agent =>
-      complexity >= agent.complexity.min &&
-      complexity <= agent.complexity.max
+    return this.getAllAgents().filter(
+      (agent) => complexity >= agent.complexity.min && complexity <= agent.complexity.max
     )
   }
 }
@@ -241,7 +234,7 @@ export class TaskAssignmentEngine {
       allowParallelAgents: false,
       preferSpecialists: true
     }
-  ) { }
+  ) {}
 
   // Assign agents to all tasks in a graph
   assignAgents(graph: TaskGraph): E.Either<Error, TaskAssignment[]> {
@@ -250,8 +243,8 @@ export class TaskAssignmentEngine {
 
       // Process tasks in dependency order
       graph.parallelGroups.forEach((group, groupIndex) => {
-        group.forEach(taskId => {
-          const task = graph.nodes.find(n => n.id === taskId)
+        group.forEach((taskId) => {
+          const task = graph.nodes.find((n) => n.id === taskId)
           if (task) {
             const assignment = this.assignAgentToTask(task, groupIndex)
             if (E.isRight(assignment)) {
@@ -268,10 +261,7 @@ export class TaskAssignmentEngine {
   }
 
   // Assign agent to single task
-  private assignAgentToTask(
-    task: DecomposedTask,
-    priority: number
-  ): E.Either<Error, TaskAssignment> {
+  private assignAgentToTask(task: DecomposedTask, priority: number): E.Either<Error, TaskAssignment> {
     try {
       // Get candidate agents
       const candidates = this.findCandidateAgents(task)
@@ -281,7 +271,7 @@ export class TaskAssignmentEngine {
       }
 
       // Score and rank candidates
-      const scored = candidates.map(agent => ({
+      const scored = candidates.map((agent) => ({
         agent,
         score: this.scoreAgentForTask(agent, task)
       }))
@@ -297,7 +287,7 @@ export class TaskAssignmentEngine {
         taskId: task.id,
         agentId: selected.agent.id,
         confidence: selected.score,
-        alternativeAgents: scored.slice(1, 4).map(s => s.agent.id),
+        alternativeAgents: scored.slice(1, 4).map((s) => s.agent.id),
         estimatedDuration: this.estimateDuration(task, selected.agent),
         priority
       }
@@ -324,14 +314,12 @@ export class TaskAssignmentEngine {
     candidates.push(...byCapabilities)
 
     // 3. Find agents by complexity
-    const byComplexity = this.agentRegistry.findAgentsByComplexity(
-      task.estimatedComplexity || 5
-    )
+    const byComplexity = this.agentRegistry.findAgentsByComplexity(task.estimatedComplexity || 5)
     candidates.push(...byComplexity)
 
     // Remove duplicates
     const unique = new Map<string, AgentProfile>()
-    candidates.forEach(agent => unique.set(agent.id, agent))
+    candidates.forEach((agent) => unique.set(agent.id, agent))
 
     return Array.from(unique.values())
   }
@@ -342,14 +330,14 @@ export class TaskAssignmentEngine {
 
     // 1. Specialization match (40%)
     const keywords = this.extractKeywords(task.description.toLowerCase())
-    const specializationMatches = agent.specializations.filter(spec =>
-      keywords.some(kw => spec.includes(kw) || kw.includes(spec))
+    const specializationMatches = agent.specializations.filter((spec) =>
+      keywords.some((kw) => spec.includes(kw) || kw.includes(spec))
     ).length
     score += (specializationMatches / Math.max(agent.specializations.length, 1)) * 0.4
 
     // 2. Capability match (30%)
-    const capabilityMatches = agent.capabilities.filter(cap =>
-      keywords.some(kw => cap.includes(kw) || kw.includes(cap))
+    const capabilityMatches = agent.capabilities.filter((cap) =>
+      keywords.some((kw) => cap.includes(kw) || kw.includes(cap))
     ).length
     score += (capabilityMatches / Math.max(agent.capabilities.length, 1)) * 0.3
 
@@ -389,7 +377,7 @@ export class TaskAssignmentEngine {
 
       case 'speed':
         // Filter for fast agents, then pick best
-        const fast = scored.filter(s => s.agent.speed !== 'slow')
+        const fast = scored.filter((s) => s.agent.speed !== 'slow')
         return fast.length > 0 ? fast[0] : scored[0]
 
       case 'cost':
@@ -418,11 +406,10 @@ export class TaskAssignmentEngine {
     const baseTime = (task.estimatedComplexity || 5) * 10 // Base: 10 min per complexity
 
     // Adjust for agent speed
-    const speedMultiplier = agent.speed === 'fast' ? 0.7 :
-      agent.speed === 'slow' ? 1.5 : 1
+    const speedMultiplier = agent.speed === 'fast' ? 0.7 : agent.speed === 'slow' ? 1.5 : 1
 
     // Adjust for subtasks
-    const subtaskMultiplier = task.subtasks ? 1 + (task.subtasks.length * 0.2) : 1
+    const subtaskMultiplier = task.subtasks ? 1 + task.subtasks.length * 0.2 : 1
 
     return Math.ceil(baseTime * speedMultiplier * subtaskMultiplier)
   }
@@ -433,15 +420,41 @@ export class TaskAssignmentEngine {
 
     // Common technical terms
     const technicalTerms = [
-      'api', 'ui', 'database', 'frontend', 'backend', 'component',
-      'service', 'route', 'schema', 'validation', 'test', 'migration',
-      'deployment', 'authentication', 'authorization', 'cache', 'queue',
-      'react', 'typescript', 'zod', 'hono', 'bun', 'sqlite', 'git',
-      'docker', 'ci', 'cd', 'workflow', 'action', 'review', 'refactor'
+      'api',
+      'ui',
+      'database',
+      'frontend',
+      'backend',
+      'component',
+      'service',
+      'route',
+      'schema',
+      'validation',
+      'test',
+      'migration',
+      'deployment',
+      'authentication',
+      'authorization',
+      'cache',
+      'queue',
+      'react',
+      'typescript',
+      'zod',
+      'hono',
+      'bun',
+      'sqlite',
+      'git',
+      'docker',
+      'ci',
+      'cd',
+      'workflow',
+      'action',
+      'review',
+      'refactor'
     ]
 
     const lowerText = text.toLowerCase()
-    technicalTerms.forEach(term => {
+    technicalTerms.forEach((term) => {
       if (lowerText.includes(term)) {
         keywords.push(term)
       }
@@ -449,11 +462,21 @@ export class TaskAssignmentEngine {
 
     // Extract action verbs
     const actionVerbs = [
-      'implement', 'create', 'build', 'design', 'write', 'add',
-      'update', 'refactor', 'test', 'deploy', 'migrate', 'review'
+      'implement',
+      'create',
+      'build',
+      'design',
+      'write',
+      'add',
+      'update',
+      'refactor',
+      'test',
+      'deploy',
+      'migrate',
+      'review'
     ]
 
-    actionVerbs.forEach(verb => {
+    actionVerbs.forEach((verb) => {
       if (lowerText.includes(verb)) {
         keywords.push(verb)
       }
@@ -469,10 +492,7 @@ export class TaskAssignmentEngine {
 
 export class AssignmentOptimizer {
   // Optimize assignments for better distribution
-  optimizeAssignments(
-    assignments: TaskAssignment[],
-    strategy: AssignmentStrategy
-  ): TaskAssignment[] {
+  optimizeAssignments(assignments: TaskAssignment[], strategy: AssignmentStrategy): TaskAssignment[] {
     // Balance load across agents
     const balanced = this.balanceAgentLoad(assignments)
 
@@ -488,7 +508,7 @@ export class AssignmentOptimizer {
   private balanceAgentLoad(assignments: TaskAssignment[]): TaskAssignment[] {
     // Count tasks per agent
     const agentLoad = new Map<string, number>()
-    assignments.forEach(assignment => {
+    assignments.forEach((assignment) => {
       const count = agentLoad.get(assignment.agentId) || 0
       agentLoad.set(assignment.agentId, count + 1)
     })
@@ -500,11 +520,10 @@ export class AssignmentOptimizer {
       .map(([agentId]) => agentId)
 
     // Reassign some tasks from overloaded agents
-    const optimized = assignments.map(assignment => {
-      if (overloaded.includes(assignment.agentId) &&
-        assignment.alternativeAgents.length > 0) {
+    const optimized = assignments.map((assignment) => {
+      if (overloaded.includes(assignment.agentId) && assignment.alternativeAgents.length > 0) {
         // Check if alternative has lower load
-        const alt = assignment.alternativeAgents.find(altId => {
+        const alt = assignment.alternativeAgents.find((altId) => {
           const altLoad = agentLoad.get(altId) || 0
           return altLoad < avgLoad
         })
@@ -528,24 +547,15 @@ export class AssignmentOptimizer {
   }
 
   // Add parallel agents for critical tasks
-  private addParallelAgents(
-    assignments: TaskAssignment[],
-    maxAgents: number
-  ): TaskAssignment[] {
+  private addParallelAgents(assignments: TaskAssignment[], maxAgents: number): TaskAssignment[] {
     const enhanced: TaskAssignment[] = []
 
-    assignments.forEach(assignment => {
+    assignments.forEach((assignment) => {
       enhanced.push(assignment)
 
       // Add parallel agents for high-priority, low-confidence tasks
-      if (assignment.priority <= 2 &&
-        assignment.confidence < 0.7 &&
-        assignment.alternativeAgents.length > 0) {
-
-        const parallelCount = Math.min(
-          assignment.alternativeAgents.length,
-          maxAgents - 1
-        )
+      if (assignment.priority <= 2 && assignment.confidence < 0.7 && assignment.alternativeAgents.length > 0) {
+        const parallelCount = Math.min(assignment.alternativeAgents.length, maxAgents - 1)
 
         for (let i = 0; i < parallelCount; i++) {
           enhanced.push({
@@ -570,10 +580,7 @@ export function createTaskAssignmentEngine(
   agentRegistry?: AgentRegistry,
   strategy?: AssignmentStrategy
 ): TaskAssignmentEngine {
-  return new TaskAssignmentEngine(
-    agentRegistry || createAgentRegistry(),
-    strategy
-  )
+  return new TaskAssignmentEngine(agentRegistry || createAgentRegistry(), strategy)
 }
 
 export function createAssignmentOptimizer(): AssignmentOptimizer {

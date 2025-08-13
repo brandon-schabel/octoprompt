@@ -1,10 +1,10 @@
 /**
  * Centralized SQLite Type Converters
- * 
+ *
  * This utility provides consistent type conversion between SQLite storage types
  * and TypeScript types. SQLite has a limited type system (NULL, INTEGER, REAL, TEXT, BLOB)
  * which requires careful conversion to TypeScript types.
- * 
+ *
  * Key conversions:
  * - Booleans are stored as INTEGER (0/1)
  * - Arrays/Objects are stored as TEXT (JSON strings)
@@ -100,7 +100,7 @@ export function fromString(value: string | null | undefined): string | null {
  */
 export function toJson<T>(json: string | null | undefined, fallback: T, context?: string): T {
   if (!json) return fallback
-  
+
   try {
     return JSON.parse(json) as T
   } catch (error) {
@@ -119,7 +119,7 @@ export function toJson<T>(json: string | null | undefined, fallback: T, context?
  */
 export function fromJson(value: any, fallback: string | null = null): string | null {
   if (value === null || value === undefined) return fallback
-  
+
   try {
     return JSON.stringify(value)
   } catch (error) {
@@ -163,7 +163,7 @@ export function toObject<T extends Record<string, any> = Record<string, any>>(
   context?: string
 ): T {
   const result = toJson(json, fallback, context)
-  return (typeof result === 'object' && !Array.isArray(result) && result !== null) ? result : fallback
+  return typeof result === 'object' && !Array.isArray(result) && result !== null ? result : fallback
 }
 
 /**
@@ -184,12 +184,12 @@ export function fromObject(value: Record<string, any> | null | undefined): strin
  */
 export function toTimestamp(value: any, fallback?: number): number {
   const defaultFallback = fallback ?? Date.now()
-  
+
   if (value === null || value === undefined) return defaultFallback
-  
+
   const num = toNumber(value, 0)
   if (num === 0) return defaultFallback
-  
+
   // Check if it's likely in seconds vs milliseconds
   // JavaScript timestamps are in milliseconds since 1970-01-01
   // If the number is less than 10 billion, it's likely seconds
@@ -199,7 +199,7 @@ export function toTimestamp(value: any, fallback?: number): number {
   if (num < 10000000000) {
     return num * 1000
   }
-  
+
   return num
 }
 
@@ -281,7 +281,7 @@ export function safeJsonParse<T>(
   validator?: (value: any) => value is T
 ): T {
   if (!json) return fallback
-  
+
   try {
     const parsed = JSON.parse(json)
     if (validator && !validator(parsed)) {
@@ -299,10 +299,7 @@ export function safeJsonParse<T>(
  * @param converter - Function to convert each row
  * @returns Array of converted values
  */
-export function batchConvert<TRow, TResult>(
-  rows: TRow[],
-  converter: (row: TRow) => TResult
-): TResult[] {
+export function batchConvert<TRow, TResult>(rows: TRow[], converter: (row: TRow) => TResult): TResult[] {
   return rows.map(converter)
 }
 
@@ -319,12 +316,12 @@ export function rowsToRecord<TRow, TValue>(
   valueConverter: (row: TRow) => TValue
 ): Record<string, TValue> {
   const record: Record<string, TValue> = {}
-  
+
   for (const row of rows) {
     const key = String(keyExtractor(row))
     record[key] = valueConverter(row)
   }
-  
+
   return record
 }
 
@@ -334,38 +331,38 @@ export const SqliteConverters = {
   toBoolean,
   fromBoolean,
   ensureBoolean,
-  
+
   // Number converters
   toNumber,
   fromNumber,
   ensureNumber,
-  
+
   // String converters
   toString,
   fromString,
   ensureString,
-  
+
   // JSON converters
   toJson,
   fromJson,
   safeJsonParse,
-  
+
   // Array converters
   toArray,
   fromArray,
-  
+
   // Object converters
   toObject,
   fromObject,
-  
+
   // Timestamp converters
   toTimestamp,
   fromTimestamp,
-  
+
   // Type guards
   isNullish,
   isValidJson,
-  
+
   // Batch operations
   batchConvert,
   rowsToRecord

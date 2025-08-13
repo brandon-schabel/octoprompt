@@ -17,7 +17,7 @@ export interface LLMProvider {
   readonly batchGenerate: (prompts: string[], options?: GenerationOptions) => Effect.Effect<string[], LLMError>
 }
 
-export const LLMProviderTag = Context.GenericTag<LLMProvider>("LLMProvider")
+export const LLMProviderTag = Context.GenericTag<LLMProvider>('LLMProvider')
 
 export interface GenerationOptions {
   temperature?: number
@@ -26,22 +26,16 @@ export interface GenerationOptions {
   stopSequences?: string[]
 }
 
-export class LLMError extends Schema.TaggedError<LLMError>("LLMError")(
-  "LLMError",
-  {
-    cause: Schema.Unknown,
-    message: Schema.String
-  }
-) { }
+export class LLMError extends Schema.TaggedError<LLMError>('LLMError')('LLMError', {
+  cause: Schema.Unknown,
+  message: Schema.String
+}) {}
 
-export class OptimizationError extends Schema.TaggedError<OptimizationError>("OptimizationError")(
-  "OptimizationError",
-  {
-    stage: Schema.String,
-    message: Schema.String,
-    details: Schema.optional(Schema.Unknown)
-  }
-) { }
+export class OptimizationError extends Schema.TaggedError<OptimizationError>('OptimizationError')('OptimizationError', {
+  stage: Schema.String,
+  message: Schema.String,
+  details: Schema.optional(Schema.Unknown)
+}) {}
 
 // ============================================================================
 // PromptWizard Core Types
@@ -130,12 +124,12 @@ export class PromptWizardOptimizer implements Optimizer {
   /**
    * Async optimization with full PromptWizard evolution
    */
-  optimizeAsync(
-    prompt: string,
-    context?: any
-  ): TE.TaskEither<Error, OptimizedPrompt> {
+  optimizeAsync(prompt: string, context?: any): TE.TaskEither<Error, OptimizedPrompt> {
     // Simplified TE wrapper to satisfy interface without requiring Effect runtime
-    return TE.tryCatch(async () => this.createBasicOptimization(prompt), (e) => e as Error)
+    return TE.tryCatch(
+      async () => this.createBasicOptimization(prompt),
+      (e) => e as Error
+    )
   }
 
   /**
@@ -231,7 +225,7 @@ function initializePopulation(
     // Evaluate initial candidates
     const candidates = yield* _(
       Effect.all(
-        variations.map(v => evaluateCandidate(v, llm, context)),
+        variations.map((v) => evaluateCandidate(v, llm, context)),
         { concurrency: 5 }
       )
     )
@@ -245,14 +239,16 @@ function initializePopulation(
       bestCandidate: sorted[0],
       apiCallsUsed: variations.length,
       converged: false,
-      history: [{
-        generation: 0,
-        bestScore: sorted[0].fitness.overall,
-        averageScore: calculateAverageScore(sorted),
-        diversity: calculateDiversity(sorted),
-        mutations: 0,
-        improvements: 0
-      }]
+      history: [
+        {
+          generation: 0,
+          bestScore: sorted[0].fitness.overall,
+          averageScore: calculateAverageScore(sorted),
+          diversity: calculateDiversity(sorted),
+          mutations: 0,
+          improvements: 0
+        }
+      ]
     }
   })
 }
@@ -279,24 +275,18 @@ function evolvePopulation(
       const parents = selectParents(state.population, config)
 
       // Generate offspring through crossover and mutation
-      const offspring = yield* _(
-        generateOffspring(parents, llm, context, config)
-      )
+      const offspring = yield* _(generateOffspring(parents, llm, context, config))
 
       // Evaluate new candidates
       const evaluatedOffspring = yield* _(
         Effect.all(
-          offspring.map(o => evaluateCandidate(o, llm, context)),
+          offspring.map((o) => evaluateCandidate(o, llm, context)),
           { concurrency: 5 }
         )
       )
 
       // Select next generation
-      const nextPopulation = selectNextGeneration(
-        state.population,
-        evaluatedOffspring,
-        config
-      )
+      const nextPopulation = selectNextGeneration(state.population, evaluatedOffspring, config)
 
       // Update state
       const bestCandidate = nextPopulation[0]
@@ -312,9 +302,8 @@ function evolvePopulation(
       state = {
         generation: gen,
         population: nextPopulation,
-        bestCandidate: bestCandidate.fitness.overall > state.bestCandidate.fitness.overall
-          ? bestCandidate
-          : state.bestCandidate,
+        bestCandidate:
+          bestCandidate.fitness.overall > state.bestCandidate.fitness.overall ? bestCandidate : state.bestCandidate,
         apiCallsUsed: state.apiCallsUsed + offspring.length,
         converged: checkConvergence(state.history, history, config),
         history: [...state.history, history]
@@ -339,16 +328,18 @@ function evaluateCandidate(
 
     const outputs = yield* _(
       llm.batchGenerate(
-        testInputs.map(input => `${prompt}\n\nInput: ${input}`),
+        testInputs.map((input) => `${prompt}\n\nInput: ${input}`),
         { temperature: 0.3, maxTokens: 200 }
       )
     ).pipe(
-      Effect.catchTag("LLMError", (error) =>
-        Effect.fail(new OptimizationError({
-          stage: "evaluation",
-          message: "Failed to evaluate candidate",
-          details: error
-        }))
+      Effect.catchTag('LLMError', (error) =>
+        Effect.fail(
+          new OptimizationError({
+            stage: 'evaluation',
+            message: 'Failed to evaluate candidate',
+            details: error
+          })
+        )
       )
     )
 
@@ -400,10 +391,7 @@ function generateOffspring(
 /**
  * Mutate prompt using LLM-guided mutations
  */
-function mutatePrompt(
-  prompt: string,
-  llm: LLMProvider
-): Effect.Effect<string, OptimizationError> {
+function mutatePrompt(prompt: string, llm: LLMProvider): Effect.Effect<string, OptimizationError> {
   const strategy = selectMutationStrategy(prompt)
 
   const mutationPrompt = `
@@ -418,12 +406,14 @@ Target: ${strategy.targetAspect}
 Generate an improved version:`
 
   return llm.generate(mutationPrompt, { temperature: 0.7, maxTokens: 300 }).pipe(
-    Effect.catchTag("LLMError", (error) =>
-      Effect.fail(new OptimizationError({
-        stage: "mutation",
-        message: "Failed to mutate prompt",
-        details: error
-      }))
+    Effect.catchTag('LLMError', (error) =>
+      Effect.fail(
+        new OptimizationError({
+          stage: 'mutation',
+          message: 'Failed to mutate prompt',
+          details: error
+        })
+      )
     )
   )
 }
@@ -467,7 +457,12 @@ Requirements:
 - Be concise yet comprehensive`)
 
   // Compressed version
-  variations.push(prompt.split(' ').filter((_, i) => i % 2 === 0).join(' '))
+  variations.push(
+    prompt
+      .split(' ')
+      .filter((_, i) => i % 2 === 0)
+      .join(' ')
+  )
 
   // Expanded version
   variations.push(`
@@ -478,38 +473,35 @@ Approach: Break down the problem systematically and provide a thorough solution.
   return variations.slice(0, 20) // Limit to population size
 }
 
-function calculateFitness(
-  prompt: string,
-  outputs: string[],
-  inputs: string[]
-): FitnessMetrics {
+function calculateFitness(prompt: string, outputs: string[], inputs: string[]): FitnessMetrics {
   // Clarity: How well-structured are the outputs
-  const clarity = outputs.reduce((acc, output) => {
-    const hasStructure = output.includes('\n') ? 0.2 : 0
-    const hasSections = output.match(/\d\.|•|-/g) ? 0.3 : 0
-    const avgSentenceLength = output.split('.').length > 3 ? 0.3 : 0
-    const readable = output.length > 50 && output.length < 500 ? 0.2 : 0
-    return acc + hasStructure + hasSections + avgSentenceLength + readable
-  }, 0) / outputs.length
+  const clarity =
+    outputs.reduce((acc, output) => {
+      const hasStructure = output.includes('\n') ? 0.2 : 0
+      const hasSections = output.match(/\d\.|•|-/g) ? 0.3 : 0
+      const avgSentenceLength = output.split('.').length > 3 ? 0.3 : 0
+      const readable = output.length > 50 && output.length < 500 ? 0.2 : 0
+      return acc + hasStructure + hasSections + avgSentenceLength + readable
+    }, 0) / outputs.length
 
   // Specificity: Concrete details and examples
-  const specificity = outputs.reduce((acc, output) => {
-    const hasNumbers = /\d+/.test(output) ? 0.25 : 0
-    const hasExamples = /example|for instance|such as/i.test(output) ? 0.25 : 0
-    const hasDetails = output.length > 100 ? 0.25 : 0
-    const hasCode = /```|`[^`]+`/.test(output) ? 0.25 : 0
-    return acc + hasNumbers + hasExamples + hasDetails + hasCode
-  }, 0) / outputs.length
+  const specificity =
+    outputs.reduce((acc, output) => {
+      const hasNumbers = /\d+/.test(output) ? 0.25 : 0
+      const hasExamples = /example|for instance|such as/i.test(output) ? 0.25 : 0
+      const hasDetails = output.length > 100 ? 0.25 : 0
+      const hasCode = /```|`[^`]+`/.test(output) ? 0.25 : 0
+      return acc + hasNumbers + hasExamples + hasDetails + hasCode
+    }, 0) / outputs.length
 
   // Effectiveness: How well outputs address inputs
-  const effectiveness = outputs.reduce((acc, output, i) => {
-    const input = inputs[i]
-    const keywords = input.toLowerCase().split(/\s+/)
-    const matches = keywords.filter(kw =>
-      output.toLowerCase().includes(kw)
-    ).length
-    return acc + (matches / keywords.length)
-  }, 0) / outputs.length
+  const effectiveness =
+    outputs.reduce((acc, output, i) => {
+      const input = inputs[i]
+      const keywords = input.toLowerCase().split(/\s+/)
+      const matches = keywords.filter((kw) => output.toLowerCase().includes(kw)).length
+      return acc + matches / keywords.length
+    }, 0) / outputs.length
 
   // Token efficiency
   const avgTokens = outputs.reduce((acc, o) => acc + estimateTokens(o), 0) / outputs.length
@@ -517,7 +509,7 @@ function calculateFitness(
   const tokenEfficiency = Math.max(0, 1 - Math.abs(avgTokens - targetTokens) / targetTokens)
 
   // Robustness: Consistency across different inputs
-  const uniquePatterns = new Set(outputs.map(o => o.substring(0, 20))).size
+  const uniquePatterns = new Set(outputs.map((o) => o.substring(0, 20))).size
   const robustness = 1 - (uniquePatterns / outputs.length) * 0.5
 
   // Calculate overall fitness
@@ -546,10 +538,7 @@ function calculateFitness(
   }
 }
 
-function selectParents(
-  population: EvolutionCandidate[],
-  config: EvolutionConfig
-): EvolutionCandidate[] {
+function selectParents(population: EvolutionCandidate[], config: EvolutionConfig): EvolutionCandidate[] {
   const parents: EvolutionCandidate[] = []
 
   // Elite selection
@@ -577,15 +566,9 @@ function crossover(parent1: string, parent2: string): string[] {
   const point1 = Math.floor(words1.length / 2)
   const point2 = Math.floor(words2.length / 2)
 
-  const child1 = [
-    ...words1.slice(0, point1),
-    ...words2.slice(point2)
-  ].join(' ')
+  const child1 = [...words1.slice(0, point1), ...words2.slice(point2)].join(' ')
 
-  const child2 = [
-    ...words2.slice(0, point2),
-    ...words1.slice(point1)
-  ].join(' ')
+  const child2 = [...words2.slice(0, point2), ...words1.slice(point1)].join(' ')
 
   return [child1, child2]
 }
@@ -602,11 +585,11 @@ function selectMutationStrategy(prompt: string): MutationStrategy {
 
   // Select based on prompt characteristics
   if (prompt.length < 50) {
-    return strategies.find(s => s.type === 'expand')!
+    return strategies.find((s) => s.type === 'expand')!
   } else if (prompt.length > 300) {
-    return strategies.find(s => s.type === 'compress')!
+    return strategies.find((s) => s.type === 'compress')!
   } else if (!prompt.includes('\n')) {
-    return strategies.find(s => s.type === 'restructure')!
+    return strategies.find((s) => s.type === 'restructure')!
   }
 
   // Random selection
@@ -651,15 +634,11 @@ function selectNextGeneration(
   return selected
 }
 
-function checkConvergence(
-  history: GenerationHistory[],
-  current: GenerationHistory,
-  config: EvolutionConfig
-): boolean {
+function checkConvergence(history: GenerationHistory[], current: GenerationHistory, config: EvolutionConfig): boolean {
   if (history.length < 3) return false
 
   // Check if improvement has plateaued
-  const recentScores = [...history.slice(-3), current].map(h => h.bestScore)
+  const recentScores = [...history.slice(-3), current].map((h) => h.bestScore)
   const improvement = recentScores[3] - recentScores[0]
 
   // Check if diversity is too low
@@ -674,11 +653,11 @@ function checkConvergence(
 function generateTestInputs(context?: any): string[] {
   // Generate diverse test inputs based on context
   const baseInputs = [
-    "Explain how this works",
-    "Provide an example",
-    "What are the edge cases?",
-    "How can this be optimized?",
-    "What are the alternatives?"
+    'Explain how this works',
+    'Provide an example',
+    'What are the edge cases?',
+    'How can this be optimized?',
+    'What are the alternatives?'
   ]
 
   if (context?.domain) {
@@ -701,13 +680,13 @@ function extractReasoning(prompt: string): string {
     /consider|analyze|evaluate/i
   ]
 
-  const matches = patterns.filter(p => p.test(prompt))
+  const matches = patterns.filter((p) => p.test(prompt))
 
   if (matches.length > 0) {
     return `Uses ${matches.length} reasoning patterns`
   }
 
-  return "Direct instruction without explicit reasoning"
+  return 'Direct instruction without explicit reasoning'
 }
 
 function calculateAverageScore(population: EvolutionCandidate[]): number {
@@ -721,10 +700,7 @@ function calculateDiversity(population: EvolutionCandidate[]): number {
 
   for (let i = 0; i < population.length - 1; i++) {
     for (let j = i + 1; j < population.length; j++) {
-      const distance = calculateLevenshteinDistance(
-        population[i].prompt,
-        population[j].prompt
-      )
+      const distance = calculateLevenshteinDistance(population[i].prompt, population[j].prompt)
       totalDistance += distance
       comparisons++
     }
@@ -749,11 +725,7 @@ function calculateLevenshteinDistance(a: string, b: string): number {
       if (b.charAt(i - 1) === a.charAt(j - 1)) {
         matrix[i][j] = matrix[i - 1][j - 1]
       } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        )
+        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
       }
     }
   }
@@ -782,17 +754,17 @@ function analyzePromptStructure(prompt: string) {
   const issues = []
 
   if (words.length < 10) {
-    issues.push("Prompt may be too vague")
-    recommendations.push("Add more specific details")
+    issues.push('Prompt may be too vague')
+    recommendations.push('Add more specific details')
   }
 
   if (words.length > 100) {
-    issues.push("Prompt may be too verbose")
-    recommendations.push("Compress to essential information")
+    issues.push('Prompt may be too verbose')
+    recommendations.push('Compress to essential information')
   }
 
   if (!prompt.includes('\n') && words.length > 20) {
-    recommendations.push("Add structure with line breaks")
+    recommendations.push('Add structure with line breaks')
   }
 
   const improvementScore = 50 - issues.length * 10 + recommendations.length * 5
@@ -813,7 +785,7 @@ Please provide a clear, structured response with specific examples where applica
 
   return {
     optimized: enhanced,
-    system: "You are a helpful assistant that provides clear, structured responses.",
+    system: 'You are a helpful assistant that provides clear, structured responses.',
     user: enhanced
   }
 }
@@ -850,7 +822,7 @@ function convertToOptimizedPrompt(
   return Effect.succeed({
     originalPrompt: original,
     optimizedPrompt: candidate.prompt,
-    systemPrompt: "You are an AI assistant optimized through evolutionary algorithms.",
+    systemPrompt: 'You are an AI assistant optimized through evolutionary algorithms.',
     userPrompt: candidate.prompt,
     reasoningStructure: {
       sequences: candidate.reasoning.includes('step') ? ['step-by-step'] : [],
@@ -900,12 +872,7 @@ export function createPromptWizardOptimizer(): PromptWizardOptimizer {
 }
 
 // Mock LLM provider for testing
-export const MockLLMProvider = Layer.succeed(
-  LLMProviderTag,
-  {
-    generate: (prompt: string) =>
-      Effect.succeed(`Enhanced: ${prompt.slice(0, 50)}...`),
-    batchGenerate: (prompts: string[]) =>
-      Effect.succeed(prompts.map(p => `Response to: ${p.slice(0, 30)}...`))
-  }
-)
+export const MockLLMProvider = Layer.succeed(LLMProviderTag, {
+  generate: (prompt: string) => Effect.succeed(`Enhanced: ${prompt.slice(0, 50)}...`),
+  batchGenerate: (prompts: string[]) => Effect.succeed(prompts.map((p) => `Response to: ${p.slice(0, 30)}...`))
+})

@@ -44,7 +44,10 @@ async function test() {
     body: JSON.stringify({
       model: 'openai/gpt-oss-20b',
       messages: [
-        { role: 'system', content: 'You are a code analyzer. Always respond with valid JSON only, no additional text.' },
+        {
+          role: 'system',
+          content: 'You are a code analyzer. Always respond with valid JSON only, no additional text.'
+        },
         { role: 'user', content: prompt }
       ],
       temperature: 0.3,

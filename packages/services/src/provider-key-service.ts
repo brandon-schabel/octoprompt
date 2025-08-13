@@ -205,12 +205,7 @@ export function createProviderKeyService() {
     if (data.isDefault === true && existingKey.provider === (data.provider ?? existingKey.provider)) {
       for (const keyId in allKeys) {
         const key = allKeys[keyId]
-        if (
-          key &&
-          key.id !== id &&
-          key.provider === (data.provider ?? existingKey.provider) &&
-          key.isDefault
-        ) {
+        if (key && key.id !== id && key.provider === (data.provider ?? existingKey.provider) && key.isDefault) {
           key.isDefault = false
           key.updated = now
         }

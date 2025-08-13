@@ -84,19 +84,22 @@ export class TaskDecompositionStrategy {
   }
 
   // Full decomposition pipeline
-  decompose(taskDescription: string): E.Either<Error, {
-    task: DecomposedTask
-    graph: TaskGraph
-    analysis: ReturnType<DependencyGraphAnalyzer['analyzeGraph']>
-    executionPlan: ReturnType<ExecutionPlanner['createExecutionPlan']>
-    assignments: ReturnType<TaskAssignmentEngine['assignAgents']>
-  }> {
+  decompose(taskDescription: string): E.Either<
+    Error,
+    {
+      task: DecomposedTask
+      graph: TaskGraph
+      analysis: ReturnType<DependencyGraphAnalyzer['analyzeGraph']>
+      executionPlan: ReturnType<ExecutionPlanner['createExecutionPlan']>
+      assignments: ReturnType<TaskAssignmentEngine['assignAgents']>
+    }
+  > {
     return pipe(
       // Step 1: Analyze and decompose task
       this.taskAnalyzer.analyzeTask(taskDescription),
 
       // Step 2: Build task graph
-      E.chain(task => {
+      E.chain((task) => {
         const graph = this.graphBuilder.buildGraph(task)
         return E.right({ task, graph })
       }),
@@ -109,10 +112,7 @@ export class TaskDecompositionStrategy {
 
       // Step 4: Create execution plan
       E.chain(({ task, graph, analysis }) => {
-        const executionPlan = this.executionPlanner.createExecutionPlan(
-          graph,
-          this.config?.maxConcurrency || 5
-        )
+        const executionPlan = this.executionPlanner.createExecutionPlan(graph, this.config?.maxConcurrency || 5)
         return E.right({ task, graph, analysis, executionPlan })
       }),
 
@@ -127,13 +127,16 @@ export class TaskDecompositionStrategy {
   }
 
   // Async version
-  decomposeAsync(taskDescription: string): TE.TaskEither<Error, {
-    task: DecomposedTask
-    graph: TaskGraph
-    analysis: ReturnType<DependencyGraphAnalyzer['analyzeGraph']>
-    executionPlan: ReturnType<ExecutionPlanner['createExecutionPlan']>
-    assignments: ReturnType<TaskAssignmentEngine['assignAgents']>
-  }> {
+  decomposeAsync(taskDescription: string): TE.TaskEither<
+    Error,
+    {
+      task: DecomposedTask
+      graph: TaskGraph
+      analysis: ReturnType<DependencyGraphAnalyzer['analyzeGraph']>
+      executionPlan: ReturnType<ExecutionPlanner['createExecutionPlan']>
+      assignments: ReturnType<TaskAssignmentEngine['assignAgents']>
+    }
+  > {
     return TE.fromEither(this.decompose(taskDescription))
   }
 
@@ -151,8 +154,6 @@ export class TaskDecompositionStrategy {
 }
 
 // Export factory function
-export function createTaskDecompositionStrategy(
-  config?: TaskDecompositionConfig
-): TaskDecompositionStrategy {
+export function createTaskDecompositionStrategy(config?: TaskDecompositionConfig): TaskDecompositionStrategy {
   return new TaskDecompositionStrategy(config)
 }

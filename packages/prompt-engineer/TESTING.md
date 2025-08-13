@@ -100,6 +100,7 @@ TEST_VERBOSE=true                            # Enable verbose output
 Each optimizer should be tested for:
 
 1. **Basic functionality**
+
    ```typescript
    test('should optimize a simple prompt', () => {
      const result = optimizer.optimize('Sort an array')
@@ -109,6 +110,7 @@ Each optimizer should be tested for:
    ```
 
 2. **Configuration options**
+
    ```typescript
    test('should respect configuration', () => {
      const customOptimizer = createSCoTOptimizer({
@@ -206,6 +208,7 @@ const optimizer = createSelfConsistencyOptimizer(mockProvider)
    - Install for your platform
 
 2. **Load a Model**
+
    ```
    Recommended models for testing:
    - openai/gpt-oss-20b (good balance)
@@ -220,6 +223,7 @@ const optimizer = createSelfConsistencyOptimizer(mockProvider)
    - Start the server
 
 4. **Verify Connection**
+
    ```bash
    # Check models endpoint
    curl http://localhost:1234/v1/models
@@ -239,8 +243,8 @@ await provider.initialize()
 
 const solution = await provider.generate(
   'Write a sorting function',
-  0.7,  // temperature
-  0.9   // top_p
+  0.7, // temperature
+  0.9 // top_p
 )
 
 // With optimizer
@@ -256,13 +260,13 @@ const result = await optimizer.optimizeAsync('Sort an array')()
 
 ### Current Coverage Goals
 
-| Component | Target | Current | Status |
-|-----------|--------|---------|--------|
-| Optimizers | 90% | 85% | 🟡 |
-| Strategies | 85% | 70% | 🟡 |
-| Core Classes | 95% | 90% | 🟢 |
-| Utilities | 80% | 75% | 🟡 |
-| Integration | 70% | 60% | 🟡 |
+| Component    | Target | Current | Status |
+| ------------ | ------ | ------- | ------ |
+| Optimizers   | 90%    | 85%     | 🟡     |
+| Strategies   | 85%    | 70%     | 🟡     |
+| Core Classes | 95%    | 90%     | 🟢     |
+| Utilities    | 80%    | 75%     | 🟡     |
+| Integration  | 70%    | 60%     | 🟡     |
 
 ### Running Coverage Reports
 
@@ -287,7 +291,7 @@ describe('Performance Benchmarks', () => {
     const startTime = performance.now()
     const result = await optimizer.optimize(complexPrompt)
     const duration = performance.now() - startTime
-    
+
     expect(duration).toBeLessThan(2000) // 2 seconds max
     expect(result.improvementScore).toBeGreaterThan(15)
   })
@@ -300,9 +304,9 @@ describe('Performance Benchmarks', () => {
 test('should handle large prompts efficiently', () => {
   const measurer = new PerformanceMeasurer()
   measurer.start()
-  
+
   const result = optimizer.optimize(veryLongPrompt)
-  
+
   const { duration, memoryDelta } = measurer.end()
   expect(memoryDelta.heapUsed).toBeLessThan(50 * 1024 * 1024) // 50MB max
 })
@@ -314,11 +318,9 @@ test('should handle large prompts efficiently', () => {
 test('should handle concurrent optimizations', async () => {
   const prompts = Array(100).fill(testPrompt)
   const startTime = performance.now()
-  
-  const results = await Promise.all(
-    prompts.map(p => engineer.optimize(p))
-  )
-  
+
+  const results = await Promise.all(prompts.map((p) => engineer.optimize(p)))
+
   const duration = performance.now() - startTime
   expect(duration).toBeLessThan(10000) // 10 seconds for 100 prompts
 })
@@ -384,7 +386,7 @@ test('debug test', () => {
 # GitHub Actions example
 - name: Run Tests
   env:
-    SKIP_LMSTUDIO_TESTS: true  # Skip in CI
+    SKIP_LMSTUDIO_TESTS: true # Skip in CI
   run: |
     bun test:unit
     bun test:coverage
@@ -444,22 +446,22 @@ import * as E from 'fp-ts/Either'
 
 describe('My Optimizer', () => {
   let optimizer: ReturnType<typeof createMyOptimizer>
-  
+
   beforeEach(() => {
     optimizer = createMyOptimizer()
   })
-  
+
   describe('Basic Functionality', () => {
     test('should optimize prompts', () => {
       const result = optimizer.optimize(TEST_PROMPTS.simple.sorting)
       expect(E.isRight(result)).toBe(true)
     })
   })
-  
+
   describe('Configuration', () => {
     // Configuration tests
   })
-  
+
   describe('Error Handling', () => {
     // Error scenario tests
   })
@@ -471,11 +473,11 @@ describe('My Optimizer', () => {
 ```typescript
 describe.skipIf(!process.env.LMSTUDIO_BASE_URL)('LMStudio Integration', () => {
   let provider: LMStudioProvider
-  
+
   beforeAll(async () => {
     provider = await createLMStudioProvider()
   })
-  
+
   test('should generate with real LLM', async () => {
     const result = await provider.generate(prompt, 0.7, 0.9)
     expect(result).toBeDefined()
@@ -502,6 +504,7 @@ describe.skipIf(!process.env.LMSTUDIO_BASE_URL)('LMStudio Integration', () => {
 ### Contributing
 
 When adding new features:
+
 1. Write tests first (TDD approach)
 2. Ensure all tests pass
 3. Add integration tests if applicable
@@ -512,30 +515,35 @@ When adding new features:
 ### ✅ Completed Components
 
 #### Phase 1: Core Fixes
+
 - **Self-Consistency Optimizer**: Fixed async/sync compatibility, added mock fallback for testing
 - **Context Optimizer**: Added compress method, ChunkingStrategy namespace, overloaded scoreByRecency
 - **SCoT Optimizer**: Fixed analyze() return type to proper PromptAnalysis structure
 - **All Optimizers**: Updated analyze() methods to return consistent PromptAnalysis type
 
 #### Phase 2: Test Infrastructure
+
 - **Test Fixtures**: Comprehensive prompt library with simple, algorithmic, complex, and edge cases
 - **Mock Providers**: Deterministic testing without LLMs
 - **LMStudio Provider**: Real LLM integration for validation
 - **Test Utilities**: Token estimation, improvement validators
 
 #### Phase 3: Test Coverage
+
 - **Unit Tests**: 100+ test cases across all optimizers
 - **Strategy Tests**: Task decomposition with 28 test cases
 - **Integration Tests**: PromptEngineer class with optimizer switching
 - **Edge Cases**: Empty prompts, special characters, unicode, very long texts
 
 #### Phase 4: Benchmark Framework
+
 - **BenchmarkRunner**: Configurable iterations, warmup runs, timeout handling
 - **QualityMetrics**: 6-dimensional quality assessment system
 - **Comparative Analysis**: Cross-optimizer performance comparison
 - **Report Generation**: Markdown reports with pass/fail status
 
 #### Phase 5: Quality Metrics
+
 - **Dimensions**: Clarity, Completeness, Accuracy, Relevance, Structure, Efficiency
 - **Response Evaluation**: Issue and strength identification
 - **Keyword Extraction**: Smart keyword analysis for relevance scoring
@@ -543,30 +551,30 @@ When adding new features:
 
 ### 📊 Test Results Summary
 
-| Component | Tests | Pass | Coverage | Status |
-|-----------|-------|------|----------|--------|
-| SCoT Optimizer | 15 | 15 | 92% | ✅ |
-| Self-Consistency | 14 | 13 | 88% | ✅ |
-| Context Optimizer | 18 | 18 | 95% | ✅ |
-| Task Decomposition | 28 | 22 | 78% | 🟡 |
-| PromptEngineer | 12 | 12 | 90% | ✅ |
-| Benchmarks | 15 | N/A | N/A | ✅ |
+| Component          | Tests | Pass | Coverage | Status |
+| ------------------ | ----- | ---- | -------- | ------ |
+| SCoT Optimizer     | 15    | 15   | 92%      | ✅     |
+| Self-Consistency   | 14    | 13   | 88%      | ✅     |
+| Context Optimizer  | 18    | 18   | 95%      | ✅     |
+| Task Decomposition | 28    | 22   | 78%      | 🟡     |
+| PromptEngineer     | 12    | 12   | 90%      | ✅     |
+| Benchmarks         | 15    | N/A  | N/A      | ✅     |
 
 ### 🎯 Benchmark Results
 
 #### Expected vs Actual Improvements
 
-| Optimizer | Simple Prompts | Algorithmic | Complex Tasks |
-|-----------|---------------|-------------|---------------|
-| **SCoT** | | | |
-| Expected | 10% | 20% | 30% |
-| Actual | 13.79% | 22.5% | 28.3% |
-| **Self-Consistency** | | | |
-| Expected | 10% | 25% | 30% |
-| Actual | 23% | 27.8% | 29.1% |
-| **Context** | | | |
-| Expected | 15% | 10% | 15% |
-| Actual | 12.4% | 8.7% | 18.2% |
+| Optimizer            | Simple Prompts | Algorithmic | Complex Tasks |
+| -------------------- | -------------- | ----------- | ------------- |
+| **SCoT**             |                |             |               |
+| Expected             | 10%            | 20%         | 30%           |
+| Actual               | 13.79%         | 22.5%       | 28.3%         |
+| **Self-Consistency** |                |             |               |
+| Expected             | 10%            | 25%         | 30%           |
+| Actual               | 23%            | 27.8%       | 29.1%         |
+| **Context**          |                |             |               |
+| Expected             | 15%            | 10%         | 15%           |
+| Actual               | 12.4%          | 8.7%        | 18.2%         |
 
 ### 🚀 Performance Metrics
 
@@ -584,6 +592,6 @@ When adding new features:
 
 ---
 
-*Last updated: January 2025*
-*Version: 1.0.0*
-*Implementation Status: Complete ✅*
+_Last updated: January 2025_
+_Version: 1.0.0_
+_Implementation Status: Complete ✅_

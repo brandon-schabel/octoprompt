@@ -27,7 +27,7 @@ export class ClaudeCodeImportService {
     // Create a new chat with project association
     const chatId = chatStorage.generateId()
     const now = normalizeToUnixMs(new Date())
-    
+
     const newChat: Chat = {
       id: chatId,
       title,
@@ -41,7 +41,7 @@ export class ClaudeCodeImportService {
     const allChats = await chatStorage.readChats()
     allChats[String(chatId)] = validatedChat
     await chatStorage.writeChats(allChats)
-    
+
     const chat = validatedChat
 
     // Convert and import messages

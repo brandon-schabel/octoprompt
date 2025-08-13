@@ -28,7 +28,7 @@ export interface SecurityThreat {
   readonly mitigation: string
 }
 
-export type ThreatType = 
+export type ThreatType =
   | 'prompt_injection'
   | 'jailbreak_attempt'
   | 'data_exfiltration'
@@ -76,9 +76,9 @@ const THREAT_PATTERNS: Record<ThreatType, RegExp[]> = {
     /new\s+instructions?:\s*/gi,
     /system:\s*you\s+are/gi,
     /\[\[.*\]\]/g, // Double bracket injection
-    /<\|.*\|>/g, // Special delimiter injection
+    /<\|.*\|>/g // Special delimiter injection
   ],
-  
+
   jailbreak_attempt: [
     /pretend\s+you\s+are/gi,
     /act\s+as\s+if/gi,
@@ -87,17 +87,17 @@ const THREAT_PATTERNS: Record<ThreatType, RegExp[]> = {
     /developer\s+mode/gi,
     /unlock\s+.*\s+mode/gi,
     /bypass\s+.*\s+restrictions?/gi,
-    /without\s+.*\s+limitations?/gi,
+    /without\s+.*\s+limitations?/gi
   ],
-  
+
   data_exfiltration: [
     /repeat\s+.*\s+verbatim/gi,
     /output\s+.*\s+training\s+data/gi,
     /show\s+.*\s+system\s+prompt/gi,
     /reveal\s+.*\s+instructions?/gi,
-    /what\s+are\s+your\s+instructions?/gi,
+    /what\s+are\s+your\s+instructions?/gi
   ],
-  
+
   system_command: [
     /\$\{.*\}/g, // Template injection
     /`.*`/g, // Backtick command
@@ -105,45 +105,41 @@ const THREAT_PATTERNS: Record<ThreatType, RegExp[]> = {
     /eval\s*\(/gi,
     /system\s*\(/gi,
     /subprocess/gi,
-    /os\.\w+/gi,
+    /os\.\w+/gi
   ],
-  
+
   role_manipulation: [
     /you\s+must/gi,
     /you\s+have\s+to/gi,
     /it\s+is\s+imperative/gi,
     /mandatory\s+to/gi,
-    /required\s+to/gi,
+    /required\s+to/gi
   ],
-  
+
   context_overflow: [
     /(.)\1{50,}/g, // Repeated characters
-    /[\s\S]{10000,}/g, // Very long prompts
+    /[\s\S]{10000,}/g // Very long prompts
   ],
-  
+
   encoding_attack: [
     /\\x[0-9a-f]{2}/gi, // Hex encoding
     /\\u[0-9a-f]{4}/gi, // Unicode escape
     /%[0-9a-f]{2}/gi, // URL encoding
-    /base64:/gi,
+    /base64:/gi
   ],
-  
-  recursive_prompt: [
-    /repeat\s+this\s+prompt/gi,
-    /ask\s+me\s+to\s+ask\s+you/gi,
-    /infinite\s+loop/gi,
-  ],
-  
+
+  recursive_prompt: [/repeat\s+this\s+prompt/gi, /ask\s+me\s+to\s+ask\s+you/gi, /infinite\s+loop/gi],
+
   adversarial_suffix: [
     /\s{20,}$/g, // Excessive trailing spaces
     /[^\x20-\x7E]/g, // Non-printable characters
-    /[\u200B-\u200F\u202A-\u202E]/g, // Zero-width characters
+    /[\u200B-\u200F\u202A-\u202E]/g // Zero-width characters
   ],
-  
+
   harmful_content: [
     // Patterns for harmful content detection
     // This would be more comprehensive in production
-    /\b(harm|hurt|damage|destroy)\b.*\b(someone|people|myself)\b/gi,
+    /\b(harm|hurt|damage|destroy)\b.*\b(someone|people|myself)\b/gi
   ]
 }
 
@@ -153,7 +149,7 @@ const THREAT_PATTERNS: Record<ThreatType, RegExp[]> = {
 
 export class PromptSanitizer {
   private config: SanitizationConfig
-  
+
   constructor(config: SanitizationConfig = { strict: false }) {
     this.config = {
       maxLength: config.maxLength || 10000,
@@ -167,172 +163,183 @@ export class PromptSanitizer {
    * Sanitize a prompt
    */
   sanitize(prompt: string): Effect.Effect<SanitizationResult, never> {
-    return Effect.gen(function* (_) {
-      const threats: SecurityThreat[] = []
-      const modifications: Modification[] = []
-      let sanitized = prompt
-      
-      // Length check
-      if (sanitized.length > this.config.maxLength!) {
-        sanitized = sanitized.substring(0, this.config.maxLength)
-        modifications.push({
-          type: 'removed',
-          original: prompt.substring(this.config.maxLength!),
-          modified: '',
-          reason: 'Exceeded maximum length'
-        })
-      }
-      
-      // Detect threats
-      for (const [threatType, patterns] of Object.entries(THREAT_PATTERNS)) {
-        for (const pattern of patterns) {
-          const matches = [...sanitized.matchAll(pattern)]
-          for (const match of matches) {
-            if (match.index !== undefined) {
-              threats.push({
-                type: threatType as ThreatType,
-                severity: this.getThreatSeverity(threatType as ThreatType),
-                location: {
-                  start: match.index,
-                  end: match.index + match[0].length
-                },
-                description: this.getThreatDescription(threatType as ThreatType),
-                mitigation: this.getThreatMitigation(threatType as ThreatType)
+    return Effect.gen(
+      function* (_) {
+        const threats: SecurityThreat[] = []
+        const modifications: Modification[] = []
+        let sanitized = prompt
+
+        // Length check
+        if (sanitized.length > this.config.maxLength!) {
+          sanitized = sanitized.substring(0, this.config.maxLength)
+          modifications.push({
+            type: 'removed',
+            original: prompt.substring(this.config.maxLength!),
+            modified: '',
+            reason: 'Exceeded maximum length'
+          })
+        }
+
+        // Detect threats
+        for (const [threatType, patterns] of Object.entries(THREAT_PATTERNS)) {
+          for (const pattern of patterns) {
+            const matches = [...sanitized.matchAll(pattern)]
+            for (const match of matches) {
+              if (match.index !== undefined) {
+                threats.push({
+                  type: threatType as ThreatType,
+                  severity: this.getThreatSeverity(threatType as ThreatType),
+                  location: {
+                    start: match.index,
+                    end: match.index + match[0].length
+                  },
+                  description: this.getThreatDescription(threatType as ThreatType),
+                  mitigation: this.getThreatMitigation(threatType as ThreatType)
+                })
+
+                // Apply mitigation
+                if (this.config.strict || this.getThreatSeverity(threatType as ThreatType) === 'critical') {
+                  const replacement = this.getMitigationReplacement(threatType as ThreatType, match[0])
+                  sanitized = sanitized.replace(match[0], replacement)
+
+                  modifications.push({
+                    type: replacement === '' ? 'removed' : 'replaced',
+                    original: match[0],
+                    modified: replacement,
+                    reason: `Detected ${threatType}`
+                  })
+                }
+              }
+            }
+          }
+        }
+
+        // Apply custom filters
+        if (this.config.customFilters) {
+          for (const filter of this.config.customFilters) {
+            const result = this.applyCustomFilter(sanitized, filter)
+            sanitized = result.text
+            modifications.push(...result.modifications)
+
+            if (result.threat) {
+              threats.push(result.threat)
+            }
+          }
+        }
+
+        // Apply allowed patterns
+        if (this.config.allowedPatterns) {
+          const allowed = this.config.allowedPatterns.some((pattern) => pattern.test(sanitized))
+          if (!allowed && this.config.strict) {
+            return yield* _(
+              Effect.succeed({
+                sanitized: '',
+                original: prompt,
+                threats: [
+                  {
+                    type: 'prompt_injection',
+                    severity: 'high',
+                    location: { start: 0, end: prompt.length },
+                    description: 'Prompt does not match allowed patterns',
+                    mitigation: 'Rejected'
+                  }
+                ],
+                modifications: [
+                  {
+                    type: 'removed',
+                    original: prompt,
+                    modified: '',
+                    reason: 'Does not match allowed patterns'
+                  }
+                ],
+                riskLevel: 'high'
               })
-              
-              // Apply mitigation
-              if (this.config.strict || this.getThreatSeverity(threatType as ThreatType) === 'critical') {
-                const replacement = this.getMitigationReplacement(threatType as ThreatType, match[0])
-                sanitized = sanitized.replace(match[0], replacement)
-                
+            )
+          }
+        }
+
+        // Apply blocked patterns
+        if (this.config.blockedPatterns) {
+          for (const pattern of this.config.blockedPatterns) {
+            if (pattern.test(sanitized)) {
+              threats.push({
+                type: 'prompt_injection',
+                severity: 'high',
+                location: { start: 0, end: sanitized.length },
+                description: 'Contains blocked pattern',
+                mitigation: 'Pattern blocked'
+              })
+
+              if (this.config.strict) {
+                sanitized = sanitized.replace(pattern, '')
                 modifications.push({
-                  type: replacement === '' ? 'removed' : 'replaced',
-                  original: match[0],
-                  modified: replacement,
-                  reason: `Detected ${threatType}`
+                  type: 'removed',
+                  original: pattern.source,
+                  modified: '',
+                  reason: 'Blocked pattern'
                 })
               }
             }
           }
         }
-      }
-      
-      // Apply custom filters
-      if (this.config.customFilters) {
-        for (const filter of this.config.customFilters) {
-          const result = this.applyCustomFilter(sanitized, filter)
-          sanitized = result.text
-          modifications.push(...result.modifications)
-          
-          if (result.threat) {
-            threats.push(result.threat)
-          }
-        }
-      }
-      
-      // Apply allowed patterns
-      if (this.config.allowedPatterns) {
-        const allowed = this.config.allowedPatterns.some(pattern => pattern.test(sanitized))
-        if (!allowed && this.config.strict) {
-          return yield* _(Effect.succeed({
-            sanitized: '',
-            original: prompt,
-            threats: [{
-              type: 'prompt_injection',
-              severity: 'high',
-              location: { start: 0, end: prompt.length },
-              description: 'Prompt does not match allowed patterns',
-              mitigation: 'Rejected'
-            }],
-            modifications: [{
-              type: 'removed',
-              original: prompt,
-              modified: '',
-              reason: 'Does not match allowed patterns'
-            }],
-            riskLevel: 'high'
-          }))
-        }
-      }
-      
-      // Apply blocked patterns
-      if (this.config.blockedPatterns) {
-        for (const pattern of this.config.blockedPatterns) {
-          if (pattern.test(sanitized)) {
-            threats.push({
-              type: 'prompt_injection',
-              severity: 'high',
-              location: { start: 0, end: sanitized.length },
-              description: 'Contains blocked pattern',
-              mitigation: 'Pattern blocked'
+
+        // Clean up formatting if needed
+        if (!this.config.preserveFormatting) {
+          const cleaned = this.cleanFormatting(sanitized)
+          if (cleaned !== sanitized) {
+            modifications.push({
+              type: 'replaced',
+              original: sanitized,
+              modified: cleaned,
+              reason: 'Formatting cleaned'
             })
-            
-            if (this.config.strict) {
-              sanitized = sanitized.replace(pattern, '')
-              modifications.push({
-                type: 'removed',
-                original: pattern.source,
-                modified: '',
-                reason: 'Blocked pattern'
-              })
-            }
+            sanitized = cleaned
           }
         }
-      }
-      
-      // Clean up formatting if needed
-      if (!this.config.preserveFormatting) {
-        const cleaned = this.cleanFormatting(sanitized)
-        if (cleaned !== sanitized) {
-          modifications.push({
-            type: 'replaced',
-            original: sanitized,
-            modified: cleaned,
-            reason: 'Formatting cleaned'
-          })
-          sanitized = cleaned
+
+        // Calculate risk level
+        const riskLevel = this.calculateRiskLevel(threats)
+
+        return {
+          sanitized,
+          original: prompt,
+          threats,
+          modifications,
+          riskLevel
         }
-      }
-      
-      // Calculate risk level
-      const riskLevel = this.calculateRiskLevel(threats)
-      
-      return {
-        sanitized,
-        original: prompt,
-        threats,
-        modifications,
-        riskLevel
-      }
-    }.bind(this))
+      }.bind(this)
+    )
   }
 
   /**
    * Validate a prompt without modifying it
    */
-  validate(prompt: string): Effect.Effect<{
-    valid: boolean
-    threats: SecurityThreat[]
-    riskLevel: 'safe' | 'low' | 'medium' | 'high' | 'critical'
-  }, never> {
-    return Effect.gen(function* (_) {
-      const result = yield* _(this.sanitize(prompt))
-      
-      return {
-        valid: result.threats.length === 0 || result.riskLevel === 'safe',
-        threats: result.threats,
-        riskLevel: result.riskLevel
-      }
-    }.bind(this))
+  validate(prompt: string): Effect.Effect<
+    {
+      valid: boolean
+      threats: SecurityThreat[]
+      riskLevel: 'safe' | 'low' | 'medium' | 'high' | 'critical'
+    },
+    never
+  > {
+    return Effect.gen(
+      function* (_) {
+        const result = yield* _(this.sanitize(prompt))
+
+        return {
+          valid: result.threats.length === 0 || result.riskLevel === 'safe',
+          threats: result.threats,
+          riskLevel: result.riskLevel
+        }
+      }.bind(this)
+    )
   }
 
   /**
    * Check if a prompt is safe
    */
   isSafe(prompt: string): Effect.Effect<boolean, never> {
-    return this.validate(prompt).pipe(
-      Effect.map(result => result.valid)
-    )
+    return this.validate(prompt).pipe(Effect.map((result) => result.valid))
   }
 
   // Helper methods
@@ -350,7 +357,7 @@ export class PromptSanitizer {
       adversarial_suffix: 'high',
       harmful_content: 'high'
     }
-    
+
     return severities[type] || 'medium'
   }
 
@@ -367,7 +374,7 @@ export class PromptSanitizer {
       adversarial_suffix: 'Hidden or adversarial characters',
       harmful_content: 'Content that may cause harm'
     }
-    
+
     return descriptions[type] || 'Unknown threat'
   }
 
@@ -384,7 +391,7 @@ export class PromptSanitizer {
       adversarial_suffix: 'Remove hidden characters',
       harmful_content: 'Filter harmful content'
     }
-    
+
     return mitigations[type] || 'Apply default mitigation'
   }
 
@@ -394,24 +401,27 @@ export class PromptSanitizer {
       case 'jailbreak_attempt':
       case 'system_command':
         return '' // Remove completely
-      
+
       case 'role_manipulation':
         return '[request modified for safety]'
-      
+
       case 'encoding_attack':
         // Decode if possible, otherwise remove
         return this.decodeString(original) || ''
-      
+
       case 'adversarial_suffix':
         // Remove non-printable characters
         return original.replace(/[^\x20-\x7E]/g, '')
-      
+
       default:
         return '[content filtered]'
     }
   }
 
-  private applyCustomFilter(text: string, filter: SanitizationFilter): {
+  private applyCustomFilter(
+    text: string,
+    filter: SanitizationFilter
+  ): {
     text: string
     modifications: Modification[]
     threat?: SecurityThreat
@@ -419,11 +429,10 @@ export class PromptSanitizer {
     const modifications: Modification[] = []
     let threat: SecurityThreat | undefined
     let modified = text
-    
-    const matches = typeof filter.pattern === 'function' 
-      ? (filter.pattern(text) ? [text] : [])
-      : [...text.matchAll(filter.pattern)]
-    
+
+    const matches =
+      typeof filter.pattern === 'function' ? (filter.pattern(text) ? [text] : []) : [...text.matchAll(filter.pattern)]
+
     if (matches.length > 0) {
       switch (filter.action) {
         case 'remove':
@@ -438,7 +447,7 @@ export class PromptSanitizer {
             })
           }
           break
-        
+
         case 'replace':
           for (const match of matches) {
             const matchText = typeof match === 'string' ? match : match[0]
@@ -452,7 +461,7 @@ export class PromptSanitizer {
             })
           }
           break
-        
+
         case 'escape':
           for (const match of matches) {
             const matchText = typeof match === 'string' ? match : match[0]
@@ -466,7 +475,7 @@ export class PromptSanitizer {
             })
           }
           break
-        
+
         case 'reject':
           threat = {
             type: 'prompt_injection',
@@ -478,7 +487,7 @@ export class PromptSanitizer {
           break
       }
     }
-    
+
     return { text: modified, modifications, threat }
   }
 
@@ -491,16 +500,16 @@ export class PromptSanitizer {
 
   private calculateRiskLevel(threats: SecurityThreat[]): 'safe' | 'low' | 'medium' | 'high' | 'critical' {
     if (threats.length === 0) return 'safe'
-    
-    const hasCritical = threats.some(t => t.severity === 'critical')
+
+    const hasCritical = threats.some((t) => t.severity === 'critical')
     if (hasCritical) return 'critical'
-    
-    const hasHigh = threats.some(t => t.severity === 'high')
+
+    const hasHigh = threats.some((t) => t.severity === 'high')
     if (hasHigh) return 'high'
-    
-    const hasMedium = threats.some(t => t.severity === 'medium')
+
+    const hasMedium = threats.some((t) => t.severity === 'medium')
     if (hasMedium) return 'medium'
-    
+
     return 'low'
   }
 
@@ -510,17 +519,17 @@ export class PromptSanitizer {
       if (/^\\x[0-9a-f]+$/i.test(str)) {
         return String.fromCharCode(parseInt(str.slice(2), 16))
       }
-      
+
       // Try unicode decoding
       if (/^\\u[0-9a-f]{4}$/i.test(str)) {
         return String.fromCharCode(parseInt(str.slice(2), 16))
       }
-      
+
       // Try URL decoding
       if (/%[0-9a-f]{2}/i.test(str)) {
         return decodeURIComponent(str)
       }
-      
+
       return null
     } catch {
       return null
@@ -566,9 +575,7 @@ export function createStrictSanitizer(config?: Partial<SanitizationConfig>): Pro
 /**
  * Create a sanitizer for specific use case
  */
-export function createCustomSanitizer(
-  useCase: 'chat' | 'code' | 'search' | 'creative'
-): PromptSanitizer {
+export function createCustomSanitizer(useCase: 'chat' | 'code' | 'search' | 'creative'): PromptSanitizer {
   const configs: Record<string, SanitizationConfig> = {
     chat: {
       strict: false,
@@ -592,6 +599,6 @@ export function createCustomSanitizer(
       preserveFormatting: true
     }
   }
-  
+
   return new PromptSanitizer(configs[useCase] || configs.chat)
 }

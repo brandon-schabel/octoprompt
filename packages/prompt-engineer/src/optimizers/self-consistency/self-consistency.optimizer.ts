@@ -28,11 +28,7 @@ const defaultConfig: SelfConsistencyConfig = {
 // ============================================================================
 
 export interface SolutionGenerator<T = string> {
-  generate: (
-    prompt: string,
-    temperature: number,
-    topP: number
-  ) => Promise<T>
+  generate: (prompt: string, temperature: number, topP: number) => Promise<T>
 }
 
 // ============================================================================
@@ -96,9 +92,10 @@ export const createSelfConsistencyOptimizer = <T = string>(
 
     solutions.forEach((item) => {
       // Use JSON string as key for grouping (simplified)
-      const key = typeof item.solution === 'string'
-        ? item.solution.substring(0, 50)
-        : JSON.stringify(item.solution).substring(0, 50)
+      const key =
+        typeof item.solution === 'string'
+          ? item.solution.substring(0, 50)
+          : JSON.stringify(item.solution).substring(0, 50)
 
       const group = groups.get(key) || []
       group.push(item)
@@ -126,13 +123,13 @@ export const createSelfConsistencyOptimizer = <T = string>(
           // Prefer solutions with moderate temperature
           const avgTemp = group.reduce((sum, item) => sum + item.temperature, 0) / group.length
           const tempScore = 1 - Math.abs(avgTemp - 0.6) // Optimal around 0.6
-          weight *= (1 + tempScore)
+          weight *= 1 + tempScore
           break
 
         case 'confidence':
           // Prefer solutions with lower temperature (more confident)
-          const minTemp = Math.min(...group.map(item => item.temperature))
-          weight *= (2 - minTemp)
+          const minTemp = Math.min(...group.map((item) => item.temperature))
+          weight *= 2 - minTemp
           break
 
         case 'ensemble':
@@ -175,14 +172,10 @@ export const createSelfConsistencyOptimizer = <T = string>(
     validSamples: number,
     votingResults: VotingResult[]
   ): ConsistencyMetadata => {
-    const consensusLevel = validSamples > 0
-      ? votingResults[0].votes / validSamples
-      : 0
+    const consensusLevel = validSamples > 0 ? votingResults[0].votes / validSamples : 0
 
     // Calculate divergence (how spread out the votes are)
-    const divergenceScore = votingResults.length > 1
-      ? 1 - consensusLevel
-      : 0
+    const divergenceScore = votingResults.length > 1 ? 1 - consensusLevel : 0
 
     return {
       totalSamples,
@@ -208,23 +201,13 @@ export const createSelfConsistencyOptimizer = <T = string>(
     const groups = verifySolutions(solutions)
 
     // Select best solution
-    const { solution, votingResults, confidence } = selectBestSolution(
-      groups,
-      finalConfig.votingStrategy
-    )
+    const { solution, votingResults, confidence } = selectBestSolution(groups, finalConfig.votingStrategy)
 
     // Get top alternatives
-    const alternatives = votingResults
-      .slice(0, 3)
-      .map(r => String(r.solution))
+    const alternatives = votingResults.slice(0, 3).map((r) => String(r.solution))
 
     // Calculate metadata
-    const metadata = calculateMetadata(
-      startTime,
-      finalConfig.samples,
-      solutions.length,
-      votingResults
-    )
+    const metadata = calculateMetadata(startTime, finalConfig.samples, solutions.length, votingResults)
 
     return {
       solution: String(solution),
@@ -236,10 +219,7 @@ export const createSelfConsistencyOptimizer = <T = string>(
   }
 
   // Build optimized prompt with self-consistency
-  const buildOptimizedPrompt = (
-    prompt: string,
-    result: ConsistentResult<string>
-  ): OptimizedPrompt => {
+  const buildOptimizedPrompt = (prompt: string, result: ConsistentResult<string>): OptimizedPrompt => {
     const systemPrompt = buildSystemPrompt(result.confidence)
     const userPrompt = buildEnhancedPrompt(prompt, result)
 
@@ -341,13 +321,15 @@ export const createSelfConsistencyOptimizer = <T = string>(
         solution: `Optimized: ${prompt}`,
         confidence: 0.85,
         alternatives: [],
-        votingResults: [{
-          solution: `Optimized: ${prompt}`,
-          votes: finalConfig.samples,
-          weight: 1.0,
-          temperature: finalConfig.temperatureRange[0],
-          topP: finalConfig.topPRange[0]
-        }],
+        votingResults: [
+          {
+            solution: `Optimized: ${prompt}`,
+            votes: finalConfig.samples,
+            weight: 1.0,
+            temperature: finalConfig.temperatureRange[0],
+            topP: finalConfig.topPRange[0]
+          }
+        ],
         metadata: {
           totalSamples: finalConfig.samples,
           validSamples: finalConfig.samples,

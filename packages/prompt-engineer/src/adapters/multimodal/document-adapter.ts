@@ -272,9 +272,9 @@ export class DocumentAdapter {
     readonly cacheResults: boolean
     readonly defaultLanguage: string
   }
-  
+
   private cache: Map<string, DocumentContent> = new Map()
-  
+
   constructor(config?: Partial<typeof DocumentAdapter.prototype.config>) {
     this.config = {
       maxDocumentSize: 50 * 1024 * 1024, // 50MB
@@ -293,259 +293,260 @@ export class DocumentAdapter {
    * Parse a document and extract content
    */
   parseDocument(document: Buffer): Effect.Effect<DocumentContent, Error> {
-    return Effect.gen(function* (_) {
-      // Validate document size
-      if (document.length > this.config.maxDocumentSize) {
-        return yield* _(Effect.fail(new Error(
-          `Document size ${document.length} exceeds maximum ${this.config.maxDocumentSize}`
-        )))
-      }
-      
-      // Check cache
-      const cacheKey = this.getCacheKey(document)
-      if (this.config.cacheResults && this.cache.has(cacheKey)) {
-        return this.cache.get(cacheKey)!
-      }
-      
-      // Extract metadata
-      const metadata = yield* _(this.extractMetadata(document))
-      
-      // Validate format
-      if (!this.config.supportedFormats.includes(metadata.format)) {
-        return yield* _(Effect.fail(new Error(
-          `Unsupported document format: ${metadata.format}`
-        )))
-      }
-      
-      // Parse document based on format
-      const content = yield* _(this.parseByFormat(document, metadata))
-      
-      // Cache result
-      if (this.config.cacheResults) {
-        this.cache.set(cacheKey, content)
-      }
-      
-      return content
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        // Validate document size
+        if (document.length > this.config.maxDocumentSize) {
+          return yield* _(
+            Effect.fail(new Error(`Document size ${document.length} exceeds maximum ${this.config.maxDocumentSize}`))
+          )
+        }
+
+        // Check cache
+        const cacheKey = this.getCacheKey(document)
+        if (this.config.cacheResults && this.cache.has(cacheKey)) {
+          return this.cache.get(cacheKey)!
+        }
+
+        // Extract metadata
+        const metadata = yield* _(this.extractMetadata(document))
+
+        // Validate format
+        if (!this.config.supportedFormats.includes(metadata.format)) {
+          return yield* _(Effect.fail(new Error(`Unsupported document format: ${metadata.format}`)))
+        }
+
+        // Parse document based on format
+        const content = yield* _(this.parseByFormat(document, metadata))
+
+        // Cache result
+        if (this.config.cacheResults) {
+          this.cache.set(cacheKey, content)
+        }
+
+        return content
+      }.bind(this)
+    )
   }
 
   /**
    * Extract structured data from document
    */
   extractStructuredData(document: Buffer): Effect.Effect<StructuredData, Error> {
-    return Effect.gen(function* (_) {
-      const content = yield* _(this.parseDocument(document))
-      
-      // Extract entities
-      const entities = yield* _(this.extractEntities(content.text))
-      
-      // Extract relationships
-      const relationships = yield* _(this.extractRelationships(entities, content.text))
-      
-      // Extract key-value pairs
-      const keyValuePairs = yield* _(this.extractKeyValuePairs(content))
-      
-      // Extract dates
-      const dates = yield* _(this.extractDates(content))
-      
-      // Extract numbers
-      const numbers = yield* _(this.extractNumbers(content))
-      
-      // Extract contact information
-      const contacts = yield* _(this.extractContactInfo(content.text))
-      
-      return {
-        entities,
-        relationships,
-        keyValuePairs,
-        dates,
-        numbers,
-        emails: contacts.emails,
-        urls: contacts.urls,
-        phoneNumbers: contacts.phoneNumbers
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const content = yield* _(this.parseDocument(document))
+
+        // Extract entities
+        const entities = yield* _(this.extractEntities(content.text))
+
+        // Extract relationships
+        const relationships = yield* _(this.extractRelationships(entities, content.text))
+
+        // Extract key-value pairs
+        const keyValuePairs = yield* _(this.extractKeyValuePairs(content))
+
+        // Extract dates
+        const dates = yield* _(this.extractDates(content))
+
+        // Extract numbers
+        const numbers = yield* _(this.extractNumbers(content))
+
+        // Extract contact information
+        const contacts = yield* _(this.extractContactInfo(content.text))
+
+        return {
+          entities,
+          relationships,
+          keyValuePairs,
+          dates,
+          numbers,
+          emails: contacts.emails,
+          urls: contacts.urls,
+          phoneNumbers: contacts.phoneNumbers
+        }
+      }.bind(this)
+    )
   }
 
   /**
    * Query a document with natural language
    */
   queryDocument(query: DocumentQuery): Effect.Effect<string, Error> {
-    return Effect.gen(function* (_) {
-      const content = yield* _(this.parseDocument(query.document))
-      
-      // Filter content by page range if specified
-      let relevantContent = content
-      if (query.pageRange) {
-        relevantContent = this.filterByPageRange(content, query.pageRange)
-      }
-      
-      // Process the query
-      const response = yield* _(this.processDocumentQuery(
-        relevantContent,
-        query.query,
-        {
-          extractTables: query.extractTables ?? false,
-          extractImages: query.extractImages ?? false,
-          includeMetadata: query.includeMetadata ?? false
+    return Effect.gen(
+      function* (_) {
+        const content = yield* _(this.parseDocument(query.document))
+
+        // Filter content by page range if specified
+        let relevantContent = content
+        if (query.pageRange) {
+          relevantContent = this.filterByPageRange(content, query.pageRange)
         }
-      ))
-      
-      // Format output
-      return this.formatQueryResponse(response, query.outputFormat || 'text')
-    }.bind(this))
+
+        // Process the query
+        const response = yield* _(
+          this.processDocumentQuery(relevantContent, query.query, {
+            extractTables: query.extractTables ?? false,
+            extractImages: query.extractImages ?? false,
+            includeMetadata: query.includeMetadata ?? false
+          })
+        )
+
+        // Format output
+        return this.formatQueryResponse(response, query.outputFormat || 'text')
+      }.bind(this)
+    )
   }
 
   /**
    * Summarize a document
    */
-  summarizeDocument(
-    document: Buffer,
-    options?: DocumentSummaryOptions
-  ): Effect.Effect<string, Error> {
-    return Effect.gen(function* (_) {
-      const content = yield* _(this.parseDocument(document))
-      
-      // Extract key information
-      const keyInfo = yield* _(this.extractKeyInformation(content, options))
-      
-      // Generate summary based on style
-      const summary = this.generateSummary(keyInfo, options?.style || 'paragraph')
-      
-      // Limit length if specified
-      if (options?.maxLength) {
-        return this.truncateSummary(summary, options.maxLength)
-      }
-      
-      return summary
-    }.bind(this))
+  summarizeDocument(document: Buffer, options?: DocumentSummaryOptions): Effect.Effect<string, Error> {
+    return Effect.gen(
+      function* (_) {
+        const content = yield* _(this.parseDocument(document))
+
+        // Extract key information
+        const keyInfo = yield* _(this.extractKeyInformation(content, options))
+
+        // Generate summary based on style
+        const summary = this.generateSummary(keyInfo, options?.style || 'paragraph')
+
+        // Limit length if specified
+        if (options?.maxLength) {
+          return this.truncateSummary(summary, options.maxLength)
+        }
+
+        return summary
+      }.bind(this)
+    )
   }
 
   /**
    * Compare two documents
    */
-  compareDocuments(
-    document1: Buffer,
-    document2: Buffer
-  ): Effect.Effect<DocumentComparisonResult, Error> {
-    return Effect.gen(function* (_) {
-      const [content1, content2] = yield* _(Effect.all([
-        this.parseDocument(document1),
-        this.parseDocument(document2)
-      ]))
-      
-      // Compare text content
-      const textComparison = this.compareText(content1.text, content2.text)
-      
-      // Compare structure
-      const structuralChanges = this.compareStructure(content1, content2)
-      
-      // Compare tables
-      const tableChanges = this.compareTables(content1.tables, content2.tables)
-      
-      // Calculate overall similarity
-      const similarity = this.calculateSimilarity(content1, content2)
-      
-      return {
-        similarity,
-        differences: textComparison.differences,
-        additions: textComparison.additions,
-        deletions: textComparison.deletions,
-        modifications: textComparison.modifications,
-        structuralChanges: [...structuralChanges, ...tableChanges]
-      }
-    }.bind(this))
+  compareDocuments(document1: Buffer, document2: Buffer): Effect.Effect<DocumentComparisonResult, Error> {
+    return Effect.gen(
+      function* (_) {
+        const [content1, content2] = yield* _(
+          Effect.all([this.parseDocument(document1), this.parseDocument(document2)])
+        )
+
+        // Compare text content
+        const textComparison = this.compareText(content1.text, content2.text)
+
+        // Compare structure
+        const structuralChanges = this.compareStructure(content1, content2)
+
+        // Compare tables
+        const tableChanges = this.compareTables(content1.tables, content2.tables)
+
+        // Calculate overall similarity
+        const similarity = this.calculateSimilarity(content1, content2)
+
+        return {
+          similarity,
+          differences: textComparison.differences,
+          additions: textComparison.additions,
+          deletions: textComparison.deletions,
+          modifications: textComparison.modifications,
+          structuralChanges: [...structuralChanges, ...tableChanges]
+        }
+      }.bind(this)
+    )
   }
 
   /**
    * Extract tables from document
    */
   extractTables(document: Buffer): Effect.Effect<Table[], Error> {
-    return Effect.gen(function* (_) {
-      if (!this.config.enableTableExtraction) {
-        return yield* _(Effect.fail(new Error('Table extraction is disabled')))
-      }
-      
-      const content = yield* _(this.parseDocument(document))
-      return content.tables
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        if (!this.config.enableTableExtraction) {
+          return yield* _(Effect.fail(new Error('Table extraction is disabled')))
+        }
+
+        const content = yield* _(this.parseDocument(document))
+        return content.tables
+      }.bind(this)
+    )
   }
 
   /**
    * Extract images from document
    */
   extractImages(document: Buffer): Effect.Effect<EmbeddedImage[], Error> {
-    return Effect.gen(function* (_) {
-      if (!this.config.enableImageExtraction) {
-        return yield* _(Effect.fail(new Error('Image extraction is disabled')))
-      }
-      
-      const content = yield* _(this.parseDocument(document))
-      return content.images
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        if (!this.config.enableImageExtraction) {
+          return yield* _(Effect.fail(new Error('Image extraction is disabled')))
+        }
+
+        const content = yield* _(this.parseDocument(document))
+        return content.images
+      }.bind(this)
+    )
   }
 
   /**
    * Extract form fields from document
    */
   extractFormFields(document: Buffer): Effect.Effect<FormField[], Error> {
-    return Effect.gen(function* (_) {
-      if (!this.config.enableFormExtraction) {
-        return yield* _(Effect.fail(new Error('Form extraction is disabled')))
-      }
-      
-      const content = yield* _(this.parseDocument(document))
-      return content.formFields || []
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        if (!this.config.enableFormExtraction) {
+          return yield* _(Effect.fail(new Error('Form extraction is disabled')))
+        }
+
+        const content = yield* _(this.parseDocument(document))
+        return content.formFields || []
+      }.bind(this)
+    )
   }
 
   /**
    * Fill form fields in document
    */
-  fillForm(
-    document: Buffer,
-    values: Map<string, any>
-  ): Effect.Effect<Buffer, Error> {
-    return Effect.gen(function* (_) {
-      const content = yield* _(this.parseDocument(document))
-      
-      if (!content.formFields || content.formFields.length === 0) {
-        return yield* _(Effect.fail(new Error('No form fields found in document')))
-      }
-      
-      // Fill form fields
-      const filledForm = yield* _(this.applyFormValues(document, content.formFields, values))
-      
-      return filledForm
-    }.bind(this))
+  fillForm(document: Buffer, values: Map<string, any>): Effect.Effect<Buffer, Error> {
+    return Effect.gen(
+      function* (_) {
+        const content = yield* _(this.parseDocument(document))
+
+        if (!content.formFields || content.formFields.length === 0) {
+          return yield* _(Effect.fail(new Error('No form fields found in document')))
+        }
+
+        // Fill form fields
+        const filledForm = yield* _(this.applyFormValues(document, content.formFields, values))
+
+        return filledForm
+      }.bind(this)
+    )
   }
 
   /**
    * Convert document to different format
    */
-  convertDocument(
-    document: Buffer,
-    targetFormat: 'pdf' | 'html' | 'markdown' | 'txt'
-  ): Effect.Effect<Buffer, Error> {
-    return Effect.gen(function* (_) {
-      const content = yield* _(this.parseDocument(document))
-      
-      // Convert based on target format
-      const converted = yield* _(this.convertToFormat(content, targetFormat))
-      
-      return converted
-    }.bind(this))
+  convertDocument(document: Buffer, targetFormat: 'pdf' | 'html' | 'markdown' | 'txt'): Effect.Effect<Buffer, Error> {
+    return Effect.gen(
+      function* (_) {
+        const content = yield* _(this.parseDocument(document))
+
+        // Convert based on target format
+        const converted = yield* _(this.convertToFormat(content, targetFormat))
+
+        return converted
+      }.bind(this)
+    )
   }
 
   /**
    * Stream process multiple documents
    */
-  streamProcessDocuments(
-    documents: Stream.Stream<Buffer, never>
-  ): Stream.Stream<DocumentContent, Error> {
+  streamProcessDocuments(documents: Stream.Stream<Buffer, never>): Stream.Stream<DocumentContent, Error> {
     return pipe(
       documents,
-      Stream.mapEffect(doc => this.parseDocument(doc))
+      Stream.mapEffect((doc) => this.parseDocument(doc))
     )
   }
 
@@ -556,37 +557,34 @@ export class DocumentAdapter {
     documents: Buffer[],
     options?: { preserveFormatting?: boolean; addPageBreaks?: boolean }
   ): Effect.Effect<Buffer, Error> {
-    return Effect.gen(function* (_) {
-      const contents = yield* _(Effect.all(
-        documents.map(doc => this.parseDocument(doc))
-      ))
-      
-      // Merge content
-      const merged = this.mergeContent(contents, options)
-      
-      // Convert back to document
-      const document = yield* _(this.contentToDocument(merged))
-      
-      return document
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const contents = yield* _(Effect.all(documents.map((doc) => this.parseDocument(doc))))
+
+        // Merge content
+        const merged = this.mergeContent(contents, options)
+
+        // Convert back to document
+        const document = yield* _(this.contentToDocument(merged))
+
+        return document
+      }.bind(this)
+    )
   }
 
   /**
    * Split document by pages
    */
-  splitDocument(
-    document: Buffer,
-    ranges: Array<{ start: number; end: number }>
-  ): Effect.Effect<Buffer[], Error> {
-    return Effect.gen(function* (_) {
-      const content = yield* _(this.parseDocument(document))
-      
-      const splits = yield* _(Effect.all(
-        ranges.map(range => this.extractPageRange(document, content, range))
-      ))
-      
-      return splits
-    }.bind(this))
+  splitDocument(document: Buffer, ranges: Array<{ start: number; end: number }>): Effect.Effect<Buffer[], Error> {
+    return Effect.gen(
+      function* (_) {
+        const content = yield* _(this.parseDocument(document))
+
+        const splits = yield* _(Effect.all(ranges.map((range) => this.extractPageRange(document, content, range))))
+
+        return splits
+      }.bind(this)
+    )
   }
 
   // Private helper methods
@@ -610,10 +608,7 @@ export class DocumentAdapter {
     })
   }
 
-  private parseByFormat(
-    document: Buffer,
-    metadata: DocumentMetadata
-  ): Effect.Effect<DocumentContent, Error> {
+  private parseByFormat(document: Buffer, metadata: DocumentMetadata): Effect.Effect<DocumentContent, Error> {
     // Simplified parsing - would use pdf-parse, mammoth, etc. in production
     return Effect.succeed({
       text: 'This is the extracted text content from the document.',
@@ -631,79 +626,93 @@ export class DocumentAdapter {
   }
 
   private createSamplePages(): PageContent[] {
-    return [{
-      pageNumber: 1,
-      text: 'Page 1 content',
-      boundingBox: { x: 0, y: 0, width: 612, height: 792 },
-      elements: [],
-      layout: {
-        columns: 1,
-        orientation: 'portrait' as const,
-        margins: { top: 72, bottom: 72, left: 72, right: 72 }
+    return [
+      {
+        pageNumber: 1,
+        text: 'Page 1 content',
+        boundingBox: { x: 0, y: 0, width: 612, height: 792 },
+        elements: [],
+        layout: {
+          columns: 1,
+          orientation: 'portrait' as const,
+          margins: { top: 72, bottom: 72, left: 72, right: 72 }
+        }
       }
-    }]
+    ]
   }
 
   private createSampleSections(): DocumentSection[] {
-    return [{
-      id: 'section1',
-      title: 'Introduction',
-      level: 1,
-      content: 'Introduction content',
-      startPage: 1,
-      endPage: 2,
-      subsections: []
-    }]
+    return [
+      {
+        id: 'section1',
+        title: 'Introduction',
+        level: 1,
+        content: 'Introduction content',
+        startPage: 1,
+        endPage: 2,
+        subsections: []
+      }
+    ]
   }
 
   private createSampleParagraphs(): Paragraph[] {
-    return [{
-      text: 'This is a sample paragraph.',
-      page: 1,
-      position: { x: 72, y: 100, width: 468, height: 20 },
-      style: { fontSize: 12, fontFamily: 'Arial' },
-      type: 'normal' as const
-    }]
+    return [
+      {
+        text: 'This is a sample paragraph.',
+        page: 1,
+        position: { x: 72, y: 100, width: 468, height: 20 },
+        style: { fontSize: 12, fontFamily: 'Arial' },
+        type: 'normal' as const
+      }
+    ]
   }
 
   private createSampleTables(): Table[] {
-    return [{
-      rows: [
-        { cells: [{ value: 'Header 1' }, { value: 'Header 2' }] },
-        { cells: [{ value: 'Cell 1' }, { value: 'Cell 2' }] }
-      ],
-      headers: ['Header 1', 'Header 2'],
-      page: 2,
-      position: { x: 72, y: 200, width: 468, height: 100 }
-    }]
+    return [
+      {
+        rows: [
+          { cells: [{ value: 'Header 1' }, { value: 'Header 2' }] },
+          { cells: [{ value: 'Cell 1' }, { value: 'Cell 2' }] }
+        ],
+        headers: ['Header 1', 'Header 2'],
+        page: 2,
+        position: { x: 72, y: 200, width: 468, height: 100 }
+      }
+    ]
   }
 
   private createSampleImages(): EmbeddedImage[] {
-    return [{
-      id: 'img1',
-      page: 1,
-      position: { x: 72, y: 300, width: 200, height: 150 },
-      caption: 'Sample Image'
-    }]
+    return [
+      {
+        id: 'img1',
+        page: 1,
+        position: { x: 72, y: 300, width: 200, height: 150 },
+        caption: 'Sample Image'
+      }
+    ]
   }
 
   private createSampleLinks(): Hyperlink[] {
-    return [{
-      text: 'Example Link',
-      url: 'https://example.com',
-      page: 1,
-      position: { x: 72, y: 400, width: 100, height: 15 },
-      type: 'external' as const
-    }]
+    return [
+      {
+        text: 'Example Link',
+        url: 'https://example.com',
+        page: 1,
+        position: { x: 72, y: 400, width: 100, height: 15 },
+        type: 'external' as const
+      }
+    ]
   }
 
   private createSampleHeaders(): Header[] {
-    return [{
-      level: 1,
-      text: 'Main Header',
-      page: 1,
-      id: 'header1'
-    }]
+    return [
+      {
+        level: 1,
+        text: 'Main Header',
+        page: 1,
+        id: 'header1'
+      }
+    ]
   }
 
   private extractEntities(text: string): Effect.Effect<Entity[], never> {
@@ -726,10 +735,7 @@ export class DocumentAdapter {
     ])
   }
 
-  private extractRelationships(
-    entities: Entity[],
-    text: string
-  ): Effect.Effect<Relationship[], never> {
+  private extractRelationships(entities: Entity[], text: string): Effect.Effect<Relationship[], never> {
     // Simplified relationship extraction
     return Effect.succeed([
       {
@@ -743,11 +749,13 @@ export class DocumentAdapter {
 
   private extractKeyValuePairs(content: DocumentContent): Effect.Effect<Map<string, any>, never> {
     // Simplified key-value extraction
-    return Effect.succeed(new Map([
-      ['Date', '2024-01-01'],
-      ['Invoice Number', 'INV-001'],
-      ['Total', '$1,234.56']
-    ]))
+    return Effect.succeed(
+      new Map([
+        ['Date', '2024-01-01'],
+        ['Invoice Number', 'INV-001'],
+        ['Total', '$1,234.56']
+      ])
+    )
   }
 
   private extractDates(content: DocumentContent): Effect.Effect<DateReference[], never> {
@@ -775,16 +783,19 @@ export class DocumentAdapter {
     ])
   }
 
-  private extractContactInfo(text: string): Effect.Effect<{
-    emails: string[]
-    urls: string[]
-    phoneNumbers: string[]
-  }, never> {
+  private extractContactInfo(text: string): Effect.Effect<
+    {
+      emails: string[]
+      urls: string[]
+      phoneNumbers: string[]
+    },
+    never
+  > {
     // Simplified contact extraction
     const emailRegex = /[\w.-]+@[\w.-]+\.\w+/g
     const urlRegex = /https?:\/\/[^\s]+/g
     const phoneRegex = /[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4}/g
-    
+
     return Effect.succeed({
       emails: text.match(emailRegex) || [],
       urls: text.match(urlRegex) || [],
@@ -792,44 +803,31 @@ export class DocumentAdapter {
     })
   }
 
-  private filterByPageRange(
-    content: DocumentContent,
-    range: { start: number; end: number }
-  ): DocumentContent {
+  private filterByPageRange(content: DocumentContent, range: { start: number; end: number }): DocumentContent {
     return {
       ...content,
-      pages: content.pages.filter(p => 
-        p.pageNumber >= range.start && p.pageNumber <= range.end
-      ),
-      paragraphs: content.paragraphs.filter(p =>
-        p.page >= range.start && p.page <= range.end
-      ),
-      tables: content.tables.filter(t =>
-        t.page >= range.start && t.page <= range.end
-      )
+      pages: content.pages.filter((p) => p.pageNumber >= range.start && p.pageNumber <= range.end),
+      paragraphs: content.paragraphs.filter((p) => p.page >= range.start && p.page <= range.end),
+      tables: content.tables.filter((t) => t.page >= range.start && t.page <= range.end)
     }
   }
 
-  private processDocumentQuery(
-    content: DocumentContent,
-    query: string,
-    options: any
-  ): Effect.Effect<any, never> {
+  private processDocumentQuery(content: DocumentContent, query: string, options: any): Effect.Effect<any, never> {
     // Simplified query processing
     const lowerQuery = query.toLowerCase()
-    
+
     if (lowerQuery.includes('table')) {
       return Effect.succeed(content.tables)
     }
-    
+
     if (lowerQuery.includes('image')) {
       return Effect.succeed(content.images)
     }
-    
+
     if (lowerQuery.includes('summary')) {
       return Effect.succeed(content.text.substring(0, 200) + '...')
     }
-    
+
     return Effect.succeed(content.text)
   }
 
@@ -837,26 +835,23 @@ export class DocumentAdapter {
     switch (format) {
       case 'json':
         return JSON.stringify(response, null, 2)
-      
+
       case 'markdown':
         return this.convertToMarkdown(response)
-      
+
       case 'structured':
         return this.formatStructured(response)
-      
+
       default:
         return typeof response === 'string' ? response : String(response)
     }
   }
 
-  private extractKeyInformation(
-    content: DocumentContent,
-    options?: DocumentSummaryOptions
-  ): Effect.Effect<any, never> {
+  private extractKeyInformation(content: DocumentContent, options?: DocumentSummaryOptions): Effect.Effect<any, never> {
     // Extract key information for summary
     return Effect.succeed({
       title: content.sections[0]?.title || 'Document',
-      mainPoints: content.paragraphs.slice(0, 5).map(p => p.text),
+      mainPoints: content.paragraphs.slice(0, 5).map((p) => p.text),
       tables: options?.includeTables ? content.tables : [],
       conclusion: content.paragraphs[content.paragraphs.length - 1]?.text
     })
@@ -866,10 +861,10 @@ export class DocumentAdapter {
     switch (style) {
       case 'bullet':
         return keyInfo.mainPoints.map((p: string) => `• ${p}`).join('\n')
-      
+
       case 'executive':
         return `Executive Summary:\n\n${keyInfo.title}\n\n${keyInfo.mainPoints.join(' ')}`
-      
+
       default:
         return keyInfo.mainPoints.join(' ')
     }
@@ -892,10 +887,10 @@ export class DocumentAdapter {
     // Simplified text comparison
     const words1 = text1.split(/\s+/)
     const words2 = text2.split(/\s+/)
-    
-    const additions = words2.filter(w => !words1.includes(w))
-    const deletions = words1.filter(w => !words2.includes(w))
-    
+
+    const additions = words2.filter((w) => !words1.includes(w))
+    const deletions = words1.filter((w) => !words2.includes(w))
+
     return {
       differences: [],
       additions,
@@ -904,44 +899,38 @@ export class DocumentAdapter {
     }
   }
 
-  private compareStructure(
-    content1: DocumentContent,
-    content2: DocumentContent
-  ): string[] {
+  private compareStructure(content1: DocumentContent, content2: DocumentContent): string[] {
     const changes: string[] = []
-    
+
     if (content1.pages.length !== content2.pages.length) {
       changes.push(`Page count changed: ${content1.pages.length} → ${content2.pages.length}`)
     }
-    
+
     if (content1.sections.length !== content2.sections.length) {
       changes.push(`Section count changed: ${content1.sections.length} → ${content2.sections.length}`)
     }
-    
+
     return changes
   }
 
   private compareTables(tables1: Table[], tables2: Table[]): string[] {
     const changes: string[] = []
-    
+
     if (tables1.length !== tables2.length) {
       changes.push(`Table count changed: ${tables1.length} → ${tables2.length}`)
     }
-    
+
     return changes
   }
 
-  private calculateSimilarity(
-    content1: DocumentContent,
-    content2: DocumentContent
-  ): number {
+  private calculateSimilarity(content1: DocumentContent, content2: DocumentContent): number {
     // Simplified similarity calculation
     const words1 = new Set(content1.text.toLowerCase().split(/\s+/))
     const words2 = new Set(content2.text.toLowerCase().split(/\s+/))
-    
-    const intersection = new Set([...words1].filter(x => words2.has(x)))
+
+    const intersection = new Set([...words1].filter((x) => words2.has(x)))
     const union = new Set([...words1, ...words2])
-    
+
     return intersection.size / union.size
   }
 
@@ -954,40 +943,37 @@ export class DocumentAdapter {
     return Effect.succeed(document)
   }
 
-  private convertToFormat(
-    content: DocumentContent,
-    format: string
-  ): Effect.Effect<Buffer, never> {
+  private convertToFormat(content: DocumentContent, format: string): Effect.Effect<Buffer, never> {
     // Simplified format conversion
     let result = ''
-    
+
     switch (format) {
       case 'txt':
         result = content.text
         break
-      
+
       case 'markdown':
         result = this.convertToMarkdown(content)
         break
-      
+
       case 'html':
         result = this.convertToHTML(content)
         break
-      
+
       default:
         result = content.text
     }
-    
+
     return Effect.succeed(Buffer.from(result))
   }
 
   private convertToMarkdown(content: any): string {
     if (typeof content === 'string') return content
-    
+
     if (content.text) {
       return `# Document\n\n${content.text}`
     }
-    
+
     return JSON.stringify(content, null, 2)
   }
 
@@ -996,19 +982,19 @@ export class DocumentAdapter {
 <html>
 <head><title>Document</title></head>
 <body>
-${content.sections.map(s => `<h${s.level}>${s.title}</h${s.level}>`).join('\n')}
-${content.paragraphs.map(p => `<p>${p.text}</p>`).join('\n')}
+${content.sections.map((s) => `<h${s.level}>${s.title}</h${s.level}>`).join('\n')}
+${content.paragraphs.map((p) => `<p>${p.text}</p>`).join('\n')}
 </body>
 </html>`
   }
 
   private formatStructured(response: any): string {
     if (typeof response === 'string') return response
-    
+
     if (Array.isArray(response)) {
       return response.map((item, i) => `${i + 1}. ${String(item)}`).join('\n')
     }
-    
+
     return Object.entries(response)
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n')
@@ -1019,15 +1005,15 @@ ${content.paragraphs.map(p => `<p>${p.text}</p>`).join('\n')}
     options?: { preserveFormatting?: boolean; addPageBreaks?: boolean }
   ): DocumentContent {
     return {
-      text: contents.map(c => c.text).join('\n\n'),
-      pages: contents.flatMap(c => c.pages),
-      sections: contents.flatMap(c => c.sections),
-      paragraphs: contents.flatMap(c => c.paragraphs),
-      tables: contents.flatMap(c => c.tables),
-      images: contents.flatMap(c => c.images),
-      links: contents.flatMap(c => c.links),
-      footnotes: contents.flatMap(c => c.footnotes),
-      headers: contents.flatMap(c => c.headers)
+      text: contents.map((c) => c.text).join('\n\n'),
+      pages: contents.flatMap((c) => c.pages),
+      sections: contents.flatMap((c) => c.sections),
+      paragraphs: contents.flatMap((c) => c.paragraphs),
+      tables: contents.flatMap((c) => c.tables),
+      images: contents.flatMap((c) => c.images),
+      links: contents.flatMap((c) => c.links),
+      footnotes: contents.flatMap((c) => c.footnotes),
+      headers: contents.flatMap((c) => c.headers)
     }
   }
 

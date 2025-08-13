@@ -32,7 +32,7 @@ export class ClaudeHookStorageSimple {
 
     try {
       await fs.access(filePath)
-  const content = ensureString(await fs.readFile(filePath, 'utf-8'))
+      const content = ensureString(await fs.readFile(filePath, 'utf-8'))
 
       if (!content.trim()) {
         return { hooks: {} }
@@ -224,9 +224,9 @@ export class ClaudeHookStorageSimple {
     }
 
     if (updates.timeout !== undefined) {
-  firstHook.timeout = ensureNumber(updates.timeout, 60)
+      firstHook.timeout = ensureNumber(updates.timeout, 60)
     } else if (updates.timeout === null) {
-  firstHook.timeout = 60 // Use default timeout
+      firstHook.timeout = 60 // Use default timeout
     }
 
     await this.writeSettings(projectPath, settings)

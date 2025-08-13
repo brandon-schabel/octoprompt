@@ -420,10 +420,7 @@ export interface OptimizationEvent {
 }
 
 export interface StreamingOptimizer extends Optimizer {
-  optimizeStream: (
-    prompt: string,
-    onEvent: (event: OptimizationEvent) => void
-  ) => Promise<OptimizedPrompt>
+  optimizeStream: (prompt: string, onEvent: (event: OptimizationEvent) => void) => Promise<OptimizedPrompt>
 }
 
 // ============================================================================
@@ -456,8 +453,8 @@ export const isPromptAnalysis = (value: any): value is PromptAnalysis => {
 
 export type PartialDeep<T> = T extends object
   ? {
-    [P in keyof T]?: PartialDeep<T[P]>
-  }
+      [P in keyof T]?: PartialDeep<T[P]>
+    }
   : T
 
 export type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyof T, Keys>> &

@@ -37,7 +37,7 @@ export class TokenCounter {
 
     // Adjust for whitespace and formatting
     const whitespaceRatio = (text.match(/\s/g) || []).length / text.length
-    const whitespaceMultiplier = 1 - (whitespaceRatio * 0.2)
+    const whitespaceMultiplier = 1 - whitespaceRatio * 0.2
 
     return Math.ceil(baseCount * codeMultiplier * whitespaceMultiplier)
   }
@@ -90,7 +90,7 @@ export class ContentPrioritizer {
     let score = 0
     const lowerContent = content.toLowerCase()
 
-    keywords.forEach(keyword => {
+    keywords.forEach((keyword) => {
       const lowerKeyword = keyword.toLowerCase()
       const regex = new RegExp(`\\b${lowerKeyword}\\b`, 'g')
       const matches = lowerContent.match(regex)
@@ -103,7 +103,7 @@ export class ContentPrioritizer {
     })
 
     // Bonus for being at the beginning
-    if (keywords.some(k => lowerContent.startsWith(k.toLowerCase()))) {
+    if (keywords.some((k) => lowerContent.startsWith(k.toLowerCase()))) {
       score += 20
     }
 
@@ -124,7 +124,7 @@ export class ContentPrioritizer {
       // Array implementation for segments
       const now = Date.now()
       const segments = contentOrSegments
-      return segments.map(seg => {
+      return segments.map((seg) => {
         const ageInHours = (now - seg.timestamp) / (1000 * 60 * 60)
         // Newer content gets higher score
         return Math.max(0, 100 - ageInHours * 2)
@@ -153,12 +153,7 @@ export class ContentPrioritizer {
     return score
   }
 
-  static hybridScore(
-    content: string,
-    index: number,
-    total: number,
-    keywords: string[]
-  ): number {
+  static hybridScore(content: string, index: number, total: number, keywords: string[]): number {
     const relevance = this.scoreByRelevance(content, keywords) * 0.4
     const recency = this.scoreByRecency(content, index, total) * 0.2
     const importance = this.scoreByImportance(content) * 0.4
@@ -398,10 +393,7 @@ export const createContextOptimizer = (config?: Partial<ContextConfig>): Optimiz
   const finalConfig = { ...defaultConfig, ...config }
 
   // Optimize context to fit within token limits
-  const optimizeContext = (
-    content: string,
-    keywords: string[] = []
-  ): E.Either<Error, ContextWindow[]> => {
+  const optimizeContext = (content: string, keywords: string[] = []): E.Either<Error, ContextWindow[]> => {
     try {
       // Chunk the content
       const chunks = chunkContent(content)
@@ -507,9 +499,7 @@ export const createContextOptimizer = (config?: Partial<ContextConfig>): Optimiz
   }
 
   // Create context windows with metadata
-  const createContextWindows = (
-    selectedChunks: Array<{ chunk: string; score: number }>
-  ): ContextWindow[] => {
+  const createContextWindows = (selectedChunks: Array<{ chunk: string; score: number }>): ContextWindow[] => {
     return selectedChunks.map((item, index) => ({
       content: item.chunk,
       tokens: TokenCounter.count(item.chunk),
@@ -538,11 +528,8 @@ export const createContextOptimizer = (config?: Partial<ContextConfig>): Optimiz
   }
 
   // Build optimized prompt
-  const buildOptimizedPrompt = (
-    original: string,
-    windows: ContextWindow[]
-  ): OptimizedPrompt => {
-    const optimizedContent = windows.map(w => w.content).join('\n\n')
+  const buildOptimizedPrompt = (original: string, windows: ContextWindow[]): OptimizedPrompt => {
+    const optimizedContent = windows.map((w) => w.content).join('\n\n')
     const totalTokens = windows.reduce((sum, w) => sum + w.tokens, 0)
     const reduction = ((TokenCounter.count(original) - totalTokens) / TokenCounter.count(original)) * 100
 
@@ -599,7 +586,8 @@ export const createContextOptimizer = (config?: Partial<ContextConfig>): Optimiz
       case 'light':
         return text.replace(/\s+/g, ' ').trim()
       case 'moderate':
-        return text.replace(/\s+/g, ' ')
+        return text
+          .replace(/\s+/g, ' ')
           .replace(/\b(the|a|an|is|are|was|were|been|being|be)\b/gi, '')
           .trim()
       case 'aggressive':

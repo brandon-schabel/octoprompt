@@ -23,11 +23,13 @@ export class MockLLMProvider implements SolutionGenerator<string> {
   private errorRate: number = 0
   private latency: number = 0
 
-  constructor(options: {
-    defaultResponse?: string
-    errorRate?: number
-    latency?: number
-  } = {}) {
+  constructor(
+    options: {
+      defaultResponse?: string
+      errorRate?: number
+      latency?: number
+    } = {}
+  ) {
     this.defaultResponse = options.defaultResponse || this.defaultResponse
     this.errorRate = options.errorRate || 0
     this.latency = options.latency || 0
@@ -39,11 +41,7 @@ export class MockLLMProvider implements SolutionGenerator<string> {
   }
 
   // Generate response based on patterns
-  async generate(
-    prompt: string,
-    temperature: number,
-    topP: number
-  ): Promise<string> {
+  async generate(prompt: string, temperature: number, topP: number): Promise<string> {
     // Simulate error rate
     if (Math.random() < this.errorRate) {
       throw new Error('Mock LLM error: Service temporarily unavailable')
@@ -51,7 +49,7 @@ export class MockLLMProvider implements SolutionGenerator<string> {
 
     // Simulate latency
     if (this.latency > 0) {
-      await new Promise(resolve => setTimeout(resolve, this.latency))
+      await new Promise((resolve) => setTimeout(resolve, this.latency))
     }
 
     // Find matching response pattern
@@ -59,14 +57,13 @@ export class MockLLMProvider implements SolutionGenerator<string> {
     let customDelay = 0
 
     for (const mockResponse of this.responses) {
-      const matches = typeof mockResponse.pattern === 'string'
-        ? prompt.includes(mockResponse.pattern)
-        : mockResponse.pattern.test(prompt)
+      const matches =
+        typeof mockResponse.pattern === 'string'
+          ? prompt.includes(mockResponse.pattern)
+          : mockResponse.pattern.test(prompt)
 
       if (matches) {
-        response = typeof mockResponse.response === 'function'
-          ? mockResponse.response(prompt)
-          : mockResponse.response
+        response = typeof mockResponse.response === 'function' ? mockResponse.response(prompt) : mockResponse.response
         customDelay = mockResponse.delay || 0
         break
       }
@@ -74,16 +71,12 @@ export class MockLLMProvider implements SolutionGenerator<string> {
 
     // Apply custom delay if specified
     if (customDelay > 0) {
-      await new Promise(resolve => setTimeout(resolve, customDelay))
+      await new Promise((resolve) => setTimeout(resolve, customDelay))
     }
 
     // Apply temperature variation (simulate randomness)
     if (temperature > 0.7) {
-      const variations = [
-        ' (high temperature variation)',
-        ' (creative response)',
-        ' (alternative approach)'
-      ]
+      const variations = [' (high temperature variation)', ' (creative response)', ' (alternative approach)']
       response += variations[Math.floor(Math.random() * variations.length)]
     }
 
@@ -134,13 +127,18 @@ export const mockProviders = {
     })
 
     // Add specific patterns for common test cases
-    provider.addResponse(/sort.*array/i, `
+    provider.addResponse(
+      /sort.*array/i,
+      `
 function sortArray(arr) {
   return arr.sort((a, b) => a - b);
 }
-    `)
+    `
+    )
 
-    provider.addResponse(/binary.*search/i, `
+    provider.addResponse(
+      /binary.*search/i,
+      `
 function binarySearch(arr, target) {
   let left = 0, right = arr.length - 1;
   while (left <= right) {
@@ -151,9 +149,12 @@ function binarySearch(arr, target) {
   }
   return -1;
 }
-    `)
+    `
+    )
 
-    provider.addResponse(/palindrome/i, `
+    provider.addResponse(
+      /palindrome/i,
+      `
 function longestPalindrome(s) {
   let longest = "";
   for (let i = 0; i < s.length; i++) {
@@ -166,7 +167,8 @@ function longestPalindrome(s) {
   }
   return longest;
 }
-    `)
+    `
+    )
 
     return provider
   },
@@ -278,20 +280,18 @@ export class LMStudioMock {
     }
   }> {
     const lastMessage = request.messages[request.messages.length - 1]
-    const response = await this.provider.generate(
-      lastMessage.content,
-      request.temperature || 0.7,
-      request.top_p || 0.9
-    )
+    const response = await this.provider.generate(lastMessage.content, request.temperature || 0.7, request.top_p || 0.9)
 
     const promptTokens = Math.ceil(lastMessage.content.length / 4)
     const completionTokens = Math.ceil(response.length / 4)
 
     return {
-      choices: [{
-        message: { role: 'assistant', content: response },
-        finish_reason: 'stop'
-      }],
+      choices: [
+        {
+          message: { role: 'assistant', content: response },
+          finish_reason: 'stop'
+        }
+      ],
       usage: {
         prompt_tokens: promptTokens,
         completion_tokens: completionTokens,
@@ -305,7 +305,7 @@ export class LMStudioMock {
     data: Array<{ id: string; object: string }>
   }> {
     return {
-      data: this.models.map(id => ({ id, object: 'model' }))
+      data: this.models.map((id) => ({ id, object: 'model' }))
     }
   }
 

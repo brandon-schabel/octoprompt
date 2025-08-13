@@ -22,7 +22,7 @@ export interface BenchmarkDataset {
   readonly metadata?: DatasetMetadata
 }
 
-export type DatasetCategory = 
+export type DatasetCategory =
   | 'code_generation'
   | 'code_completion'
   | 'bug_fixing'
@@ -77,7 +77,7 @@ export interface DatasetMetadata {
 // Evaluation Types
 // ============================================================================
 
-export type EvaluationMetric = 
+export type EvaluationMetric =
   | 'exact_match'
   | 'pass_at_k'
   | 'bleu'
@@ -167,7 +167,7 @@ export interface CodeTask extends BenchmarkTask {
   readonly testFramework?: TestFramework
 }
 
-export type ProgrammingLanguage = 
+export type ProgrammingLanguage =
   | 'python'
   | 'javascript'
   | 'typescript'
@@ -181,15 +181,7 @@ export type ProgrammingLanguage =
   | 'swift'
   | 'kotlin'
 
-export type TestFramework = 
-  | 'pytest'
-  | 'unittest'
-  | 'jest'
-  | 'mocha'
-  | 'junit'
-  | 'gtest'
-  | 'cargo_test'
-  | 'rspec'
+export type TestFramework = 'pytest' | 'unittest' | 'jest' | 'mocha' | 'junit' | 'gtest' | 'cargo_test' | 'rspec'
 
 export interface CodeEvaluationResult extends EvaluationResult {
   readonly syntaxValid: boolean
@@ -209,7 +201,7 @@ export interface DatasetPlugin {
   readonly name: string
   readonly version: string
   readonly capabilities: DatasetCapability[]
-  
+
   load(): Promise<BenchmarkDataset>
   evaluate(response: string, task: BenchmarkTask, config?: EvaluationConfig): Promise<EvaluationResult>
   validateResponse?(response: string, task: BenchmarkTask): boolean
@@ -217,7 +209,7 @@ export interface DatasetPlugin {
   postprocess?(result: EvaluationResult): EvaluationResult
 }
 
-export type DatasetCapability = 
+export type DatasetCapability =
   | 'streaming'
   | 'filtering'
   | 'sampling'
@@ -230,8 +222,8 @@ export type DatasetCapability =
 // ============================================================================
 
 export interface PassAtKConfig {
-  readonly k: number[]  // e.g., [1, 10, 100]
-  readonly n: number    // number of samples to generate
+  readonly k: number[] // e.g., [1, 10, 100]
+  readonly n: number // number of samples to generate
   readonly temperature: number
   readonly topP?: number
   readonly codeOnly?: boolean // strip comments and docstrings
@@ -258,7 +250,7 @@ export interface CodeSample {
 
 export interface DatasetLoader {
   readonly format: 'json' | 'jsonl' | 'csv' | 'parquet' | 'custom'
-  
+
   load(path: string): Promise<BenchmarkTask[]>
   validate(data: any): boolean
   transform?(data: any): BenchmarkTask[]
@@ -321,17 +313,14 @@ export interface BenchmarkRunner {
     generateFn: (task: BenchmarkTask) => Promise<string>,
     config?: EvaluationConfig
   ): Promise<DatasetEvaluation>
-  
+
   runTask(
     task: BenchmarkTask,
     generateFn: (task: BenchmarkTask) => Promise<string>,
     config?: EvaluationConfig
   ): Promise<EvaluationResult>
-  
-  compareResults(
-    baseline: DatasetEvaluation,
-    comparison: DatasetEvaluation
-  ): ComparisonResult
+
+  compareResults(baseline: DatasetEvaluation, comparison: DatasetEvaluation): ComparisonResult
 }
 
 export interface ComparisonResult {

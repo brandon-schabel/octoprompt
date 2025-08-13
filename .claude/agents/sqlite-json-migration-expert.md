@@ -27,12 +27,12 @@ You are the project's SQLite authority. Design schemas, write migrations, implem
 
 ### Default approach
 
-1) Confirm target entities and access patterns (reads, filters, writes, queue ops)
-2) Model with Zod, then map to SQLite columns (no magic numbers; explicit enums/text)
-3) Plan migration (backup, create tables, transform, validate counts, swap, cleanup)
-4) Implement storage functions mirroring existing style (prepare/transaction/validate)
-5) Wire services to storage; keep services thin and functional
-6) Tests: unit for conversions/transformations; package tests for storage/services
+1. Confirm target entities and access patterns (reads, filters, writes, queue ops)
+2. Model with Zod, then map to SQLite columns (no magic numbers; explicit enums/text)
+3. Plan migration (backup, create tables, transform, validate counts, swap, cleanup)
+4. Implement storage functions mirroring existing style (prepare/transaction/validate)
+5. Wire services to storage; keep services thin and functional
+6. Tests: unit for conversions/transformations; package tests for storage/services
 
 ### Technical guidelines
 

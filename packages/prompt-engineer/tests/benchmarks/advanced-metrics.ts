@@ -150,7 +150,7 @@ export class PassAtKMetric {
    */
   private static getZScore(confidence: number): number {
     const zScores: Record<number, number> = {
-      0.90: 1.645,
+      0.9: 1.645,
       0.95: 1.96,
       0.99: 2.576
     }
@@ -169,12 +169,9 @@ export class PassAtKMetric {
   /**
    * Generate multiple samples and calculate pass@k
    */
-  static calculateFromSamples(
-    results: boolean[],
-    k: number
-  ): PassAtKResult {
+  static calculateFromSamples(results: boolean[], k: number): PassAtKResult {
     const n = results.length
-    const c = results.filter(r => r).length
+    const c = results.filter((r) => r).length
     return this.calculate(n, c, k)
   }
 }
@@ -233,12 +230,12 @@ export class CodeBLEUMetric {
       const candNgramCounts = new Map<string, number>()
 
       // Count candidate n-grams
-      candNgrams.forEach(ngram => {
+      candNgrams.forEach((ngram) => {
         candNgramCounts.set(ngram, (candNgramCounts.get(ngram) || 0) + 1)
       })
 
       // Count matches with clipping
-      refNgrams.forEach(ngram => {
+      refNgrams.forEach((ngram) => {
         const count = candNgramCounts.get(ngram) || 0
         if (count > 0) {
           matches++
@@ -282,7 +279,7 @@ export class CodeBLEUMetric {
     const refPatterns = this.extractStructuralPatterns(reference)
     const candPatterns = this.extractStructuralPatterns(candidate)
 
-    const intersection = new Set([...refPatterns].filter(x => candPatterns.has(x)))
+    const intersection = new Set([...refPatterns].filter((x) => candPatterns.has(x)))
     const union = new Set([...refPatterns, ...candPatterns])
 
     return union.size > 0 ? intersection.size / union.size : 0
@@ -296,7 +293,7 @@ export class CodeBLEUMetric {
 
     // Function declarations
     const functions = code.match(/function\s+\w+|const\s+\w+\s*=\s*(?:async\s*)?\(/g) || []
-    functions.forEach(f => patterns.add('func'))
+    functions.forEach((f) => patterns.add('func'))
 
     // Control structures
     if (code.includes('if')) patterns.add('conditional')
@@ -342,7 +339,7 @@ export class CodeBLEUMetric {
       /(\w+)\s*:/g // Object properties
     ]
 
-    patterns.forEach(pattern => {
+    patterns.forEach((pattern) => {
       const matches = code.matchAll(pattern)
       for (const match of matches) {
         if (match[1] && !['function', 'const', 'let', 'var'].includes(match[1])) {
@@ -379,7 +376,7 @@ export class CodeBLEUMetric {
    * Calculate Jaccard similarity between sets
    */
   private static calculateSetSimilarity(set1: Set<string>, set2: Set<string>): number {
-    const intersection = new Set([...set1].filter(x => set2.has(x)))
+    const intersection = new Set([...set1].filter((x) => set2.has(x)))
     const union = new Set([...set1, ...set2])
     return union.size > 0 ? intersection.size / union.size : 0
   }
@@ -397,11 +394,7 @@ export class ComplexityAnalyzer {
     const complexity = this.calculateCyclomaticComplexity(code)
     const cognitiveComplexity = this.calculateCognitiveComplexity(code)
     const halstead = this.calculateHalsteadMetrics(code)
-    const maintainability = this.calculateMaintainabilityIndex(
-      complexity,
-      halstead.volume,
-      code.split('\n').length
-    )
+    const maintainability = this.calculateMaintainabilityIndex(complexity, halstead.volume, code.split('\n').length)
 
     return {
       complexity,
@@ -430,7 +423,7 @@ export class ComplexityAnalyzer {
       /\|\|/g
     ]
 
-    decisionPatterns.forEach(pattern => {
+    decisionPatterns.forEach((pattern) => {
       const matches = code.match(pattern)
       if (matches) {
         complexity += matches.length
@@ -449,7 +442,7 @@ export class ComplexityAnalyzer {
 
     const lines = code.split('\n')
 
-    lines.forEach(line => {
+    lines.forEach((line) => {
       // Track nesting
       if (line.includes('{')) nestingLevel++
       if (line.includes('}')) nestingLevel = Math.max(0, nestingLevel - 1)
@@ -485,12 +478,37 @@ export class ComplexityAnalyzer {
 
     // Common operators
     const operatorPatterns = [
-      '+', '-', '*', '/', '%', '=', '==', '===', '!=', '!==',
-      '<', '>', '<=', '>=', '&&', '||', '!', '++', '--',
-      'if', 'else', 'for', 'while', 'return', 'function', 'const', 'let', 'var'
+      '+',
+      '-',
+      '*',
+      '/',
+      '%',
+      '=',
+      '==',
+      '===',
+      '!=',
+      '!==',
+      '<',
+      '>',
+      '<=',
+      '>=',
+      '&&',
+      '||',
+      '!',
+      '++',
+      '--',
+      'if',
+      'else',
+      'for',
+      'while',
+      'return',
+      'function',
+      'const',
+      'let',
+      'var'
     ]
 
-    operatorPatterns.forEach(op => {
+    operatorPatterns.forEach((op) => {
       const regex = new RegExp(op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
       const matches = code.match(regex)
       if (matches) {
@@ -501,7 +519,7 @@ export class ComplexityAnalyzer {
 
     // Extract identifiers as operands (simplified)
     const identifiers = code.match(/\b[a-zA-Z_]\w*\b/g) || []
-    identifiers.forEach(id => {
+    identifiers.forEach((id) => {
       if (!operatorPatterns.includes(id)) {
         operands.add(id)
         operandCount.set(id, (operandCount.get(id) || 0) + 1)
@@ -509,9 +527,9 @@ export class ComplexityAnalyzer {
     })
 
     const n1 = operators.size // Unique operators
-    const n2 = operands.size  // Unique operands
+    const n2 = operands.size // Unique operands
     const N1 = Array.from(operatorCount.values()).reduce((a, b) => a + b, 0) // Total operators
-    const N2 = Array.from(operandCount.values()).reduce((a, b) => a + b, 0)  // Total operands
+    const N2 = Array.from(operandCount.values()).reduce((a, b) => a + b, 0) // Total operands
 
     const vocabulary = n1 + n2
     const length = N1 + N2
@@ -541,9 +559,7 @@ export class ComplexityAnalyzer {
     // Microsoft's Maintainability Index formula
     const mi = Math.max(
       0,
-      (171 - 5.2 * Math.log(halsteadVolume) -
-        0.23 * cyclomaticComplexity -
-        16.2 * Math.log(linesOfCode)) * 100 / 171
+      ((171 - 5.2 * Math.log(halsteadVolume) - 0.23 * cyclomaticComplexity - 16.2 * Math.log(linesOfCode)) * 100) / 171
     )
 
     return Math.round(mi * 100) / 100
@@ -595,7 +611,7 @@ export class SemanticSimilarityMetric {
     const tokens1 = new Set(text1.toLowerCase().split(/\s+/))
     const tokens2 = new Set(text2.toLowerCase().split(/\s+/))
 
-    const intersection = new Set([...tokens1].filter(x => tokens2.has(x)))
+    const intersection = new Set([...tokens1].filter((x) => tokens2.has(x)))
     const union = new Set([...tokens1, ...tokens2])
 
     return union.size > 0 ? intersection.size / union.size : 0
@@ -628,11 +644,11 @@ export class SemanticSimilarityMetric {
    */
   private static createVector(tokens: string[], vocabulary: Set<string>): number[] {
     const tokenCounts = new Map<string, number>()
-    tokens.forEach(token => {
+    tokens.forEach((token) => {
       tokenCounts.set(token, (tokenCounts.get(token) || 0) + 1)
     })
 
-    return Array.from(vocabulary).map(word => tokenCounts.get(word) || 0)
+    return Array.from(vocabulary).map((word) => tokenCounts.get(word) || 0)
   }
 
   /**
@@ -678,17 +694,14 @@ export class SemanticSimilarityMetric {
   /**
    * Cosine similarity for frequency maps
    */
-  private static cosineSimilarityForSets(
-    map1: Map<string, number>,
-    map2: Map<string, number>
-  ): number {
+  private static cosineSimilarityForSets(map1: Map<string, number>, map2: Map<string, number>): number {
     const keys = new Set([...map1.keys(), ...map2.keys()])
 
     let dotProduct = 0
     let magnitude1 = 0
     let magnitude2 = 0
 
-    keys.forEach(key => {
+    keys.forEach((key) => {
       const val1 = map1.get(key) || 0
       const val2 = map2.get(key) || 0
       dotProduct += val1 * val2
@@ -719,7 +732,7 @@ export class ChrFMetric {
     let totalPrecision = 0
     let totalRecall = 0
 
-    ngramSizes.forEach(n => {
+    ngramSizes.forEach((n) => {
       const refNgrams = this.getCharNgrams(reference, n)
       const candNgrams = this.getCharNgrams(candidate, n)
 
@@ -738,7 +751,7 @@ export class ChrFMetric {
       precision: Math.round(avgPrecision * 1000) / 1000,
       recall: Math.round(avgRecall * 1000) / 1000,
       fScore: Math.round(avgFScore * 1000) / 1000,
-      charNgrams: scores.map(s => Math.round(s * 1000) / 1000)
+      charNgrams: scores.map((s) => Math.round(s * 1000) / 1000)
     }
   }
 
@@ -774,7 +787,7 @@ export class ChrFMetric {
       matches += Math.min(count, candCount)
     })
 
-    candidate.forEach(count => {
+    candidate.forEach((count) => {
       totalCand += count
     })
 
@@ -790,7 +803,7 @@ export class ChrFMetric {
   private static calculateFScore(precision: number, recall: number, beta: number): number {
     if (precision + recall === 0) return 0
     const betaSquared = beta * beta
-    return (1 + betaSquared) * precision * recall / (betaSquared * precision + recall)
+    return ((1 + betaSquared) * precision * recall) / (betaSquared * precision + recall)
   }
 }
 
@@ -842,11 +855,7 @@ export class EffectSizeCalculator {
   /**
    * Calculate pooled standard deviation
    */
-  private static pooledStandardDeviation(
-    group1: number[],
-    group2: number[],
-    corrected: boolean
-  ): number {
+  private static pooledStandardDeviation(group1: number[], group2: number[], corrected: boolean): number {
     const n1 = group1.length
     const n2 = group2.length
 
@@ -869,7 +878,7 @@ export class EffectSizeCalculator {
    */
   private static variance(values: number[]): number {
     const m = this.mean(values)
-    const squaredDiffs = values.map(val => Math.pow(val - m, 2))
+    const squaredDiffs = values.map((val) => Math.pow(val - m, 2))
     return this.mean(squaredDiffs)
   }
 
@@ -886,11 +895,7 @@ export class EffectSizeCalculator {
   /**
    * Simple power analysis
    */
-  private static powerAnalysis(
-    effectSize: number,
-    n1: number,
-    n2: number
-  ): EffectSize['powerAnalysis'] {
+  private static powerAnalysis(effectSize: number, n1: number, n2: number): EffectSize['powerAnalysis'] {
     // Simplified power calculation
     const alpha = 0.05
     const df = n1 + n2 - 2
@@ -931,7 +936,7 @@ export class EffectSizeCalculator {
     const t4 = t3 * t
     const t5 = t4 * t
 
-    const y = 1.0 - (((((a5 * t5 + a4 * t4) + a3 * t3) + a2 * t2) + a1 * t) * Math.exp(-x * x))
+    const y = 1.0 - (a5 * t5 + a4 * t4 + a3 * t3 + a2 * t2 + a1 * t) * Math.exp(-x * x)
 
     return 0.5 * (1.0 + sign * y)
   }
@@ -939,10 +944,7 @@ export class EffectSizeCalculator {
   /**
    * Calculate Glass's delta (for unequal variances)
    */
-  static calculateGlassDelta(
-    control: number[],
-    treatment: number[]
-  ): number {
+  static calculateGlassDelta(control: number[], treatment: number[]): number {
     const meanControl = this.mean(control)
     const meanTreatment = this.mean(treatment)
     const sdControl = Math.sqrt(this.variance(control))
@@ -992,25 +994,23 @@ export class CompositeMetrics {
       chrF: number
     }
   } {
-    const codeBLEU = candidates.map(c => CodeBLEUMetric.calculate(reference, c))
-    const complexity = candidates.map(c => ComplexityAnalyzer.analyze(c))
-    const semanticSimilarity = candidates.map(c => SemanticSimilarityMetric.calculate(reference, c))
-    const chrF = candidates.map(c => ChrFMetric.calculate(reference, c))
+    const codeBLEU = candidates.map((c) => CodeBLEUMetric.calculate(reference, c))
+    const complexity = candidates.map((c) => ComplexityAnalyzer.analyze(c))
+    const semanticSimilarity = candidates.map((c) => SemanticSimilarityMetric.calculate(reference, c))
+    const chrF = candidates.map((c) => ChrFMetric.calculate(reference, c))
 
     // Calculate pass@k if results provided
     let passAtK: PassAtKResult[] | undefined
     if (passResults && passResults.length > 0) {
-      passAtK = [1, 10, 100].map(k =>
-        PassAtKMetric.calculateFromSamples(passResults, k)
-      )
+      passAtK = [1, 10, 100].map((k) => PassAtKMetric.calculateFromSamples(passResults, k))
     }
 
     // Calculate averages
     const averageScores = {
-      codeBLEU: this.average(codeBLEU.map(s => s.overall)),
-      complexity: this.average(complexity.map(c => c.maintainabilityIndex)),
-      similarity: this.average(semanticSimilarity.map(s => s.score)),
-      chrF: this.average(chrF.map(c => c.fScore))
+      codeBLEU: this.average(codeBLEU.map((s) => s.overall)),
+      complexity: this.average(complexity.map((c) => c.maintainabilityIndex)),
+      similarity: this.average(semanticSimilarity.map((s) => s.score)),
+      chrF: this.average(chrF.map((c) => c.fScore))
     }
 
     return {
@@ -1054,20 +1054,22 @@ export class CompositeMetrics {
 
     const finalWeights = { ...defaultWeights, ...weights }
 
-    return candidates.map((candidate, index) => {
-      const bleu = CodeBLEUMetric.calculate(reference, candidate).overall
-      const comp = ComplexityAnalyzer.analyze(candidate).maintainabilityIndex / 100
-      const sim = SemanticSimilarityMetric.calculate(reference, candidate).score
-      const chrf = ChrFMetric.calculate(reference, candidate).fScore
+    return candidates
+      .map((candidate, index) => {
+        const bleu = CodeBLEUMetric.calculate(reference, candidate).overall
+        const comp = ComplexityAnalyzer.analyze(candidate).maintainabilityIndex / 100
+        const sim = SemanticSimilarityMetric.calculate(reference, candidate).score
+        const chrf = ChrFMetric.calculate(reference, candidate).fScore
 
-      const score =
-        bleu * finalWeights.codeBLEU +
-        comp * finalWeights.complexity +
-        sim * finalWeights.similarity +
-        chrf * finalWeights.chrF
+        const score =
+          bleu * finalWeights.codeBLEU +
+          comp * finalWeights.complexity +
+          sim * finalWeights.similarity +
+          chrf * finalWeights.chrF
 
-      return { index, score, candidate }
-    }).sort((a, b) => b.score - a.score)
+        return { index, score, candidate }
+      })
+      .sort((a, b) => b.score - a.score)
   }
 }
 

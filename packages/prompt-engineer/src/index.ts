@@ -43,13 +43,13 @@ export class PromptEngineer {
 
   constructor(config?: PromptEngineerConfig) {
     this.config = config || {}
-    
+
     // Initialize default optimizers
     this.registerOptimizer('scot', createSCoTOptimizer())
     this.registerOptimizer('self-consistency', createSelfConsistencyOptimizer())
     this.registerOptimizer('context', createContextOptimizer())
     this.registerOptimizer('prompt-wizard', createPromptWizardOptimizer())
-    
+
     if (config?.defaultOptimizer) {
       this.defaultOptimizer = config.defaultOptimizer
     }
@@ -60,15 +60,15 @@ export class PromptEngineer {
    */
   async initialize(): Promise<void> {
     if (this.initialized) return
-    
+
     // Initialize plugin system
     this.pluginSystem = getPluginSystem()
     await this.pluginSystem.initialize(this.config.plugins)
-    
+
     // Initialize provider manager
     this.providerManager = getProviderManager()
     await this.providerManager.initialize()
-    
+
     // Register provider plugins with the provider manager
     const providerPlugins = await this.pluginSystem.listPlugins()
     for (const plugin of providerPlugins) {
@@ -77,17 +77,13 @@ export class PromptEngineer {
         await this.providerManager.register(plugin.name, {
           name: plugin.name,
           models: [],
-          generate: (messages, options) => 
-            providerPlugin.generate(
-              messages.map(m => m.content).join('\n'),
-              options
-            ),
+          generate: (messages, options) => providerPlugin.generate(messages.map((m) => m.content).join('\n'), options),
           stream: providerPlugin.stream,
           generateStructured: providerPlugin.generateStructured
         } as any)
       }
     }
-    
+
     this.initialized = true
   }
 
@@ -108,10 +104,10 @@ export class PromptEngineer {
     if (!this.initialized && (options?.provider || options?.cache)) {
       await this.initialize()
     }
-    
+
     const optimizerName = options?.optimizer || this.defaultOptimizer
     const optimizer = this.optimizers.get(optimizerName)
-    
+
     if (!optimizer) {
       throw new Error(`Optimizer '${optimizerName}' not found`)
     }
@@ -122,9 +118,7 @@ export class PromptEngineer {
       if (storage) {
         const cacheKey = `optimize:${optimizerName}:${prompt}`
         const cached = await Effect.runPromise(
-          storage.get<OptimizedPrompt>(cacheKey).pipe(
-            Effect.catchAll(() => Effect.succeed(null))
-          )
+          storage.get<OptimizedPrompt>(cacheKey).pipe(Effect.catchAll(() => Effect.succeed(null)))
         )
         if (cached && cached.value) {
           return cached.value
@@ -133,43 +127,44 @@ export class PromptEngineer {
     }
 
     const result = await optimizer.optimizeAsync(prompt, options?.context)()
-    
+
     if (result._tag === 'Left') {
       throw result.left
     }
-    
+
     const optimized = result.right
-    
+
     // Cache result if enabled
     if (options?.cache && this.pluginSystem) {
       const storage = await this.pluginSystem.getStorage()
       if (storage) {
         const cacheKey = `optimize:${optimizerName}:${prompt}`
         await Effect.runPromise(
-          storage.set(cacheKey, optimized, 3600000).pipe( // 1 hour TTL
+          storage.set(cacheKey, optimized, 3600000).pipe(
+            // 1 hour TTL
             Effect.catchAll(() => Effect.succeed(undefined))
           )
         )
       }
     }
-    
+
     return optimized
   }
 
   analyze(prompt: string, optimizer?: string): PromptAnalysis {
     const optimizerName = optimizer || this.defaultOptimizer
     const opt = this.optimizers.get(optimizerName)
-    
+
     if (!opt) {
       throw new Error(`Optimizer '${optimizerName}' not found`)
     }
 
     const result = opt.analyze(prompt)
-    
+
     if (result._tag === 'Left') {
       throw result.left
     }
-    
+
     return result.right
   }
 
@@ -180,7 +175,7 @@ export class PromptEngineer {
   supportsFeature(feature: string, optimizer?: string): boolean {
     const optimizerName = optimizer || this.defaultOptimizer
     const opt = this.optimizers.get(optimizerName)
-    
+
     return opt ? opt.supports(feature) : false
   }
 
@@ -229,9 +224,7 @@ export const promptEngineer = new PromptEngineer()
 /**
  * Create a configured PromptEngineer instance
  */
-export async function createPromptEngineer(
-  config?: PromptEngineerConfig
-): Promise<PromptEngineer> {
+export async function createPromptEngineer(config?: PromptEngineerConfig): Promise<PromptEngineer> {
   const engineer = new PromptEngineer(config)
   if (config?.plugins || config?.enableCaching) {
     await engineer.initialize()
@@ -256,9 +249,6 @@ export async function optimizePrompt(
 /**
  * Quick analysis function
  */
-export function analyzePrompt(
-  prompt: string,
-  optimizer?: string
-): PromptAnalysis {
+export function analyzePrompt(prompt: string, optimizer?: string): PromptAnalysis {
   return promptEngineer.analyze(prompt, optimizer)
 }

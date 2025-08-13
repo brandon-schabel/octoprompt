@@ -11,21 +11,9 @@ import { Effect, pipe } from 'effect'
 import { PromptSanitizer, createSanitizer } from './sanitizer'
 import { RCIFramework, createRCIFramework } from './rci'
 import { AuditLogger, createAuditLogger } from './audit'
-import type { 
-  SanitizationResult, 
-  SanitizationConfig,
-  SecurityThreat 
-} from './sanitizer'
-import type { 
-  RCIResult, 
-  RCIConfig,
-  Vulnerability 
-} from './rci'
-import type { 
-  AuditConfig,
-  AuditEvent,
-  AuditReport 
-} from './audit'
+import type { SanitizationResult, SanitizationConfig, SecurityThreat } from './sanitizer'
+import type { RCIResult, RCIConfig, Vulnerability } from './rci'
+import type { AuditConfig, AuditEvent, AuditReport } from './audit'
 
 // ============================================================================
 // Integrated Security Manager
@@ -59,24 +47,24 @@ export class SecurityManager {
   private rciFramework: RCIFramework
   private auditLogger: AuditLogger
   private config: SecurityConfig
-  
+
   constructor(config: SecurityConfig = {}) {
     this.config = {
       enableAll: config.enableAll ?? true,
       strictMode: config.strictMode ?? false,
       ...config
     }
-    
+
     this.sanitizer = createSanitizer({
       strict: this.config.strictMode,
       ...config.sanitization
     })
-    
+
     this.rciFramework = createRCIFramework({
       autoHarden: this.config.strictMode,
       ...config.rci
     })
-    
+
     this.auditLogger = createAuditLogger({
       logLevel: this.config.strictMode ? 'info' : 'warning',
       ...config.audit
@@ -86,157 +74,151 @@ export class SecurityManager {
   /**
    * Perform comprehensive security analysis
    */
-  analyzePrompt(
-    prompt: string,
-    userId?: string,
-    sessionId?: string
-  ): Effect.Effect<SecurityAnalysisResult, never> {
-    return Effect.gen(function* (_) {
-      const threats: SecurityThreat[] = []
-      const vulnerabilities: Vulnerability[] = []
-      const recommendations: string[] = []
-      let finalPrompt = prompt
-      let safe = true
-      
-      // Step 1: Sanitization
-      let sanitizationResult: SanitizationResult | undefined
-      if (this.config.enableAll || this.config.sanitization) {
-        sanitizationResult = yield* _(this.sanitizer.sanitize(prompt))
-        threats.push(...sanitizationResult.threats)
-        finalPrompt = sanitizationResult.sanitized
-        
-        if (sanitizationResult.riskLevel !== 'safe' && sanitizationResult.riskLevel !== 'low') {
-          safe = false
+  analyzePrompt(prompt: string, userId?: string, sessionId?: string): Effect.Effect<SecurityAnalysisResult, never> {
+    return Effect.gen(
+      function* (_) {
+        const threats: SecurityThreat[] = []
+        const vulnerabilities: Vulnerability[] = []
+        const recommendations: string[] = []
+        let finalPrompt = prompt
+        let safe = true
+
+        // Step 1: Sanitization
+        let sanitizationResult: SanitizationResult | undefined
+        if (this.config.enableAll || this.config.sanitization) {
+          sanitizationResult = yield* _(this.sanitizer.sanitize(prompt))
+          threats.push(...sanitizationResult.threats)
+          finalPrompt = sanitizationResult.sanitized
+
+          if (sanitizationResult.riskLevel !== 'safe' && sanitizationResult.riskLevel !== 'low') {
+            safe = false
+          }
+
+          // Log sanitization
+          yield* _(this.auditLogger.logSanitization(sanitizationResult, userId))
         }
-        
-        // Log sanitization
-        yield* _(this.auditLogger.logSanitization(sanitizationResult, userId))
-      }
-      
-      // Step 2: RCI Analysis
-      let rciResult: RCIResult | undefined
-      if (this.config.enableAll || this.config.rci) {
-        rciResult = yield* _(this.rciFramework.analyzeRobustness(finalPrompt))
-        vulnerabilities.push(...rciResult.vulnerabilities)
-        recommendations.push(...rciResult.recommendations)
-        
-        if (rciResult.robustnessScore < 70) {
-          safe = false
-          finalPrompt = rciResult.hardened
+
+        // Step 2: RCI Analysis
+        let rciResult: RCIResult | undefined
+        if (this.config.enableAll || this.config.rci) {
+          rciResult = yield* _(this.rciFramework.analyzeRobustness(finalPrompt))
+          vulnerabilities.push(...rciResult.vulnerabilities)
+          recommendations.push(...rciResult.recommendations)
+
+          if (rciResult.robustnessScore < 70) {
+            safe = false
+            finalPrompt = rciResult.hardened
+          }
+
+          // Log RCI analysis
+          yield* _(this.auditLogger.logRCIAnalysis(rciResult, userId))
         }
-        
-        // Log RCI analysis
-        yield* _(this.auditLogger.logRCIAnalysis(rciResult, userId))
-      }
-      
-      // Step 3: Additional checks for high-risk patterns
-      if (threats.some(t => t.severity === 'critical')) {
-        yield* _(this.auditLogger.logJailbreakAttempt(
-          prompt,
-          'detected_in_analysis',
-          true,
-          userId
-        ))
-        
-        if (this.config.strictMode) {
-          // In strict mode, completely block critical threats
-          finalPrompt = '[BLOCKED: Security threat detected]'
-          safe = false
+
+        // Step 3: Additional checks for high-risk patterns
+        if (threats.some((t) => t.severity === 'critical')) {
+          yield* _(this.auditLogger.logJailbreakAttempt(prompt, 'detected_in_analysis', true, userId))
+
+          if (this.config.strictMode) {
+            // In strict mode, completely block critical threats
+            finalPrompt = '[BLOCKED: Security threat detected]'
+            safe = false
+          }
         }
-      }
-      
-      // Generate combined recommendations
-      if (!safe) {
-        recommendations.push('Consider rephrasing your prompt to avoid security concerns')
-      }
-      
-      if (threats.length > 3) {
-        recommendations.push('Multiple security threats detected - review prompt carefully')
-      }
-      
-      if (vulnerabilities.length > 2) {
-        recommendations.push('Prompt has structural vulnerabilities - apply hardening')
-      }
-      
-      // Create audit event for the complete analysis
-      const auditEvent: Omit<AuditEvent, 'id' | 'timestamp'> = {
-        type: 'prompt_sanitized',
-        severity: safe ? 'info' : threats.some(t => t.severity === 'critical') ? 'critical' : 'warning',
-        source: 'security_manager',
-        userId,
-        sessionId,
-        details: {
-          action: 'comprehensive_analysis',
-          result: safe ? 'success' : 'modified',
-          prompt,
-          sanitizedPrompt: finalPrompt,
+
+        // Generate combined recommendations
+        if (!safe) {
+          recommendations.push('Consider rephrasing your prompt to avoid security concerns')
+        }
+
+        if (threats.length > 3) {
+          recommendations.push('Multiple security threats detected - review prompt carefully')
+        }
+
+        if (vulnerabilities.length > 2) {
+          recommendations.push('Prompt has structural vulnerabilities - apply hardening')
+        }
+
+        // Create audit event for the complete analysis
+        const auditEvent: Omit<AuditEvent, 'id' | 'timestamp'> = {
+          type: 'prompt_sanitized',
+          severity: safe ? 'info' : threats.some((t) => t.severity === 'critical') ? 'critical' : 'warning',
+          source: 'security_manager',
+          userId,
+          sessionId,
+          details: {
+            action: 'comprehensive_analysis',
+            result: safe ? 'success' : 'modified',
+            prompt,
+            sanitizedPrompt: finalPrompt,
+            threats,
+            vulnerabilities,
+            riskScore: rciResult ? 100 - rciResult.robustnessScore : undefined,
+            mitigationApplied: finalPrompt !== prompt
+          }
+        }
+
+        yield* _(this.auditLogger.log(auditEvent))
+
+        return {
+          original: prompt,
+          final: finalPrompt,
+          safe,
+          sanitization: sanitizationResult,
+          rci: rciResult,
           threats,
           vulnerabilities,
-          riskScore: rciResult ? (100 - rciResult.robustnessScore) : undefined,
-          mitigationApplied: finalPrompt !== prompt
+          recommendations,
+          auditId: `analysis-${Date.now()}`
         }
-      }
-      
-      yield* _(this.auditLogger.log(auditEvent))
-      
-      return {
-        original: prompt,
-        final: finalPrompt,
-        safe,
-        sanitization: sanitizationResult,
-        rci: rciResult,
-        threats,
-        vulnerabilities,
-        recommendations,
-        auditId: `analysis-${Date.now()}`
-      }
-    }.bind(this))
+      }.bind(this)
+    )
   }
 
   /**
    * Validate a prompt without modification
    */
   validatePrompt(prompt: string): Effect.Effect<boolean, never> {
-    return Effect.gen(function* (_) {
-      const validationResult = yield* _(this.sanitizer.validate(prompt))
-      
-      if (!validationResult.valid) {
-        return false
-      }
-      
-      if (this.config.rci) {
-        const rciResult = yield* _(this.rciFramework.analyzeRobustness(prompt))
-        if (rciResult.robustnessScore < 60) {
+    return Effect.gen(
+      function* (_) {
+        const validationResult = yield* _(this.sanitizer.validate(prompt))
+
+        if (!validationResult.valid) {
           return false
         }
-      }
-      
-      return true
-    }.bind(this))
+
+        if (this.config.rci) {
+          const rciResult = yield* _(this.rciFramework.analyzeRobustness(prompt))
+          if (rciResult.robustnessScore < 60) {
+            return false
+          }
+        }
+
+        return true
+      }.bind(this)
+    )
   }
 
   /**
    * Harden a prompt
    */
   hardenPrompt(prompt: string): Effect.Effect<string, never> {
-    return Effect.gen(function* (_) {
-      // First sanitize
-      const sanitized = yield* _(this.sanitizer.sanitize(prompt))
-      
-      // Then apply RCI hardening
-      const rciAnalysis = yield* _(this.rciFramework.analyzeRobustness(sanitized.sanitized))
-      
-      return rciAnalysis.hardened
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        // First sanitize
+        const sanitized = yield* _(this.sanitizer.sanitize(prompt))
+
+        // Then apply RCI hardening
+        const rciAnalysis = yield* _(this.rciFramework.analyzeRobustness(sanitized.sanitized))
+
+        return rciAnalysis.hardened
+      }.bind(this)
+    )
   }
 
   /**
    * Get security report
    */
-  getSecurityReport(
-    startDate: Date,
-    endDate: Date
-  ): Effect.Effect<AuditReport, never> {
+  getSecurityReport(startDate: Date, endDate: Date): Effect.Effect<AuditReport, never> {
     return this.auditLogger.generateReport(startDate, endDate)
   }
 
@@ -328,22 +310,25 @@ export function createDevSecurityManager(): SecurityManager {
 /**
  * Quick security check for a prompt
  */
-export function quickSecurityCheck(prompt: string): Effect.Effect<{
-  safe: boolean
-  reason?: string
-}, never> {
+export function quickSecurityCheck(prompt: string): Effect.Effect<
+  {
+    safe: boolean
+    reason?: string
+  },
+  never
+> {
   const manager = createSecurityManager({ enableAll: false, sanitization: { strict: false } })
-  
+
   return Effect.gen(function* (_) {
     const result = yield* _(manager.validatePrompt(prompt))
-    
+
     if (!result) {
       return {
         safe: false,
         reason: 'Prompt failed security validation'
       }
     }
-    
+
     return { safe: true }
   })
 }
@@ -359,14 +344,11 @@ export function applyDefaultHardening(prompt: string): Effect.Effect<string, nev
 /**
  * Check for specific threat types
  */
-export function checkForThreats(
-  prompt: string,
-  threatTypes: string[]
-): Effect.Effect<SecurityThreat[], never> {
+export function checkForThreats(prompt: string, threatTypes: string[]): Effect.Effect<SecurityThreat[], never> {
   const sanitizer = createSanitizer()
-  
+
   return Effect.gen(function* (_) {
     const result = yield* _(sanitizer.sanitize(prompt))
-    return result.threats.filter(t => threatTypes.includes(t.type))
+    return result.threats.filter((t) => threatTypes.includes(t.type))
   })
 }

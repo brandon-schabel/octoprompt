@@ -35,7 +35,11 @@ async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: s
   const validationResult = await schema.safeParseAsync(data)
   if (!validationResult.success) {
     console.error(`Zod validation failed for ${context}:`, validationResult.error.errors)
-    throw new ApiError(400, `Validation failed for ${context}`, fromJson(validationResult.error.errors) ?? 'VALIDATION_ERROR')
+    throw new ApiError(
+      400,
+      `Validation failed for ${context}`,
+      fromJson(validationResult.error.errors) ?? 'VALIDATION_ERROR'
+    )
   }
   return validationResult.data
 }

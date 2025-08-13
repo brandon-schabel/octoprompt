@@ -25,9 +25,10 @@ export const customMatchers = {
 
     return {
       pass: hasRequiredFields,
-      message: () => hasRequiredFields
-        ? 'Expected not to be a valid OptimizedPrompt'
-        : 'Expected to be a valid OptimizedPrompt with all required fields'
+      message: () =>
+        hasRequiredFields
+          ? 'Expected not to be a valid OptimizedPrompt'
+          : 'Expected to be a valid OptimizedPrompt with all required fields'
     }
   },
 
@@ -44,9 +45,10 @@ export const customMatchers = {
 
     return {
       pass,
-      message: () => pass
-        ? `Expected improvement score not to be between ${min} and ${max}, but got ${score}`
-        : `Expected improvement score to be between ${min} and ${max}, but got ${score}`
+      message: () =>
+        pass
+          ? `Expected improvement score not to be between ${min} and ${max}, but got ${score}`
+          : `Expected improvement score to be between ${min} and ${max}, but got ${score}`
     }
   },
 
@@ -63,9 +65,10 @@ export const customMatchers = {
 
     return {
       pass,
-      message: () => pass
-        ? `Expected token count not to be between ${min} and ${max}, but got ${tokens}`
-        : `Expected token count to be between ${min} and ${max}, but got ${tokens}`
+      message: () =>
+        pass
+          ? `Expected token count not to be between ${min} and ${max}, but got ${tokens}`
+          : `Expected token count to be between ${min} and ${max}, but got ${tokens}`
     }
   }
 }
@@ -85,14 +88,10 @@ export class MockSolutionGenerator implements SolutionGenerator<string> {
     this.callCount.set(prompt, 0)
   }
 
-  async generate(
-    prompt: string,
-    temperature: number,
-    topP: number
-  ): Promise<string> {
+  async generate(prompt: string, temperature: number, topP: number): Promise<string> {
     // Simulate delay
     if (this.delay > 0) {
-      await new Promise(resolve => setTimeout(resolve, this.delay))
+      await new Promise((resolve) => setTimeout(resolve, this.delay))
     }
 
     const responses = this.responses.get(prompt) || [`Mock response for: ${prompt}`]
@@ -216,11 +215,7 @@ export class MockOptimizer implements Optimizer {
 }
 
 // Test helper for async operations
-export async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  errorMessage?: string
-): Promise<T> {
+export async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage?: string): Promise<T> {
   const timeout = new Promise<never>((_, reject) => {
     setTimeout(() => {
       reject(new Error(errorMessage || `Operation timed out after ${timeoutMs}ms`))
@@ -253,7 +248,7 @@ export async function retryTest<T>(
 
       if (attempt < maxAttempts && shouldRetry(error)) {
         console.log(`Attempt ${attempt} failed, retrying in ${delay}ms...`)
-        await new Promise(resolve => setTimeout(resolve, delay))
+        await new Promise((resolve) => setTimeout(resolve, delay))
       }
     }
   }
@@ -282,15 +277,17 @@ export class PerformanceMeasurer {
     const duration = performance.now() - this.startTime
     const endMemory = process.memoryUsage()
 
-    const memoryDelta = this.startMemory ? {
-      heapUsed: endMemory.heapUsed - this.startMemory.heapUsed,
-      external: endMemory.external - this.startMemory.external,
-      rss: endMemory.rss - this.startMemory.rss
-    } : {
-      heapUsed: 0,
-      external: 0,
-      rss: 0
-    }
+    const memoryDelta = this.startMemory
+      ? {
+          heapUsed: endMemory.heapUsed - this.startMemory.heapUsed,
+          external: endMemory.external - this.startMemory.external,
+          rss: endMemory.rss - this.startMemory.rss
+        }
+      : {
+          heapUsed: 0,
+          external: 0,
+          rss: 0
+        }
 
     return { duration, memoryDelta }
   }
@@ -325,21 +322,21 @@ export function compareTokenReduction(
 }
 
 // Snapshot testing helper
-export function createSnapshot(
-  optimizer: string,
-  prompt: string,
-  output: OptimizedPrompt
-): string {
-  return JSON.stringify({
-    optimizer,
-    prompt: prompt.substring(0, 100),
-    systemPrompt: output.systemPrompt.substring(0, 100),
-    userPromptPrefix: output.userPrompt.substring(0, 100),
-    improvementScore: output.improvementScore,
-    tokenCount: output.estimatedTokens,
-    techniques: output.optimizationStrategy.techniques,
-    timestamp: new Date().toISOString()
-  }, null, 2)
+export function createSnapshot(optimizer: string, prompt: string, output: OptimizedPrompt): string {
+  return JSON.stringify(
+    {
+      optimizer,
+      prompt: prompt.substring(0, 100),
+      systemPrompt: output.systemPrompt.substring(0, 100),
+      userPromptPrefix: output.userPrompt.substring(0, 100),
+      improvementScore: output.improvementScore,
+      tokenCount: output.estimatedTokens,
+      techniques: output.optimizationStrategy.techniques,
+      timestamp: new Date().toISOString()
+    },
+    null,
+    2
+  )
 }
 
 // Test data generators
@@ -349,12 +346,7 @@ export function generateTestPrompt(options: {
   includeExamples?: boolean
   includeConstraints?: boolean
 }): string {
-  const {
-    length = 'medium',
-    complexity = 'moderate',
-    includeExamples = false,
-    includeConstraints = false
-  } = options
+  const { length = 'medium', complexity = 'moderate', includeExamples = false, includeConstraints = false } = options
 
   let prompt = ''
 
@@ -373,7 +365,8 @@ export function generateTestPrompt(options: {
 
   // Add length
   if (length === 'long') {
-    prompt += '. The implementation should be production-ready with comprehensive error handling, logging, and monitoring. Consider performance implications and scalability concerns.'
+    prompt +=
+      '. The implementation should be production-ready with comprehensive error handling, logging, and monitoring. Consider performance implications and scalability concerns.'
   } else if (length === 'short') {
     prompt = prompt.split(' ').slice(0, 5).join(' ')
   }
@@ -405,12 +398,7 @@ export const assertHelpers = {
     }
   },
 
-  assertComplexityInRange(
-    complexity: number,
-    min: number,
-    max: number,
-    type: string = 'overall'
-  ): void {
+  assertComplexityInRange(complexity: number, min: number, max: number, type: string = 'overall'): void {
     if (complexity < min || complexity > max) {
       throw new Error(`Expected ${type} complexity between ${min} and ${max}, got ${complexity}`)
     }

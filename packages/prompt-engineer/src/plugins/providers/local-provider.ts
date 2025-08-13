@@ -4,12 +4,7 @@
  */
 
 import { Effect, Stream, Schema, pipe, Ref } from 'effect'
-import type { 
-  ProviderPlugin, 
-  GenerationOptions, 
-  GenerationResult,
-  ProviderError as ProviderErrorType
-} from '../types'
+import type { ProviderPlugin, GenerationOptions, GenerationResult, ProviderError as ProviderErrorType } from '../types'
 import { ProviderError, ValidationError } from '../types'
 
 type LocalModelType = 'lmstudio' | 'ollama' | 'llamacpp' | 'custom'
@@ -36,16 +31,16 @@ export class LocalProviderPlugin implements ProviderPlugin {
   readonly name: string
   readonly version = '1.0.0'
   readonly capabilities = ['streaming', 'model-switching', 'health-check']
-  
+
   private config: LocalProviderConfig
   private availableModels: Ref.Ref<ModelInfo[]>
   private currentModel: Ref.Ref<string | null>
   private isHealthy: Ref.Ref<boolean>
   private healthCheckTimer: NodeJS.Timeout | null = null
-  
+
   constructor(config: LocalProviderConfig) {
     this.name = `local-${config.type}`
-    
+
     // Set default endpoints based on type
     const defaultEndpoints: Record<LocalModelType, string> = {
       lmstudio: 'http://localhost:1234/v1',
@@ -53,46 +48,52 @@ export class LocalProviderPlugin implements ProviderPlugin {
       llamacpp: 'http://localhost:8080',
       custom: 'http://localhost:8080'
     }
-    
+
     this.config = {
       endpoint: config.endpoint || defaultEndpoints[config.type],
       healthCheckInterval: config.healthCheckInterval || 30000, // 30 seconds
       autoSelectModel: config.autoSelectModel ?? true,
       ...config
     }
-    
+
     this.availableModels = Ref.unsafeMake([])
     this.currentModel = Ref.unsafeMake(config.model || null)
     this.isHealthy = Ref.unsafeMake(false)
   }
 
   initialize(): Effect.Effect<void, ProviderError> {
-    return Effect.gen(function* (_) {
-      // Check server health
-      const healthy = yield* _(this.checkHealth())
-      
-      if (!healthy) {
-        return yield* _(Effect.fail(new ProviderError({
-          provider: this.name,
-          message: `Local model server at ${this.config.endpoint} is not responding`,
-          code: 'SERVER_UNAVAILABLE',
-          retryable: true
-        })))
-      }
-      
-      // Get available models
-      yield* _(this.refreshModels())
-      
-      // Auto-select model if needed
-      if (this.config.autoSelectModel && !this.config.model) {
-        yield* _(this.autoSelectBestModel())
-      }
-      
-      // Start health check timer
-      if (this.config.healthCheckInterval && this.config.healthCheckInterval > 0) {
-        this.startHealthCheck()
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        // Check server health
+        const healthy = yield* _(this.checkHealth())
+
+        if (!healthy) {
+          return yield* _(
+            Effect.fail(
+              new ProviderError({
+                provider: this.name,
+                message: `Local model server at ${this.config.endpoint} is not responding`,
+                code: 'SERVER_UNAVAILABLE',
+                retryable: true
+              })
+            )
+          )
+        }
+
+        // Get available models
+        yield* _(this.refreshModels())
+
+        // Auto-select model if needed
+        if (this.config.autoSelectModel && !this.config.model) {
+          yield* _(this.autoSelectBestModel())
+        }
+
+        // Start health check timer
+        if (this.config.healthCheckInterval && this.config.healthCheckInterval > 0) {
+          this.startHealthCheck()
+        }
+      }.bind(this)
+    )
   }
 
   cleanup(): Effect.Effect<void, never> {
@@ -104,58 +105,64 @@ export class LocalProviderPlugin implements ProviderPlugin {
     })
   }
 
-  generate(
-    prompt: string,
-    options?: GenerationOptions
-  ): Effect.Effect<GenerationResult, ProviderError> {
-    return Effect.gen(function* (_) {
-      // Check health
-      const healthy = yield* _(Ref.get(this.isHealthy))
-      if (!healthy) {
-        // Try to reconnect
-        const reconnected = yield* _(this.checkHealth())
-        if (!reconnected) {
-          return yield* _(Effect.fail(new ProviderError({
-            provider: this.name,
-            message: 'Local model server is not available',
-            code: 'SERVER_UNAVAILABLE',
-            retryable: true
-          })))
+  generate(prompt: string, options?: GenerationOptions): Effect.Effect<GenerationResult, ProviderError> {
+    return Effect.gen(
+      function* (_) {
+        // Check health
+        const healthy = yield* _(Ref.get(this.isHealthy))
+        if (!healthy) {
+          // Try to reconnect
+          const reconnected = yield* _(this.checkHealth())
+          if (!reconnected) {
+            return yield* _(
+              Effect.fail(
+                new ProviderError({
+                  provider: this.name,
+                  message: 'Local model server is not available',
+                  code: 'SERVER_UNAVAILABLE',
+                  retryable: true
+                })
+              )
+            )
+          }
         }
-      }
-      
-      // Get current model
-      const model = yield* _(this.getCurrentModel())
-      
-      // Make request based on provider type
-      const response = yield* _(this.makeRequest(prompt, model, options))
-      
-      return this.transformResponse(response, model)
-    }.bind(this))
+
+        // Get current model
+        const model = yield* _(this.getCurrentModel())
+
+        // Make request based on provider type
+        const response = yield* _(this.makeRequest(prompt, model, options))
+
+        return this.transformResponse(response, model)
+      }.bind(this)
+    )
   }
 
-  stream(
-    prompt: string,
-    options?: GenerationOptions
-  ): Stream.Stream<string, ProviderError> {
-    return Stream.gen(function* (_) {
-      // Check health
-      const healthy = yield* _(Stream.fromEffect(Ref.get(this.isHealthy)))
-      if (!healthy) {
-        yield* _(Stream.fail(new ProviderError({
-          provider: this.name,
-          message: 'Local model server is not available',
-          code: 'SERVER_UNAVAILABLE',
-          retryable: true
-        })))
-      }
-      
-      // Get current model
-      const model = yield* _(Stream.fromEffect(this.getCurrentModel()))
-      
-      // Stream based on provider type
-      yield* _(this.makeStreamRequest(prompt, model, options))
-    }.bind(this))
+  stream(prompt: string, options?: GenerationOptions): Stream.Stream<string, ProviderError> {
+    return Stream.gen(
+      function* (_) {
+        // Check health
+        const healthy = yield* _(Stream.fromEffect(Ref.get(this.isHealthy)))
+        if (!healthy) {
+          yield* _(
+            Stream.fail(
+              new ProviderError({
+                provider: this.name,
+                message: 'Local model server is not available',
+                code: 'SERVER_UNAVAILABLE',
+                retryable: true
+              })
+            )
+          )
+        }
+
+        // Get current model
+        const model = yield* _(Stream.fromEffect(this.getCurrentModel()))
+
+        // Stream based on provider type
+        yield* _(this.makeStreamRequest(prompt, model, options))
+      }.bind(this)
+    )
   }
 
   generateStructured<T>(
@@ -163,32 +170,38 @@ export class LocalProviderPlugin implements ProviderPlugin {
     schema: Schema.Schema<T, any>,
     options?: GenerationOptions
   ): Effect.Effect<T, ProviderError | ValidationError> {
-    return Effect.gen(function* (_) {
-      // Add JSON instruction to prompt
-      const jsonPrompt = this.createJSONPrompt(prompt, schema)
-      
-      // Generate with constrained output if supported
-      const result = yield* _(this.generate(jsonPrompt, {
-        ...options,
-        temperature: 0.3, // Lower temperature for structured output
-        topP: 0.9
-      }))
-      
-      // Parse and validate
-      const parsed = yield* _(this.parseJSON(result.text))
-      
-      return yield* _(
-        Schema.decodeUnknown(schema)(parsed).pipe(
-          Effect.catchAll((error) => 
-            Effect.fail(new ValidationError({
-              field: 'response',
-              message: `Schema validation failed: ${error}`,
-              value: parsed
-            }))
+    return Effect.gen(
+      function* (_) {
+        // Add JSON instruction to prompt
+        const jsonPrompt = this.createJSONPrompt(prompt, schema)
+
+        // Generate with constrained output if supported
+        const result = yield* _(
+          this.generate(jsonPrompt, {
+            ...options,
+            temperature: 0.3, // Lower temperature for structured output
+            topP: 0.9
+          })
+        )
+
+        // Parse and validate
+        const parsed = yield* _(this.parseJSON(result.text))
+
+        return yield* _(
+          Schema.decodeUnknown(schema)(parsed).pipe(
+            Effect.catchAll((error) =>
+              Effect.fail(
+                new ValidationError({
+                  field: 'response',
+                  message: `Schema validation failed: ${error}`,
+                  value: parsed
+                })
+              )
+            )
           )
         )
-      )
-    }.bind(this))
+      }.bind(this)
+    )
   }
 
   // Model management methods
@@ -197,59 +210,68 @@ export class LocalProviderPlugin implements ProviderPlugin {
    * List available models
    */
   listModels(): Effect.Effect<ModelInfo[], ProviderError> {
-    return this.refreshModels().pipe(
-      Effect.flatMap(() => Ref.get(this.availableModels))
-    )
+    return this.refreshModels().pipe(Effect.flatMap(() => Ref.get(this.availableModels)))
   }
 
   /**
    * Switch to a different model
    */
   switchModel(modelName: string): Effect.Effect<void, ProviderError> {
-    return Effect.gen(function* (_) {
-      const models = yield* _(Ref.get(this.availableModels))
-      const model = models.find(m => m.name === modelName)
-      
-      if (!model || !model.available) {
-        return yield* _(Effect.fail(new ProviderError({
-          provider: this.name,
-          message: `Model ${modelName} is not available`,
-          code: 'MODEL_NOT_FOUND',
-          retryable: false
-        })))
-      }
-      
-      yield* _(Ref.set(this.currentModel, modelName))
-      
-      // Load model if needed (Ollama)
-      if (this.config.type === 'ollama') {
-        yield* _(this.loadOllamaModel(modelName))
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const models = yield* _(Ref.get(this.availableModels))
+        const model = models.find((m) => m.name === modelName)
+
+        if (!model || !model.available) {
+          return yield* _(
+            Effect.fail(
+              new ProviderError({
+                provider: this.name,
+                message: `Model ${modelName} is not available`,
+                code: 'MODEL_NOT_FOUND',
+                retryable: false
+              })
+            )
+          )
+        }
+
+        yield* _(Ref.set(this.currentModel, modelName))
+
+        // Load model if needed (Ollama)
+        if (this.config.type === 'ollama') {
+          yield* _(this.loadOllamaModel(modelName))
+        }
+      }.bind(this)
+    )
   }
 
   // Private helper methods
 
   private checkHealth(): Effect.Effect<boolean, never> {
-    return Effect.gen(function* (_) {
-      try {
-        const endpoint = this.getHealthEndpoint()
-        const response = yield* _(Effect.tryPromise({
-          try: () => fetch(endpoint, {
-            method: 'GET',
-            headers: this.config.customHeaders
-          }),
-          catch: () => false
-        }))
-        
-        const healthy = response && (response === true || (response as any).ok)
-        yield* _(Ref.set(this.isHealthy, healthy))
-        return healthy
-      } catch {
-        yield* _(Ref.set(this.isHealthy, false))
-        return false
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        try {
+          const endpoint = this.getHealthEndpoint()
+          const response = yield* _(
+            Effect.tryPromise({
+              try: () =>
+                fetch(endpoint, {
+                  method: 'GET',
+                  headers: this.config.customHeaders
+                }),
+              catch: () => false
+            })
+          )
+
+          const healthy = response && (response === true || (response as any).ok)
+          yield* _(Ref.set(this.isHealthy, healthy))
+          return healthy
+        } catch {
+          yield* _(Ref.set(this.isHealthy, false))
+          return false
+        }
+      }.bind(this)
+    )
   }
 
   private startHealthCheck(): void {
@@ -259,103 +281,116 @@ export class LocalProviderPlugin implements ProviderPlugin {
   }
 
   private refreshModels(): Effect.Effect<void, ProviderError> {
-    return Effect.gen(function* (_) {
-      const endpoint = this.getModelsEndpoint()
-      
-      const response = yield* _(Effect.tryPromise({
-        try: async () => {
-          const res = await fetch(endpoint, {
-            method: 'GET',
-            headers: this.config.customHeaders
+    return Effect.gen(
+      function* (_) {
+        const endpoint = this.getModelsEndpoint()
+
+        const response = yield* _(
+          Effect.tryPromise({
+            try: async () => {
+              const res = await fetch(endpoint, {
+                method: 'GET',
+                headers: this.config.customHeaders
+              })
+              return res.json()
+            },
+            catch: (error) =>
+              new ProviderError({
+                provider: this.name,
+                message: `Failed to fetch models: ${error}`,
+                code: 'MODELS_FETCH_ERROR',
+                retryable: true
+              })
           })
-          return res.json()
-        },
-        catch: (error) => new ProviderError({
-          provider: this.name,
-          message: `Failed to fetch models: ${error}`,
-          code: 'MODELS_FETCH_ERROR',
-          retryable: true
-        })
-      }))
-      
-      const models = this.parseModelsResponse(response)
-      yield* _(Ref.set(this.availableModels, models))
-    }.bind(this))
+        )
+
+        const models = this.parseModelsResponse(response)
+        yield* _(Ref.set(this.availableModels, models))
+      }.bind(this)
+    )
   }
 
   private autoSelectBestModel(): Effect.Effect<void, ProviderError> {
-    return Effect.gen(function* (_) {
-      const models = yield* _(Ref.get(this.availableModels))
-      
-      if (models.length === 0) {
-        return yield* _(Effect.fail(new ProviderError({
-          provider: this.name,
-          message: 'No models available',
-          code: 'NO_MODELS',
-          retryable: false
-        })))
-      }
-      
-      // Select based on criteria (prefer larger context, better quantization)
-      const sorted = [...models].sort((a, b) => {
-        // Prefer available models
-        if (a.available !== b.available) return a.available ? -1 : 1
-        
-        // Prefer larger context
-        const aContext = a.contextLength || 2048
-        const bContext = b.contextLength || 2048
-        if (aContext !== bContext) return bContext - aContext
-        
-        // Prefer certain quantizations
-        const quantPriority: Record<string, number> = {
-          'f16': 4,
-          'q8_0': 3,
-          'q5_1': 2,
-          'q4_0': 1
+    return Effect.gen(
+      function* (_) {
+        const models = yield* _(Ref.get(this.availableModels))
+
+        if (models.length === 0) {
+          return yield* _(
+            Effect.fail(
+              new ProviderError({
+                provider: this.name,
+                message: 'No models available',
+                code: 'NO_MODELS',
+                retryable: false
+              })
+            )
+          )
         }
-        const aQuant = quantPriority[a.quantization || ''] || 0
-        const bQuant = quantPriority[b.quantization || ''] || 0
-        
-        return bQuant - aQuant
-      })
-      
-      yield* _(Ref.set(this.currentModel, sorted[0].name))
-    }.bind(this))
+
+        // Select based on criteria (prefer larger context, better quantization)
+        const sorted = [...models].sort((a, b) => {
+          // Prefer available models
+          if (a.available !== b.available) return a.available ? -1 : 1
+
+          // Prefer larger context
+          const aContext = a.contextLength || 2048
+          const bContext = b.contextLength || 2048
+          if (aContext !== bContext) return bContext - aContext
+
+          // Prefer certain quantizations
+          const quantPriority: Record<string, number> = {
+            f16: 4,
+            q8_0: 3,
+            q5_1: 2,
+            q4_0: 1
+          }
+          const aQuant = quantPriority[a.quantization || ''] || 0
+          const bQuant = quantPriority[b.quantization || ''] || 0
+
+          return bQuant - aQuant
+        })
+
+        yield* _(Ref.set(this.currentModel, sorted[0].name))
+      }.bind(this)
+    )
   }
 
   private getCurrentModel(): Effect.Effect<string, ProviderError> {
-    return Effect.gen(function* (_) {
-      const model = yield* _(Ref.get(this.currentModel))
-      
-      if (!model) {
-        // Try to auto-select
-        yield* _(this.autoSelectBestModel())
-        const selected = yield* _(Ref.get(this.currentModel))
-        
-        if (!selected) {
-          return yield* _(Effect.fail(new ProviderError({
-            provider: this.name,
-            message: 'No model selected',
-            code: 'NO_MODEL_SELECTED',
-            retryable: false
-          })))
+    return Effect.gen(
+      function* (_) {
+        const model = yield* _(Ref.get(this.currentModel))
+
+        if (!model) {
+          // Try to auto-select
+          yield* _(this.autoSelectBestModel())
+          const selected = yield* _(Ref.get(this.currentModel))
+
+          if (!selected) {
+            return yield* _(
+              Effect.fail(
+                new ProviderError({
+                  provider: this.name,
+                  message: 'No model selected',
+                  code: 'NO_MODEL_SELECTED',
+                  retryable: false
+                })
+              )
+            )
+          }
+
+          return selected
         }
-        
-        return selected
-      }
-      
-      return model
-    }.bind(this))
+
+        return model
+      }.bind(this)
+    )
   }
 
-  private makeRequest(
-    prompt: string,
-    model: string,
-    options?: GenerationOptions
-  ): Effect.Effect<any, ProviderError> {
+  private makeRequest(prompt: string, model: string, options?: GenerationOptions): Effect.Effect<any, ProviderError> {
     const endpoint = this.getCompletionEndpoint()
     const body = this.buildRequestBody(prompt, model, options)
-    
+
     return Effect.tryPromise({
       try: async () => {
         const response = await fetch(endpoint, {
@@ -366,19 +401,20 @@ export class LocalProviderPlugin implements ProviderPlugin {
           },
           body: JSON.stringify(body)
         })
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${await response.text()}`)
         }
-        
+
         return response.json()
       },
-      catch: (error: any) => new ProviderError({
-        provider: this.name,
-        message: `Request failed: ${error.message}`,
-        code: 'REQUEST_ERROR',
-        retryable: true
-      })
+      catch: (error: any) =>
+        new ProviderError({
+          provider: this.name,
+          message: `Request failed: ${error.message}`,
+          code: 'REQUEST_ERROR',
+          retryable: true
+        })
     })
   }
 
@@ -392,7 +428,7 @@ export class LocalProviderPlugin implements ProviderPlugin {
       ...this.buildRequestBody(prompt, model, options),
       stream: true
     }
-    
+
     return Stream.async<string>((emit) => {
       fetch(endpoint, {
         method: 'POST',
@@ -401,64 +437,68 @@ export class LocalProviderPlugin implements ProviderPlugin {
           ...this.config.customHeaders
         },
         body: JSON.stringify(body)
-      }).then(response => {
-        if (!response.ok || !response.body) {
-          emit.fail(new ProviderError({
-            provider: this.name,
-            message: `Stream request failed: ${response.statusText}`,
-            code: 'STREAM_ERROR',
-            retryable: false
-          }))
-          return
-        }
-        
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        
-        const read = async () => {
-          try {
-            const { done, value } = await reader.read()
-            
-            if (done) {
-              emit.end()
-              return
-            }
-            
-            const text = decoder.decode(value, { stream: true })
-            const chunks = this.parseStreamChunks(text)
-            
-            for (const chunk of chunks) {
-              emit.single(chunk)
-            }
-            
-            read()
-          } catch (error) {
-            emit.fail(new ProviderError({
-              provider: this.name,
-              message: `Stream processing error: ${error}`,
-              code: 'STREAM_PROCESS_ERROR',
-              retryable: false
-            }))
-          }
-        }
-        
-        read()
-      }).catch(error => {
-        emit.fail(new ProviderError({
-          provider: this.name,
-          message: `Stream initialization error: ${error}`,
-          code: 'STREAM_INIT_ERROR',
-          retryable: false
-        }))
       })
+        .then((response) => {
+          if (!response.ok || !response.body) {
+            emit.fail(
+              new ProviderError({
+                provider: this.name,
+                message: `Stream request failed: ${response.statusText}`,
+                code: 'STREAM_ERROR',
+                retryable: false
+              })
+            )
+            return
+          }
+
+          const reader = response.body.getReader()
+          const decoder = new TextDecoder()
+
+          const read = async () => {
+            try {
+              const { done, value } = await reader.read()
+
+              if (done) {
+                emit.end()
+                return
+              }
+
+              const text = decoder.decode(value, { stream: true })
+              const chunks = this.parseStreamChunks(text)
+
+              for (const chunk of chunks) {
+                emit.single(chunk)
+              }
+
+              read()
+            } catch (error) {
+              emit.fail(
+                new ProviderError({
+                  provider: this.name,
+                  message: `Stream processing error: ${error}`,
+                  code: 'STREAM_PROCESS_ERROR',
+                  retryable: false
+                })
+              )
+            }
+          }
+
+          read()
+        })
+        .catch((error) => {
+          emit.fail(
+            new ProviderError({
+              provider: this.name,
+              message: `Stream initialization error: ${error}`,
+              code: 'STREAM_INIT_ERROR',
+              retryable: false
+            })
+          )
+        })
     })
   }
 
-  private buildRequestBody(
-    prompt: string,
-    model: string,
-    options?: GenerationOptions
-  ): any {
+  private buildRequestBody(prompt: string, model: string, options?: GenerationOptions): any {
     switch (this.config.type) {
       case 'lmstudio':
         return {
@@ -468,7 +508,7 @@ export class LocalProviderPlugin implements ProviderPlugin {
           max_tokens: options?.maxTokens || 1000,
           stream: false
         }
-      
+
       case 'ollama':
         return {
           model,
@@ -480,7 +520,7 @@ export class LocalProviderPlugin implements ProviderPlugin {
           },
           stream: false
         }
-      
+
       case 'llamacpp':
         return {
           prompt,
@@ -489,7 +529,7 @@ export class LocalProviderPlugin implements ProviderPlugin {
           top_p: options?.topP || 0.9,
           stream: false
         }
-      
+
       default:
         return {
           model,
@@ -506,15 +546,17 @@ export class LocalProviderPlugin implements ProviderPlugin {
       case 'lmstudio':
         return {
           text: response.choices?.[0]?.message?.content || '',
-          usage: response.usage ? {
-            promptTokens: response.usage.prompt_tokens,
-            completionTokens: response.usage.completion_tokens,
-            totalTokens: response.usage.total_tokens
-          } : undefined,
+          usage: response.usage
+            ? {
+                promptTokens: response.usage.prompt_tokens,
+                completionTokens: response.usage.completion_tokens,
+                totalTokens: response.usage.total_tokens
+              }
+            : undefined,
           finishReason: response.choices?.[0]?.finish_reason,
           model
         }
-      
+
       case 'ollama':
         return {
           text: response.response || '',
@@ -526,7 +568,7 @@ export class LocalProviderPlugin implements ProviderPlugin {
           finishReason: response.done ? 'stop' : 'length',
           model
         }
-      
+
       case 'llamacpp':
         return {
           text: response.content || '',
@@ -538,7 +580,7 @@ export class LocalProviderPlugin implements ProviderPlugin {
           finishReason: response.stopped_eos ? 'stop' : 'length',
           model
         }
-      
+
       default:
         return {
           text: response.text || response.content || response.response || '',
@@ -549,7 +591,7 @@ export class LocalProviderPlugin implements ProviderPlugin {
 
   private parseStreamChunks(text: string): string[] {
     const chunks: string[] = []
-    
+
     switch (this.config.type) {
       case 'lmstudio':
         // SSE format
@@ -567,10 +609,10 @@ export class LocalProviderPlugin implements ProviderPlugin {
           }
         }
         break
-      
+
       case 'ollama':
         // JSONL format
-        const jsonLines = text.split('\n').filter(l => l.trim())
+        const jsonLines = text.split('\n').filter((l) => l.trim())
         for (const line of jsonLines) {
           try {
             const parsed = JSON.parse(line)
@@ -578,16 +620,16 @@ export class LocalProviderPlugin implements ProviderPlugin {
           } catch {}
         }
         break
-      
+
       case 'llamacpp':
         // Direct text chunks
         if (text) chunks.push(text)
         break
-      
+
       default:
         if (text) chunks.push(text)
     }
-    
+
     return chunks
   }
 
@@ -599,7 +641,7 @@ export class LocalProviderPlugin implements ProviderPlugin {
           size: m.size || 0,
           available: true
         }))
-      
+
       case 'ollama':
         return (response.models || []).map((m: any) => ({
           name: m.name,
@@ -607,15 +649,17 @@ export class LocalProviderPlugin implements ProviderPlugin {
           quantization: m.details?.quantization_level,
           available: true
         }))
-      
+
       case 'llamacpp':
         // llama.cpp doesn't have a models endpoint, return configured model
-        return [{
-          name: this.config.model || 'default',
-          size: 0,
-          available: true
-        }]
-      
+        return [
+          {
+            name: this.config.model || 'default',
+            size: 0,
+            available: true
+          }
+        ]
+
       default:
         return []
     }
@@ -636,12 +680,13 @@ export class LocalProviderPlugin implements ProviderPlugin {
           })
         })
       },
-      catch: (error) => new ProviderError({
-        provider: this.name,
-        message: `Failed to load model ${modelName}: ${error}`,
-        code: 'MODEL_LOAD_ERROR',
-        retryable: true
-      })
+      catch: (error) =>
+        new ProviderError({
+          provider: this.name,
+          message: `Failed to load model ${modelName}: ${error}`,
+          code: 'MODEL_LOAD_ERROR',
+          retryable: true
+        })
     })
   }
 
@@ -669,11 +714,12 @@ Important: Return only valid JSON, no additional text.`
         const jsonText = jsonMatch ? jsonMatch[0] : text
         return JSON.parse(jsonText)
       },
-      catch: (error) => new ValidationError({
-        field: 'response',
-        message: `Failed to parse JSON: ${error}`,
-        value: text
-      })
+      catch: (error) =>
+        new ValidationError({
+          field: 'response',
+          message: `Failed to parse JSON: ${error}`,
+          value: text
+        })
     })
   }
 

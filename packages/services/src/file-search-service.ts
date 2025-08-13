@@ -1007,12 +1007,12 @@ export class FileSearchService {
     sampleMetadataRows: any[]
   }> {
     const ftsCount = (this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts').get() as any)?.count || 0
-    const projectFTSCount = (
-      this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE project_id = ?').get(projectId) as any
-    )?.count || 0
-    const metadataCount = (
-      this.db.prepare('SELECT COUNT(*) as count FROM file_search_metadata WHERE project_id = ?').get(projectId) as any
-    )?.count || 0
+    const projectFTSCount =
+      (this.db.prepare('SELECT COUNT(*) as count FROM file_search_fts WHERE project_id = ?').get(projectId) as any)
+        ?.count || 0
+    const metadataCount =
+      (this.db.prepare('SELECT COUNT(*) as count FROM file_search_metadata WHERE project_id = ?').get(projectId) as any)
+        ?.count || 0
 
     const sampleFTSRows = this.db
       .prepare('SELECT file_id, project_id, path, name FROM file_search_fts WHERE project_id = ? LIMIT 5')

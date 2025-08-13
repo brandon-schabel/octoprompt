@@ -112,10 +112,12 @@ describe('getSchemaDefaults', () => {
 
     test('handles nested schemas with defaults', () => {
       const schema = z.object({
-        user: z.object({
-          name: z.string().default('Guest'),
-          email: z.string()
-        }).default({ name: 'Admin', email: 'admin@example.com' })
+        user: z
+          .object({
+            name: z.string().default('Guest'),
+            email: z.string()
+          })
+          .default({ name: 'Admin', email: 'admin@example.com' })
       })
 
       const defaults = getSchemaDefaults(schema)
@@ -155,8 +157,9 @@ describe('getSchemaDefaults', () => {
 
     test('handles transform with default', () => {
       const schema = z.object({
-        uppercase: z.string()
-          .transform(str => str.toUpperCase())
+        uppercase: z
+          .string()
+          .transform((str) => str.toUpperCase())
           .default('hello')
       })
 
@@ -167,8 +170,9 @@ describe('getSchemaDefaults', () => {
 
     test('handles refine with default', () => {
       const schema = z.object({
-        even: z.number()
-          .refine(n => n % 2 === 0)
+        even: z
+          .number()
+          .refine((n) => n % 2 === 0)
           .default(4)
       })
 
@@ -230,13 +234,15 @@ describe('getSchemaDefaults', () => {
         age: z.number().min(18).optional(),
         newsletter: z.boolean().default(false),
         country: z.string().default('US'),
-        preferences: z.object({
-          theme: z.enum(['light', 'dark']).default('light'),
-          notifications: z.boolean().default(true)
-        }).default({
-          theme: 'light',
-          notifications: true
-        })
+        preferences: z
+          .object({
+            theme: z.enum(['light', 'dark']).default('light'),
+            notifications: z.boolean().default(true)
+          })
+          .default({
+            theme: 'light',
+            notifications: true
+          })
       })
 
       const defaults = getSchemaDefaults(formSchema)
@@ -257,15 +263,17 @@ describe('getSchemaDefaults', () => {
     test('API response schema with defaults', () => {
       const responseSchema = z.object({
         data: z.array(z.unknown()).default([]),
-        pagination: z.object({
-          page: z.number().default(1),
-          limit: z.number().default(10),
-          total: z.number().default(0)
-        }).default({
-          page: 1,
-          limit: 10,
-          total: 0
-        }),
+        pagination: z
+          .object({
+            page: z.number().default(1),
+            limit: z.number().default(10),
+            total: z.number().default(0)
+          })
+          .default({
+            page: 1,
+            limit: 10,
+            total: 0
+          }),
         error: z.string().nullable().default(null)
       })
 
@@ -284,7 +292,7 @@ describe('getSchemaDefaults', () => {
 
     test('configuration schema with environment-based defaults', () => {
       const isDev = process.env.NODE_ENV === 'development'
-      
+
       const configSchema = z.object({
         apiUrl: z.string().default(isDev ? 'http://localhost:3000' : 'https://api.example.com'),
         debug: z.boolean().default(isDev),
@@ -320,10 +328,12 @@ describe('getSchemaDefaults', () => {
 
     test('handles discriminated unions', () => {
       const schema = z.object({
-        result: z.discriminatedUnion('status', [
-          z.object({ status: z.literal('success'), data: z.string() }),
-          z.object({ status: z.literal('error'), error: z.string() })
-        ]).default({ status: 'success', data: 'OK' })
+        result: z
+          .discriminatedUnion('status', [
+            z.object({ status: z.literal('success'), data: z.string() }),
+            z.object({ status: z.literal('error'), error: z.string() })
+          ])
+          .default({ status: 'success', data: 'OK' })
       })
 
       const defaults = getSchemaDefaults(schema)

@@ -37,7 +37,7 @@ export class SummarizationCache {
   private hits = 0
   private misses = 0
   private readonly options: Required<CacheOptions>
-  
+
   // Version tracking for cache invalidation
   private readonly CURRENT_MODEL_VERSION = 'gpt-oss-20b-v1'
   private readonly CURRENT_PROMPT_VERSION = 'v2.0.0'
@@ -172,11 +172,11 @@ export class SummarizationCache {
   invalidate(projectId: number, fileId: number): boolean {
     const cacheKey = this.getCacheKey(projectId, fileId)
     const deleted = this.cache.delete(cacheKey)
-    
+
     if (deleted) {
       logger.debug(`Invalidated cache for file ${fileId} in project ${projectId}`)
     }
-    
+
     return deleted
   }
 
@@ -185,18 +185,18 @@ export class SummarizationCache {
    */
   invalidateProject(projectId: number): number {
     let invalidated = 0
-    
+
     for (const [key] of this.cache) {
       if (key.startsWith(`${projectId}-`)) {
         this.cache.delete(key)
         invalidated++
       }
     }
-    
+
     if (invalidated > 0) {
       logger.info(`Invalidated ${invalidated} cache entries for project ${projectId}`)
     }
-    
+
     return invalidated
   }
 
@@ -254,14 +254,11 @@ export class SummarizationCache {
   getStats(): CacheStats {
     const entries = Array.from(this.cache.values())
     const now = Date.now()
-    
-    const totalSizeBytes = entries.reduce((sum, entry) => 
-      sum + Buffer.byteLength(entry.summary, 'utf8'), 0
-    )
-    
-    const averageAge = entries.length > 0
-      ? entries.reduce((sum, entry) => sum + (now - entry.timestamp), 0) / entries.length
-      : 0
+
+    const totalSizeBytes = entries.reduce((sum, entry) => sum + Buffer.byteLength(entry.summary, 'utf8'), 0)
+
+    const averageAge =
+      entries.length > 0 ? entries.reduce((sum, entry) => sum + (now - entry.timestamp), 0) / entries.length : 0
 
     const totalRequests = this.hits + this.misses
     const hitRate = totalRequests > 0 ? this.hits / totalRequests : 0
@@ -312,17 +309,15 @@ export class SummarizationCache {
   /**
    * Generate incremental summary for file changes
    */
-  async getIncrementalSummary(
-    file: ProjectFile,
-    previousSummary: string,
-    changes: string[]
-  ): Promise<string | null> {
+  async getIncrementalSummary(file: ProjectFile, previousSummary: string, changes: string[]): Promise<string | null> {
     // Check if changes are significant enough to warrant re-summarization
-    const significantChanges = changes.filter(change => {
+    const significantChanges = changes.filter((change) => {
       // Filter out trivial changes
-      return !change.match(/^\s*\/\//) && // Comments
-             !change.match(/^\s*$/) &&      // Empty lines
-             change.length > 10              // Very short changes
+      return (
+        !change.match(/^\s*\/\//) && // Comments
+        !change.match(/^\s*$/) && // Empty lines
+        change.length > 10
+      ) // Very short changes
     })
 
     if (significantChanges.length === 0) {
@@ -362,71 +357,73 @@ export class SummarizationCache {
         logger.warn('Invalid cache data: not a string or empty')
         return false
       }
-      
+
       // Size check to prevent memory exhaustion
       const MAX_CACHE_SIZE = 50 * 1024 * 1024 // 50MB limit
       if (data.length > MAX_CACHE_SIZE) {
         logger.warn(`Cache data too large: ${data.length} bytes exceeds ${MAX_CACHE_SIZE} limit`)
         return false
       }
-      
+
       const parsed = JSON.parse(data)
-      
+
       // Validate structure
       if (!parsed || typeof parsed !== 'object') {
         logger.warn('Invalid cache structure: not an object')
         return false
       }
-      
+
       // Validate required fields
       if (!parsed.version || !parsed.modelVersion || !parsed.promptVersion || !Array.isArray(parsed.entries)) {
         logger.warn('Invalid cache structure: missing required fields')
         return false
       }
-      
+
       // Check version compatibility
-      if (parsed.modelVersion !== this.CURRENT_MODEL_VERSION ||
-          parsed.promptVersion !== this.CURRENT_PROMPT_VERSION) {
+      if (parsed.modelVersion !== this.CURRENT_MODEL_VERSION || parsed.promptVersion !== this.CURRENT_PROMPT_VERSION) {
         logger.warn('Cache version mismatch, skipping deserialization')
         return false
       }
-      
+
       // Validate entries structure and sanitize
       const validEntries: Array<[string, CachedSummary]> = []
       for (const entry of parsed.entries) {
         if (!Array.isArray(entry) || entry.length !== 2) {
           continue // Skip invalid entry
         }
-        
+
         const [key, value] = entry
-        
+
         // Validate key
         if (typeof key !== 'string' || !key.match(/^\d+-\d+$/)) {
           continue // Skip entry with invalid key format
         }
-        
+
         // Validate value structure
-        if (!value || typeof value !== 'object' ||
-            typeof value.fileId !== 'number' ||
-            typeof value.fileHash !== 'string' ||
-            typeof value.summary !== 'string' ||
-            typeof value.timestamp !== 'number' ||
-            typeof value.modelVersion !== 'string' ||
-            typeof value.promptVersion !== 'string') {
+        if (
+          !value ||
+          typeof value !== 'object' ||
+          typeof value.fileId !== 'number' ||
+          typeof value.fileHash !== 'string' ||
+          typeof value.summary !== 'string' ||
+          typeof value.timestamp !== 'number' ||
+          typeof value.modelVersion !== 'string' ||
+          typeof value.promptVersion !== 'string'
+        ) {
           continue // Skip entry with invalid value structure
         }
-        
+
         // Validate hash format (should be hex string)
         if (!value.fileHash.match(/^[a-f0-9]{64}$/)) {
           continue // Skip entry with invalid hash
         }
-        
+
         // Validate timestamp is reasonable (not in future, not too old)
         const now = Date.now()
         if (value.timestamp > now || value.timestamp < now - 30 * 24 * 60 * 60 * 1000) {
           continue // Skip entry with unreasonable timestamp
         }
-        
+
         validEntries.push([key, value as CachedSummary])
       }
 
@@ -438,18 +435,17 @@ export class SummarizationCache {
 
       // Restore stats with validation
       if (parsed.stats && typeof parsed.stats === 'object') {
-        this.hits = typeof parsed.stats.hits === 'number' && parsed.stats.hits >= 0 
-          ? Math.floor(parsed.stats.hits) 
-          : 0
-        this.misses = typeof parsed.stats.misses === 'number' && parsed.stats.misses >= 0 
-          ? Math.floor(parsed.stats.misses) 
-          : 0
+        this.hits = typeof parsed.stats.hits === 'number' && parsed.stats.hits >= 0 ? Math.floor(parsed.stats.hits) : 0
+        this.misses =
+          typeof parsed.stats.misses === 'number' && parsed.stats.misses >= 0 ? Math.floor(parsed.stats.misses) : 0
       } else {
         this.hits = 0
         this.misses = 0
       }
 
-      logger.info(`Deserialized ${this.cache.size} valid cache entries (${parsed.entries.length - this.cache.size} invalid entries skipped)`)
+      logger.info(
+        `Deserialized ${this.cache.size} valid cache entries (${parsed.entries.length - this.cache.size} invalid entries skipped)`
+      )
       return true
     } catch (error) {
       logger.error('Failed to deserialize cache:', error)

@@ -1,9 +1,5 @@
 import { E, A, O, pipe } from '../../fp'
-import {
-  type DecomposedTask,
-  type TaskGraph,
-  type TaskDependency
-} from '../../types'
+import { type DecomposedTask, type TaskGraph, type TaskDependency } from '../../types'
 
 // ============================================================================
 // Advanced Dependency Graph Operations
@@ -122,7 +118,7 @@ export class DependencyGraphAnalyzer {
   private calculateMaxParallelism(graph: TaskGraph): number {
     // Maximum parallelism is the maximum number of tasks at any dependency level
     const levels = this.topologicalLevels(graph)
-    return Math.max(...levels.map(level => level.length), 1)
+    return Math.max(...levels.map((level) => level.length), 1)
   }
 
   // Identify bottleneck tasks (high in-degree or out-degree)
@@ -131,13 +127,13 @@ export class DependencyGraphAnalyzer {
     const outDegree = new Map<string, number>()
 
     // Initialize degrees
-    graph.nodes.forEach(node => {
+    graph.nodes.forEach((node) => {
       inDegree.set(node.id, 0)
       outDegree.set(node.id, 0)
     })
 
     // Calculate degrees
-    graph.edges.forEach(edge => {
+    graph.edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         inDegree.set(edge.to, (inDegree.get(edge.to) || 0) + 1)
         outDegree.set(edge.from, (outDegree.get(edge.from) || 0) + 1)
@@ -147,7 +143,7 @@ export class DependencyGraphAnalyzer {
     const bottlenecks: string[] = []
     const avgDegree = (graph.edges.length * 2) / graph.nodes.length
 
-    graph.nodes.forEach(node => {
+    graph.nodes.forEach((node) => {
       const inDeg = inDegree.get(node.id) || 0
       const outDeg = outDegree.get(node.id) || 0
 
@@ -168,8 +164,8 @@ export class DependencyGraphAnalyzer {
     let totalComplexity = 0
     let taskCount = 0
 
-    graph.criticalPath.forEach(taskId => {
-      const task = graph.nodes.find(n => n.id === taskId)
+    graph.criticalPath.forEach((taskId) => {
+      const task = graph.nodes.find((n) => n.id === taskId)
       if (task) {
         totalComplexity += task.estimatedComplexity || 1
         taskCount++
@@ -186,7 +182,7 @@ export class DependencyGraphAnalyzer {
   private buildAdjacencyList(edges: TaskDependency[]): Map<string, string[]> {
     const adjList = new Map<string, string[]>()
 
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         if (!adjList.has(edge.from)) {
           adjList.set(edge.from, [])
@@ -205,11 +201,11 @@ export class DependencyGraphAnalyzer {
     const adjList = this.buildAdjacencyList(graph.edges)
 
     // Calculate in-degrees
-    graph.nodes.forEach(node => {
+    graph.nodes.forEach((node) => {
       inDegree.set(node.id, 0)
     })
 
-    graph.edges.forEach(edge => {
+    graph.edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         inDegree.set(edge.to, (inDegree.get(edge.to) || 0) + 1)
       }
@@ -220,7 +216,7 @@ export class DependencyGraphAnalyzer {
     while (processed.size < graph.nodes.length) {
       const currentLevel: string[] = []
 
-      graph.nodes.forEach(node => {
+      graph.nodes.forEach((node) => {
         if (!processed.has(node.id) && inDegree.get(node.id) === 0) {
           currentLevel.push(node.id)
         }
@@ -231,10 +227,10 @@ export class DependencyGraphAnalyzer {
       levels.push(currentLevel)
 
       // Update in-degrees
-      currentLevel.forEach(nodeId => {
+      currentLevel.forEach((nodeId) => {
         processed.add(nodeId)
         const neighbors = adjList.get(nodeId) || []
-        neighbors.forEach(neighbor => {
+        neighbors.forEach((neighbor) => {
           inDegree.set(neighbor, (inDegree.get(neighbor) || 1) - 1)
         })
       })
@@ -271,7 +267,7 @@ export class ExecutionPlanner {
 
     // Build dependency map
     const dependencies = new Map<string, Set<string>>()
-    graph.edges.forEach(edge => {
+    graph.edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         if (!dependencies.has(edge.to)) {
           dependencies.set(edge.to, new Set())
@@ -286,10 +282,10 @@ export class ExecutionPlanner {
       const stageTasks: string[] = []
 
       // Find tasks ready to execute
-      graph.nodes.forEach(node => {
+      graph.nodes.forEach((node) => {
         if (!completed.has(node.id) && !inProgress.has(node.id)) {
           const deps = dependencies.get(node.id) || new Set()
-          if ([...deps].every(dep => completed.has(dep))) {
+          if ([...deps].every((dep) => completed.has(dep))) {
             stageTasks.push(node.id)
             inProgress.add(node.id)
           }
@@ -298,9 +294,7 @@ export class ExecutionPlanner {
 
       if (stageTasks.length === 0) {
         // Handle remaining tasks (possible cycle or error)
-        const remaining = graph.nodes
-          .filter(n => !completed.has(n.id))
-          .map(n => n.id)
+        const remaining = graph.nodes.filter((n) => !completed.has(n.id)).map((n) => n.id)
 
         if (remaining.length > 0) {
           stages.push({
@@ -310,20 +304,19 @@ export class ExecutionPlanner {
             estimatedDuration: remaining.length * 10,
             dependencies: []
           })
-          remaining.forEach(id => completed.add(id))
+          remaining.forEach((id) => completed.add(id))
         }
         break
       }
 
       // Calculate stage properties
-      const stageDeps = [...new Set(
-        stageTasks.flatMap(taskId =>
-          [...(dependencies.get(taskId) || [])].filter(dep => !completed.has(dep))
+      const stageDeps = [
+        ...new Set(
+          stageTasks.flatMap((taskId) => [...(dependencies.get(taskId) || [])].filter((dep) => !completed.has(dep)))
         )
-      )]
+      ]
 
-      const canParallelize = stageTasks.length > 1 &&
-        this.tasksCanParallelize(stageTasks, graph)
+      const canParallelize = stageTasks.length > 1 && this.tasksCanParallelize(stageTasks, graph)
 
       const estimatedDuration = this.estimateStageDuration(stageTasks, graph)
 
@@ -336,7 +329,7 @@ export class ExecutionPlanner {
       })
 
       // Mark tasks as completed
-      stageTasks.forEach(id => {
+      stageTasks.forEach((id) => {
         inProgress.delete(id)
         completed.add(id)
       })
@@ -349,31 +342,25 @@ export class ExecutionPlanner {
   private tasksCanParallelize(taskIds: string[], graph: TaskGraph): boolean {
     // Check if any tasks depend on each other
     for (const edge of graph.edges) {
-      if (edge.type === 'blocks' &&
-        taskIds.includes(edge.from) &&
-        taskIds.includes(edge.to)) {
+      if (edge.type === 'blocks' && taskIds.includes(edge.from) && taskIds.includes(edge.to)) {
         return false
       }
     }
 
     // Check if tasks are marked as parallelizable
-    const tasks = taskIds
-      .map(id => graph.nodes.find(n => n.id === id))
-      .filter(t => t !== undefined)
+    const tasks = taskIds.map((id) => graph.nodes.find((n) => n.id === id)).filter((t) => t !== undefined)
 
-    return tasks.every(task => task.parallelizable !== false)
+    return tasks.every((task) => task.parallelizable !== false)
   }
 
   // Estimate duration for a stage
   private estimateStageDuration(taskIds: string[], graph: TaskGraph): number {
-    const tasks = taskIds
-      .map(id => graph.nodes.find(n => n.id === id))
-      .filter(t => t !== undefined)
+    const tasks = taskIds.map((id) => graph.nodes.find((n) => n.id === id)).filter((t) => t !== undefined)
 
     if (tasks.length === 0) return 10
 
     // If parallel, duration is the max; if sequential, it's the sum
-    const complexities = tasks.map(t => t.estimatedComplexity || 1)
+    const complexities = tasks.map((t) => t.estimatedComplexity || 1)
 
     const canParallelize = this.tasksCanParallelize(taskIds, graph)
 
@@ -388,7 +375,7 @@ export class ExecutionPlanner {
   private estimateExecutionTime(stages: ExecutionStage[], maxConcurrency: number): number {
     let totalTime = 0
 
-    stages.forEach(stage => {
+    stages.forEach((stage) => {
       if (stage.canParallelize && stage.tasks.length > 1) {
         // Account for concurrency limit
         const batches = Math.ceil(stage.tasks.length / maxConcurrency)
@@ -453,7 +440,7 @@ export class GraphOptimizer {
   // Check if path exists between two nodes
   private hasPath(from: string, to: string, edges: TaskDependency[]): boolean {
     const adjList = new Map<string, string[]>()
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         if (!adjList.has(edge.from)) {
           adjList.set(edge.from, [])
@@ -480,27 +467,24 @@ export class GraphOptimizer {
   }
 
   // Calculate transitive closure
-  private transitiveClosuare(
-    nodes: DecomposedTask[],
-    edges: TaskDependency[]
-  ): Map<string, Set<string>> {
+  private transitiveClosuare(nodes: DecomposedTask[], edges: TaskDependency[]): Map<string, Set<string>> {
     const closure = new Map<string, Set<string>>()
 
     // Initialize with direct dependencies
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       closure.set(node.id, new Set())
     })
 
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         closure.get(edge.from)?.add(edge.to)
       }
     })
 
     // Floyd-Warshall for transitive closure
-    nodes.forEach(k => {
-      nodes.forEach(i => {
-        nodes.forEach(j => {
+    nodes.forEach((k) => {
+      nodes.forEach((i) => {
+        nodes.forEach((j) => {
           if (closure.get(i.id)?.has(k.id) && closure.get(k.id)?.has(j.id)) {
             closure.get(i.id)?.add(j.id)
           }
@@ -516,15 +500,13 @@ export class GraphOptimizer {
     const groups = [...graph.parallelGroups]
 
     // Try to balance group sizes
-    const avgSize = Math.ceil(
-      graph.nodes.length / Math.max(groups.length, 1)
-    )
+    const avgSize = Math.ceil(graph.nodes.length / Math.max(groups.length, 1))
 
     const balanced: string[][] = []
     let currentGroup: string[] = []
 
-    groups.forEach(group => {
-      group.forEach(taskId => {
+    groups.forEach((group) => {
+      group.forEach((taskId) => {
         currentGroup.push(taskId)
         if (currentGroup.length >= avgSize) {
           balanced.push([...currentGroup])
@@ -541,12 +523,9 @@ export class GraphOptimizer {
   }
 
   // Recalculate critical path after optimization
-  private recalculateCriticalPath(
-    nodes: DecomposedTask[],
-    edges: TaskDependency[]
-  ): string[] {
+  private recalculateCriticalPath(nodes: DecomposedTask[], edges: TaskDependency[]): string[] {
     const adjList = new Map<string, string[]>()
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       if (edge.type === 'blocks') {
         if (!adjList.has(edge.from)) {
           adjList.set(edge.from, [])
@@ -581,7 +560,7 @@ export class GraphOptimizer {
     }
 
     let criticalPath: string[] = []
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       const path = dfs(node.id)
       if (path.length > criticalPath.length) {
         criticalPath = path

@@ -143,9 +143,9 @@ export class ImageAdapter {
     readonly enableNSFW: boolean
     readonly cacheResults: boolean
   }
-  
+
   private cache: Map<string, ImageAnalysisResult> = new Map()
-  
+
   constructor(config?: Partial<typeof ImageAdapter.prototype.config>) {
     this.config = {
       maxImageSize: 10 * 1024 * 1024, // 10MB
@@ -162,26 +162,26 @@ export class ImageAdapter {
    * Process an image and extract metadata
    */
   processImage(image: Buffer): Effect.Effect<ImageMetadata, Error> {
-    return Effect.gen(function* (_) {
-      // Validate image size
-      if (image.length > this.config.maxImageSize) {
-        return yield* _(Effect.fail(new Error(
-          `Image size ${image.length} exceeds maximum ${this.config.maxImageSize}`
-        )))
-      }
-      
-      // Extract metadata (simplified - would use sharp or similar in production)
-      const metadata = yield* _(this.extractMetadata(image))
-      
-      // Validate format
-      if (!this.config.supportedFormats.includes(metadata.format)) {
-        return yield* _(Effect.fail(new Error(
-          `Unsupported image format: ${metadata.format}`
-        )))
-      }
-      
-      return metadata
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        // Validate image size
+        if (image.length > this.config.maxImageSize) {
+          return yield* _(
+            Effect.fail(new Error(`Image size ${image.length} exceeds maximum ${this.config.maxImageSize}`))
+          )
+        }
+
+        // Extract metadata (simplified - would use sharp or similar in production)
+        const metadata = yield* _(this.extractMetadata(image))
+
+        // Validate format
+        if (!this.config.supportedFormats.includes(metadata.format)) {
+          return yield* _(Effect.fail(new Error(`Unsupported image format: ${metadata.format}`)))
+        }
+
+        return metadata
+      }.bind(this)
+    )
   }
 
   /**
@@ -191,96 +191,101 @@ export class ImageAdapter {
     image: Buffer,
     style?: 'descriptive' | 'concise' | 'technical' | 'creative'
   ): Effect.Effect<string, Error> {
-    return Effect.gen(function* (_) {
-      const metadata = yield* _(this.processImage(image))
-      const analysis = yield* _(this.analyzeImage(image))
-      
-      // Generate caption based on style
-      const caption = this.createCaption(analysis, style || 'descriptive')
-      
-      return caption
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const metadata = yield* _(this.processImage(image))
+        const analysis = yield* _(this.analyzeImage(image))
+
+        // Generate caption based on style
+        const caption = this.createCaption(analysis, style || 'descriptive')
+
+        return caption
+      }.bind(this)
+    )
   }
 
   /**
    * Perform comprehensive image analysis
    */
   analyzeImage(image: Buffer): Effect.Effect<ImageAnalysisResult, Error> {
-    return Effect.gen(function* (_) {
-      // Check cache
-      const cacheKey = this.getCacheKey(image)
-      if (this.config.cacheResults && this.cache.has(cacheKey)) {
-        return this.cache.get(cacheKey)!
-      }
-      
-      // Process image
-      const metadata = yield* _(this.processImage(image))
-      
-      // Parallel analysis tasks
-      const [objects, text, faces, scenes, colors, quality, nsfw] = yield* _(
-        Effect.all([
-          this.detectObjects(image),
-          this.config.enableOCR ? this.performOCR(image) : Effect.succeed([]),
-          this.config.enableFaceDetection ? this.detectFaces(image) : Effect.succeed([]),
-          this.classifyScenes(image),
-          this.analyzeColors(image),
-          this.assessQuality(image),
-          this.config.enableNSFW ? this.detectNSFW(image) : Effect.succeed({
-            safe: true,
-            confidence: 1.0,
-            categories: new Map()
-          })
-        ])
-      )
-      
-      // Generate caption
-      const caption = this.generateDefaultCaption(objects, scenes)
-      
-      const result: ImageAnalysisResult = {
-        metadata,
-        caption,
-        objects,
-        text,
-        faces,
-        scenes,
-        colors,
-        quality,
-        nsfw
-      }
-      
-      // Cache result
-      if (this.config.cacheResults) {
-        this.cache.set(cacheKey, result)
-      }
-      
-      return result
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        // Check cache
+        const cacheKey = this.getCacheKey(image)
+        if (this.config.cacheResults && this.cache.has(cacheKey)) {
+          return this.cache.get(cacheKey)!
+        }
+
+        // Process image
+        const metadata = yield* _(this.processImage(image))
+
+        // Parallel analysis tasks
+        const [objects, text, faces, scenes, colors, quality, nsfw] = yield* _(
+          Effect.all([
+            this.detectObjects(image),
+            this.config.enableOCR ? this.performOCR(image) : Effect.succeed([]),
+            this.config.enableFaceDetection ? this.detectFaces(image) : Effect.succeed([]),
+            this.classifyScenes(image),
+            this.analyzeColors(image),
+            this.assessQuality(image),
+            this.config.enableNSFW
+              ? this.detectNSFW(image)
+              : Effect.succeed({
+                  safe: true,
+                  confidence: 1.0,
+                  categories: new Map()
+                })
+          ])
+        )
+
+        // Generate caption
+        const caption = this.generateDefaultCaption(objects, scenes)
+
+        const result: ImageAnalysisResult = {
+          metadata,
+          caption,
+          objects,
+          text,
+          faces,
+          scenes,
+          colors,
+          quality,
+          nsfw
+        }
+
+        // Cache result
+        if (this.config.cacheResults) {
+          this.cache.set(cacheKey, result)
+        }
+
+        return result
+      }.bind(this)
+    )
   }
 
   /**
    * Answer questions about an image
    */
   queryImage(context: ImagePromptContext): Effect.Effect<string, Error> {
-    return Effect.gen(function* (_) {
-      const analysis = yield* _(this.analyzeImage(context.image))
-      
-      // Process the query based on the prompt
-      const response = yield* _(this.processImageQuery(
-        analysis,
-        context.prompt,
-        context.focusArea,
-        context.previousContext
-      ))
-      
-      // Format output
-      if (context.outputFormat === 'json') {
-        return JSON.stringify(response, null, 2)
-      } else if (context.outputFormat === 'structured') {
-        return this.formatStructuredResponse(response)
-      } else {
-        return typeof response === 'string' ? response : String(response)
-      }
-    }.bind(this))
+    return Effect.gen(
+      function* (_) {
+        const analysis = yield* _(this.analyzeImage(context.image))
+
+        // Process the query based on the prompt
+        const response = yield* _(
+          this.processImageQuery(analysis, context.prompt, context.focusArea, context.previousContext)
+        )
+
+        // Format output
+        if (context.outputFormat === 'json') {
+          return JSON.stringify(response, null, 2)
+        } else if (context.outputFormat === 'structured') {
+          return this.formatStructuredResponse(response)
+        } else {
+          return typeof response === 'string' ? response : String(response)
+        }
+      }.bind(this)
+    )
   }
 
   /**
@@ -290,110 +295,105 @@ export class ImageAdapter {
     image1: Buffer,
     image2: Buffer,
     aspects?: ('visual' | 'semantic' | 'quality' | 'objects')[]
-  ): Effect.Effect<{
-    similarity: number
-    differences: string[]
-    analysis: {
-      image1: ImageAnalysisResult
-      image2: ImageAnalysisResult
-    }
-  }, Error> {
-    return Effect.gen(function* (_) {
-      const [analysis1, analysis2] = yield* _(Effect.all([
-        this.analyzeImage(image1),
-        this.analyzeImage(image2)
-      ]))
-      
-      const aspectsToCompare = aspects || ['visual', 'semantic', 'quality', 'objects']
-      const similarities: number[] = []
-      const differences: string[] = []
-      
-      if (aspectsToCompare.includes('visual')) {
-        const visualSim = this.compareVisual(analysis1, analysis2)
-        similarities.push(visualSim.similarity)
-        differences.push(...visualSim.differences)
+  ): Effect.Effect<
+    {
+      similarity: number
+      differences: string[]
+      analysis: {
+        image1: ImageAnalysisResult
+        image2: ImageAnalysisResult
       }
-      
-      if (aspectsToCompare.includes('semantic')) {
-        const semanticSim = this.compareSemantic(analysis1, analysis2)
-        similarities.push(semanticSim.similarity)
-        differences.push(...semanticSim.differences)
-      }
-      
-      if (aspectsToCompare.includes('quality')) {
-        const qualitySim = this.compareQuality(analysis1.quality, analysis2.quality)
-        similarities.push(qualitySim.similarity)
-        differences.push(...qualitySim.differences)
-      }
-      
-      if (aspectsToCompare.includes('objects')) {
-        const objectSim = this.compareObjects(analysis1.objects, analysis2.objects)
-        similarities.push(objectSim.similarity)
-        differences.push(...objectSim.differences)
-      }
-      
-      const overallSimilarity = similarities.reduce((a, b) => a + b, 0) / similarities.length
-      
-      return {
-        similarity: overallSimilarity,
-        differences,
-        analysis: { image1: analysis1, image2: analysis2 }
-      }
-    }.bind(this))
+    },
+    Error
+  > {
+    return Effect.gen(
+      function* (_) {
+        const [analysis1, analysis2] = yield* _(Effect.all([this.analyzeImage(image1), this.analyzeImage(image2)]))
+
+        const aspectsToCompare = aspects || ['visual', 'semantic', 'quality', 'objects']
+        const similarities: number[] = []
+        const differences: string[] = []
+
+        if (aspectsToCompare.includes('visual')) {
+          const visualSim = this.compareVisual(analysis1, analysis2)
+          similarities.push(visualSim.similarity)
+          differences.push(...visualSim.differences)
+        }
+
+        if (aspectsToCompare.includes('semantic')) {
+          const semanticSim = this.compareSemantic(analysis1, analysis2)
+          similarities.push(semanticSim.similarity)
+          differences.push(...semanticSim.differences)
+        }
+
+        if (aspectsToCompare.includes('quality')) {
+          const qualitySim = this.compareQuality(analysis1.quality, analysis2.quality)
+          similarities.push(qualitySim.similarity)
+          differences.push(...qualitySim.differences)
+        }
+
+        if (aspectsToCompare.includes('objects')) {
+          const objectSim = this.compareObjects(analysis1.objects, analysis2.objects)
+          similarities.push(objectSim.similarity)
+          differences.push(...objectSim.differences)
+        }
+
+        const overallSimilarity = similarities.reduce((a, b) => a + b, 0) / similarities.length
+
+        return {
+          similarity: overallSimilarity,
+          differences,
+          analysis: { image1: analysis1, image2: analysis2 }
+        }
+      }.bind(this)
+    )
   }
 
   /**
    * Transform an image
    */
-  transformImage(
-    image: Buffer,
-    options: ImageTransformOptions
-  ): Effect.Effect<Buffer, Error> {
-    return Effect.gen(function* (_) {
-      let result = image
-      
-      // Apply transformations (simplified - would use sharp in production)
-      if (options.resize) {
-        result = yield* _(this.resizeImage(result, options.resize))
-      }
-      
-      if (options.crop) {
-        result = yield* _(this.cropImage(result, options.crop))
-      }
-      
-      if (options.rotate) {
-        result = yield* _(this.rotateImage(result, options.rotate))
-      }
-      
-      if (options.flip) {
-        result = yield* _(this.flipImage(result, options.flip))
-      }
-      
-      if (options.enhance) {
-        result = yield* _(this.enhanceImage(result))
-      }
-      
-      if (options.format || options.quality) {
-        result = yield* _(this.convertFormat(
-          result,
-          options.format || 'jpeg',
-          options.quality || 85
-        ))
-      }
-      
-      return result
-    }.bind(this))
+  transformImage(image: Buffer, options: ImageTransformOptions): Effect.Effect<Buffer, Error> {
+    return Effect.gen(
+      function* (_) {
+        let result = image
+
+        // Apply transformations (simplified - would use sharp in production)
+        if (options.resize) {
+          result = yield* _(this.resizeImage(result, options.resize))
+        }
+
+        if (options.crop) {
+          result = yield* _(this.cropImage(result, options.crop))
+        }
+
+        if (options.rotate) {
+          result = yield* _(this.rotateImage(result, options.rotate))
+        }
+
+        if (options.flip) {
+          result = yield* _(this.flipImage(result, options.flip))
+        }
+
+        if (options.enhance) {
+          result = yield* _(this.enhanceImage(result))
+        }
+
+        if (options.format || options.quality) {
+          result = yield* _(this.convertFormat(result, options.format || 'jpeg', options.quality || 85))
+        }
+
+        return result
+      }.bind(this)
+    )
   }
 
   /**
    * Stream process multiple images
    */
-  streamProcessImages(
-    images: Stream.Stream<Buffer, never>
-  ): Stream.Stream<ImageAnalysisResult, Error> {
+  streamProcessImages(images: Stream.Stream<Buffer, never>): Stream.Stream<ImageAnalysisResult, Error> {
     return pipe(
       images,
-      Stream.mapEffect(image => this.analyzeImage(image))
+      Stream.mapEffect((image) => this.analyzeImage(image))
     )
   }
 
@@ -514,15 +514,18 @@ export class ImageAdapter {
   private createCaption(analysis: ImageAnalysisResult, style: string): string {
     switch (style) {
       case 'concise':
-        return `Image shows ${analysis.objects.slice(0, 2).map(o => o.label).join(' and ')}`
-      
+        return `Image shows ${analysis.objects
+          .slice(0, 2)
+          .map((o) => o.label)
+          .join(' and ')}`
+
       case 'technical':
         return `${analysis.metadata.width}x${analysis.metadata.height} ${analysis.metadata.format} image with ${analysis.objects.length} detected objects`
-      
+
       case 'creative':
         const scene = analysis.scenes[0]
         return `A ${scene?.tags.join(', ')} scene featuring ${analysis.objects[0]?.label || 'various elements'}`
-      
+
       case 'descriptive':
       default:
         return this.generateDefaultCaption(analysis.objects, analysis.scenes)
@@ -530,12 +533,13 @@ export class ImageAdapter {
   }
 
   private generateDefaultCaption(objects: DetectedObject[], scenes: SceneClassification[]): string {
-    const objectDescriptions = objects.slice(0, 3).map(o => 
-      `a ${o.attributes?.join(' ') || ''} ${o.label}`.trim()
-    ).join(', ')
-    
+    const objectDescriptions = objects
+      .slice(0, 3)
+      .map((o) => `a ${o.attributes?.join(' ') || ''} ${o.label}`.trim())
+      .join(', ')
+
     const sceneDescription = scenes[0] ? `in a ${scenes[0].category} setting` : ''
-    
+
     return `An image showing ${objectDescriptions} ${sceneDescription}`.trim()
   }
 
@@ -547,31 +551,31 @@ export class ImageAdapter {
   ): Effect.Effect<any, never> {
     // Simplified query processing
     const lowerPrompt = prompt.toLowerCase()
-    
+
     if (lowerPrompt.includes('count')) {
       const target = lowerPrompt.split('count')[1].trim()
-      const count = analysis.objects.filter(o => o.label.includes(target)).length
+      const count = analysis.objects.filter((o) => o.label.includes(target)).length
       return Effect.succeed(`There are ${count} ${target}(s) in the image`)
     }
-    
+
     if (lowerPrompt.includes('color')) {
       return Effect.succeed(`The dominant colors are ${analysis.colors.dominant.join(', ')}`)
     }
-    
+
     if (lowerPrompt.includes('describe')) {
       return Effect.succeed(analysis.caption)
     }
-    
+
     if (lowerPrompt.includes('quality')) {
       return Effect.succeed(`Image quality score: ${analysis.quality.aestheticScore.toFixed(2)}`)
     }
-    
+
     return Effect.succeed(analysis.caption)
   }
 
   private formatStructuredResponse(response: any): string {
     if (typeof response === 'string') return response
-    
+
     return Object.entries(response)
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n')
@@ -588,25 +592,24 @@ export class ImageAdapter {
   ): { similarity: number; differences: string[] } {
     const differences: string[] = []
     let similarity = 1.0
-    
+
     // Compare dimensions
-    if (analysis1.metadata.width !== analysis2.metadata.width ||
-        analysis1.metadata.height !== analysis2.metadata.height) {
+    if (
+      analysis1.metadata.width !== analysis2.metadata.width ||
+      analysis1.metadata.height !== analysis2.metadata.height
+    ) {
       differences.push('Different image dimensions')
       similarity -= 0.2
     }
-    
+
     // Compare colors
-    const colorSim = this.compareColorPalettes(
-      analysis1.colors.dominant,
-      analysis2.colors.dominant
-    )
+    const colorSim = this.compareColorPalettes(analysis1.colors.dominant, analysis2.colors.dominant)
     similarity = similarity * 0.5 + colorSim * 0.5
-    
+
     if (colorSim < 0.7) {
       differences.push('Different color palettes')
     }
-    
+
     return { similarity, differences }
   }
 
@@ -615,28 +618,28 @@ export class ImageAdapter {
     analysis2: ImageAnalysisResult
   ): { similarity: number; differences: string[] } {
     const differences: string[] = []
-    
+
     // Compare scenes
     const scene1 = analysis1.scenes[0]?.category
     const scene2 = analysis2.scenes[0]?.category
-    
+
     if (scene1 !== scene2) {
       differences.push(`Different scenes: ${scene1} vs ${scene2}`)
     }
-    
+
     // Compare object types
-    const objects1 = new Set(analysis1.objects.map(o => o.label))
-    const objects2 = new Set(analysis2.objects.map(o => o.label))
-    
-    const intersection = new Set([...objects1].filter(x => objects2.has(x)))
+    const objects1 = new Set(analysis1.objects.map((o) => o.label))
+    const objects2 = new Set(analysis2.objects.map((o) => o.label))
+
+    const intersection = new Set([...objects1].filter((x) => objects2.has(x)))
     const union = new Set([...objects1, ...objects2])
-    
+
     const similarity = intersection.size / union.size
-    
+
     if (similarity < 0.5) {
       differences.push('Different object composition')
     }
-    
+
     return { similarity, differences }
   }
 
@@ -645,19 +648,17 @@ export class ImageAdapter {
     quality2: QualityMetrics
   ): { similarity: number; differences: string[] } {
     const differences: string[] = []
-    
+
     const metrics = ['sharpness', 'brightness', 'contrast', 'aestheticScore'] as const
-    const diffs = metrics.map(metric => 
-      Math.abs(quality1[metric] - quality2[metric])
-    )
-    
+    const diffs = metrics.map((metric) => Math.abs(quality1[metric] - quality2[metric]))
+
     const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length
     const similarity = 1 - avgDiff
-    
+
     if (avgDiff > 0.3) {
       differences.push('Significant quality differences')
     }
-    
+
     return { similarity, differences }
   }
 
@@ -666,23 +667,23 @@ export class ImageAdapter {
     objects2: DetectedObject[]
   ): { similarity: number; differences: string[] } {
     const differences: string[] = []
-    
-    const labels1 = objects1.map(o => o.label).sort()
-    const labels2 = objects2.map(o => o.label).sort()
-    
+
+    const labels1 = objects1.map((o) => o.label).sort()
+    const labels2 = objects2.map((o) => o.label).sort()
+
     if (labels1.length !== labels2.length) {
       differences.push(`Different object count: ${labels1.length} vs ${labels2.length}`)
     }
-    
-    const common = labels1.filter(l => labels2.includes(l))
+
+    const common = labels1.filter((l) => labels2.includes(l))
     const similarity = common.length / Math.max(labels1.length, labels2.length)
-    
+
     return { similarity, differences }
   }
 
   private compareColorPalettes(palette1: string[], palette2: string[]): number {
     // Simplified color comparison
-    const common = palette1.filter(c => palette2.includes(c))
+    const common = palette1.filter((c) => palette2.includes(c))
     return common.length / Math.max(palette1.length, palette2.length)
   }
 
@@ -711,11 +712,7 @@ export class ImageAdapter {
     return Effect.succeed(image)
   }
 
-  private convertFormat(
-    image: Buffer,
-    format: string,
-    quality: number
-  ): Effect.Effect<Buffer, never> {
+  private convertFormat(image: Buffer, format: string, quality: number): Effect.Effect<Buffer, never> {
     // Placeholder - would use sharp or similar
     return Effect.succeed(image)
   }

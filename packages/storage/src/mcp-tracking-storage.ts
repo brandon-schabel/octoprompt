@@ -72,15 +72,15 @@ export class MCPTrackingStorage {
       execution.projectId ?? null,
       execution.userId ?? null,
       execution.sessionId ?? null,
-  execution.startedAt,
-  execution.completedAt ?? null,
-  execution.durationMs ?? null,
-  execution.status,
-  execution.errorMessage ?? null,
-  execution.errorCode ?? null,
-  execution.inputParams ?? null,
-  execution.outputSize ?? null,
-  execution.metadata ?? null
+      execution.startedAt,
+      execution.completedAt ?? null,
+      execution.durationMs ?? null,
+      execution.status,
+      execution.errorMessage ?? null,
+      execution.errorCode ?? null,
+      execution.inputParams ?? null,
+      execution.outputSize ?? null,
+      execution.metadata ?? null
     )
 
     return execution
@@ -140,7 +140,7 @@ export class MCPTrackingStorage {
     const row = stmt.get(id) as any
     if (!row) return null
 
-  return this.rowToExecution(row)
+    return this.rowToExecution(row)
   }
 
   async queryExecutions(query: MCPExecutionQuery): Promise<{
@@ -201,7 +201,7 @@ export class MCPTrackingStorage {
     `)
 
     const rows = stmt.all(...values, query.limit, query.offset) as any[]
-  const executions = rows.map((row) => this.rowToExecution(row))
+    const executions = rows.map((row) => this.rowToExecution(row))
 
     return { executions, total }
   }
