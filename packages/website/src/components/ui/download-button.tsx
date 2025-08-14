@@ -9,7 +9,7 @@ const platforms: DownloadPlatform[] = [
     icon: Package as any,
     label: 'Bun Bundle',
     description: 'Server and UI Bundle - Requires Bun',
-    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.1/promptliano-0.9.1-bun-bundle.zip',
+    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.2/promptliano-0.9.2-bun-bundle.zip',
     available: true,
     recommended: true
   },
@@ -18,7 +18,7 @@ const platforms: DownloadPlatform[] = [
     icon: Apple as any,
     label: 'macOS (M1+)',
     description: 'Native macOS Binary for Apple Silicon',
-    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.1/promptliano-0.9.1-macos-arm64.zip',
+    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.2/promptliano-0.9.2-macos-arm64.zip',
     available: true
   },
   {
@@ -26,7 +26,7 @@ const platforms: DownloadPlatform[] = [
     icon: MonitorSmartphone as any,
     label: 'Windows x64',
     description: 'Native Windows Binary',
-    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.1/promptliano-0.9.1-windows-x64.zip',
+    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.2/promptliano-0.9.2-windows-x64.zip',
     available: true
   },
   {
@@ -34,7 +34,7 @@ const platforms: DownloadPlatform[] = [
     icon: Terminal as any,
     label: 'Linux x64',
     description: 'Native Linux Binary',
-    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.1/promptliano-0.9.1-linux-x64.zip',
+    url: 'https://github.com/brandon-schabel/promptliano/releases/download/v0.9.2/promptliano-0.9.2-linux-x64.zip',
     available: true
   }
 ]
@@ -55,7 +55,7 @@ export function DownloadButton(props?: DownloadButtonProps) {
       subtitle='Choose your platform below'
       guideUrl='/docs/download-installation'
       guideText='View Installation Guide'
-      version='v0.9.1'
+      version='v0.9.2'
       allReleasesUrl='https://github.com/brandon-schabel/promptliano/releases'
     />
   )
