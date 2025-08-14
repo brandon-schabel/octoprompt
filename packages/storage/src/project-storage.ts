@@ -3,6 +3,13 @@ import { ProjectSchema, ProjectFileSchema, type ProjectFile, type Project } from
 import { unixTimestampSchema } from '@promptliano/schemas'
 import { getDb } from './database-manager'
 import { ApiError } from '@promptliano/shared'
+import {
+  toNumber,
+  toString,
+  toArray,
+  fromArray,
+  SqliteConverters
+} from '@promptliano/shared/src/utils/sqlite-converters'
 
 // --- Schemas for Storage ---
 export const ProjectsStorageSchema = z.record(z.string(), ProjectSchema)
@@ -25,19 +32,8 @@ async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: s
   return validationResult.data
 }
 
-/**
- * Safely parse JSON with fallback value and error logging.
- */
-function safeJsonParse<T>(json: string | null | undefined, fallback: T, context?: string): T {
-  if (!json) return fallback
-
-  try {
-    return JSON.parse(json)
-  } catch (error) {
-    console.warn(`Failed to parse JSON${context ? ` for ${context}` : ''}: ${json}`, error)
-    return fallback
-  }
-}
+// Note: Now using centralized SqliteConverters instead of local helper functions
+// The toArray function from SqliteConverters provides consistent JSON array parsing
 
 export const projectStorage = {
   async readProjects(): Promise<ProjectsStorage> {
@@ -62,8 +58,8 @@ export const projectStorage = {
           name: row.name,
           description: row.description,
           path: row.path,
-          created: Number(row.created_at),
-          updated: Number(row.updated_at)
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
 
         // Validate each project before adding
@@ -145,10 +141,10 @@ export const projectStorage = {
           summaryLastUpdated: row.summary_last_updated,
           meta: row.meta,
           checksum: row.checksum,
-          imports: safeJsonParse(row.imports, null, 'file.imports'),
-          exports: safeJsonParse(row.exports, null, 'file.exports'),
-          created: Number(row.created_at),
-          updated: Number(row.updated_at)
+          imports: toArray(row.imports, [], 'file.imports'),
+          exports: toArray(row.exports, [], 'file.exports'),
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
 
         // Validate each file before adding
@@ -214,8 +210,8 @@ export const projectStorage = {
             file.summaryLastUpdated,
             file.meta,
             file.checksum,
-            JSON.stringify(file.imports || []),
-            JSON.stringify(file.exports || []),
+            fromArray(file.imports),
+            fromArray(file.exports),
             file.created,
             file.updated
           )
@@ -270,10 +266,10 @@ export const projectStorage = {
         summaryLastUpdated: row.summary_last_updated,
         meta: row.meta,
         checksum: row.checksum,
-        imports: safeJsonParse(row.imports, null, 'file.imports'),
-        exports: safeJsonParse(row.exports, null, 'file.exports'),
-        created: Number(row.created_at),
-        updated: Number(row.updated_at)
+        imports: toArray(row.imports, [], 'file.imports'),
+        exports: toArray(row.exports, [], 'file.exports'),
+        created: toNumber(row.created_at, Date.now()),
+        updated: toNumber(row.updated_at, Date.now())
       }
 
       // Update the file
@@ -305,8 +301,8 @@ export const projectStorage = {
         validatedFile.summaryLastUpdated,
         validatedFile.meta,
         validatedFile.checksum,
-        JSON.stringify(validatedFile.imports || []),
-        JSON.stringify(validatedFile.exports || []),
+        fromArray(validatedFile.imports),
+        fromArray(validatedFile.exports),
         validatedFile.updated,
         validatedFile.id,
         validatedFile.projectId
@@ -354,10 +350,10 @@ export const projectStorage = {
         summaryLastUpdated: row.summary_last_updated,
         meta: row.meta,
         checksum: row.checksum,
-        imports: safeJsonParse(row.imports, null, 'file.imports'),
-        exports: safeJsonParse(row.exports, null, 'file.exports'),
-        created: Number(row.created_at),
-        updated: Number(row.updated_at)
+        imports: toArray(row.imports, [], 'file.imports'),
+        exports: toArray(row.exports, [], 'file.exports'),
+        created: toNumber(row.created_at, Date.now()),
+        updated: toNumber(row.updated_at, Date.now())
       }
 
       // Validate before returning
@@ -423,10 +419,10 @@ export const projectStorage = {
           summaryLastUpdated: row.summary_last_updated,
           meta: row.meta,
           checksum: row.checksum,
-          imports: safeJsonParse(row.imports, null, 'file.imports'),
-          exports: safeJsonParse(row.exports, null, 'file.exports'),
-          created: Number(row.created_at),
-          updated: Number(row.updated_at)
+          imports: toArray(row.imports, [], 'file.imports'),
+          exports: toArray(row.exports, [], 'file.exports'),
+          created: toNumber(row.created_at, Date.now()),
+          updated: toNumber(row.updated_at, Date.now())
         }
 
         // Validate before adding

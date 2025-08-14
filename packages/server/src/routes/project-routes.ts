@@ -25,6 +25,8 @@ import { resolve as resolvePath } from 'node:path'
 import { homedir as getHomedir } from 'node:os'
 
 import * as projectService from '@promptliano/services'
+import { stream } from 'hono/streaming'
+import { createSyncProgressTracker } from '@promptliano/services/src/utils/sync-progress-tracker'
 import {
   getFullProjectSummary,
   getProjectStatistics,
@@ -273,6 +275,28 @@ const syncProjectRoute = createRoute({
       content: { 'application/json': { schema: ApiErrorResponseSchema } },
       description: 'Internal Server Error during sync'
     }
+  }
+})
+
+const syncProjectStreamRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/sync-stream',
+  tags: ['Projects', 'Files'],
+  summary: 'Trigger a file sync with real-time progress updates via SSE',
+  request: { params: ProjectIdParamsSchema },
+  responses: {
+    200: {
+      content: { 
+        'text/event-stream': { 
+          schema: z.string().openapi({ 
+            description: 'Server-sent events stream with sync progress updates' 
+          })
+        }
+      },
+      description: 'Sync progress stream'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
 })
 
@@ -854,6 +878,58 @@ export const projectRoutes = new OpenAPIHono()
       message: 'Project sync initiated.'
     }
     return c.json(payload, 200)
+  })
+
+  .openapi(syncProjectStreamRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const project = await projectService.getProjectById(projectId)
+    if (!project) {
+      throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+    }
+
+    // Set up SSE headers
+    c.header('Content-Type', 'text/event-stream')
+    c.header('Cache-Control', 'no-cache')
+    c.header('Connection', 'keep-alive')
+
+    return stream(c, async (streamInstance) => {
+      // Create progress tracker with callback
+      const progressTracker = createSyncProgressTracker({
+        onProgress: async (event) => {
+          // Send progress event as SSE
+          const data = JSON.stringify({
+            type: 'progress',
+            data: event
+          })
+          await streamInstance.writeln(`data: ${data}`)
+          await streamInstance.writeln('') // Empty line to flush
+        }
+      })
+
+      try {
+        // Perform sync with progress tracking
+        const results = await syncProject(project, progressTracker)
+        
+        // Send final success event
+        const successData = JSON.stringify({
+          type: 'complete',
+          data: results
+        })
+        await streamInstance.writeln(`data: ${successData}`)
+        await streamInstance.writeln('')
+      } catch (error: any) {
+        // Send error event
+        const errorData = JSON.stringify({
+          type: 'error',
+          data: {
+            message: error.message || 'Sync failed',
+            code: error.code || 'SYNC_ERROR'
+          }
+        })
+        await streamInstance.writeln(`data: ${errorData}`)
+        await streamInstance.writeln('')
+      }
+    })
   })
 
   .openapi(getProjectFilesRoute, async (c) => {

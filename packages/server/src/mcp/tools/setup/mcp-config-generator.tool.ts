@@ -71,11 +71,15 @@ export const mcpConfigGeneratorTool: MCPToolDefinition = {
               }
             }
             // Add editor-specific configuration
-            if (editorType === 'cursor') {
-              config.mcpServers[options.serverName || 'promptliano'].disabled = false
-            } else if (editorType === 'vscode') {
-              // VSCode specific config
-              config.mcpServers[options.serverName || 'promptliano'].workspaceFolder = projectPath
+            const serverName = options.serverName || 'promptliano'
+            const serverConfig = config.mcpServers[serverName] as any
+            if (serverConfig) {
+              if (editorType === 'cursor') {
+                serverConfig.disabled = false
+              } else if (editorType === 'vscode') {
+                // VSCode specific config
+                serverConfig.workspaceFolder = projectPath
+              }
             }
             return {
               content: [
@@ -102,10 +106,11 @@ export const mcpConfigGeneratorTool: MCPToolDefinition = {
               errors.push('Missing required field: mcpServers')
             } else {
               for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
-                if (!serverConfig.command) {
+                const config = serverConfig as any
+                if (!config?.command) {
                   errors.push(`Server ${serverName}: missing required field 'command'`)
                 }
-                if (!serverConfig.args || !Array.isArray(serverConfig.args)) {
+                if (!config?.args || !Array.isArray(config.args)) {
                   errors.push(`Server ${serverName}: 'args' must be an array`)
                 }
               }

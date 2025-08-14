@@ -66,6 +66,7 @@ export enum MCPErrorCode {
  */
 const ERROR_RECOVERY_SUGGESTIONS: Record<MCPErrorCode, string> = {
   [MCPErrorCode.INVALID_PARAMS]: 'Validate the provided parameters and try again.',
+  [MCPErrorCode.INVALID_REQUEST]: 'The request format is invalid. Check the request structure and try again.',
   [MCPErrorCode.MISSING_REQUIRED_PARAM]: 'Ensure all required parameters are provided in the request.',
   [MCPErrorCode.INVALID_PARAM_VALUE]: 'Check that the parameter value matches the expected format and constraints.',
   [MCPErrorCode.INVALID_PARAM_TYPE]: 'Verify the parameter type matches the expected type (string, number, etc.).',
@@ -79,6 +80,7 @@ const ERROR_RECOVERY_SUGGESTIONS: Record<MCPErrorCode, string> = {
   [MCPErrorCode.PROMPT_NOT_FOUND]:
     'Check the prompt ID exists. Use prompt_manager list action to see available prompts.',
   [MCPErrorCode.AGENT_NOT_FOUND]: 'Verify the agent ID exists. Use agent_manager list action to see available agents.',
+  [MCPErrorCode.RESOURCE_NOT_FOUND]: 'The requested resource was not found. Verify the resource ID and try again.',
   [MCPErrorCode.RESOURCE_ALREADY_EXISTS]:
     'The resource already exists. Use update action instead of create, or choose a different name.',
 
@@ -154,6 +156,11 @@ export interface MCPErrorDetails {
     itemId?: number
     status?: string
     errorMessage?: string
+    requestedPath?: string
+    fileName?: string
+    filterOptions?: any
+    failures?: any[]
+    searchOptions?: any
   }
   timestamp: number
 }

@@ -86,10 +86,17 @@ export class MCPProjectConfigService extends EventEmitter {
     const project = await getProjectById(projectId)
     const projectPath = project.path
 
+    if (!projectPath) {
+      throw new Error(`Project ${projectId} has no path defined`)
+    }
+
     const locations: MCPConfigLocation[] = []
 
     for (let i = 0; i < CONFIG_FILE_NAMES.length; i++) {
-      const configPath = path.join(projectPath, CONFIG_FILE_NAMES[i])
+      const configFileName = CONFIG_FILE_NAMES[i]
+      if (!configFileName) continue
+
+      const configPath = path.join(projectPath, configFileName)
       const exists = await this.fileExists(configPath)
 
       locations.push({
@@ -369,9 +376,11 @@ export class MCPProjectConfigService extends EventEmitter {
       currentPath = parentPath
     }
 
+    // Define normalizedCwd in the correct scope
+    const normalizedCwd = toPosixPath(promptlianoPath)
+
     if (!foundRoot) {
       // Fallback: if we're in packages/server, go up two levels
-      const normalizedCwd = toPosixPath(promptlianoPath)
       if (normalizedCwd.includes('packages/server')) {
         promptlianoPath = path.resolve(promptlianoPath, '../..')
         logger.debug('Using fallback method - adjusted from packages/server')

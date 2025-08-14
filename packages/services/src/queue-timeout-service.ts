@@ -105,12 +105,12 @@ export class QueueTimeoutService {
                 totalTimedOut += result.timedOut
               }
 
-              if (result.errors > 0) {
-                logger.warn(`Failed to recover ${result.errors} items in queue ${queue.name}`, {
+              if (result.errors.length > 0) {
+                logger.warn(`Failed to recover ${result.errors.length} items in queue ${queue.name}`, {
                   queueId: queue.id,
                   projectId: project.id
                 })
-                totalErrors += result.errors
+                totalErrors += result.errors.length
               }
             } catch (error) {
               logger.error(`Error checking timeouts for queue ${queue.id}:`, error)

@@ -1,6 +1,6 @@
 {
   "name": "@promptliano/api-client",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "module": "index.ts",
   "type": "module",
   "scripts": {
@@ -13,7 +13,12 @@
     "test:projects": "bun test src/tests/projects-api.test.ts --timeout 30000",
     "test:chat": "bun test src/tests/chat-api.test.ts --timeout 30000",
     "test:prompt": "bun test src/tests/prompt-api.test.ts --timeout 30000",
-    "test:provider-key": "bun test src/tests/provider-key-api.test.ts --timeout 30000"
+    "test:provider-key": "bun test src/tests/provider-key-api.test.ts --timeout 30000",
+    "docs:generate": "typedoc",
+    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api-markdown",
+    "docs:watch": "typedoc --watch",
+    "docs:serve": "npx serve docs/api",
+    "docs:clean": "rm -rf docs/api docs/api-markdown"
   },
   "devDependencies": {
     "@types/bun": "latest"

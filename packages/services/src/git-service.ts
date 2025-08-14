@@ -638,23 +638,23 @@ export async function getCommitDetails(projectId: number, commitHash: string): P
     ])
 
     const lines = commitInfo.split('\n')
-    const hash = lines[0]
-    const subject = lines[1]
-    const body = lines[2]
+    const hash = lines[0] || ''
+    const subject = lines[1] || ''
+    const body = lines[2] || ''
     const message = body ? `${subject}\n\n${body}` : subject
 
     return {
       hash,
       message,
       author: {
-        name: lines[3],
-        email: lines[4],
-        date: lines[5]
+        name: lines[3] || '',
+        email: lines[4] || '',
+        date: lines[5] || ''
       },
       committer: {
-        name: lines[6],
-        email: lines[7],
-        date: lines[8]
+        name: lines[6] || '',
+        email: lines[7] || '',
+        date: lines[8] || ''
       },
       parents: lines[9] ? lines[9].split(' ') : [],
       files: diffSummary.files.map((f) => f.file)
@@ -969,7 +969,8 @@ export async function getTags(projectId: number): Promise<GitTag[]> {
     ])
 
     return tags.all.map((tagLine) => {
-      const [name, commit, annotation = '', taggerName = '', taggerEmail = '', taggerDate = ''] = tagLine.split('\t')
+      const [name = '', commit = '', annotation = '', taggerName = '', taggerEmail = '', taggerDate = ''] =
+        tagLine.split('\t')
 
       const tag: GitTag = {
         name,
@@ -1099,12 +1100,13 @@ export async function stashList(projectId: number): Promise<GitStash[]> {
 
     return stashListResult.all.map((stashItem, index) => {
       // Parse stash message format: stash@{0}: WIP on branch: message
-      const match = stashItem.message.match(/WIP on (.+?): (.+)$/) || stashItem.message.match(/On (.+?): (.+)$/)
+      const message = stashItem.message || ''
+      const match = message.match(/WIP on (.+?): (.+)$/) || message.match(/On (.+?): (.+)$/)
 
       return {
         index,
-        message: match ? match[2] : stashItem.message,
-        branch: match ? match[1] : 'unknown',
+        message: match && match[2] ? match[2] : message,
+        branch: match && match[1] ? match[1] : 'unknown',
         date: stashItem.date || new Date().toISOString()
       }
     })
@@ -1267,8 +1269,8 @@ export async function blame(projectId: number, filePath: string): Promise<GitBla
       // Parse porcelain format
       const match = line.match(/^([0-9a-f]+) (\d+) (\d+)/)
       if (match) {
-        const commit = match[1]
-        const lineNumber = parseInt(match[3], 10)
+        const commit = match[1] || ''
+        const lineNumber = parseInt(match[3] || '0', 10)
 
         // Skip metadata lines
         let author = ''
@@ -1276,11 +1278,11 @@ export async function blame(projectId: number, filePath: string): Promise<GitBla
         let content = ''
 
         i++
-        while (i < blameLines.length && !blameLines[i].startsWith('\t')) {
+        while (i < blameLines.length && blameLines[i] && !blameLines[i]?.startsWith('\t')) {
           const metaLine = blameLines[i]
-          if (metaLine.startsWith('author ')) {
+          if (metaLine && metaLine.startsWith('author ')) {
             author = metaLine.substring(7)
-          } else if (metaLine.startsWith('author-time ')) {
+          } else if (metaLine && metaLine.startsWith('author-time ')) {
             const timestamp = parseInt(metaLine.substring(12), 10)
             date = new Date(timestamp * 1000).toISOString()
           }
@@ -1288,8 +1290,8 @@ export async function blame(projectId: number, filePath: string): Promise<GitBla
         }
 
         // Get the actual line content
-        if (i < blameLines.length && blameLines[i].startsWith('\t')) {
-          content = blameLines[i].substring(1)
+        if (i < blameLines.length && blameLines[i] && blameLines[i]?.startsWith('\t')) {
+          content = blameLines[i]?.substring(1) || ''
         }
 
         lines.push({
@@ -1712,7 +1714,7 @@ export async function pruneWorktrees(projectId: number, dryRun: boolean = false)
       // Git outputs lines like "Removing worktrees/branch-name: gitdir file points to non-existent location"
       const match = line.match(/^Removing (.+?):|^Would remove (.+?):/)
       if (match) {
-        prunedPaths.push(match[1] || match[2])
+        prunedPaths.push(match[1] || match[2] || '')
       }
     }
 
@@ -1882,19 +1884,19 @@ export async function getCommitLogEnhanced(
             for (const line of lines) {
               const parts = line.split('\t')
               if (parts.length >= 3) {
-                const additions = parseInt(parts[0], 10) || 0
-                const deletions = parseInt(parts[1], 10) || 0
-                const filePath = parts[2]
+                const additions = parseInt(parts[0] || '0', 10) || 0
+                const deletions = parseInt(parts[1] || '0', 10) || 0
+                const filePath = parts[2] || ''
 
                 // Handle renames
                 let status: GitFileStats['status'] = 'modified'
                 let oldPath: string | undefined
 
-                if (filePath.includes('=>')) {
+                if (filePath && filePath.includes('=>')) {
                   // This is a rename
                   const renameParts = filePath.match(/(.+?)\s*=>\s*(.+)/)
                   if (renameParts) {
-                    oldPath = renameParts[1].trim()
+                    oldPath = renameParts[1]?.trim()
                     status = 'renamed'
                   }
                 } else if (additions > 0 && deletions === 0) {
@@ -1903,7 +1905,7 @@ export async function getCommitLogEnhanced(
                   status = 'deleted'
                 }
 
-                if (request.includeFileDetails) {
+                if (request.includeFileDetails && filePath) {
                   fileStats.push({
                     path: filePath,
                     additions,
@@ -2027,7 +2029,7 @@ export async function getBranchesEnhanced(projectId: number): Promise<GitBranchL
           // Get ahead/behind counts
           const revList = await git.raw(['rev-list', '--left-right', '--count', `${defaultBranch}...${name}`])
 
-          const [behindStr, aheadStr] = revList.trim().split('\t')
+          const [behindStr = '0', aheadStr = '0'] = revList.trim().split('\t')
           behind = parseInt(behindStr, 10) || 0
           ahead = parseInt(aheadStr, 10) || 0
         } catch (error) {
@@ -2163,7 +2165,7 @@ export async function getCommitDetail(
     const showResult = await git.show([commitHash, `--format=${commitFormat}`, '--no-patch'])
 
     const lines = showResult.split('\n')
-    const [hash, abbreviatedHash, subject, ...bodyAndRest] = lines
+    const [hash = '', abbreviatedHash = '', subject = '', ...bodyAndRest] = lines
 
     // Find where the body ends (empty line after body)
     let bodyEndIndex = bodyAndRest.findIndex((line) => line === '')
@@ -2172,8 +2174,16 @@ export async function getCommitDetail(
     const body = bodyAndRest.slice(0, bodyEndIndex).join('\n')
     const metadataLines = bodyAndRest.slice(bodyEndIndex + 1)
 
-    const [authorName, authorEmail, authorDate, committerName, committerEmail, committerDate, parents, refs] =
-      metadataLines
+    const [
+      authorName = '',
+      authorEmail = '',
+      authorDate = '',
+      committerName = '',
+      committerEmail = '',
+      committerDate = '',
+      parents = '',
+      refs = ''
+    ] = metadataLines
 
     // Get file changes with numstat
     const numstatResult = await git.raw(['show', '--numstat', '--format=', commitHash])
@@ -2187,9 +2197,9 @@ export async function getCommitDetail(
     for (const line of numstatLines) {
       const parts = line.split('\t')
       if (parts.length >= 3) {
-        const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10) || 0
-        const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10) || 0
-        const filePath = parts[2]
+        const additions = parts[0] === '-' || !parts[0] ? 0 : parseInt(parts[0], 10) || 0
+        const deletions = parts[1] === '-' || !parts[1] ? 0 : parseInt(parts[1], 10) || 0
+        const filePath = parts[2] || ''
 
         // Determine file status
         let status: GitFileDiff['status'] = 'modified'
@@ -2197,11 +2207,11 @@ export async function getCommitDetail(
         let oldPath: string | undefined
 
         // Handle renames (format: "oldname => newname" or "{oldname => newname}")
-        if (filePath.includes('=>')) {
+        if (filePath && filePath.includes('=>')) {
           const renameParts = filePath.match(/^(?:\{(.+?)\s*=>\s*(.+?)\}|(.+?)\s*=>\s*(.+))$/)
           if (renameParts) {
-            oldPath = renameParts[1] || renameParts[3]
-            path = renameParts[2] || renameParts[4]
+            oldPath = renameParts[1] || renameParts[3] || undefined
+            path = renameParts[2] || renameParts[4] || filePath
             status = 'renamed'
           }
         } else if (additions > 0 && deletions === 0) {
@@ -2211,7 +2221,7 @@ export async function getCommitDetail(
         }
 
         fileDiffs.push({
-          path,
+          path: path || filePath,
           status,
           additions,
           deletions,
@@ -2219,7 +2229,7 @@ export async function getCommitDetail(
           oldPath
         })
 
-        if (!fileDiffs[fileDiffs.length - 1].binary) {
+        if (!fileDiffs[fileDiffs.length - 1]?.binary) {
           totalAdditions += additions
           totalDeletions += deletions
         }

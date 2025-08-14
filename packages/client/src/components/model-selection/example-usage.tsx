@@ -10,11 +10,16 @@ import { useState } from 'react'
 
 // Example 1: Basic usage with useModelSelection hook
 export function BasicModelSelectionExample() {
-  const { provider, model, setProvider, setModel, isLoadingModels, availableModels } = useModelSelection({
+  const { provider, model, setProvider: setProviderBase, setModel, isLoadingModels, availableModels } = useModelSelection({
     defaultProvider: 'openai',
     defaultModel: 'gpt-4',
     persistenceKey: 'example-model-selection' // Optional: persists selection to localStorage
   })
+
+  // Wrapper to handle string | APIProviders type
+  const setProvider = (newProvider: string | APIProviders) => {
+    setProviderBase(newProvider as APIProviders)
+  }
 
   return (
     <Card>
@@ -41,7 +46,12 @@ export function BasicModelSelectionExample() {
 
 // Example 2: Vertical layout with labels
 export function VerticalModelSelectionExample() {
-  const { provider, model, setProvider, setModel } = useModelSelection()
+  const { provider, model, setProvider: setProviderBase, setModel } = useModelSelection()
+
+  // Wrapper to handle string | APIProviders type
+  const setProvider = (newProvider: string | APIProviders) => {
+    setProviderBase(newProvider as APIProviders)
+  }
 
   return (
     <Card>
@@ -64,7 +74,12 @@ export function VerticalModelSelectionExample() {
 
 // Example 3: Filtered providers and models
 export function FilteredModelSelectionExample() {
-  const { provider, model, setProvider, setModel } = useModelSelection()
+  const { provider, model, setProvider: setProviderBase, setModel } = useModelSelection()
+
+  // Wrapper to handle string | APIProviders type
+  const setProvider = (newProvider: string | APIProviders) => {
+    setProviderBase(newProvider as APIProviders)
+  }
 
   // Only show specific providers
   const allowedProviders: APIProviders[] = ['openai', 'anthropic', 'google_gemini']
@@ -96,9 +111,14 @@ export function FilteredModelSelectionExample() {
 
 // Example 4: Model Settings Popover
 export function ModelSettingsExample() {
-  const { provider, model, setProvider, setModel } = useModelSelection({
+  const { provider, model, setProvider: setProviderBase, setModel } = useModelSelection({
     defaultProvider: 'openrouter'
   })
+
+  // Wrapper to handle string | APIProviders type
+  const setProvider = (newProvider: string | APIProviders) => {
+    setProviderBase(newProvider as APIProviders)
+  }
 
   const [settings, setSettings] = useState<Partial<AiSdkOptions>>({
     temperature: 0.7,
@@ -140,7 +160,12 @@ export function ModelSettingsExample() {
 
 // Example 5: Compact layout
 export function CompactModelSelectionExample() {
-  const { provider, model, setProvider, setModel } = useModelSelection()
+  const { provider, model, setProvider: setProviderBase, setModel } = useModelSelection()
+
+  // Wrapper to handle string | APIProviders type
+  const setProvider = (newProvider: string | APIProviders) => {
+    setProviderBase(newProvider as APIProviders)
+  }
 
   return (
     <Card>
@@ -168,10 +193,15 @@ export function CallbackModelSelectionExample() {
     setLog((prev) => [...prev, `${new Date().toISOString()}: ${message}`])
   }
 
-  const { provider, model, setProvider, setModel } = useModelSelection({
+  const { provider, model, setProvider: setProviderBase, setModel } = useModelSelection({
     onProviderChange: (provider) => addLog(`Provider changed to: ${provider}`),
     onModelChange: (model) => addLog(`Model changed to: ${model}`)
   })
+
+  // Wrapper to handle string | APIProviders type
+  const setProvider = (newProvider: string | APIProviders) => {
+    setProviderBase(newProvider as APIProviders)
+  }
 
   return (
     <Card>

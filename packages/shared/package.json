@@ -1,12 +1,17 @@
 {
   "name": "@promptliano/shared",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Shared types and utilities for both client and server",
   "type": "module",
   "main": "index.ts",
   "module": "index.ts",
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:generate": "typedoc",
+    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api-markdown",
+    "docs:watch": "typedoc --watch",
+    "docs:serve": "npx serve docs/api",
+    "docs:clean": "rm -rf docs/api docs/api-markdown"
   }
 }

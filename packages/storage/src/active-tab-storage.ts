@@ -1,4 +1,5 @@
 import { type ActiveTab, activeTabSchema } from '@promptliano/schemas'
+import { ensureNumber } from '@promptliano/shared/src/utils/sqlite-converters'
 import { StorageV2 } from './storage-v2'
 import { SQLiteDbManagerAdapter } from './sqlite-db-manager-adapter'
 
@@ -16,3 +17,6 @@ export const activeTabStorage = new StorageV2<ActiveTab>({
   },
   schema: activeTabSchema
 })
+
+// Helper to generate IDs with consistent type conversion
+;(activeTabStorage as any).generateId = () => ensureNumber(Date.now())

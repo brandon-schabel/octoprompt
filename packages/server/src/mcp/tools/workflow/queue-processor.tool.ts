@@ -145,11 +145,12 @@ ${ticket.suggestedAgentIds?.length > 0 ? `Suggested Agents: ${ticket.suggestedAg
                 ]
               }
             } catch (error) {
-              throw createMCPError(
-                MCPErrorCode.SERVICE_ERROR,
-                `Failed to update ${itemType} status: ${error.message}`,
-                { itemType, itemId, status }
-              )
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, `Failed to update ${itemType} status: ${errorMessage}`, {
+                itemType,
+                itemId,
+                status
+              })
             }
           }
 
@@ -173,7 +174,8 @@ ${ticket.suggestedAgentIds?.length > 0 ? `Suggested Agents: ${ticket.suggestedAg
                 ]
               }
             } catch (error) {
-              throw createMCPError(MCPErrorCode.SERVICE_ERROR, `Failed to complete ${itemType}: ${error.message}`, {
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, `Failed to complete ${itemType}: ${errorMessage}`, {
                 itemType,
                 itemId
               })
@@ -200,11 +202,12 @@ ${ticket.suggestedAgentIds?.length > 0 ? `Suggested Agents: ${ticket.suggestedAg
                 ]
               }
             } catch (error) {
-              throw createMCPError(
-                MCPErrorCode.SERVICE_ERROR,
-                `Failed to mark ${itemType} as failed: ${error.message}`,
-                { itemType, itemId, errorMessage }
-              )
+              const errorMsg = error instanceof Error ? error.message : String(error)
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, `Failed to mark ${itemType} as failed: ${errorMsg}`, {
+                itemType,
+                itemId,
+                errorMessage
+              })
             }
           }
 

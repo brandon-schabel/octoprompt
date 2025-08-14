@@ -248,9 +248,45 @@ export class PromptlianoSetup {
         throw new Error(`Failed to install dependencies: ${installError.message}`)
       }
 
-      spinner.text = 'Building client...'
+      // Step 2: Build the UI package (required dependency for client)
+      const uiPath = join(this.installPath, 'packages', 'ui')
+      const uiDistPath = join(uiPath, 'dist')
+      let uiBuildFailed = false
 
-      // Step 2: Build the client
+      // Check if UI is already built
+      if (existsSync(uiDistPath)) {
+        logger.info('UI package already built, skipping UI build')
+        spinner.text = 'UI components ready, building client application...'
+      } else {
+        spinner.text = 'Building UI components...'
+
+        try {
+          const uiBuildResult = execSync('bun run build', {
+            cwd: uiPath,
+            stdio: 'pipe',
+            encoding: 'utf-8'
+          })
+          logger.info('UI build output:', uiBuildResult)
+
+          // Verify UI build output
+          if (existsSync(uiDistPath)) {
+            logger.info('UI build successful, artifacts at:', uiDistPath)
+          } else {
+            uiBuildFailed = true
+            logger.warn('UI dist directory not found after build')
+          }
+        } catch (uiError: any) {
+          uiBuildFailed = true
+          logger.error('UI build failed:', uiError.message)
+          if (uiError.stdout) logger.error('UI build stdout:', uiError.stdout)
+          if (uiError.stderr) logger.error('UI build stderr:', uiError.stderr)
+          // Don't throw - continue to attempt client build
+          spinner.warn('UI build encountered issues, continuing with client build...')
+        }
+      }
+
+      // Step 3: Build the client application
+      spinner.text = 'Building client application...'
       const clientPath = join(this.installPath, 'packages', 'client')
       let buildError = ''
 
@@ -269,7 +305,7 @@ export class PromptlianoSetup {
         if (buildErr.stderr) logger.error('Build stderr:', buildErr.stderr)
       }
 
-      // Step 3: Verify client build output (vite builds directly to server/client-dist)
+      // Step 4: Verify client build output (vite builds directly to server/client-dist)
       const clientDistPath = join(this.installPath, 'packages', 'server', 'client-dist')
 
       if (existsSync(clientDistPath)) {
@@ -279,7 +315,11 @@ export class PromptlianoSetup {
         spinner.warn('Client build failed, but server can still run')
         console.log(chalk.yellow('\n⚠️  Client build failed'))
         console.log(chalk.gray('The server will start but without the web interface.'))
-        console.log(chalk.gray('To manually build the client later, run:'))
+        console.log(chalk.gray('To manually build the packages later, run:'))
+        if (uiBuildFailed) {
+          console.log(chalk.cyan(`  cd ${uiPath}`))
+          console.log(chalk.cyan('  bun run build'))
+        }
         console.log(chalk.cyan(`  cd ${clientPath}`))
         console.log(chalk.cyan('  bun run build'))
         console.log()
@@ -292,7 +332,17 @@ export class PromptlianoSetup {
         logger.info('Expected location:', clientDistPath)
       }
 
-      spinner.succeed(buildFailed ? 'Promptliano installed (server only)' : 'Promptliano built successfully')
+      // Update success message to reflect what was built
+      let successMessage = 'Promptliano built successfully'
+      if (buildFailed && uiBuildFailed) {
+        successMessage = 'Promptliano installed (server only - UI and client builds failed)'
+      } else if (buildFailed) {
+        successMessage = 'Promptliano installed (server and UI ready - client build failed)'
+      } else if (uiBuildFailed) {
+        successMessage = 'Promptliano built (UI build had issues but client built)'
+      }
+
+      spinner.succeed(successMessage)
     } catch (error) {
       spinner.fail('Build failed')
       logger.error('Build error:', error)

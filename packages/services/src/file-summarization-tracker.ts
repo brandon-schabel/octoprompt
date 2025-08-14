@@ -294,7 +294,10 @@ export class FileSummarizationTracker {
             staleCount++
           }
 
-          statusCounts[status?.status || 'completed']++
+          const key = status?.status || 'completed'
+          if (key in statusCounts) {
+            statusCounts[key as keyof typeof statusCounts]++
+          }
         } else {
           unsummarizedCount++
 
@@ -302,7 +305,10 @@ export class FileSummarizationTracker {
             failedCount++
           }
 
-          statusCounts[status?.status || 'pending']++
+          const key2 = status?.status || 'pending'
+          if (key2 in statusCounts) {
+            statusCounts[key2 as keyof typeof statusCounts]++
+          }
         }
       }
 

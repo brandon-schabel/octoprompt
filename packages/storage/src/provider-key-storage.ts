@@ -3,6 +3,13 @@ import { ProviderKeySchema, type ProviderKey } from '@promptliano/schemas'
 import { normalizeToUnixMs } from '@promptliano/shared/src/utils/parse-timestamp'
 import { DatabaseManager, getDb } from './database-manager'
 import { ApiError } from '@promptliano/shared'
+import {
+  toBoolean,
+  toNumber,
+  toString,
+  fromBoolean,
+  SqliteConverters
+} from '@promptliano/shared/src/utils/sqlite-converters'
 
 // Schema for the entire storage file: a record of ProviderKeys keyed by their ID
 export const ProviderKeysStorageSchema = z.record(z.string(), ProviderKeySchema)
@@ -34,6 +41,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -50,18 +58,20 @@ export const providerKeyStorage = {
         name: row.name,
         provider: row.provider,
         key: row.key,
-        encrypted: Boolean(row.encrypted),
+        encrypted: toBoolean(row.encrypted),
         iv: row.iv,
         tag: row.tag,
         salt: row.salt,
-        isDefault: Boolean(row.is_default),
-        isActive: Boolean(row.is_active),
-        environment: row.environment,
+        baseUrl: row.base_url || undefined,
+        customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
+        isDefault: toBoolean(row.is_default),
+        isActive: toBoolean(row.is_active),
+        environment: row.environment || 'production',
         description: row.description || undefined,
         expiresAt: row.expires_at || undefined,
         lastUsed: row.last_used || undefined,
-        created: Number(row.created_at),
-        updated: Number(row.updated_at)
+        created: toNumber(row.created_at, Date.now()),
+        updated: toNumber(row.updated_at, Date.now())
       }
 
       // Validate the result
@@ -94,10 +104,11 @@ export const providerKeyStorage = {
       const insertStmt = database.prepare(`
         INSERT INTO provider_keys (
           id, name, provider, key, encrypted, iv, tag, salt,
+          base_url, custom_headers,
           is_default, is_active, environment, description,
           expires_at, last_used, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
 
       for (const [id, key] of Object.entries(validatedKeys)) {
@@ -107,12 +118,14 @@ export const providerKeyStorage = {
           key.name,
           key.provider,
           key.key,
-          key.encrypted ? 1 : 0,
+          fromBoolean(key.encrypted),
           key.iv || null,
           key.tag || null,
           key.salt || null,
-          key.isDefault ? 1 : 0,
-          key.isActive ? 1 : 0,
+          key.baseUrl || null,
+          key.customHeaders ? JSON.stringify(key.customHeaders) : null,
+          fromBoolean(key.isDefault),
+          fromBoolean(key.isActive),
           key.environment,
           key.description || null,
           key.expiresAt || null,
@@ -134,6 +147,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -155,6 +169,8 @@ export const providerKeyStorage = {
       iv: row.iv,
       tag: row.tag,
       salt: row.salt,
+      baseUrl: row.base_url || undefined,
+      customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
       isDefault: Boolean(row.is_default),
       isActive: Boolean(row.is_active),
       environment: row.environment,
@@ -187,6 +203,7 @@ export const providerKeyStorage = {
       const updateQuery = database.prepare(`
         UPDATE provider_keys
         SET name = ?, provider = ?, key = ?, encrypted = ?, iv = ?, tag = ?, salt = ?,
+            base_url = ?, custom_headers = ?,
             is_default = ?, is_active = ?, environment = ?, description = ?,
             expires_at = ?, last_used = ?, updated_at = ?
         WHERE id = ?
@@ -195,12 +212,14 @@ export const providerKeyStorage = {
         validatedKey.name,
         validatedKey.provider,
         validatedKey.key,
-        validatedKey.encrypted ? 1 : 0,
+        fromBoolean(validatedKey.encrypted),
         validatedKey.iv || null,
         validatedKey.tag || null,
         validatedKey.salt || null,
-        validatedKey.isDefault ? 1 : 0,
-        validatedKey.isActive ? 1 : 0,
+        validatedKey.baseUrl || null,
+        validatedKey.customHeaders ? JSON.stringify(validatedKey.customHeaders) : null,
+        fromBoolean(validatedKey.isDefault),
+        fromBoolean(validatedKey.isActive),
         validatedKey.environment,
         validatedKey.description || null,
         validatedKey.expiresAt || null,
@@ -213,22 +232,25 @@ export const providerKeyStorage = {
       const insertQuery = database.prepare(`
         INSERT INTO provider_keys (
           id, name, provider, key, encrypted, iv, tag, salt,
+          base_url, custom_headers,
           is_default, is_active, environment, description,
           expires_at, last_used, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       insertQuery.run(
         validatedKey.id,
         validatedKey.name,
         validatedKey.provider,
         validatedKey.key,
-        validatedKey.encrypted ? 1 : 0,
+        fromBoolean(validatedKey.encrypted),
         validatedKey.iv || null,
         validatedKey.tag || null,
         validatedKey.salt || null,
-        validatedKey.isDefault ? 1 : 0,
-        validatedKey.isActive ? 1 : 0,
+        validatedKey.baseUrl || null,
+        validatedKey.customHeaders ? JSON.stringify(validatedKey.customHeaders) : null,
+        fromBoolean(validatedKey.isDefault),
+        fromBoolean(validatedKey.isActive),
         validatedKey.environment,
         validatedKey.description || null,
         validatedKey.expiresAt || null,
@@ -260,6 +282,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -276,18 +299,20 @@ export const providerKeyStorage = {
         name: row.name,
         provider: row.provider,
         key: row.key,
-        encrypted: Boolean(row.encrypted),
+        encrypted: toBoolean(row.encrypted),
         iv: row.iv,
         tag: row.tag,
         salt: row.salt,
-        isDefault: Boolean(row.is_default),
-        isActive: Boolean(row.is_active),
-        environment: row.environment,
+        baseUrl: row.base_url || undefined,
+        customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
+        isDefault: toBoolean(row.is_default),
+        isActive: toBoolean(row.is_active),
+        environment: row.environment || 'production',
         description: row.description || undefined,
         expiresAt: row.expires_at || undefined,
         lastUsed: row.last_used || undefined,
-        created: Number(row.created_at),
-        updated: Number(row.updated_at)
+        created: toNumber(row.created_at, Date.now()),
+        updated: toNumber(row.updated_at, Date.now())
       }
 
       // Validate before adding
@@ -310,6 +335,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -326,18 +352,20 @@ export const providerKeyStorage = {
         name: row.name,
         provider: row.provider,
         key: row.key,
-        encrypted: Boolean(row.encrypted),
+        encrypted: toBoolean(row.encrypted),
         iv: row.iv,
         tag: row.tag,
         salt: row.salt,
-        isDefault: Boolean(row.is_default),
-        isActive: Boolean(row.is_active),
-        environment: row.environment,
+        baseUrl: row.base_url || undefined,
+        customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
+        isDefault: toBoolean(row.is_default),
+        isActive: toBoolean(row.is_active),
+        environment: row.environment || 'production',
         description: row.description || undefined,
         expiresAt: row.expires_at || undefined,
         lastUsed: row.last_used || undefined,
-        created: Number(row.created_at),
-        updated: Number(row.updated_at)
+        created: toNumber(row.created_at, Date.now()),
+        updated: toNumber(row.updated_at, Date.now())
       }
 
       // Validate before adding
@@ -360,6 +388,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -376,18 +405,20 @@ export const providerKeyStorage = {
         name: row.name,
         provider: row.provider,
         key: row.key,
-        encrypted: Boolean(row.encrypted),
+        encrypted: toBoolean(row.encrypted),
         iv: row.iv,
         tag: row.tag,
         salt: row.salt,
-        isDefault: Boolean(row.is_default),
-        isActive: Boolean(row.is_active),
-        environment: row.environment,
+        baseUrl: row.base_url || undefined,
+        customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
+        isDefault: toBoolean(row.is_default),
+        isActive: toBoolean(row.is_active),
+        environment: row.environment || 'production',
         description: row.description || undefined,
         expiresAt: row.expires_at || undefined,
         lastUsed: row.last_used || undefined,
-        created: Number(row.created_at),
-        updated: Number(row.updated_at)
+        created: toNumber(row.created_at, Date.now()),
+        updated: toNumber(row.updated_at, Date.now())
       }
 
       // Validate before adding

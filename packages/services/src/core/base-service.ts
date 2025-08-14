@@ -15,6 +15,14 @@ export abstract class BaseService<
   protected errorHandlers: ReturnType<typeof createCrudErrorHandlers>
 
   constructor() {
+    // Initialize error handlers - entityName will be set by derived class
+    this.errorHandlers = createCrudErrorHandlers('base')
+  }
+
+  /**
+   * Initialize error handlers with entity name - should be called by derived classes
+   */
+  protected initializeErrorHandlers() {
     this.errorHandlers = createCrudErrorHandlers(this.entityName)
   }
 

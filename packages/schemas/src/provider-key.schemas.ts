@@ -10,7 +10,8 @@ export const AI_API_PROVIDERS = [
   'google_gemini',
   'anthropic',
   'groq',
-  'together'
+  'together',
+  'custom' // Support for custom OpenAI-compatible providers
 ] as const
 export const aiProviderSchema = z.enum(AI_API_PROVIDERS)
 
@@ -23,7 +24,7 @@ export const ProviderKeySchema = z
     name: z.string().openapi({ example: 'My OpenAI Key', description: 'User-defined name for the key' }),
     provider: z
       .string()
-      .openapi({ example: 'openai', description: 'AI Provider identifier (e.g., openai, anthropic)' }),
+      .openapi({ example: 'openai', description: 'AI Provider identifier (e.g., openai, anthropic, custom)' }),
     // NOTE: We intentionally DO NOT include the 'key' field in the response schema for security.
     // The full key might be returned on creation/update but shouldn't be listed.
     // This comment is misleading if ProviderKeySchema is used for full details.
@@ -43,6 +44,16 @@ export const ProviderKeySchema = z
       .optional()
       .openapi({ example: 'base64string', description: 'Authentication tag for AES-GCM' }),
     salt: z.string().nullable().optional().openapi({ example: 'base64string', description: 'Salt for key derivation' }),
+    // Custom provider configuration
+    baseUrl: z
+      .string()
+      .url()
+      .optional()
+      .openapi({ example: 'https://api.example.com/v1', description: 'Base URL for custom OpenAI-compatible providers' }),
+    customHeaders: z
+      .record(z.string())
+      .optional()
+      .openapi({ example: { 'X-Custom-Header': 'value' }, description: 'Optional custom headers for the provider' }),
     isDefault: z
       .boolean()
       .default(false)
@@ -80,6 +91,8 @@ export const CreateProviderKeyBodySchema = z
     name: z.string().min(1).openapi({ example: 'My OpenAI Key' }),
     provider: z.string().min(1).openapi({ example: 'anthropic' }),
     key: z.string().min(1).openapi({ example: 'sk-ant-xxxxxxxx' }),
+    baseUrl: z.string().url().optional().openapi({ example: 'https://api.example.com/v1', description: 'Base URL for custom providers' }),
+    customHeaders: z.record(z.string()).optional().openapi({ example: { 'X-Custom-Header': 'value' }, description: 'Custom headers' }),
     isDefault: z.boolean().optional().openapi({ example: true })
   })
   .openapi('CreateProviderKeyRequestBody')
@@ -89,10 +102,12 @@ export const UpdateProviderKeyBodySchema = z
     name: z.string().min(1).optional().openapi({ example: 'My Updated Key Name' }),
     provider: z.string().min(1).optional().openapi({ example: 'google' }),
     key: z.string().min(1).optional().openapi({ example: 'aizaxxxxxxxxxxxxx' }),
+    baseUrl: z.string().url().optional().openapi({ example: 'https://api.example.com/v1', description: 'Base URL for custom providers' }),
+    customHeaders: z.record(z.string()).optional().openapi({ example: { 'X-Custom-Header': 'value' }, description: 'Custom headers' }),
     isDefault: z.boolean().optional().openapi({ example: false })
   })
-  .refine((data) => data.name || data.provider || data.key || typeof data.isDefault === 'boolean', {
-    message: 'At least one field (name, provider, key, isDefault) must be provided for update'
+  .refine((data) => data.name || data.provider || data.key || data.baseUrl || data.customHeaders || typeof data.isDefault === 'boolean', {
+    message: 'At least one field (name, provider, key, baseUrl, customHeaders, isDefault) must be provided for update'
   })
   .openapi('UpdateProviderKeyRequestBody')
 
@@ -270,6 +285,41 @@ export const ProviderHealthStatusListResponseSchema = z
   })
   .openapi('ProviderHealthStatusListResponse')
 
+// --- Custom Provider Validation Schemas ---
+
+export const ValidateCustomProviderRequestSchema = z
+  .object({
+    baseUrl: z.string().url().openapi({ example: 'https://api.example.com/v1', description: 'Base URL to validate' }),
+    apiKey: z.string().min(1).openapi({ example: 'sk-xxxxxxxx', description: 'API key for authentication' }),
+    customHeaders: z
+      .record(z.string())
+      .optional()
+      .openapi({ example: { 'X-Custom-Header': 'value' }, description: 'Optional custom headers' })
+  })
+  .openapi('ValidateCustomProviderRequest')
+
+export const CustomProviderFeaturesSchema = z
+  .object({
+    streaming: z.boolean().openapi({ example: true, description: 'Supports streaming responses' }),
+    functionCalling: z.boolean().openapi({ example: false, description: 'Supports function/tool calling' }),
+    structuredOutput: z.boolean().openapi({ example: true, description: 'Supports structured JSON output' }),
+    vision: z.boolean().openapi({ example: false, description: 'Supports image inputs' }),
+    embeddings: z.boolean().openapi({ example: false, description: 'Provides embedding endpoints' })
+  })
+  .openapi('CustomProviderFeatures')
+
+export const ValidateCustomProviderResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      compatible: z.boolean().openapi({ example: true, description: 'Whether the endpoint is OpenAI-compatible' }),
+      models: z.array(ProviderModelSchema).openapi({ description: 'Available models from the provider' }),
+      features: CustomProviderFeaturesSchema.openapi({ description: 'Detected provider capabilities' }),
+      baseUrl: z.string().url().openapi({ example: 'https://api.example.com/v1', description: 'Validated base URL' })
+    })
+  })
+  .openapi('ValidateCustomProviderResponse')
+
 // Type exports
 export type ProviderModel = z.infer<typeof ProviderModelSchema>
 export type ProviderStatus = z.infer<typeof ProviderStatusEnum>
@@ -280,3 +330,6 @@ export type BatchTestProviderResponse = z.infer<typeof BatchTestProviderResponse
 export type BatchTestSummary = z.infer<typeof BatchTestSummarySchema>
 export type ProviderHealthStatus = z.infer<typeof ProviderHealthStatusSchema>
 export type ProviderHealthStatusType = z.infer<typeof ProviderHealthStatusEnum>
+export type ValidateCustomProviderRequest = z.infer<typeof ValidateCustomProviderRequestSchema>
+export type ValidateCustomProviderResponse = z.infer<typeof ValidateCustomProviderResponseSchema>
+export type CustomProviderFeatures = z.infer<typeof CustomProviderFeaturesSchema>

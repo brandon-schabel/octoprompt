@@ -132,7 +132,7 @@ export class CompactFileFormatter {
     }
 
     let summary = ''
-    for (const [category, categoryFiles] of categories) {
+    for (const [category, categoryFiles] of Array.from(categories.entries())) {
       summary += `\n${category} (${categoryFiles.length}):\n`
       for (const file of categoryFiles.slice(0, 5)) {
         // Show max 5 per category

@@ -3,7 +3,14 @@
  */
 
 import { claudeHookService } from '../src/claude-hook-service'
-import type { HookGenerationContext } from '../src/claude-hook-service'
+import type { HookEvent } from '@promptliano/schemas'
+
+// Define the context type since it's not exported from the service
+type HookGenerationContext = {
+  projectPath?: string
+  suggestedEvent?: HookEvent
+  examples?: string[]
+}
 
 async function generateHookExamples() {
   console.log('🎯 Generating Claude Code hooks from natural language descriptions...\n')
@@ -18,9 +25,9 @@ async function generateHookExamples() {
     console.log('Generated hook:')
     console.log(`  Event: ${autoSaveHook.event}`)
     console.log(`  Matcher: ${autoSaveHook.matcher}`)
-    console.log(`  Command: ${autoSaveHook.hookConfig.command}`)
+    console.log(`  Command: ${autoSaveHook.command}`)
     console.log(`  Description: ${autoSaveHook.description}`)
-    console.log(`  Background: ${autoSaveHook.hookConfig.run_in_background}`)
+    console.log(`  Timeout: ${autoSaveHook.timeout || 60}s`)
     console.log()
   } catch (error) {
     console.error('Failed to generate auto-save hook:', error)
@@ -43,9 +50,9 @@ async function generateHookExamples() {
     console.log('Generated hook:')
     console.log(`  Event: ${testHook.event}`)
     console.log(`  Matcher: ${testHook.matcher}`)
-    console.log(`  Command: ${testHook.hookConfig.command}`)
+    console.log(`  Command: ${testHook.command}`)
     console.log(`  Description: ${testHook.description}`)
-    console.log(`  Timeout: ${testHook.hookConfig.timeout}s`)
+    console.log(`  Timeout: ${testHook.timeout || 60}s`)
     if (testHook.security_warnings?.length) {
       console.log(`  ⚠️  Warnings: ${testHook.security_warnings.join(', ')}`)
     }
@@ -64,8 +71,9 @@ async function generateHookExamples() {
     console.log('Generated hook:')
     console.log(`  Event: ${loggingHook.event}`)
     console.log(`  Matcher: ${loggingHook.matcher}`)
-    console.log(`  Command: ${loggingHook.hookConfig.command}`)
+    console.log(`  Command: ${loggingHook.command}`)
     console.log(`  Description: ${loggingHook.description}`)
+    console.log(`  Timeout: ${loggingHook.timeout || 60}s`)
     console.log()
   } catch (error) {
     console.error('Failed to generate logging hook:', error)
@@ -81,9 +89,9 @@ async function generateHookExamples() {
     console.log('Generated hook:')
     console.log(`  Event: ${lintHook.event}`)
     console.log(`  Matcher: ${lintHook.matcher}`)
-    console.log(`  Command: ${lintHook.hookConfig.command}`)
+    console.log(`  Command: ${lintHook.command}`)
     console.log(`  Description: ${lintHook.description}`)
-    console.log(`  Background: ${lintHook.hookConfig.run_in_background}`)
+    console.log(`  Timeout: ${lintHook.timeout || 60}s`)
     console.log()
   } catch (error) {
     console.error('Failed to generate linting hook:', error)
@@ -99,8 +107,9 @@ async function generateHookExamples() {
     console.log('Generated hook:')
     console.log(`  Event: ${securityHook.event}`)
     console.log(`  Matcher: ${securityHook.matcher}`)
-    console.log(`  Command: ${securityHook.hookConfig.command}`)
+    console.log(`  Command: ${securityHook.command}`)
     console.log(`  Description: ${securityHook.description}`)
+    console.log(`  Timeout: ${securityHook.timeout || 60}s`)
     if (securityHook.security_warnings?.length) {
       console.log(`  ⚠️  Warnings: ${securityHook.security_warnings.join(', ')}`)
     }
@@ -111,6 +120,7 @@ async function generateHookExamples() {
 }
 
 // Run examples if this file is executed directly
-if (import.meta.main) {
+// Note: import.meta.main is available in Bun runtime
+if (typeof Bun !== 'undefined' && import.meta.url === Bun.main) {
   generateHookExamples()
 }

@@ -126,12 +126,10 @@ export const hookManagerTool: MCPToolDefinition = {
             const eventName = validateDataField<HookEvent>(data, 'eventName', 'string', 'PreToolUse')
             const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', 0)
 
-            const hook = await claudeHookService.getHook(project.path, eventName, matcherIndex.toString())
+            const hook = await claudeHookService.getHook(project.path, eventName, matcherIndex)
             if (!hook) {
               throw createMCPError(MCPErrorCode.RESOURCE_NOT_FOUND, `Hook not found: ${eventName}[${matcherIndex}]`, {
-                projectId: validProjectId,
-                event: eventName,
-                matcherIndex
+                projectId: validProjectId
               })
             }
             const details = `Hook Details:
@@ -167,7 +165,10 @@ Command: ${hook.command}`
             const eventName = validateDataField<HookEvent>(data, 'eventName', 'string', 'PreToolUse')
             const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', 0)
 
-            const updateData: UpdateHookConfigBody = {}
+            const updateData: UpdateHookConfigBody = {
+              event: eventName,
+              matcherIndex
+            }
             if (data.matcher !== undefined) updateData.matcher = data.matcher
             if (data.command !== undefined) updateData.command = data.command
             if (data.timeout !== undefined) updateData.timeout = data.timeout
@@ -175,7 +176,7 @@ Command: ${hook.command}`
             const updatedHook = await claudeHookService.updateHook(project.path, eventName, matcherIndex, updateData)
             return {
               content: [
-                { type: 'text', text: `Hook updated successfully: ${updatedHook.event} at index ${matcherIndex}` }
+                { type: 'text', text: `Hook updated successfully: ${updatedHook?.event || eventName} at index ${matcherIndex}` }
               ]
             }
           }
@@ -197,11 +198,8 @@ Command: ${hook.command}`
             const generatedHook = await claudeHookService.generateHookFromDescription(description, context)
             const details = `Generated Hook:
 Event: ${generatedHook.event}
-Matcher Type: ${generatedHook.matcherType || 'Not specified'}
 Matcher: ${generatedHook.matcher}
 Command: ${generatedHook.command}
-Message: ${generatedHook.message || 'None'}
-Allow: ${generatedHook.allow !== undefined ? generatedHook.allow : 'Not specified'}
 
 To create this hook, use:
 action: "create"
@@ -219,12 +217,10 @@ data: ${JSON.stringify({ level: 'project', ...generatedHook }, null, 2)}`
 
             const testRequest: HookTestRequest = {
               event,
-              hookConfig: {
-                matcher,
-                command,
-                message: data.message,
-                allow: data.allow
-              },
+              event,
+              matcher,
+              command,
+              timeout: data.timeout,
               testData
             }
 

@@ -105,7 +105,7 @@ export const websiteDemoRunnerTool: MCPToolDefinition = {
           case WebsiteDemoRunnerAction.RUN_SCENARIO: {
             const scenarioId = validateDataField<string>(data, 'scenarioId', 'string', '"getting-started"')
             const step = data?.step || 1
-            const scenario = scenarios[scenarioId]
+            const scenario = scenarios[scenarioId as keyof typeof scenarios]
             if (!scenario) {
               throw createMCPError(MCPErrorCode.INVALID_PARAMS, `Unknown scenario: ${scenarioId}`)
             }

@@ -63,11 +63,16 @@ import {
   BatchTestProviderRequestSchema,
   BatchTestProviderApiResponseSchema as BatchTestProviderResponseSchemaZ,
   ProviderHealthStatusListResponseSchema as ProviderHealthStatusListResponseSchemaZ,
+  ValidateCustomProviderRequestSchema,
+  ValidateCustomProviderResponseSchema,
   type TestProviderRequest,
   type TestProviderResponse,
   type BatchTestProviderRequest,
   type BatchTestProviderResponse,
-  type ProviderHealthStatus
+  type ProviderHealthStatus,
+  type ValidateCustomProviderRequest,
+  type CustomProviderFeatures,
+  type ProviderModel
 } from '@promptliano/schemas'
 
 import {
@@ -1491,6 +1496,19 @@ export class ProviderKeyService extends BaseApiClient {
     })
     return result
   }
+
+  async validateCustomProvider(data: ValidateCustomProviderRequest) {
+    const validatedData = this.validateBody(ValidateCustomProviderRequestSchema, data)
+    const result = await this.request('POST', '/api/keys/validate-custom', {
+      body: validatedData,
+      responseSchema: ValidateCustomProviderResponseSchema
+    })
+    return result as DataResponseSchema<{
+      compatible: boolean
+      models: ProviderModel[]
+      features: CustomProviderFeatures
+    }>
+  }
 }
 
 // Gen AI Service
@@ -1512,6 +1530,21 @@ export class GenAiService extends BaseApiClient {
       timeout: options?.timeout // Pass custom timeout if provided
     })
     return result as { success: true; data: { output: any } }
+  }
+
+  async getProviders() {
+    const result = await this.request('GET', '/providers', {
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          isCustom: z.boolean().optional(),
+          baseUrl: z.string().optional()
+        }))
+      })
+    })
+    return result as { success: true; data: Array<{ id: string; name: string; isCustom?: boolean; baseUrl?: string }> }
   }
 
   async getModels(provider: string, options?: { ollamaUrl?: string; lmstudioUrl?: string }) {

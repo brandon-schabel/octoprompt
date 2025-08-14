@@ -10,6 +10,7 @@ import {
 import { toPosixPath } from '@promptliano/services'
 import { ClaudeCommandParser } from '@promptliano/services'
 import { SecurePathValidator } from '@promptliano/shared'
+import { ensureString, ensureNumber, toNumber } from '@promptliano/shared/src/utils/sqlite-converters'
 import { homedir } from 'os'
 
 // Storage schema for commands (indexed by command key)
@@ -124,21 +125,27 @@ export const claudeCommandStorage = {
               // Generate command key
               const key = this.generateCommandKey(commandName, namespace, scope)
 
-              // Create command object
-              const command: ClaudeCommand = {
-                id: stats.birthtime.getTime(),
-                name: commandName,
-                namespace,
-                scope,
-                description: parseResult.frontmatter.description,
+              // Create preliminary command object with conversion utilities
+              const preliminary: Partial<ClaudeCommand> = {
+                id: ensureNumber(stats.birthtime.getTime()),
+                name: ensureString(commandName),
+                namespace: namespace || undefined,
+                scope: scope,
+                description: ensureString(parseResult.frontmatter.description || ''),
                 filePath: toPosixPath(entryPath),
-                content: parseResult.body,
-                frontmatter: parseResult.frontmatter,
-                created: stats.birthtime.getTime(),
-                updated: stats.mtime.getTime()
+                content: ensureString(parseResult.body || ''),
+                frontmatter: parseResult.frontmatter as any,
+                created: ensureNumber(stats.birthtime.getTime()),
+                updated: ensureNumber(stats.mtime.getTime())
               }
 
-              commands[key] = command
+              // Validate with schema for stronger type safety
+              const validation = await ClaudeCommandSchema.safeParseAsync(preliminary)
+              if (!validation.success) {
+                console.error(`Validation failed for command ${commandName}:`, validation.error.issues)
+              } else {
+                commands[key] = validation.data
+              }
             } catch (error) {
               console.error(`Error parsing command file ${entryPath}:`, error)
             }
@@ -279,18 +286,24 @@ export const claudeCommandStorage = {
 
     // Return the created command
     const stats = await fs.stat(filePath)
-    return {
-      id: stats.birthtime.getTime(),
-      name: commandName,
-      namespace,
+    const preliminary: Partial<ClaudeCommand> = {
+      id: ensureNumber(stats.birthtime.getTime()),
+      name: ensureString(commandName),
+      namespace: namespace || undefined,
       scope,
-      description: frontmatter.description,
+      description: ensureString(frontmatter.description || ''),
       filePath: toPosixPath(filePath),
-      content,
-      frontmatter,
-      created: stats.birthtime.getTime(),
-      updated: stats.mtime.getTime()
+      content: ensureString(content),
+      frontmatter: frontmatter as any,
+      created: ensureNumber(stats.birthtime.getTime()),
+      updated: ensureNumber(stats.mtime.getTime())
     }
+
+    const validation = await ClaudeCommandSchema.safeParseAsync(preliminary)
+    if (!validation.success) {
+      throw new Error(`Validation failed for command ${commandName}: ${validation.error.message}`)
+    }
+    return validation.data
   },
 
   /** Generate command markdown content with frontmatter */

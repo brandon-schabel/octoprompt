@@ -68,7 +68,7 @@ export class AgentFileDetectionService {
         // Extract YAML configuration if present
         const metadata: Record<string, any> = {}
         const modelMatch = content.match(/model:\s*(.+)/)
-        if (modelMatch) metadata.model = modelMatch[1].trim()
+        if (modelMatch && modelMatch[1]) metadata.model = modelMatch[1].trim()
         return metadata
       }
     },
@@ -257,7 +257,7 @@ export class AgentFileDetectionService {
       .filter((pattern) => !existingTypes.has(pattern.type))
       .map((pattern) => ({
         ...pattern,
-        suggestedPath: path.join(projectPath, pattern.patterns.project[0])
+        suggestedPath: path.join(projectPath, pattern.patterns.project[0] || '')
       }))
   }
 

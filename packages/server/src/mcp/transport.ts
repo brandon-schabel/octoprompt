@@ -1005,10 +1005,13 @@ async function handlePOSTRequest(c: Context): Promise<Response> {
     let responseSessionId = sessionId
 
     // Check if this was an initialize response with a new session
-    if (responses.length === 1 && responses[0].result?._meta?.sessionId) {
-      responseSessionId = responses[0].result._meta.sessionId
+    const firstResponse = responses[0]
+    if (responses.length === 1 && firstResponse?.result?._meta?.sessionId) {
+      responseSessionId = firstResponse.result._meta.sessionId
       // Remove _meta from the actual response
-      delete responses[0].result._meta
+      if (firstResponse.result._meta) {
+        delete firstResponse.result._meta
+      }
     }
 
     const headers: Record<string, string> = {

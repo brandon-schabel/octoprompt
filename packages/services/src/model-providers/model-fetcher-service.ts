@@ -360,6 +360,33 @@ export class ModelFetcherService {
     }))
   }
 
+  async listCustomProviderModels({ baseUrl, apiKey }: { baseUrl: string; apiKey: string }): Promise<UnifiedModel[]> {
+    // Ensure baseUrl has /v1 for OpenAI compatibility
+    let normalizedUrl = baseUrl
+    if (!normalizedUrl.endsWith('/v1')) {
+      normalizedUrl = normalizedUrl.replace(/\/$/, '') + '/v1'
+    }
+
+    const response = await fetch(`${normalizedUrl}/models`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Custom provider error: ${response.statusText} - ${errorText}`)
+    }
+
+    const data = (await response.json()) as { data: any[] }
+    return data.data.map((m) => ({
+      id: m.id,
+      name: m.name || m.id,
+      description: m.description || `Custom model: ${m.id}`
+    }))
+  }
+
   async listModels(
     provider: APIProviders,
     { ollamaBaseUrl, lmstudioBaseUrl }: ListModelsOptions = {}

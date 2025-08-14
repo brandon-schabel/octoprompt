@@ -14,9 +14,11 @@ import {
   ProviderHealthStatusEnum
 } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
+import { logger } from './utils/logger'
 import { z } from '@hono/zod-openapi'
 import { normalizeToUnixMs } from '@promptliano/shared'
 import { encryptKey, decryptKey, isEncrypted, type EncryptedData } from '@promptliano/shared/src/utils/crypto'
+import { getProviderTimeout, createProviderTimeout } from './utils/provider-timeouts'
 
 // The mapDbRowToProviderKey function is no longer needed as we store objects directly
 // that should conform to the ProviderKey schema.
@@ -38,9 +40,10 @@ export function createProviderKeyService() {
     // If this new key is set to default, unset other defaults for the same provider
     if (data.isDefault) {
       for (const keyId in allKeys) {
-        if (allKeys[keyId].provider === data.provider && allKeys[keyId].isDefault) {
-          allKeys[keyId].isDefault = false
-          allKeys[keyId].updated = now
+        const key = allKeys[keyId]
+        if (key && key.provider === data.provider && key.isDefault) {
+          key.isDefault = false
+          key.updated = now
         }
       }
     }
@@ -69,7 +72,14 @@ export function createProviderKeyService() {
       iv: encryptedData.iv,
       tag: encryptedData.tag,
       salt: encryptedData.salt,
+      baseUrl: data.baseUrl, // Custom provider base URL
+      customHeaders: data.customHeaders, // Custom provider headers
       isDefault: data.isDefault ?? false,
+      isActive: data.isActive ?? true,
+      environment: data.environment ?? 'production',
+      description: data.description,
+      expiresAt: data.expiresAt,
+      lastUsed: data.lastUsed,
       created: now,
       updated: now
     }
@@ -139,8 +149,17 @@ export function createProviderKeyService() {
             })
             return { ...key, key: decryptedKey }
           } catch (error) {
-            console.error(`Failed to decrypt key ${key.id}:`, error)
-            return key // Return with encrypted key on error
+            logger.error(`Failed to decrypt key ${key.id}`, { 
+              error, 
+              keyId: key.id,
+              provider: key.provider 
+            })
+            throw new ApiError(
+              500, 
+              'Failed to decrypt provider key', 
+              'DECRYPTION_FAILED',
+              { keyId: key.id }
+            )
           }
         }
         return key
@@ -156,6 +175,22 @@ export function createProviderKeyService() {
       return 0
     })
     return keyList
+  }
+
+  /**
+   * Get all custom providers as distinct provider options
+   * Each custom provider will have a unique ID like "custom_<keyId>"
+   */
+  async function getCustomProviders(): Promise<Array<{ id: string; name: string; baseUrl?: string; keyId: number }>> {
+    const allKeys = await listKeysUncensored()
+    const customKeys = allKeys.filter(key => key.provider === 'custom' && key.baseUrl)
+    
+    return customKeys.map(key => ({
+      id: `custom_${key.id}`,
+      name: key.name || 'Custom Provider',
+      baseUrl: key.baseUrl,
+      keyId: key.id
+    }))
   }
 
   async function getKeyById(id: number): Promise<ProviderKey | null> {
@@ -198,13 +233,10 @@ export function createProviderKeyService() {
     // If this key is being set to default, unset other defaults for the same provider
     if (data.isDefault === true && existingKey.provider === (data.provider ?? existingKey.provider)) {
       for (const keyId in allKeys) {
-        if (
-          allKeys[keyId].id !== id &&
-          allKeys[keyId].provider === (data.provider ?? existingKey.provider) &&
-          allKeys[keyId].isDefault
-        ) {
-          allKeys[keyId].isDefault = false
-          allKeys[keyId].updated = now
+        const key = allKeys[keyId]
+        if (key && key.id !== id && key.provider === (data.provider ?? existingKey.provider) && key.isDefault) {
+          key.isDefault = false
+          key.updated = now
         }
       }
     }
@@ -213,6 +245,8 @@ export function createProviderKeyService() {
       ...existingKey,
       name: data.name ?? existingKey.name,
       provider: data.provider ?? existingKey.provider,
+      baseUrl: data.baseUrl !== undefined ? data.baseUrl : existingKey.baseUrl,
+      customHeaders: data.customHeaders !== undefined ? data.customHeaders : existingKey.customHeaders,
       isDefault: data.isDefault !== undefined ? data.isDefault : existingKey.isDefault,
       updated: now
     }
@@ -391,9 +425,9 @@ export function createProviderKeyService() {
           // Return cached/estimated health status based on key data
           healthStatuses.push({
             provider,
-            status: key.isActive ? 'healthy' : 'unknown',
-            lastChecked: key.lastUsed || key.updated,
-            uptime: key.isActive ? 99.8 : 0, // Estimated uptime
+            status: (key.isActive ?? true) ? 'healthy' : 'unknown',
+            lastChecked: key.lastUsed ?? key.updated,
+            uptime: (key.isActive ?? true) ? 99.8 : 0, // Estimated uptime
             averageResponseTime: 1000, // Default estimate
             modelCount: 0 // Unknown without fresh check
           })
@@ -418,11 +452,17 @@ export function createProviderKeyService() {
    * Internal helper function to perform the actual provider test
    */
   async function performProviderTest(request: TestProviderRequest): Promise<{ models: ProviderModel[] }> {
-    const { provider, apiKey, url, timeout = 10000 } = request
+    const { provider, apiKey, url } = request
+    
+    // Use provider-specific timeout, or fallback to request timeout if specified
+    const providerTimeout = getProviderTimeout(provider, 'validation')
+    const timeout = request.timeout || providerTimeout
 
     // Create fetch with timeout
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeout)
+    
+    logger.info(`Testing provider ${provider} with timeout ${timeout}ms`)
 
     try {
       let response: Response
@@ -506,6 +546,43 @@ export function createProviderKeyService() {
             })) || []
           break
 
+        case 'custom': {
+          // Test custom OpenAI-compatible provider
+          if (!url) {
+            throw new ApiError(400, 'Base URL required for custom provider', 'MISSING_BASE_URL')
+          }
+          if (!apiKey) {
+            throw new ApiError(400, 'API key required for custom provider', 'MISSING_API_KEY')
+          }
+          
+          // Test with OpenAI-compatible /v1/models endpoint
+          const customUrl = url.endsWith('/v1') ? url : `${url.replace(/\/$/, '')}/v1`
+          response = await fetch(`${customUrl}/models`, {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            signal: controller.signal
+          })
+          
+          if (!response.ok) {
+            throw new ApiError(
+              response.status,
+              `Custom provider API error: ${response.statusText}`,
+              'CUSTOM_PROVIDER_ERROR'
+            )
+          }
+          
+          const customData = await response.json()
+          models =
+            customData.data?.map((model: any) => ({
+              id: model.id,
+              name: model.id || model.name,
+              description: `Custom provider model: ${model.id || model.name}`
+            })) || []
+          break
+        }
+
         case 'lmstudio':
           const lmstudioUrl = url || 'http://localhost:1234'
           response = await fetch(`${lmstudioUrl}/v1/models`, {
@@ -541,6 +618,7 @@ export function createProviderKeyService() {
     createKey,
     listKeysCensoredKeys,
     listKeysUncensored,
+    getCustomProviders,
     getKeyById,
     updateKey,
     deleteKey,

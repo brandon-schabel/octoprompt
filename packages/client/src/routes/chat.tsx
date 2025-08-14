@@ -98,8 +98,8 @@ export function ModelSettingsPopover() {
     }
   }
 
-  const handleProviderChange = (value: APIProviders) => {
-    setProvider(value)
+  const handleProviderChange = (value: string) => {
+    setProvider(value as APIProviders)
   }
 
   const handleModelChange = (value: string) => {

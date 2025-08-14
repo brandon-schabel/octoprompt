@@ -296,3 +296,28 @@ export type FileResponse = z.infer<typeof FileResponseSchema>
 export type ProjectStatistics = z.infer<typeof ProjectStatisticsSchema>
 export type ProjectStatisticsResponse = z.infer<typeof ProjectStatisticsResponseSchema>
 export type ProjectSummaryResponse = z.infer<typeof ProjectSummaryResponseSchema>
+
+// Sync Progress Schemas
+export const SyncProgressEventSchema = z
+  .object({
+    phase: z.enum(['initializing', 'scanning', 'processing', 'indexing', 'finalizing', 'complete', 'error']),
+    totalFiles: z.number(),
+    processedFiles: z.number(),
+    currentFile: z.string().optional(),
+    message: z.string(),
+    percentage: z.number(),
+    estimatedTimeRemaining: z.number().optional(),
+    speed: z.number().optional(), // files per second
+    error: z.any().optional()
+  })
+  .openapi('SyncProgressEvent')
+
+export const SyncProgressStreamResponseSchema = z
+  .object({
+    type: z.literal('progress'),
+    data: SyncProgressEventSchema
+  })
+  .openapi('SyncProgressStreamResponse')
+
+export type SyncProgressEvent = z.infer<typeof SyncProgressEventSchema>
+export type SyncProgressStreamResponse = z.infer<typeof SyncProgressStreamResponseSchema>

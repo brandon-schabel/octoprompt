@@ -63,13 +63,17 @@ export class FileGroupingService {
       if (dirFiles.length > 1) {
         for (let i = 0; i < dirFiles.length; i++) {
           for (let j = i + 1; j < dirFiles.length; j++) {
-            edges.push({
-              sourceFileId: dirFiles[i].id,
-              targetFileId: dirFiles[j].id,
-              type: FileRelationshipTypeEnum.enum.sibling,
-              strength: 0.5,
-              metadata: { directory: dirFiles[i].path.substring(0, dirFiles[i].path.lastIndexOf('/')) }
-            })
+            const file1 = dirFiles[i]
+            const file2 = dirFiles[j]
+            if (file1 && file2) {
+              edges.push({
+                sourceFileId: file1.id,
+                targetFileId: file2.id,
+                type: FileRelationshipTypeEnum.enum.sibling,
+                strength: 0.5,
+                metadata: { directory: file1.path.substring(0, file1.path.lastIndexOf('/')) }
+              })
+            }
           }
         }
       }
@@ -80,6 +84,9 @@ export class FileGroupingService {
       for (let j = i + 1; j < files.length; j++) {
         const file1 = files[i]
         const file2 = files[j]
+
+        // Skip if files are undefined (shouldn't happen but TypeScript is strict)
+        if (!file1 || !file2) continue
 
         // Skip if already have a stronger relationship
         const existingRelation = edges.find(
@@ -488,6 +495,10 @@ export class FileGroupingService {
 
     while (i < groups.length) {
       const currentGroup = groups[i]
+      if (!currentGroup) {
+        i++
+        continue
+      }
 
       if (!currentGroup.estimatedTokens || currentGroup.estimatedTokens >= tokenLimit * 0.7) {
         // Group is already large enough
@@ -502,6 +513,10 @@ export class FileGroupingService {
 
       while (j < groups.length && (mergedGroup.estimatedTokens || 0) < tokenLimit * 0.7) {
         const candidateGroup = groups[j]
+        if (!candidateGroup) {
+          j++
+          continue
+        }
 
         // Check if groups are compatible (same strategy or mixed)
         if (

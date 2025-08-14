@@ -91,12 +91,12 @@ export function mapProviderErrorToApiError(error: any, provider: string, operati
 
     return new ApiError(
       400,
-      `Context length exceeded for ${provider}. ${tokenMatch ? `Requested: ${tokenMatch[1]} tokens.` : ''} ${maxMatch ? `Maximum: ${maxMatch[1]} tokens.` : ''}`,
+      `Context length exceeded for ${provider}. ${tokenMatch && tokenMatch[1] ? `Requested: ${tokenMatch[1]} tokens.` : ''} ${maxMatch && maxMatch[1] ? `Maximum: ${maxMatch[1]} tokens.` : ''}`,
       'CONTEXT_LENGTH_EXCEEDED',
       {
         provider,
-        requestedTokens: tokenMatch ? parseInt(tokenMatch[1]) : undefined,
-        maxTokens: maxMatch ? parseInt(maxMatch[1]) : undefined,
+        requestedTokens: tokenMatch && tokenMatch[1] ? parseInt(tokenMatch[1]) : undefined,
+        maxTokens: maxMatch && maxMatch[1] ? parseInt(maxMatch[1]) : undefined,
         originalError: details.message
       }
     )
@@ -127,7 +127,7 @@ export function mapProviderErrorToApiError(error: any, provider: string, operati
     )
   }
 
-  if (details.code >= 500 || details.retryable) {
+  if ((typeof details.code === 'number' && details.code >= 500) || details.retryable) {
     return new ApiError(503, `${provider} service temporarily unavailable. Please try again.`, 'PROVIDER_UNAVAILABLE', {
       provider,
       retryable: true,

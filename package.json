@@ -1,7 +1,7 @@
 {
   "name": "promptliano-core",
   "module": "index.ts",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
@@ -25,6 +25,14 @@
     "test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client && bun run test:config",
     "test:queue": "cd packages/services && bun test src/queue-*.test.ts --timeout 10000",
     "test:queue:e2e": "bun run test-queue-system.ts",
+    "test:local-models": "LMSTUDIO_BASE_URL=http://192.168.1.38:1234 bun test --timeout 30000 packages/services/src/tests/*.test.ts",
+    "test:summarization": "bun test packages/services/src/tests/file-summarization.test.ts",
+    "test:ai-integration": "LMSTUDIO_BASE_URL=http://192.168.1.38:1234 bun test:local-models",
+    "docs:generate": "./scripts/generate-docs.sh",
+    "docs:clean": "./scripts/generate-docs.sh --clean",
+    "docs:serve": "./scripts/generate-docs.sh --serve",
+    "docs:markdown": "./scripts/generate-docs.sh --markdown",
+    "test:ai-e2e": "bun test packages/services/src/tests/e2e/summarization-workflow.test.ts --timeout 90000",
     "typecheck": "bun run typecheck:server && bun run typecheck:shared && bun run typecheck:schemas && bun run typecheck:services && bun run typecheck:storage && bun run typecheck:api-client && bun run typecheck:config && bun run typecheck:client && bun run typecheck:website",
     "typecheck:server": "cd packages/server && bun run typecheck",
     "typecheck:shared": "cd packages/shared && bun run typecheck",
@@ -69,6 +77,10 @@
     "bun-types": "latest",
     "esbuild": "^0.25.8",
     "prettier": "^3.5.3",
+    "typedoc": "^0.28.10",
+    "typedoc-plugin-markdown": "^4.8.1",
+    "typedoc-plugin-mermaid": "^1.12.0",
+    "typedoc-plugin-missing-exports": "^4.1.0",
     "typescript": "^5.8.3"
   },
   "dependencies": {

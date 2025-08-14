@@ -10,6 +10,7 @@ export type APIProviders =
   | 'together'
   | 'lmstudio'
   | 'ollama'
+  | 'custom'
 
 export interface ModelOptions {
   frequencyPenalty?: number
@@ -54,6 +55,10 @@ export interface ProviderConfig {
   lmstudio: {
     baseURL: string
   }
+  custom?: {
+    baseURL?: string
+    headers?: Record<string, string>
+  }
 }
 
 export interface FilesConfig {
@@ -62,6 +67,10 @@ export interface FilesConfig {
   maxFileSizeForSummary: number
   maxTokensForSummary: number
   charsPerTokenEstimate: number
+  optimalTokensForBatch?: number
+  promptOverheadTokens?: number
+  responseBufferTokens?: number
+  maxFilesPerBatch?: number
 }
 
 export interface CorsConfig {

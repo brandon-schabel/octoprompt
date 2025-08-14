@@ -46,9 +46,8 @@ export function countTotalFiles(root: Record<string, FileNode>): number {
 export function collectFiles(node: FileNode): number[] {
   let ids: number[] = []
   if (node._folder && node.children) {
-    for (const key of Object.keys(node.children)) {
-      // @ts-expect-error - key is a number
-      ids = ids.concat(collectFiles(node.children[key]))
+    for (const childNode of Object.values(node.children)) {
+      ids = ids.concat(collectFiles(childNode))
     }
   } else if (node.file?.id) {
     ids.push(node.file.id)

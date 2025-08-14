@@ -1,6 +1,6 @@
 {
   "name": "@promptliano/ui",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "React component library for Promptliano with shadcn/ui components",
   "author": "Promptliano",
   "license": "MIT",
@@ -60,7 +60,12 @@
     "prepublishOnly": "bun run test:build && bun run build",
     "test:build": "bun run typecheck",
     "size": "bun run build && du -sh dist/*",
-    "pack:dry": "npm pack --dry-run"
+    "pack:dry": "npm pack --dry-run",
+    "docs:generate": "typedoc",
+    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api-markdown",
+    "docs:watch": "typedoc --watch",
+    "docs:serve": "npx serve docs/api",
+    "docs:clean": "rm -rf docs/api docs/api-markdown"
   },
   "publishConfig": {
     "access": "public",

@@ -4,6 +4,14 @@ import { ChatSchema, ChatMessageSchema, type Chat, type ChatMessage } from '@pro
 import { normalizeToUnixMs } from '@promptliano/shared/src/utils/parse-timestamp'
 import { DatabaseManager, getDb } from './database-manager'
 import { ApiError } from '@promptliano/shared'
+import {
+  toNumber,
+  toString,
+  toArray,
+  fromArray,
+  fromJson,
+  SqliteConverters
+} from '@promptliano/shared/src/utils/sqlite-converters'
 
 // Table names for database storage
 const CHATS_TABLE = 'chats'
@@ -27,24 +35,17 @@ async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: s
   const validationResult = await schema.safeParseAsync(data)
   if (!validationResult.success) {
     console.error(`Zod validation failed for ${context}:`, validationResult.error.errors)
-    throw new ApiError(400, `Validation failed for ${context}`, JSON.stringify(validationResult.error.errors))
+    throw new ApiError(
+      400,
+      `Validation failed for ${context}`,
+      fromJson(validationResult.error.errors) ?? 'VALIDATION_ERROR'
+    )
   }
   return validationResult.data
 }
 
-/**
- * Safely parse JSON with fallback value and error logging.
- */
-function safeJsonParse<T>(json: string | null | undefined, fallback: T, context?: string): T {
-  if (!json) return fallback
-
-  try {
-    return JSON.parse(json)
-  } catch (error) {
-    console.warn(`Failed to parse JSON${context ? ` for ${context}` : ''}: ${json}`, error)
-    return fallback
-  }
-}
+// Note: Now using centralized SqliteConverters instead of local helper functions
+// The toArray function from SqliteConverters provides consistent JSON array parsing
 
 // --- Specific Data Accessors ---
 
@@ -79,8 +80,8 @@ class ChatStorage {
           id: row.id,
           title: row.title,
           projectId: row.project_id || undefined,
-          created: Number(row.created_at),
-          updated: Number(row.updated_at)
+          created: toNumber(row.created_at),
+          updated: toNumber(row.updated_at)
         }
 
         // Validate each chat
@@ -189,9 +190,9 @@ class ChatStorage {
           role: row.role,
           content: row.content,
           type: row.type || undefined,
-          attachments: safeJsonParse(row.attachments, [], 'message.attachments'),
-          created: Number(row.created_at),
-          updated: Number(row.updated_at)
+          attachments: toArray(row.attachments, [], 'message.attachments'),
+          created: toNumber(row.created_at),
+          updated: toNumber(row.updated_at)
         }
 
         // Validate each message
@@ -247,7 +248,7 @@ class ChatStorage {
             message.role,
             message.content,
             message.type || null,
-            JSON.stringify(message.attachments || []),
+            fromArray(message.attachments),
             message.created,
             message.updated
           )
@@ -316,8 +317,8 @@ class ChatStorage {
           id: row.id,
           title: row.title,
           projectId: row.project_id || undefined,
-          created: Number(row.created_at),
-          updated: Number(row.updated_at)
+          created: toNumber(row.created_at),
+          updated: toNumber(row.updated_at)
         }
         const validated = (await validateData(chat, ChatSchema, `chat ${chat.id}`)) as Chat
         validatedChats.push(validated)
@@ -375,7 +376,7 @@ class ChatStorage {
         role: row.role,
         content: row.content,
         type: row.type || undefined,
-        attachments: safeJsonParse(row.attachments, [], 'message.attachments'),
+        attachments: toArray(row.attachments, [], 'message.attachments'),
         created: row.created_at,
         updated: row.updated_at
       }
@@ -410,7 +411,7 @@ class ChatStorage {
         validatedMessage.role,
         validatedMessage.content,
         validatedMessage.type || null,
-        JSON.stringify(validatedMessage.attachments || []),
+        fromArray(validatedMessage.attachments),
         validatedMessage.created,
         validatedMessage.updated
       )
@@ -442,7 +443,7 @@ class ChatStorage {
         validatedMessage.role,
         validatedMessage.content,
         validatedMessage.type || null,
-        JSON.stringify(validatedMessage.attachments || []),
+        fromArray(validatedMessage.attachments),
         validatedMessage.updated,
         messageId
       )

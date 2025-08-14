@@ -179,7 +179,10 @@ ${result.summary}`
               includeImports: true,
               includeExports: true,
               progressive: false,
-              includeMetrics: true
+              includeMetrics: true,
+              groupAware: false,
+              includeRelationships: true,
+              contextWindow: 3
             })
 
             if (!result.metrics) {
@@ -240,7 +243,7 @@ Version Info:
 
               files.forEach((file) => {
                 const parts = file.path.split('/')
-                if (parts.length > 1) {
+                if (parts.length > 1 && parts[0]) {
                   dirs.add(parts[0])
                 } else {
                   rootFiles.push(file.path)
@@ -283,15 +286,16 @@ Version Info:
             if (!file) {
               // Provide helpful error with available files hint
               const availablePaths = files.slice(0, 5).map((f) => f.path)
-              throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, {
-                requestedPath: filePath,
-                availableFiles: availablePaths,
-                totalFiles: files.length,
-                hint: 'Use browse_files action to explore available files',
-                projectId: validProjectId,
-                tool: 'project_manager',
-                value: filePath
-              })
+              throw createMCPError(
+                MCPErrorCode.FILE_NOT_FOUND,
+                `File not found: ${filePath}. Available files: ${availablePaths.join(', ')} (${files.length} total files). Use browse_files action to explore available files`,
+                {
+                  requestedPath: filePath,
+                  projectId: validProjectId,
+                  tool: 'project_manager',
+                  value: filePath
+                }
+              )
             }
 
             // Check if it's an image file
@@ -337,14 +341,16 @@ Version Info:
             const file = files.find((f) => f.path === filePath)
             if (!file) {
               const availablePaths = files.slice(0, 5).map((f) => f.path)
-              throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, {
-                requestedPath: filePath,
-                availableFiles: availablePaths,
-                totalFiles: files.length,
-                projectId: validProjectId,
-                tool: 'project_manager',
-                value: filePath
-              })
+              throw createMCPError(
+                MCPErrorCode.FILE_NOT_FOUND,
+                `File not found: ${filePath}. Available files: ${availablePaths.join(', ')} (${files.length} total files)`,
+                {
+                  requestedPath: filePath,
+                  projectId: validProjectId,
+                  tool: 'project_manager',
+                  value: filePath
+                }
+              )
             }
 
             await updateFileContent(validProjectId, file.id, content)
@@ -387,7 +393,7 @@ Version Info:
             let fileList = ''
             if (tabMetadata.selectedFiles && tabMetadata.selectedFiles.length > 0) {
               const files = await getProjectFiles(validProjectId)
-              const selectedFileDetails = files?.filter((f) => tabMetadata.selectedFiles.includes(f.id)) || []
+              const selectedFileDetails = files?.filter((f) => tabMetadata.selectedFiles?.includes(f.id)) || []
               fileList = selectedFileDetails.map((f) => `  - ${f.path} (${f.size} bytes)`).join('\n')
             }
 
@@ -413,7 +419,7 @@ Version Info:
 
             contextText += `\n\nUI State:`
             contextText += `\n  Prompts panel: ${tabMetadata.promptsPanelCollapsed ? 'collapsed' : 'expanded'}`
-            contextText += `\n  Tickets panel: ${tabMetadata.ticketsPanelCollapsed ? 'collapsed' : 'expanded'}`
+            contextText += `\n  Selected files panel: ${tabMetadata.selectedFilesCollapsed ? 'collapsed' : 'expanded'}`
 
             return {
               content: [{ type: 'text', text: contextText }]
@@ -439,7 +445,7 @@ Version Info:
             let resultText = `Search results for "${query}":\n\n`
             results.forEach((result, index) => {
               resultText += `${index + 1}. ${result.file.path} (score: ${result.score.toFixed(2)})\n`
-              result.matches.forEach((match) => {
+              result.matches.forEach((match: { lineNumber: number; line: string }) => {
                 resultText += `   Line ${match.lineNumber}: ${match.line.trim()}\n`
               })
               resultText += '\n'
@@ -455,10 +461,9 @@ Version Info:
             const filePath = validateDataField<string>(data, 'path', 'string', '"src/new-file.ts"')
             const content = (data?.content as string) || ''
 
-            // First sync to ensure we have latest files
-            await syncProject(validProjectId)
-
+            // First get project and sync to ensure we have latest files
             const project = await getProjectById(validProjectId)
+            await syncProject(project)
             const fullPath = path.join(project.path, filePath)
 
             // Create directory if it doesn't exist
@@ -469,7 +474,7 @@ Version Info:
             await fs.writeFile(fullPath, content, 'utf-8')
 
             // Sync again to pick up the new file
-            await syncProject(validProjectId)
+            await syncProject(project)
 
             return {
               content: [{ type: 'text', text: `File created: ${filePath}` }]
@@ -531,7 +536,7 @@ Version Info:
             try {
               await fs.unlink(fullPath)
               // Sync to update the file list
-              await syncProject(validProjectId)
+              await syncProject(project)
               return {
                 content: [{ type: 'text', text: `File deleted: ${filePath}` }]
               }
@@ -549,11 +554,7 @@ Version Info:
             const includeHidden = (data?.includeHidden as boolean) || false
             const fileTypes = data?.fileTypes as string[] | undefined
 
-            const tree = await getProjectFileTree(validProjectId, {
-              maxDepth,
-              includeHidden,
-              fileTypes
-            })
+            const tree = await getProjectFileTree(validProjectId)
 
             return {
               content: [{ type: 'text', text: JSON.stringify(tree, null, 2) }]
@@ -581,7 +582,7 @@ Version Info:
             error.code === 'NOT_FOUND' ? MCPErrorCode.FILE_NOT_FOUND : MCPErrorCode.SERVICE_ERROR,
             error.message,
             {
-              statusCode: error.statusCode,
+              statusCode: error.status,
               originalError: error.message
             }
           )

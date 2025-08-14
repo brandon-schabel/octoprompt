@@ -20,6 +20,7 @@ import { SvgPreview } from '@/components/svg-preview'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { ProviderModelSelector, useModelSelection } from '@/components/model-selection'
 import { Separator } from '@promptliano/ui'
+import { APIProviders } from '@promptliano/schemas'
 
 interface AssetGeneratorDialogProps {
   open: boolean
@@ -95,11 +96,16 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
   const [isGenerating, setIsGenerating] = useState(false)
 
   // Model selection state
-  const { provider, model, setProvider, setModel } = useModelSelection({
+  const { provider, model, setProvider: setProviderBase, setModel } = useModelSelection({
     persistenceKey: 'asset-generator-model',
     defaultProvider: 'openai',
     defaultModel: 'gpt-4o'
   })
+
+  // Wrapper to handle string | APIProviders type
+  const setProvider = (newProvider: string | APIProviders) => {
+    setProviderBase(newProvider as APIProviders)
+  }
 
   const { copyToClipboard } = useCopyClipboard()
   // Use extended timeout (3 minutes) for asset generation which can take longer with many tokens

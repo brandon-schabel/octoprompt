@@ -17,6 +17,7 @@ import { mapProviderErrorToApiError } from './error-mappers'
 import { retryOperation } from './utils/bulk-operations'
 import { getProviderUrl } from './provider-settings-service'
 import { LMStudioProvider } from './providers/lmstudio-provider'
+import { mergeHeaders } from './utils/header-sanitizer'
 
 const providersConfig = getProvidersConfig()
 
@@ -31,10 +32,28 @@ const PROVIDER_CAPABILITIES = {
   lmstudio: { structuredOutput: true, useCustomProvider: true }, // Uses custom provider for native json_schema support
   ollama: { structuredOutput: false, useCustomProvider: false }, // Still uses text fallback (TODO: add custom provider)
   xai: { structuredOutput: true, useCustomProvider: false },
-  together: { structuredOutput: true, useCustomProvider: false }
+  together: { structuredOutput: true, useCustomProvider: false },
+  custom: { structuredOutput: true, useCustomProvider: false } // Custom OpenAI-compatible providers
 } as const
 
 let providerKeysCache: ProviderKey[] | null = null
+
+// Helper function to get provider key configuration
+async function getProviderKeyById(provider: string, debug: boolean = false): Promise<ProviderKey | null> {
+  const providerKeyService = createProviderKeyService()
+  const keys = await providerKeyService.listKeysUncensored()
+  
+  // Find the default key for this provider, or the first one
+  const providerKeys = keys.filter(k => k.provider === provider)
+  const defaultKey = providerKeys.find(k => k.isDefault)
+  const key = defaultKey || providerKeys[0]
+  
+  if (debug && key) {
+    console.log(`[UnifiedProviderService] Found provider key for ${provider}: ${key.name}`)
+  }
+  
+  return key || null
+}
 
 export async function handleChatMessage({
   chatId,
@@ -196,7 +215,7 @@ async function getKey(provider: APIProviders, debug: boolean): Promise<string | 
  * Handles API key fetching and local provider configurations.
  */
 async function getProviderLanguageModelInterface(
-  provider: APIProviders,
+  provider: APIProviders | string,
   options: AiSdkOptions = {},
   debug: boolean = false
 ): Promise<LanguageModel> {
@@ -213,6 +232,44 @@ async function getProviderLanguageModelInterface(
 
   if (debug) {
     console.log(`[UnifiedProviderService] Initializing model: Provider=${provider}, ModelID=${modelId}`)
+  }
+
+  // Check if this is a custom provider with format "custom_<keyId>"
+  if (typeof provider === 'string' && provider.startsWith('custom_')) {
+    const keyId = parseInt(provider.replace('custom_', ''), 10)
+    if (!isNaN(keyId)) {
+      // Get the specific custom provider key
+      const providerKeyService = createProviderKeyService()
+      const customKey = await providerKeyService.getKeyById(keyId)
+      if (!customKey || customKey.provider !== 'custom' || !customKey.baseUrl) {
+        throw new ApiError(400, 'Custom provider configuration not found', 'CUSTOM_PROVIDER_NOT_CONFIGURED')
+      }
+      
+      const baseURL = customKey.baseUrl
+      const apiKey = customKey.key
+      
+      if (!apiKey) {
+        throw new ApiError(400, 'API key required for custom provider', 'CUSTOM_PROVIDER_KEY_MISSING')
+      }
+      
+      // Ensure URL is properly formatted for OpenAI compatibility
+      const customUrl = baseURL.endsWith('/v1') ? baseURL : `${baseURL.replace(/\/$/, '')}/v1`
+      
+      if (debug) {
+        console.log(`[UnifiedProviderService] Using custom provider at: ${customUrl}`)
+      }
+      
+      // Prepare headers if any custom headers are defined
+      const customHeaders = customKey.customHeaders || {}
+      
+      // Use OpenAI SDK with custom configuration
+      return createOpenAI({
+        baseURL: customUrl,
+        apiKey,
+        headers: customHeaders,
+        compatibility: 'compatible' // Use compatible mode for flexibility
+      })(modelId)
+    }
   }
 
   switch (provider) {
@@ -278,6 +335,50 @@ async function getProviderLanguageModelInterface(
       const apiKey = await getKey('together', debug)
       if (!apiKey) throw new ApiError(400, 'Together API Key not found in DB.', 'TOGETHER_KEY_MISSING')
       return createOpenAI({ baseURL: 'https://api.together.xyz/v1', apiKey })(modelId)
+    }
+    // --- Custom OpenAI-Compatible Provider ---
+    case 'custom': {
+      // Get the provider key to access custom configuration
+      const customKey = await getProviderKeyById(provider, debug)
+      if (!customKey) {
+        throw new ApiError(400, 'Custom provider configuration not found', 'CUSTOM_PROVIDER_NOT_CONFIGURED')
+      }
+      
+      const baseURL = customKey.baseUrl || options.baseUrl
+      if (!baseURL) {
+        throw new ApiError(400, 'Base URL required for custom provider', 'CUSTOM_PROVIDER_URL_MISSING')
+      }
+      
+      const apiKey = await getKey('custom', debug)
+      if (!apiKey) {
+        throw new ApiError(400, 'API key required for custom provider', 'CUSTOM_PROVIDER_KEY_MISSING')
+      }
+      
+      // Ensure URL is properly formatted for OpenAI compatibility
+      const customUrl = baseURL.endsWith('/v1') ? baseURL : `${baseURL.replace(/\/$/, '')}/v1`
+      
+      if (debug) {
+        console.log(`[UnifiedProviderService] Using custom provider at: ${customUrl}`)
+      }
+      
+      // Prepare base headers for API key
+      const baseHeaders = {
+        'Authorization': `Bearer ${apiKey}`
+      }
+      
+      // Merge with sanitized custom headers
+      const sanitizedHeaders = mergeHeaders(baseHeaders, customKey.customHeaders)
+      
+      // Remove the Authorization header since OpenAI SDK handles it separately
+      const { Authorization, ...customHeaders } = sanitizedHeaders
+      
+      // Use OpenAI SDK with custom configuration
+      return createOpenAI({
+        baseURL: customUrl,
+        apiKey,
+        headers: customHeaders,
+        compatibility: 'compatible' // Use compatible mode for flexibility
+      })(modelId)
     }
     // --- Local Providers ---
     case 'ollama': {
@@ -375,7 +476,7 @@ export async function generateSingleText({
         return text
       },
       {
-        maxAttempts: 3,
+        maxRetries: 3,
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateSingleText')
@@ -479,25 +580,38 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
 
     try {
       // Create a prompt that instructs the model to output JSON
-      // Get example structure from the schema
-      const schemaKeys = schema._def.shape ? Object.keys(schema._def.shape) : []
-      const exampleStructure = schemaKeys.reduce((acc: any, key: string) => {
-        const fieldDef = schema._def.shape?.[key]
-        if (fieldDef?._def?.typeName === 'ZodString') {
-          acc[key] = 'string value here'
-        } else if (fieldDef?._def?.typeName === 'ZodNumber') {
-          acc[key] = 0
-        } else if (fieldDef?._def?.typeName === 'ZodBoolean') {
-          acc[key] = false
-        } else if (fieldDef?._def?.typeName === 'ZodArray') {
-          acc[key] = []
-        } else if (fieldDef?._def?.typeName === 'ZodObject') {
-          acc[key] = {}
-        } else {
-          acc[key] = null
+      // Get example structure from the schema using a safer approach
+      const exampleStructure: any = {}
+      try {
+        // Try to parse a minimal example to understand the structure
+        const testObj = schema.safeParse({})
+        if (!testObj.success && testObj.error) {
+          // Extract field names from error messages
+          for (const issue of testObj.error.issues) {
+            if (issue.path.length > 0 && issue.path[0] !== undefined) {
+              const fieldName = issue.path[0].toString()
+              if (issue.code === 'invalid_type') {
+                if (issue.expected === 'string') {
+                  exampleStructure[fieldName] = 'string value here'
+                } else if (issue.expected === 'number') {
+                  exampleStructure[fieldName] = 0
+                } else if (issue.expected === 'boolean') {
+                  exampleStructure[fieldName] = false
+                } else if (issue.expected === 'array') {
+                  exampleStructure[fieldName] = []
+                } else if (issue.expected === 'object') {
+                  exampleStructure[fieldName] = {}
+                } else {
+                  exampleStructure[fieldName] = null
+                }
+              }
+            }
+          }
         }
-        return acc
-      }, {})
+      } catch (e) {
+        // Fallback to empty object if schema introspection fails
+        console.warn('Could not introspect schema for example structure')
+      }
 
       const jsonPrompt = `${systemMessage ? systemMessage + '\n\n' : ''}${prompt}
 
@@ -639,7 +753,7 @@ Start your response with { and end with }`
         return result
       },
       {
-        maxAttempts: 3,
+        maxRetries: 3,
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateStructuredData')

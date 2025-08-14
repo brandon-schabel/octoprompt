@@ -4,6 +4,7 @@ export * from './src/project-statistics-service'
 export * from './src/prompt-service'
 export * from './src/provider-key-service'
 export * from './src/provider-settings-service'
+export * from './src/custom-provider-validator'
 export * from './src/ticket-service'
 export * from './src/queue-service'
 // Explicit re-export to avoid CleanupResult ambiguity with file-sync-service-unified
@@ -67,7 +68,6 @@ export * from './src/utils/compact-file-formatter'
 export * from './src/utils/file-suggestion-utils'
 export * from './src/file-grouping-service'
 export * from './src/file-summarization-tracker'
-export * from './src/enhanced-summarization-service'
 export * from './src/tab-name-generation-service'
 export * from './src/agent-instruction-service'
 export * from './src/agent-file-detection-service'
@@ -113,5 +113,18 @@ export type {
   UpdateHookRequest
 } from '@promptliano/schemas'
 export * from './src/parser-service'
-export * from './src/parsers'
+// Export parsers individually to avoid VSCodeSettings conflicts with mcp-installation-service
+export * from './src/parsers/base-parser'
+export * from './src/parsers/markdown-parser'
+export * from './src/parsers/json-parser'
+export * from './src/parsers/yaml-parser'
+export * from './src/parsers/claude-command-parser'
+export * from './src/parsers/cursor-config-parser'
+// VSCodeConfigParser exports VSCodeSettings which conflicts with mcp-installation-service
+// Export the parser class but use explicit re-export names for conflicting types
+export { VSCodeConfigParser } from './src/parsers/vscode-config-parser'
+export type { VSCodeSettings as ParserVSCodeSettings } from './src/parsers/vscode-config-parser'
+export { VSCodeSettingsSchema as ParserVSCodeSettingsSchema } from './src/parsers/vscode-config-parser'
 export * from './src/markdown-prompt-service'
+
+export * from './src/enhanced-summarization-service'

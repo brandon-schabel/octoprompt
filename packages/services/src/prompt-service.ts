@@ -258,20 +258,21 @@ export async function getPromptProjects(promptId: number): Promise<PromptProject
 }
 
 export async function suggestPrompts(projectId: number, userInput: string, limit: number = 5): Promise<Prompt[]> {
-  try {
-    // Validate input
-    if (!userInput || userInput.trim().length === 0) {
-      throw new ApiError(400, 'User input is required for prompt suggestions', 'USER_INPUT_REQUIRED')
-    }
+  // Validate input
+  if (!userInput || userInput.trim().length === 0) {
+    throw new ApiError(400, 'User input is required for prompt suggestions', 'USER_INPUT_REQUIRED')
+  }
 
-    // Get all prompts for the project
-    let projectPrompts = await listPromptsByProject(projectId)
+  // Get all prompts for the project - moved outside try block for scope
+  let prompts = await listPromptsByProject(projectId)
+
+  try {
     // If no project-specific prompts, fall back to all prompts
-    if (projectPrompts.length === 0) {
+    if (prompts.length === 0) {
       console.log(`No prompts associated with project ${projectId}, using all prompts as fallback`)
-      projectPrompts = await listAllPrompts()
+      prompts = await listAllPrompts()
       // If still no prompts exist at all, return empty
-      if (projectPrompts.length === 0) {
+      if (prompts.length === 0) {
         console.log('No prompts exist in the system')
         return []
       }
@@ -290,7 +291,7 @@ export async function suggestPrompts(projectId: number, userInput: string, limit
     }
 
     // Build prompt summaries with id, name, and content preview
-    const promptSummaries = projectPrompts.map((prompt) => ({
+    const promptSummaries = prompts.map((prompt) => ({
       id: prompt.id,
       name: prompt.name,
       contentPreview: prompt.content.slice(0, 200) + (prompt.content.length > 200 ? '...' : '')
@@ -330,7 +331,7 @@ Based on the user's input and project context, suggest the most relevant prompts
 
     // Maintain the order suggested by AI
     for (const promptId of suggestedPromptIds) {
-      const prompt = projectPrompts.find((p) => p.id === promptId)
+      const prompt = prompts.find((p) => p.id === promptId)
       if (prompt) {
         suggestedPrompts.push(prompt)
       }
@@ -341,18 +342,18 @@ Based on the user's input and project context, suggest the most relevant prompts
       console.log(`AI only suggested ${suggestedPrompts.length} prompts, enhancing with keyword matching`)
 
       // Calculate relevance scores for remaining prompts
-      const remainingPrompts = projectPrompts.filter((p) => !suggestedPrompts.find((sp) => sp.id === p.id))
-      const scoredPrompts = remainingPrompts.map((prompt) => ({
+      const remainingPrompts = prompts.filter((p: Prompt) => !suggestedPrompts.find((sp: Prompt) => sp.id === p.id))
+      const scoredPrompts = remainingPrompts.map((prompt: Prompt) => ({
         prompt,
         score: calculatePromptRelevance(userInput, prompt)
       }))
 
       // Add high-scoring prompts
       const additionalPrompts = scoredPrompts
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score)
+        .filter((item: { prompt: Prompt; score: number }) => item.score > 0)
+        .sort((a: { prompt: Prompt; score: number }, b: { prompt: Prompt; score: number }) => b.score - a.score)
         .slice(0, limit - suggestedPrompts.length)
-        .map((item) => item.prompt)
+        .map((item: { prompt: Prompt; score: number }) => item.prompt)
 
       suggestedPrompts = [...suggestedPrompts, ...additionalPrompts]
     }
@@ -363,16 +364,16 @@ Based on the user's input and project context, suggest the most relevant prompts
     if (error instanceof Error && error.message.includes('generate')) {
       console.log('AI prompt suggestion failed, using keyword-based fallback')
 
-      const scoredPrompts = projectPrompts.map((prompt) => ({
+      const scoredPrompts = prompts.map((prompt: Prompt) => ({
         prompt,
         score: calculatePromptRelevance(userInput, prompt)
       }))
 
       return scoredPrompts
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score)
+        .filter((item: { prompt: Prompt; score: number }) => item.score > 0)
+        .sort((a: { prompt: Prompt; score: number }, b: { prompt: Prompt; score: number }) => b.score - a.score)
         .slice(0, limit)
-        .map((item) => item.prompt)
+        .map((item: { prompt: Prompt; score: number }) => item.prompt)
     }
 
     if (error instanceof ApiError) throw error

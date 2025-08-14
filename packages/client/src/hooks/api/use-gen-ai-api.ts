@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 // Query Keys
 const GEN_AI_KEYS = {
   all: ['genAi'] as const,
+  providers: () => [...GEN_AI_KEYS.all, 'providers'] as const,
   models: (provider: string, options?: { ollamaUrl?: string; lmstudioUrl?: string }) =>
     [
       ...GEN_AI_KEYS.all,
@@ -65,6 +66,21 @@ export const useStreamText = () => {
     onError: (error) => {
       toast.error(error.message || 'Failed to start text stream')
     }
+  })
+}
+
+// Hook for getting all providers including custom ones
+export const useGetProviders = () => {
+  const client = useApiClient()
+
+  return useQuery({
+    queryKey: GEN_AI_KEYS.providers(),
+    queryFn: () => {
+      if (!client) throw new Error('API client not initialized')
+      return client.genAi.getProviders()
+    },
+    enabled: !!client,
+    staleTime: 5 * 60 * 1000 // 5 minutes - providers change when user adds/removes them
   })
 }
 

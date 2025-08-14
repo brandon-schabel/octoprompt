@@ -1,4 +1,4 @@
-import picomatch from 'picomatch'
+import * as picomatch from 'picomatch'
 
 /**
  * Normalize file path separators to forward slashes.
@@ -6,7 +6,7 @@ import picomatch from 'picomatch'
  * expects forward slashes. You can optionally allow backslashes via options.
  */
 function normalizePath(filePath: string): string {
-  return filePath.replaceAll('\\', '/')
+  return filePath.replace(/\\/g, '/')
 }
 
 /**

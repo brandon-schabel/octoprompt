@@ -25,7 +25,8 @@ import { createProject, deleteProject } from './project-service'
 import { createTicket, updateTicket, deleteTicket } from './ticket-service'
 import { createTask, updateTask } from './ticket-service'
 import { DatabaseManager } from '@promptliano/storage'
-import { clearAllData, resetTestDatabase } from '@promptliano/storage/src/test-utils'
+import { clearAllData, resetTestDatabase, resetDatabaseInstance } from '@promptliano/storage/src/test-utils'
+import { randomBytes } from 'crypto'
 
 describe('Consolidated Queue System Tests', () => {
   let testProjectId: number
@@ -33,46 +34,50 @@ describe('Consolidated Queue System Tests', () => {
   let testQueueName: string
   let db: DatabaseManager
 
+  // Generate unique suffix for this test suite
+  const suiteId = randomBytes(4).toString('hex')
+
   beforeEach(async () => {
     // Initialize database for testing
     await resetTestDatabase()
     db = DatabaseManager.getInstance()
 
-    // Create a test project
+    // Create a test project with unique name
+    const projectSuffix = randomBytes(4).toString('hex')
     const project = await createProject({
-      name: 'Queue Test Project',
-      path: '/test/queue-' + Date.now(),
-      created: Date.now(),
-      updated: Date.now()
+      name: `Queue Test Project ${suiteId}-${projectSuffix}`,
+      path: `/test/queue-${suiteId}-${projectSuffix}`
     })
     testProjectId = project.id
 
     // Create a test queue with unique name to avoid conflicts
-    testQueueName = 'Test Queue ' + Date.now()
+    const queueSuffix = randomBytes(4).toString('hex')
+    testQueueName = `Test Queue ${suiteId}-${queueSuffix}`
     const queue = await createQueue({
       projectId: testProjectId,
       name: testQueueName,
-      description: 'Testing consolidated queue system',
-      status: 'active'
+      description: 'Testing consolidated queue system'
     })
     testQueueId = queue.id
   })
 
   afterAll(async () => {
-    // Clean up test data
+    // Clean up test data and reset database instance
     await clearAllData()
+    resetDatabaseInstance()
   })
 
   describe('Queue CRUD Operations', () => {
     test('should create a queue with default values', async () => {
+      const queueSuffix = randomBytes(4).toString('hex')
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Another Test Queue',
+        name: `Another Test Queue ${suiteId}-${queueSuffix}`,
         description: 'Test description'
       })
 
       expect(queue).toBeDefined()
-      expect(queue.name).toBe('Another Test Queue')
+      expect(queue.name).toBe(`Another Test Queue ${suiteId}-${queueSuffix}`)
       expect(queue.status).toBe('active')
       expect(queue.maxParallelItems).toBe(1)
     })
@@ -119,7 +124,7 @@ describe('Consolidated Queue System Tests', () => {
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Test Ticket',
-        description: 'For queue testing',
+        overview: 'For queue testing',
         status: 'open',
         priority: 'normal'
       })
@@ -152,9 +157,10 @@ describe('Consolidated Queue System Tests', () => {
       await enqueueTicket(testTicketId, testQueueId, 5)
 
       // Try to enqueue again to a different queue
+      const anotherQueueSuffix = randomBytes(4).toString('hex')
       const anotherQueue = await createQueue({
         projectId: testProjectId,
-        name: 'Another Queue'
+        name: `Another Queue ${suiteId}-${anotherQueueSuffix}`
       })
 
       await expect(enqueueTicket(testTicketId, anotherQueue.id, 3)).rejects.toThrow(/already in queue/)
@@ -163,11 +169,11 @@ describe('Consolidated Queue System Tests', () => {
     test.skip('should enqueue ticket with all its tasks', async () => {
       // Create tasks for the ticket
       const task1 = await createTask(testTicketId, {
-        title: 'Task 1',
+        content: 'Task 1',
         description: 'First task'
       })
       const task2 = await createTask(testTicketId, {
-        title: 'Task 2',
+        content: 'Task 2',
         description: 'Second task'
       })
 
@@ -190,14 +196,14 @@ describe('Consolidated Queue System Tests', () => {
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Test Ticket for Task',
-        description: 'Task queue testing',
+        overview: 'Task queue testing',
         status: 'open',
         priority: 'normal'
       })
       testTicketId = ticket.id
 
       const task = await createTask(testTicketId, {
-        title: 'Test Task',
+        content: 'Test Task',
         description: 'For queue testing'
       })
       testTaskId = task.id
@@ -231,12 +237,14 @@ describe('Consolidated Queue System Tests', () => {
       const ticket1 = await createTicket({
         projectId: testProjectId,
         title: 'Ticket 1',
+        overview: '',
         status: 'open',
         priority: 'high'
       })
       const ticket2 = await createTicket({
         projectId: testProjectId,
         title: 'Ticket 2',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
@@ -260,18 +268,21 @@ describe('Consolidated Queue System Tests', () => {
       const ticket1 = await createTicket({
         projectId: testProjectId,
         title: 'Queued Ticket',
+        overview: '',
         status: 'open',
         priority: 'high'
       })
       const ticket2 = await createTicket({
         projectId: testProjectId,
         title: 'In Progress Ticket',
+        overview: '',
         status: 'in_progress',
         priority: 'normal'
       })
       const ticket3 = await createTicket({
         projectId: testProjectId,
         title: 'Completed Ticket',
+        overview: '',
         status: 'closed',
         priority: 'low'
       })
@@ -282,8 +293,9 @@ describe('Consolidated Queue System Tests', () => {
       await enqueueTicket(ticket3.id, testQueueId, 1)
 
       // Update their queue statuses
-      await updateTicket(ticket2.id, { queueStatus: 'in_progress' })
-      await updateTicket(ticket3.id, { queueStatus: 'completed' })
+      // Simulate processing state via queue flow
+      await getNextTaskFromQueue(testQueueId, 'agent-x')
+      await completeQueueItem('ticket', ticket3.id)
 
       // Get stats
       const stats = await getQueueStats(testQueueId)
@@ -296,21 +308,24 @@ describe('Consolidated Queue System Tests', () => {
 
     test.skip('should get all queues with stats', async () => {
       // Create another queue
+      const queue2Suffix = randomBytes(4).toString('hex')
       const queue2 = await createQueue({
         projectId: testProjectId,
-        name: 'Second Queue'
+        name: `Second Queue ${suiteId}-${queue2Suffix}`
       })
 
       // Add items to both queues
       const ticket1 = await createTicket({
         projectId: testProjectId,
         title: 'Ticket for Queue 1',
+        overview: '',
         status: 'open',
         priority: 'high'
       })
       const ticket2 = await createTicket({
         projectId: testProjectId,
         title: 'Ticket for Queue 2',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
@@ -323,8 +338,8 @@ describe('Consolidated Queue System Tests', () => {
 
       expect(queuesWithStats.length).toBeGreaterThanOrEqual(2)
 
-      const queue1Stats = queuesWithStats.find((q) => q.id === testQueueId)
-      const queue2Stats = queuesWithStats.find((q) => q.id === queue2.id)
+      const queue1Stats = queuesWithStats.find((q) => q.queue.id === testQueueId)
+      const queue2Stats = queuesWithStats.find((q) => q.queue.id === queue2.id)
 
       expect(queue1Stats?.stats.totalItems).toBeGreaterThanOrEqual(1)
       expect(queue2Stats?.stats.totalItems).toBe(1)
@@ -337,18 +352,21 @@ describe('Consolidated Queue System Tests', () => {
       const ticket1 = await createTicket({
         projectId: testProjectId,
         title: 'Low Priority',
+        overview: '',
         status: 'open',
         priority: 'low'
       })
       const ticket2 = await createTicket({
         projectId: testProjectId,
         title: 'High Priority',
+        overview: '',
         status: 'open',
         priority: 'high'
       })
       const ticket3 = await createTicket({
         projectId: testProjectId,
         title: 'Medium Priority',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
@@ -370,6 +388,7 @@ describe('Consolidated Queue System Tests', () => {
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Test Ticket',
+        overview: '',
         status: 'open',
         priority: 'high'
       })
@@ -399,15 +418,17 @@ describe('Consolidated Queue System Tests', () => {
   describe('Queue Item Movement', () => {
     test('should move ticket between queues', async () => {
       // Create second queue
+      const queue2Suffix = randomBytes(4).toString('hex')
       const queue2 = await createQueue({
         projectId: testProjectId,
-        name: 'Target Queue'
+        name: `Target Queue ${suiteId}-${queue2Suffix}`
       })
 
       // Create and enqueue ticket
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Mobile Ticket',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
@@ -434,6 +455,7 @@ describe('Consolidated Queue System Tests', () => {
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Removable Ticket',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
@@ -455,12 +477,15 @@ describe('Consolidated Queue System Tests', () => {
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Completable Ticket',
+        overview: '',
         status: 'in_progress',
         priority: 'high'
       })
 
       await enqueueTicket(ticket.id, testQueueId, 10)
-      await updateTicket(ticket.id, { queueStatus: 'in_progress' })
+      // Set in_progress via queue flow
+      await enqueueTicket(ticket.id, testQueueId, 10)
+      await getNextTaskFromQueue(testQueueId, 'agent-z')
 
       // Complete the item
       await completeQueueItem('ticket', ticket.id)
@@ -468,19 +493,21 @@ describe('Consolidated Queue System Tests', () => {
       // Verify completed
       const completedTicket = await getTicketById(ticket.id)
       expect(completedTicket.queueStatus).toBe('completed')
-      expect(completedTicket.status).toBe('done')
+      expect(completedTicket.status).toBe('closed')
     })
 
     test('should fail queue item with error message', async () => {
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Failing Ticket',
+        overview: '',
         status: 'in_progress',
         priority: 'high'
       })
 
       await enqueueTicket(ticket.id, testQueueId, 10)
-      await updateTicket(ticket.id, { queueStatus: 'in_progress' })
+      // Set in_progress via queue flow
+      await getNextTaskFromQueue(testQueueId, 'test-agent')
 
       // Fail the item
       await failQueueItem('ticket', ticket.id, 'Test failure reason')
@@ -498,18 +525,21 @@ describe('Consolidated Queue System Tests', () => {
       const queuedTicket = await createTicket({
         projectId: testProjectId,
         title: 'Queued Ticket',
+        overview: '',
         status: 'open',
         priority: 'high'
       })
       const unqueuedTicket1 = await createTicket({
         projectId: testProjectId,
         title: 'Unqueued Ticket 1',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
       const unqueuedTicket2 = await createTicket({
         projectId: testProjectId,
         title: 'Unqueued Ticket 2',
+        overview: '',
         status: 'in_progress',
         priority: 'low'
       })
@@ -557,18 +587,21 @@ describe('Consolidated Queue System Tests', () => {
         createTicket({
           projectId: testProjectId,
           title: 'Concurrent 1',
+          overview: '',
           status: 'open',
           priority: 'high'
         }),
         createTicket({
           projectId: testProjectId,
           title: 'Concurrent 2',
+          overview: '',
           status: 'open',
           priority: 'normal'
         }),
         createTicket({
           projectId: testProjectId,
           title: 'Concurrent 3',
+          overview: '',
           status: 'open',
           priority: 'low'
         })
@@ -588,6 +621,7 @@ describe('Consolidated Queue System Tests', () => {
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Orphan Ticket',
+        overview: '',
         status: 'open',
         priority: 'high'
       })

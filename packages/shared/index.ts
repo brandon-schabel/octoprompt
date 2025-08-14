@@ -28,5 +28,8 @@ export * from './src/utils/service-utils'
 // security utilities
 export * from './src/utils/secure-path-validator'
 
+// SQLite type converters
+export * from './src/utils/sqlite-converters'
+
 // Claude hook templates
 export * from './src/claude-hook-templates'

@@ -2,6 +2,7 @@ import { z, ZodError } from 'zod'
 import { PromptSchema, PromptProjectSchema, type Prompt, type PromptProject } from '@promptliano/schemas'
 import { DatabaseManager, getDb } from './database-manager'
 import { ApiError } from '@promptliano/shared'
+import { toNumber, SqliteConverters } from '@promptliano/shared/src/utils/sqlite-converters'
 
 // --- Schemas for Storage ---
 // Store all prompts (metadata) as a map (Record) keyed by promptId
@@ -51,8 +52,8 @@ export const promptStorage = {
         name: row.name,
         content: row.content,
         projectId: row.project_id,
-        created: Number(row.created_at),
-        updated: Number(row.updated_at)
+        created: toNumber(row.created_at, Date.now()),
+        updated: toNumber(row.updated_at, Date.now())
       }
 
       // Validate the result

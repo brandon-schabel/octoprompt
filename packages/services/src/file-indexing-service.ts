@@ -9,11 +9,11 @@ import type { Database, Statement } from 'bun:sqlite'
  */
 export class FileIndexingService {
   private db: Database
-  private insertFTSStmt: Statement
-  private insertMetadataStmt: Statement
-  private insertKeywordStmt: Statement
-  private insertTrigramStmt: Statement
-  private updateFTSStmt: Statement
+  private insertFTSStmt!: Statement
+  private insertMetadataStmt!: Statement
+  private insertKeywordStmt!: Statement
+  private insertTrigramStmt!: Statement
+  private updateFTSStmt!: Statement
 
   // Common stop words to filter out (excluding programming keywords)
   private readonly STOP_WORDS = new Set([

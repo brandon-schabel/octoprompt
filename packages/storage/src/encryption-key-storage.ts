@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { generateEncryptionKey } from '@promptliano/shared/src/utils/crypto'
+import { ensureString } from '@promptliano/shared/src/utils/sqlite-converters'
 
 // Get platform-appropriate data directory (same as database)
 function getDataDirectory(): string {
@@ -59,15 +60,15 @@ export class EncryptionKeyStorage {
     // Check environment variable first (backward compatibility)
     const envKey = process.env.PROMPTLIANO_ENCRYPTION_KEY
     if (envKey) {
-      this.encryptionKey = envKey
-      return envKey
+      this.encryptionKey = ensureString(envKey)
+      return this.encryptionKey
     }
 
     // Check if key file exists
     const keyPath = this.getKeyPath()
     if (fs.existsSync(keyPath)) {
       try {
-        this.encryptionKey = fs.readFileSync(keyPath, 'utf-8').trim()
+        this.encryptionKey = ensureString(fs.readFileSync(keyPath, 'utf-8').trim())
         return this.encryptionKey
       } catch (error) {
         console.error('Failed to read encryption key:', error)

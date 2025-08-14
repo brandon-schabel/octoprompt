@@ -3,14 +3,13 @@ import { APIProviders } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
 import { PromptlianoCombobox } from '@/components/promptliano/promptliano-combobox'
-import { useGetModels } from '@/hooks/api/use-gen-ai-api'
-import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
+import { useGetModels, useGetProviders } from '@/hooks/api/use-gen-ai-api'
 import { useAppSettings } from '@/hooks/use-kv-local-storage'
 
 export interface ProviderModelSelectorProps {
-  provider: APIProviders
+  provider: APIProviders | string // Allow custom provider IDs like "custom_123"
   currentModel: string
-  onProviderChange: (provider: APIProviders) => void
+  onProviderChange: (provider: APIProviders | string) => void
   onModelChange: (modelId: string) => void
   className?: string
   layout?: 'horizontal' | 'vertical' | 'compact'
@@ -38,6 +37,9 @@ export function ProviderModelSelector({
 }: ProviderModelSelectorProps) {
   // Get app settings for provider URLs
   const [appSettings] = useAppSettings()
+  
+  // Get all available providers (predefined + custom)
+  const { data: providersData } = useGetProviders()
 
   // Prepare URL options based on provider
   const urlOptions = {
@@ -47,13 +49,35 @@ export function ProviderModelSelector({
 
   const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider, urlOptions)
 
-  // Filter providers if specified
+  // Prepare provider options from API response
   const availableProviders = useMemo(() => {
-    if (!filterProviders || filterProviders.length === 0) {
-      return PROVIDER_SELECT_OPTIONS
+    if (!providersData?.data) {
+      // Fallback to predefined providers if API hasn't loaded yet
+      return [
+        { value: 'openai', label: 'OpenAI' },
+        { value: 'anthropic', label: 'Anthropic' },
+        { value: 'google_gemini', label: 'Google Gemini' },
+        { value: 'groq', label: 'Groq' },
+        { value: 'together', label: 'Together' },
+        { value: 'xai', label: 'XAI' },
+        { value: 'openrouter', label: 'OpenRouter' },
+        { value: 'lmstudio', label: 'LMStudio' },
+        { value: 'ollama', label: 'Ollama' }
+      ]
     }
-    return PROVIDER_SELECT_OPTIONS.filter((option) => filterProviders.includes(option.value as APIProviders))
-  }, [filterProviders])
+    
+    const allProviders = providersData.data.map(p => ({
+      value: p.id,
+      label: p.name
+    }))
+    
+    // Apply filter if specified
+    if (filterProviders && filterProviders.length > 0) {
+      return allProviders.filter((option) => filterProviders.includes(option.value as APIProviders))
+    }
+    
+    return allProviders
+  }, [providersData, filterProviders])
 
   // Prepare model options with optional filtering
   const comboboxOptions = useMemo(() => {
@@ -100,7 +124,7 @@ export function ProviderModelSelector({
   return (
     <div className={containerClassName}>
       {showLabels && layout === 'vertical' && <label className='text-sm font-medium'>Provider</label>}
-      <Select value={provider} onValueChange={(val) => onProviderChange(val as APIProviders)} disabled={disabled}>
+      <Select value={provider} onValueChange={(val) => onProviderChange(val)} disabled={disabled}>
         <SelectTrigger className={providerSelectClassName}>
           <SelectValue placeholder='Select provider' />
         </SelectTrigger>

@@ -11,9 +11,11 @@ import {
   TestProviderApiResponseSchema,
   BatchTestProviderRequestSchema,
   BatchTestProviderApiResponseSchema,
-  ProviderHealthStatusListResponseSchema
+  ProviderHealthStatusListResponseSchema,
+  ValidateCustomProviderRequestSchema,
+  ValidateCustomProviderResponseSchema
 } from '@promptliano/schemas'
-import { providerKeyService } from '@promptliano/services'
+import { providerKeyService, validateCustomProvider } from '@promptliano/services'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
 import { updateProviderSettings } from '@promptliano/services'
 
@@ -356,5 +358,63 @@ export const providerKeyRoutes = new OpenAPIHono()
       200
     )
   })
+
+// Validate custom provider route
+const validateCustomProviderRoute = createRoute({
+  method: 'post',
+  path: '/api/keys/validate-custom',
+  tags: ['Provider Keys'],
+  summary: 'Validate a custom OpenAI-compatible provider',
+  request: {
+    body: {
+      content: { 'application/json': { schema: ValidateCustomProviderRequestSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: ValidateCustomProviderResponseSchema } },
+      description: 'Validation result'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation failed'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Invalid request'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
+providerKeyRoutes.openapi(validateCustomProviderRoute, async (c) => {
+  const body = c.req.valid('json')
+  
+  try {
+    const result = await validateCustomProvider(body)
+    
+    return c.json(
+      {
+        success: true,
+        data: result
+      } satisfies z.infer<typeof ValidateCustomProviderResponseSchema>,
+      200
+    )
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error
+    }
+    throw new ApiError(
+      500,
+      'Failed to validate custom provider',
+      'CUSTOM_PROVIDER_VALIDATION_ERROR',
+      error instanceof Error ? { error: error.message } : undefined
+    )
+  }
+})
 
 export type ProviderKeyRouteTypes = typeof providerKeyRoutes

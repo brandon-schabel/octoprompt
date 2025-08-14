@@ -5,8 +5,8 @@ import { createReadStream, existsSync } from 'fs'
 import { createInterface } from 'readline'
 import { watch } from 'chokidar'
 import { z } from 'zod'
-import { 
-  ClaudeMessageSchema, 
+import {
+  ClaudeMessageSchema,
   ClaudeSessionSchema,
   ClaudeProjectDataSchema,
   type ClaudeMessage,
@@ -26,7 +26,7 @@ export class ClaudeCodeFileReaderService {
    */
   getClaudeConfigDir(): string {
     const home = os.homedir()
-    
+
     switch (this.platform) {
       case 'darwin':
         return path.join(home, '.claude')
@@ -81,12 +81,10 @@ export class ClaudeCodeFileReaderService {
   async getClaudeProjects(): Promise<string[]> {
     const configDir = this.getClaudeConfigDir()
     const projectsDir = path.join(configDir, 'projects')
-    
+
     try {
       const entries = await fs.readdir(projectsDir, { withFileTypes: true })
-      return entries
-        .filter(entry => entry.isDirectory())
-        .map(entry => entry.name)
+      return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
     } catch (error) {
       logger.debug('Failed to read Claude projects directory:', error)
       return []
@@ -98,11 +96,11 @@ export class ClaudeCodeFileReaderService {
    */
   private parseJsonLine(line: string): ClaudeMessage | null {
     if (!line.trim()) return null
-    
+
     try {
       const data = JSON.parse(line)
       const validated = ClaudeMessageSchema.safeParse(data)
-      
+
       if (validated.success) {
         return validated.data
       } else {
@@ -122,28 +120,26 @@ export class ClaudeCodeFileReaderService {
     const configDir = this.getClaudeConfigDir()
     const encodedPath = this.encodeProjectPath(projectPath)
     const projectDir = path.join(configDir, 'projects', encodedPath)
-    
+
     if (!existsSync(projectDir)) {
       logger.debug(`No Claude data found for project: ${projectPath}`)
       return []
     }
-    
+
     const messages: ClaudeMessage[] = []
-    
+
     try {
       const files = await fs.readdir(projectDir)
-      const jsonlFiles = files.filter(file => file.endsWith('.jsonl'))
-      
+      const jsonlFiles = files.filter((file) => file.endsWith('.jsonl'))
+
       for (const file of jsonlFiles) {
         const filePath = path.join(projectDir, file)
         const fileMessages = await this.readJsonlFile(filePath)
         messages.push(...fileMessages)
       }
-      
+
       // Sort by timestamp
-      return messages.sort((a, b) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      )
+      return messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
     } catch (error) {
       logger.error('Failed to read chat history:', error)
       throw new ApiError(500, 'Failed to read Claude chat history')
@@ -155,21 +151,21 @@ export class ClaudeCodeFileReaderService {
    */
   private async readJsonlFile(filePath: string): Promise<ClaudeMessage[]> {
     const messages: ClaudeMessage[] = []
-    
+
     return new Promise((resolve, reject) => {
       const fileStream = createReadStream(filePath)
       const rl = createInterface({
         input: fileStream,
         crlfDelay: Infinity
       })
-      
+
       rl.on('line', (line) => {
         const message = this.parseJsonLine(line)
         if (message) {
           messages.push(message)
         }
       })
-      
+
       rl.on('close', () => resolve(messages))
       rl.on('error', reject)
     })
@@ -180,37 +176,42 @@ export class ClaudeCodeFileReaderService {
    */
   async getSessions(projectPath: string): Promise<ClaudeSession[]> {
     const messages = await this.readChatHistory(projectPath)
-    
+
     // Group messages by session
     const sessionMap = new Map<string, ClaudeMessage[]>()
-    
+
     for (const message of messages) {
       if (!sessionMap.has(message.sessionId)) {
         sessionMap.set(message.sessionId, [])
       }
       sessionMap.get(message.sessionId)!.push(message)
     }
-    
+
     // Create session metadata
     const sessions: ClaudeSession[] = []
-    
+
     for (const [sessionId, sessionMessages] of sessionMap) {
       if (sessionMessages.length === 0) continue
-      
+
       const firstMessage = sessionMessages[0]
       const lastMessage = sessionMessages[sessionMessages.length - 1]
-      
+
+      if (!firstMessage || !lastMessage) {
+        continue
+      }
+
       // Find the most recent git branch and cwd
       let gitBranch: string | undefined
       let cwd: string | undefined
-      
+
       for (let i = sessionMessages.length - 1; i >= 0; i--) {
         const msg = sessionMessages[i]
+        if (!msg) continue
         if (!gitBranch && msg.gitBranch) gitBranch = msg.gitBranch
         if (!cwd && msg.cwd) cwd = msg.cwd
         if (gitBranch && cwd) break
       }
-      
+
       // Calculate token breakdown
       let totalInputTokens = 0
       let totalCacheCreationTokens = 0
@@ -219,7 +220,7 @@ export class ClaudeCodeFileReaderService {
       let totalTokensUsed = 0
       let totalCostUsd = 0
       const serviceTiers = new Set<string>()
-      
+
       for (const msg of sessionMessages) {
         // New token usage format
         if (msg.message.usage) {
@@ -243,9 +244,9 @@ export class ClaudeCodeFileReaderService {
         if (msg.tokensUsed) totalTokensUsed += msg.tokensUsed
         if (msg.costUsd) totalCostUsd += msg.costUsd
       }
-      
+
       const totalTokens = totalInputTokens + totalCacheCreationTokens + totalCacheReadTokens + totalOutputTokens
-      
+
       sessions.push({
         sessionId,
         projectPath,
@@ -254,23 +255,24 @@ export class ClaudeCodeFileReaderService {
         messageCount: sessionMessages.length,
         gitBranch,
         cwd,
-        tokenUsage: totalTokens > 0 ? {
-          totalInputTokens,
-          totalCacheCreationTokens,
-          totalCacheReadTokens,
-          totalOutputTokens,
-          totalTokens
-        } : undefined,
+        tokenUsage:
+          totalTokens > 0
+            ? {
+                totalInputTokens,
+                totalCacheCreationTokens,
+                totalCacheReadTokens,
+                totalOutputTokens,
+                totalTokens
+              }
+            : undefined,
         serviceTiers: serviceTiers.size > 0 ? Array.from(serviceTiers) : undefined,
         totalTokensUsed: totalTokensUsed > 0 ? totalTokensUsed : undefined,
         totalCostUsd: totalCostUsd > 0 ? totalCostUsd : undefined
       })
     }
-    
+
     // Sort by last update time (most recent first)
-    return sessions.sort((a, b) => 
-      new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime()
-    )
+    return sessions.sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
   }
 
   /**
@@ -278,7 +280,7 @@ export class ClaudeCodeFileReaderService {
    */
   async getSessionMessages(projectPath: string, sessionId: string): Promise<ClaudeMessage[]> {
     const allMessages = await this.readChatHistory(projectPath)
-    return allMessages.filter(msg => msg.sessionId === sessionId)
+    return allMessages.filter((msg) => msg.sessionId === sessionId)
   }
 
   /**
@@ -287,28 +289,28 @@ export class ClaudeCodeFileReaderService {
   async getProjectData(projectPath: string): Promise<ClaudeProjectData> {
     const messages = await this.readChatHistory(projectPath)
     const sessions = await this.getSessions(projectPath)
-    
+
     // Extract unique branches and working directories
     const branches = new Set<string>()
     const workingDirectories = new Set<string>()
-    
+
     for (const msg of messages) {
       if (msg.gitBranch) branches.add(msg.gitBranch)
       if (msg.cwd) workingDirectories.add(msg.cwd)
     }
-    
+
     // Find first and last message times
     let firstMessageTime: string | undefined
     let lastMessageTime: string | undefined
-    
+
     if (messages.length > 0) {
-      const sorted = [...messages].sort((a, b) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      )
-      firstMessageTime = sorted[0].timestamp
-      lastMessageTime = sorted[sorted.length - 1].timestamp
+      const sorted = [...messages].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      const first = sorted[0]
+      const last = sorted[sorted.length - 1]
+      if (first) firstMessageTime = first.timestamp
+      if (last) lastMessageTime = last.timestamp
     }
-    
+
     return {
       projectPath,
       encodedPath: this.encodeProjectPath(projectPath),
@@ -324,14 +326,11 @@ export class ClaudeCodeFileReaderService {
   /**
    * Watch for real-time updates to Claude chat files
    */
-  watchChatHistory(
-    projectPath: string, 
-    onUpdate: (messages: ClaudeMessage[]) => void
-  ): () => void {
+  watchChatHistory(projectPath: string, onUpdate: (messages: ClaudeMessage[]) => void): () => void {
     const configDir = this.getClaudeConfigDir()
     const encodedPath = this.encodeProjectPath(projectPath)
     const watchPath = path.join(configDir, 'projects', encodedPath, '*.jsonl')
-    
+
     const watcher = watch(watchPath, {
       ignoreInitial: true,
       persistent: true,
@@ -340,7 +339,7 @@ export class ClaudeCodeFileReaderService {
         pollInterval: 100
       }
     })
-    
+
     const handleUpdate = async () => {
       try {
         const messages = await this.readChatHistory(projectPath)
@@ -349,11 +348,9 @@ export class ClaudeCodeFileReaderService {
         logger.error('Error in file watcher:', error)
       }
     }
-    
-    watcher
-      .on('add', handleUpdate)
-      .on('change', handleUpdate)
-    
+
+    watcher.on('add', handleUpdate).on('change', handleUpdate)
+
     // Return cleanup function
     return () => {
       watcher.close()
@@ -366,12 +363,12 @@ export class ClaudeCodeFileReaderService {
   async findProjectByPath(targetPath: string): Promise<string | null> {
     const encodedTarget = this.encodeProjectPath(targetPath)
     const projects = await this.getClaudeProjects()
-    
+
     // First try exact match
     if (projects.includes(encodedTarget)) {
       return targetPath
     }
-    
+
     // Try to find a project that ends with the target path
     for (const encodedProject of projects) {
       const decodedPath = this.decodeProjectPath(encodedProject)
@@ -379,7 +376,7 @@ export class ClaudeCodeFileReaderService {
         return decodedPath
       }
     }
-    
+
     return null
   }
 }

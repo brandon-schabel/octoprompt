@@ -1,8 +1,9 @@
 import { chatStorage } from '@promptliano/storage'
 import { claudeCodeMCPService } from './claude-code-mcp-service'
-import type { ClaudeMessage, ClaudeContentItem } from '@promptliano/schemas'
+import { ChatSchema } from '@promptliano/schemas'
+import type { ClaudeMessage } from '@promptliano/schemas'
 import type { Chat, ChatMessage } from '@promptliano/schemas'
-import { nanoid } from 'nanoid'
+import { normalizeToUnixMs } from '@promptliano/shared'
 
 export class ClaudeCodeImportService {
   /**
@@ -23,11 +24,25 @@ export class ClaudeCodeImportService {
     const firstUserMessage = messages.find((m) => m.message.role === 'user')
     const title = this.generateChatTitle(firstUserMessage, sessionId)
 
-    // Create a new chat
-    const chat = await chatStorage.createChat({
+    // Create a new chat with project association
+    const chatId = chatStorage.generateId()
+    const now = normalizeToUnixMs(new Date())
+
+    const newChat: Chat = {
+      id: chatId,
       title,
-      projectId
-    })
+      projectId,
+      created: now,
+      updated: now
+    }
+
+    // Validate and store the chat
+    const validatedChat = ChatSchema.parse(newChat)
+    const allChats = await chatStorage.readChats()
+    allChats[String(chatId)] = validatedChat
+    await chatStorage.writeChats(allChats)
+
+    const chat = validatedChat
 
     // Convert and import messages
     const importPromises = messages.map((message, index) => this.importMessage(chat.id, message, index))
@@ -105,8 +120,8 @@ export class ClaudeCodeImportService {
             return item.content
           } else if (Array.isArray(item.content)) {
             return item.content
-              .filter((c) => c.type === 'text')
-              .map((c) => c.text)
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => c.text)
               .join('\n')
           }
           return '[Tool Result]'

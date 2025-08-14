@@ -359,13 +359,15 @@ export function getTextFiles(
  * @param absoluteProjectPath Absolute path to the project on disk.
  * @param absoluteFilePathsOnDisk Absolute paths of files found on disk (already filtered by initial ignore).
  * @param ignoreFilter The Ignore instance for checking deletions of previously tracked files.
+ * @param progressTracker Optional progress tracker for real-time updates
  * @returns Counts of created, updated, deleted, and skipped files.
  */
 export async function syncFileSet(
   project: Project,
   absoluteProjectPath: string,
   absoluteFilePathsOnDisk: string[],
-  ignoreFilter: Ignore
+  ignoreFilter: Ignore,
+  progressTracker?: import('../utils/sync-progress-tracker').SyncProgressTracker
 ): Promise<{ created: number; updated: number; deleted: number; skipped: number }> {
   logger.verbose(`Starting syncFileSet for project ${project.id} with ${absoluteFilePathsOnDisk.length} disk files`)
 
@@ -389,13 +391,16 @@ export async function syncFileSet(
   for (const absFilePath of absoluteFilePathsOnDisk) {
     processedCount++
 
+    const relativePath = relative(absoluteProjectPath, absFilePath)
+    const normalizedRelativePath = normalizePathForDbUtil(relativePath)
+    
+    // Report progress for each file
+    progressTracker?.incrementProcessed(normalizedRelativePath)
+
     // Log progress every 100 files for large projects
     if (processedCount % 100 === 0) {
       logger.info(`[SYNC PROGRESS] Processed ${processedCount}/${absoluteFilePathsOnDisk.length} files...`)
     }
-
-    const relativePath = relative(absoluteProjectPath, absFilePath)
-    const normalizedRelativePath = normalizePathForDbUtil(relativePath)
 
     try {
       const stats = statSync(absFilePath)
@@ -542,6 +547,9 @@ export async function syncFileSet(
     // Index new and updated files immediately
     if (createdCount > 0 || updatedCount > 0) {
       const filesToIndex = [...createdFiles, ...updatedFiles]
+      
+      // Switch to indexing phase
+      progressTracker?.setPhase('indexing', `Indexing ${filesToIndex.length} files for search...`)
 
       try {
         const indexResult = await fileIndexingService.indexFiles(filesToIndex)
@@ -577,27 +585,35 @@ export async function syncFileSet(
  * Loads ignore rules, gets disk files, and calls syncFileSet.
  * Originally from file-sync-service.ts
  * @param project The project to sync.
+ * @param progressTracker Optional progress tracker for real-time updates
  * @returns Counts of created, updated, deleted, and skipped files.
  */
 export async function syncProject(
-  project: Project
+  project: Project,
+  progressTracker?: import('../utils/sync-progress-tracker').SyncProgressTracker
 ): Promise<{ created: number; updated: number; deleted: number; skipped: number }> {
   const startTime = Date.now()
   logger.info(`[SYNC START] Project: ${project.name} (ID: ${project.id})`)
+
+  // Initialize progress tracking
+  progressTracker?.setPhase('initializing', `Initializing sync for ${project.name}...`)
 
   // Wrap the sync operation in retry logic for resilience
   return retryOperation(
     async () => {
       const absoluteProjectPath = resolvePath(project.path)
       if (!nodeFsExistsSync(absoluteProjectPath) || !statSync(absoluteProjectPath).isDirectory()) {
+        const error = new Error(`Project path is not a valid directory: ${project.path}`)
         logger.error(`Project path is not a valid directory: ${absoluteProjectPath}`)
-        throw new Error(`Project path is not a valid directory: ${project.path}`)
+        progressTracker?.error(error)
+        throw error
       }
 
       const ignoreFilter = await loadIgnoreRules(absoluteProjectPath)
       logger.debug(`Starting full sync for project ${project.name} (${project.id}) at path: ${absoluteProjectPath}`)
 
-      // Log scanning phase
+      // Scanning phase
+      progressTracker?.setPhase('scanning', 'Scanning project directory for files...')
       logger.info(`[SYNC] Scanning files in ${absoluteProjectPath}...`)
       const scanStartTime = Date.now()
 
@@ -612,15 +628,25 @@ export async function syncProject(
       logger.info(
         `[SYNC] File scan completed in ${scanDuration}ms. Found ${projectFilesOnDisk.length} files to process`
       )
+      
+      // Set total files for progress tracking
+      progressTracker?.setTotalFiles(projectFilesOnDisk.length)
+      progressTracker?.setPhase('processing', `Processing ${projectFilesOnDisk.length} files...`)
 
-      // Process files
+      // Process files with progress tracking
       logger.info(`[SYNC] Processing ${projectFilesOnDisk.length} files...`)
-      const results = await syncFileSet(project, absoluteProjectPath, projectFilesOnDisk, ignoreFilter)
+      const results = await syncFileSet(project, absoluteProjectPath, projectFilesOnDisk, ignoreFilter, progressTracker)
+
+      // Finalize
+      progressTracker?.setPhase('finalizing', 'Finalizing sync...')
 
       const totalDuration = Date.now() - startTime
       logger.info(
         `[SYNC COMPLETE] Project ${project.id} synced in ${totalDuration}ms - Created: ${results.created}, Updated: ${results.updated}, Deleted: ${results.deleted}, Skipped: ${results.skipped}`
       )
+
+      // Complete progress tracking
+      progressTracker?.complete(`Sync completed! Processed ${projectFilesOnDisk.length} files in ${(totalDuration / 1000).toFixed(1)} seconds`)
 
       return results
     },
@@ -650,6 +676,7 @@ export async function syncProject(
       `[SYNC FAILED] Project ${project.id} ${project.name} failed after ${duration}ms and all retry attempts`,
       error
     )
+    progressTracker?.error(error)
     throw error
   })
 }
