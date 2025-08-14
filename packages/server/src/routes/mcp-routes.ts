@@ -1287,7 +1287,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
             },
             clientInfo: {
               name: 'promptliano-tester',
-              version: '0.9.1'
+              version: '0.9.2'
             }
           }
         }),
@@ -1826,7 +1826,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             },
             clientInfo: {
               name: 'promptliano-tester',
-              version: '0.9.1'
+              version: '0.9.2'
             }
           },
           example: {
@@ -1836,7 +1836,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             params: {
               protocolVersion: '2024-11-05',
               capabilities: { tools: true, resources: true },
-              clientInfo: { name: 'promptliano-tester', version: '0.9.1' }
+              clientInfo: { name: 'promptliano-tester', version: '0.9.2' }
             }
           }
         },

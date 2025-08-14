@@ -19,7 +19,7 @@ import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './mcp/tools-regis
 const server = new Server(
   {
     name: 'promptliano-mcp',
-    version: '0.9.1'
+    version: '0.9.2'
   },
   {
     capabilities: {
@@ -191,7 +191,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             {
               uri,
               mimeType: 'text/plain',
-              text: `Promptliano MCP Server v0.9.1
+              text: `Promptliano MCP Server v0.9.2
 
 Promptliano is a powerful project management and AI assistance tool.
 

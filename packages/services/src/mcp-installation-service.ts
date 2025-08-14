@@ -1375,7 +1375,7 @@ export class MCPInstallationService {
         tool: 'claude-desktop',
         configPath,
         serverName: 'promptliano',
-        version: '0.9.1'
+        version: '0.9.2'
       })
 
       return {
@@ -1449,7 +1449,7 @@ export class MCPInstallationService {
         tool,
         configPath,
         serverName: 'promptliano',
-        version: '0.9.1'
+        version: '0.9.2'
       })
 
       return {
@@ -1537,7 +1537,7 @@ export class MCPInstallationService {
         tool: 'continue',
         configPath,
         serverName: 'promptliano',
-        version: '0.9.1'
+        version: '0.9.2'
       })
 
       return {
@@ -1618,7 +1618,7 @@ export class MCPInstallationService {
         tool: 'claude-code',
         configPath,
         serverName: 'promptliano',
-        version: '0.9.1'
+        version: '0.9.2'
       })
 
       return {
