@@ -177,6 +177,22 @@ export function createProviderKeyService() {
     return keyList
   }
 
+  /**
+   * Get all custom providers as distinct provider options
+   * Each custom provider will have a unique ID like "custom_<keyId>"
+   */
+  async function getCustomProviders(): Promise<Array<{ id: string; name: string; baseUrl?: string; keyId: number }>> {
+    const allKeys = await listKeysUncensored()
+    const customKeys = allKeys.filter(key => key.provider === 'custom' && key.baseUrl)
+    
+    return customKeys.map(key => ({
+      id: `custom_${key.id}`,
+      name: key.name || 'Custom Provider',
+      baseUrl: key.baseUrl,
+      keyId: key.id
+    }))
+  }
+
   async function getKeyById(id: number): Promise<ProviderKey | null> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const foundKeyData = allKeys[id]
@@ -602,6 +618,7 @@ export function createProviderKeyService() {
     createKey,
     listKeysCensoredKeys,
     listKeysUncensored,
+    getCustomProviders,
     getKeyById,
     updateKey,
     deleteKey,

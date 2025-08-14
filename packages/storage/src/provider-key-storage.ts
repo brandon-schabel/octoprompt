@@ -41,6 +41,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -61,6 +62,8 @@ export const providerKeyStorage = {
         iv: row.iv,
         tag: row.tag,
         salt: row.salt,
+        baseUrl: row.base_url || undefined,
+        customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
         isDefault: toBoolean(row.is_default),
         isActive: toBoolean(row.is_active),
         environment: row.environment || 'production',
@@ -101,10 +104,11 @@ export const providerKeyStorage = {
       const insertStmt = database.prepare(`
         INSERT INTO provider_keys (
           id, name, provider, key, encrypted, iv, tag, salt,
+          base_url, custom_headers,
           is_default, is_active, environment, description,
           expires_at, last_used, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
 
       for (const [id, key] of Object.entries(validatedKeys)) {
@@ -118,6 +122,8 @@ export const providerKeyStorage = {
           key.iv || null,
           key.tag || null,
           key.salt || null,
+          key.baseUrl || null,
+          key.customHeaders ? JSON.stringify(key.customHeaders) : null,
           fromBoolean(key.isDefault),
           fromBoolean(key.isActive),
           key.environment,
@@ -141,6 +147,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -162,6 +169,8 @@ export const providerKeyStorage = {
       iv: row.iv,
       tag: row.tag,
       salt: row.salt,
+      baseUrl: row.base_url || undefined,
+      customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
       isDefault: Boolean(row.is_default),
       isActive: Boolean(row.is_active),
       environment: row.environment,
@@ -194,6 +203,7 @@ export const providerKeyStorage = {
       const updateQuery = database.prepare(`
         UPDATE provider_keys
         SET name = ?, provider = ?, key = ?, encrypted = ?, iv = ?, tag = ?, salt = ?,
+            base_url = ?, custom_headers = ?,
             is_default = ?, is_active = ?, environment = ?, description = ?,
             expires_at = ?, last_used = ?, updated_at = ?
         WHERE id = ?
@@ -206,6 +216,8 @@ export const providerKeyStorage = {
         validatedKey.iv || null,
         validatedKey.tag || null,
         validatedKey.salt || null,
+        validatedKey.baseUrl || null,
+        validatedKey.customHeaders ? JSON.stringify(validatedKey.customHeaders) : null,
         fromBoolean(validatedKey.isDefault),
         fromBoolean(validatedKey.isActive),
         validatedKey.environment,
@@ -220,10 +232,11 @@ export const providerKeyStorage = {
       const insertQuery = database.prepare(`
         INSERT INTO provider_keys (
           id, name, provider, key, encrypted, iv, tag, salt,
+          base_url, custom_headers,
           is_default, is_active, environment, description,
           expires_at, last_used, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       insertQuery.run(
         validatedKey.id,
@@ -234,6 +247,8 @@ export const providerKeyStorage = {
         validatedKey.iv || null,
         validatedKey.tag || null,
         validatedKey.salt || null,
+        validatedKey.baseUrl || null,
+        validatedKey.customHeaders ? JSON.stringify(validatedKey.customHeaders) : null,
         fromBoolean(validatedKey.isDefault),
         fromBoolean(validatedKey.isActive),
         validatedKey.environment,
@@ -267,6 +282,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -287,6 +303,8 @@ export const providerKeyStorage = {
         iv: row.iv,
         tag: row.tag,
         salt: row.salt,
+        baseUrl: row.base_url || undefined,
+        customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
         isDefault: toBoolean(row.is_default),
         isActive: toBoolean(row.is_active),
         environment: row.environment || 'production',
@@ -317,6 +335,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -337,6 +356,8 @@ export const providerKeyStorage = {
         iv: row.iv,
         tag: row.tag,
         salt: row.salt,
+        baseUrl: row.base_url || undefined,
+        customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
         isDefault: toBoolean(row.is_default),
         isActive: toBoolean(row.is_active),
         environment: row.environment || 'production',
@@ -367,6 +388,7 @@ export const providerKeyStorage = {
     const query = database.prepare(`
       SELECT 
         id, name, provider, key, encrypted, iv, tag, salt,
+        base_url, custom_headers,
         is_default, is_active, environment, description,
         expires_at, last_used, created_at, updated_at
       FROM provider_keys
@@ -387,6 +409,8 @@ export const providerKeyStorage = {
         iv: row.iv,
         tag: row.tag,
         salt: row.salt,
+        baseUrl: row.base_url || undefined,
+        customHeaders: row.custom_headers ? JSON.parse(row.custom_headers) : undefined,
         isDefault: toBoolean(row.is_default),
         isActive: toBoolean(row.is_active),
         environment: row.environment || 'production',

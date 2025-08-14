@@ -215,7 +215,7 @@ async function getKey(provider: APIProviders, debug: boolean): Promise<string | 
  * Handles API key fetching and local provider configurations.
  */
 async function getProviderLanguageModelInterface(
-  provider: APIProviders,
+  provider: APIProviders | string,
   options: AiSdkOptions = {},
   debug: boolean = false
 ): Promise<LanguageModel> {
@@ -232,6 +232,44 @@ async function getProviderLanguageModelInterface(
 
   if (debug) {
     console.log(`[UnifiedProviderService] Initializing model: Provider=${provider}, ModelID=${modelId}`)
+  }
+
+  // Check if this is a custom provider with format "custom_<keyId>"
+  if (typeof provider === 'string' && provider.startsWith('custom_')) {
+    const keyId = parseInt(provider.replace('custom_', ''), 10)
+    if (!isNaN(keyId)) {
+      // Get the specific custom provider key
+      const providerKeyService = createProviderKeyService()
+      const customKey = await providerKeyService.getKeyById(keyId)
+      if (!customKey || customKey.provider !== 'custom' || !customKey.baseUrl) {
+        throw new ApiError(400, 'Custom provider configuration not found', 'CUSTOM_PROVIDER_NOT_CONFIGURED')
+      }
+      
+      const baseURL = customKey.baseUrl
+      const apiKey = customKey.key
+      
+      if (!apiKey) {
+        throw new ApiError(400, 'API key required for custom provider', 'CUSTOM_PROVIDER_KEY_MISSING')
+      }
+      
+      // Ensure URL is properly formatted for OpenAI compatibility
+      const customUrl = baseURL.endsWith('/v1') ? baseURL : `${baseURL.replace(/\/$/, '')}/v1`
+      
+      if (debug) {
+        console.log(`[UnifiedProviderService] Using custom provider at: ${customUrl}`)
+      }
+      
+      // Prepare headers if any custom headers are defined
+      const customHeaders = customKey.customHeaders || {}
+      
+      // Use OpenAI SDK with custom configuration
+      return createOpenAI({
+        baseURL: customUrl,
+        apiKey,
+        headers: customHeaders,
+        compatibility: 'compatible' // Use compatible mode for flexibility
+      })(modelId)
+    }
   }
 
   switch (provider) {

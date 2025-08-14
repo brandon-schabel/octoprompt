@@ -1532,6 +1532,21 @@ export class GenAiService extends BaseApiClient {
     return result as { success: true; data: { output: any } }
   }
 
+  async getProviders() {
+    const result = await this.request('GET', '/providers', {
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          isCustom: z.boolean().optional(),
+          baseUrl: z.string().optional()
+        }))
+      })
+    })
+    return result as { success: true; data: Array<{ id: string; name: string; isCustom?: boolean; baseUrl?: string }> }
+  }
+
   async getModels(provider: string, options?: { ollamaUrl?: string; lmstudioUrl?: string }) {
     const params: Record<string, string> = { provider }
     if (options?.ollamaUrl) params.ollamaUrl = options.ollamaUrl

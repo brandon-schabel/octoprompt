@@ -49,6 +49,35 @@ const FilenameSuggestionSchema = z
 // Use the imported structuredDataSchemas from @promptliano/schemas
 // which now includes all our asset generators
 
+const getProvidersRoute = createRoute({
+  method: 'get',
+  path: '/api/providers',
+  tags: ['AI'],
+  summary: 'Get all available providers including custom ones',
+  responses: {
+    200: {
+      content: {
+        'application/json': { 
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(z.object({
+              id: z.string(),
+              name: z.string(),
+              isCustom: z.boolean().optional(),
+              baseUrl: z.string().optional()
+            }))
+          }).openapi('ProvidersListResponse')
+        }
+      },
+      description: 'List of all available providers.'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
 const getModelsRoute = createRoute({
   method: 'get',
   path: '/api/models',
@@ -240,6 +269,45 @@ const updateProviderSettingsRoute = createRoute({
 })
 
 export const genAiRoutes = new OpenAPIHono()
+  .openapi(getProvidersRoute, async (c) => {
+    try {
+      // Get predefined providers
+      const predefinedProviders = [
+        { id: 'openai', name: 'OpenAI', isCustom: false },
+        { id: 'anthropic', name: 'Anthropic', isCustom: false },
+        { id: 'google_gemini', name: 'Google Gemini', isCustom: false },
+        { id: 'groq', name: 'Groq', isCustom: false },
+        { id: 'together', name: 'Together', isCustom: false },
+        { id: 'xai', name: 'XAI', isCustom: false },
+        { id: 'openrouter', name: 'OpenRouter', isCustom: false },
+        { id: 'lmstudio', name: 'LMStudio', isCustom: false },
+        { id: 'ollama', name: 'Ollama', isCustom: false }
+      ]
+      
+      // Get custom providers
+      const customProviders = await providerKeyService.getCustomProviders()
+      const formattedCustomProviders = customProviders.map(cp => ({
+        id: cp.id,
+        name: cp.name,
+        isCustom: true,
+        baseUrl: cp.baseUrl
+      }))
+      
+      // Combine both lists
+      const allProviders = [...predefinedProviders, ...formattedCustomProviders]
+      
+      return c.json(
+        {
+          success: true,
+          data: allProviders
+        },
+        200
+      )
+    } catch (error) {
+      console.error('Failed to fetch providers:', error)
+      throw new ApiError(500, 'Failed to fetch providers', 'PROVIDERS_FETCH_ERROR')
+    }
+  })
   .openapi(generateStreamRoute, async (c) => {
     const body = c.req.valid('json')
     const { prompt, options, systemMessage } = body
@@ -312,6 +380,49 @@ export const genAiRoutes = new OpenAPIHono()
   .openapi(getModelsRoute, async (c) => {
     const { provider } = c.req.valid('query')
 
+    // Check if this is a custom provider with format "custom_<keyId>"
+    if (provider.startsWith('custom_')) {
+      const keyId = parseInt(provider.replace('custom_', ''), 10)
+      if (!isNaN(keyId)) {
+        // Get the specific custom provider key
+        const customKey = await providerKeyService.getKeyById(keyId)
+        if (customKey && customKey.provider === 'custom' && customKey.baseUrl) {
+          const modelFetcherService = new ModelFetcherService({})
+          
+          try {
+            const models = await modelFetcherService.listCustomProviderModels({
+              baseUrl: customKey.baseUrl,
+              apiKey: customKey.key
+            })
+            
+            const modelData = models.map((model) => ({
+              id: model.id,
+              name: model.name,
+              provider
+            }))
+            
+            return c.json(
+              {
+                success: true,
+                data: modelData
+              } satisfies z.infer<typeof ModelsListResponseSchema>,
+              200
+            )
+          } catch (error) {
+            console.error(`Failed to fetch models for custom provider ${keyId}:`, error)
+            return c.json(
+              {
+                success: true,
+                data: [] // Return empty array on error
+              } satisfies z.infer<typeof ModelsListResponseSchema>,
+              200
+            )
+          }
+        }
+      }
+    }
+
+    // Handle standard providers
     const keys: ProviderKey[] = await providerKeyService.listKeysUncensored()
     const providerKeysConfig: ProviderKeysConfig = keys.reduce((acc, key) => {
       acc[`${key.provider}Key`] = key.key

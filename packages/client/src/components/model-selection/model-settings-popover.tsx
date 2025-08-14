@@ -6,10 +6,10 @@ import { ProviderModelSelector } from './provider-model-selector'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 export interface ModelSettingsPopoverProps {
-  provider: APIProviders
+  provider: APIProviders | string
   model: string
   settings: Partial<AiSdkOptions>
-  onProviderChange: (provider: APIProviders) => void
+  onProviderChange: (provider: APIProviders | string) => void
   onModelChange: (model: string) => void
   onSettingsChange: (settings: Partial<AiSdkOptions>) => void
   disabled?: boolean
