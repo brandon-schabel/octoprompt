@@ -42,11 +42,53 @@ export class ServerManager {
         serverPath = join(options.installPath, 'packages', 'server')
         scriptPath = 'server.ts'
         logger.info('Using source server at:', sourceServerPath)
+        
+        // Check if dependencies are installed for source version
+        const nodeModulesPath = join(options.installPath, 'node_modules')
+        if (!existsSync(nodeModulesPath)) {
+          logger.info('Dependencies not installed, running bun install...')
+          const { execSync } = await import('child_process')
+          try {
+            execSync('bun install', {
+              cwd: options.installPath,
+              stdio: 'pipe',
+              encoding: 'utf-8'
+            })
+            logger.info('Dependencies installed successfully')
+          } catch (installError) {
+            logger.error('Failed to install dependencies:', installError)
+            return {
+              success: false,
+              error: 'Failed to install dependencies. Please run "bun install" manually in ' + options.installPath
+            }
+          }
+        }
       } else if (existsSync(sourceStartPath)) {
         // Alternative source path
         serverPath = join(options.installPath, 'packages', 'server')
         scriptPath = 'start-server.ts'
         logger.info('Using source server at:', sourceStartPath)
+        
+        // Check if dependencies are installed for source version
+        const nodeModulesPath = join(options.installPath, 'node_modules')
+        if (!existsSync(nodeModulesPath)) {
+          logger.info('Dependencies not installed, running bun install...')
+          const { execSync } = await import('child_process')
+          try {
+            execSync('bun install', {
+              cwd: options.installPath,
+              stdio: 'pipe',
+              encoding: 'utf-8'
+            })
+            logger.info('Dependencies installed successfully')
+          } catch (installError) {
+            logger.error('Failed to install dependencies:', installError)
+            return {
+              success: false,
+              error: 'Failed to install dependencies. Please run "bun install" manually in ' + options.installPath
+            }
+          }
+        }
       } else if (existsSync(bundledServerPath)) {
         // Fallback to bundled version
         serverPath = options.installPath

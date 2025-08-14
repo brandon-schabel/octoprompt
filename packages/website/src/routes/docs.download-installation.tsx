@@ -130,13 +130,13 @@ powershell -c "irm bun.sh/install.ps1 | iex"'
                   <h4 className='font-medium mb-2'>1. Download and extract</h4>
                   <CodeBlock
                     code='# Download the bundle
-curl -L https://github.com/brandon-schabel/promptliano/releases/download/v0.9.1/promptliano-0.9.1-bun-bundle.zip -o promptliano.zip
+curl -L https://github.com/brandon-schabel/promptliano/releases/download/v0.9.2/promptliano-0.9.2-bun-bundle.zip -o promptliano.zip
 
 # Extract the zip file
 unzip promptliano.zip
 
 # Navigate to the extracted folder
-cd promptliano-0.9.1-bun-bundle'
+cd promptliano-0.9.2-bun-bundle'
                     language='bash'
                   />
                 </div>
@@ -181,13 +181,13 @@ cd promptliano-0.9.1-bun-bundle'
                   <h4 className='font-medium mb-2'>1. Download and extract</h4>
                   <CodeBlock
                     code='# Download for Apple Silicon (M1 and newer)
-curl -L https://github.com/brandon-schabel/promptliano/releases/download/v0.9.1/promptliano-0.9.1-macos-arm64.zip -o promptliano.zip
+curl -L https://github.com/brandon-schabel/promptliano/releases/download/v0.9.2/promptliano-0.9.2-macos-arm64.zip -o promptliano.zip
 
 # Extract the zip file
 unzip promptliano.zip
 
 # Navigate to the extracted folder
-cd promptliano-0.9.1-macos-arm64'
+cd promptliano-0.9.2-macos-arm64'
                     language='bash'
                   />
                 </div>
@@ -234,13 +234,13 @@ chmod +x ./promptliano
                   </p>
                   <CodeBlock
                     code='# Using PowerShell
-Invoke-WebRequest -Uri "https://github.com/brandon-schabel/promptliano/releases/download/v0.9.1/promptliano-0.9.1-windows-x64.zip" -OutFile "promptliano.zip"
+Invoke-WebRequest -Uri "https://github.com/brandon-schabel/promptliano/releases/download/v0.9.2/promptliano-0.9.2-windows-x64.zip" -OutFile "promptliano.zip"
 
 # Extract the zip file
 Expand-Archive -Path "promptliano.zip" -DestinationPath "."
 
 # Navigate to the extracted folder
-cd promptliano-0.9.1-windows-x64'
+cd promptliano-0.9.2-windows-x64'
                     language='powershell'
                   />
                 </div>
@@ -285,13 +285,13 @@ cd promptliano-0.9.1-windows-x64'
                   <h4 className='font-medium mb-2'>1. Download and extract</h4>
                   <CodeBlock
                     code='# Download the Linux binary
-wget https://github.com/brandon-schabel/promptliano/releases/download/v0.9.1/promptliano-0.9.1-linux-x64.zip
+wget https://github.com/brandon-schabel/promptliano/releases/download/v0.9.2/promptliano-0.9.2-linux-x64.zip
 
 # Extract the zip file
-unzip promptliano-0.9.1-linux-x64.zip
+unzip promptliano-0.9.2-linux-x64.zip
 
 # Navigate to the extracted folder
-cd promptliano-0.9.1-linux-x64'
+cd promptliano-0.9.2-linux-x64'
                     language='bash'
                   />
                 </div>

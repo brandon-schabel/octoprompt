@@ -1,6 +1,6 @@
 {
   "name": "@promptliano/ui",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "React component library for Promptliano with shadcn/ui components",
   "author": "Promptliano",
   "license": "MIT",
