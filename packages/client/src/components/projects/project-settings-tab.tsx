@@ -1,5 +1,7 @@
 import { useProjectTabField, useUpdateActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
-import { useSyncProject, useGetProject } from '@/hooks/api/use-projects-api'
+import { useSyncProjectWithProgress, useGetProject } from '@/hooks/api/use-projects-api'
+import { SyncProgressDialog } from './sync-progress-dialog'
+import type { SyncProgressEvent } from '@promptliano/schemas'
 import { GlobalStateEditorType as EditorType, EDITOR_OPTIONS } from '@promptliano/schemas'
 import {
   Button,
@@ -20,7 +22,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@promptliano/ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Copy, RefreshCw, Settings, HelpCircle, ChevronDown } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@promptliano/ui'
 import { MCPStatusIndicator } from './mcp-status-indicator'
 import { AgentFilesManager } from './agent-files-manager'
@@ -52,17 +55,30 @@ export function ProjectSettingsTab() {
   const [showAgentFiles, setShowAgentFiles] = useState(false)
   const [showTroubleshooting, setShowTroubleshooting] = useState(false)
   const [showInstructionFileSettings, setShowInstructionFileSettings] = useState(false)
+  const [showSyncProgress, setShowSyncProgress] = useState(false)
+  
+  const { syncWithProgress } = useSyncProjectWithProgress()
+  const syncProgressRef = useRef<{ updateProgress: (event: SyncProgressEvent) => void } | null>(null)
 
-  const { isPending: isSyncing, mutate: syncProject } = useSyncProject()
-
-  useEffect(() => {
-    if (projectId) {
-      const interval = setInterval(() => {
-        syncProject(projectId)
-      }, 5000)
-      return () => clearInterval(interval)
-    }
-  }, [projectId, syncProject])
+  // Removed auto-sync to prevent blocking - sync is now handled with progress tracking on demand
+  
+  const handleManualSync = () => {
+    if (!projectId || !projectData) return
+    
+    setShowSyncProgress(true)
+    
+    syncWithProgress(projectId, (event) => {
+      syncProgressRef.current?.updateProgress(event)
+    })
+      .then(() => {
+        toast.success('Project synced successfully!')
+        setShowSyncProgress(false)
+      })
+      .catch((error) => {
+        toast.error(`Sync failed: ${error.message}`)
+        setShowSyncProgress(false)
+      })
+  }
 
   const setPreferredEditor = (value: EditorType) => {
     updateActiveProjectTab((prev) => ({
@@ -171,6 +187,13 @@ export function ProjectSettingsTab() {
                     <TooltipContent>Copy ID</TooltipContent>
                   </Tooltip>
                 </div>
+              </div>
+              
+              <div className='pt-4 border-t'>
+                <Button variant='outline' onClick={handleManualSync} className='w-full'>
+                  <RefreshCw className='h-4 w-4 mr-2' />
+                  Sync Project Files
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -462,6 +485,16 @@ export function ProjectSettingsTab() {
           </div>
         )}
       </div>
+      
+      {/* Sync Progress Dialog */}
+      {projectData && (
+        <SyncProgressDialog
+          open={showSyncProgress}
+          onOpenChange={setShowSyncProgress}
+          projectName={projectData.name}
+          ref={syncProgressRef}
+        />
+      )}
     </TooltipProvider>
   )
 }

@@ -20,10 +20,12 @@ import type {
 } from '@promptliano/schemas'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { useApiClient } from './api/use-api-client'
 import { AGENT_KEYS } from './api/use-agents-api'
+import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
 
 // Query Keys - simplified
 const CHAT_KEYS = {
@@ -433,6 +435,110 @@ export function useSyncProject() {
     retry: 2, // Retry up to 2 times on failure
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000) // Exponential backoff with max 10s
   })
+}
+
+// New SSE-based sync hook with progress tracking
+export function useSyncProjectWithProgress() {
+  const { invalidateProjectFiles, invalidateProject } = useInvalidateProjects()
+  const eventSourceRef = useRef<EventSource | null>(null)
+
+  // Cleanup function to close EventSource on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
+    }
+  }, [])
+
+  const syncWithProgress = useCallback(
+    (
+      projectId: number, 
+      onProgress?: (event: import('@promptliano/schemas').SyncProgressEvent) => void,
+      abortSignal?: AbortSignal
+    ) => {
+      return new Promise<{ created: number; updated: number; deleted: number; skipped: number }>(
+        (resolve, reject) => {
+          // Clean up any existing connection
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close()
+          }
+
+          const eventSource = new EventSource(`${SERVER_HTTP_ENDPOINT}/api/projects/${projectId}/sync-stream`)
+          eventSourceRef.current = eventSource
+
+          // Handle abort signal for cancellation
+          if (abortSignal) {
+            abortSignal.addEventListener('abort', () => {
+              eventSource.close()
+              eventSourceRef.current = null
+              reject(new Error('Sync cancelled'))
+            })
+          }
+
+          let retryCount = 0
+          const maxRetries = 3
+
+          eventSource.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data)
+
+              if (data.type === 'progress' && onProgress) {
+                onProgress(data.data)
+              } else if (data.type === 'complete') {
+                eventSource.close()
+                eventSourceRef.current = null
+                invalidateProjectFiles(projectId)
+                invalidateProject(projectId)
+                resolve(data.data)
+              } else if (data.type === 'error') {
+                eventSource.close()
+                eventSourceRef.current = null
+                reject(new Error(data.data.message || 'Sync failed'))
+              }
+            } catch (error) {
+              console.error('Error parsing SSE data:', error)
+            }
+          }
+
+          eventSource.onerror = (error) => {
+            console.error('SSE error:', error)
+            
+            // Implement retry logic with exponential backoff
+            if (retryCount < maxRetries) {
+              retryCount++
+              const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000)
+              console.log(`Retrying SSE connection in ${retryDelay}ms (attempt ${retryCount}/${maxRetries})`)
+              
+              setTimeout(() => {
+                // Check if not aborted
+                if (abortSignal?.aborted) {
+                  return
+                }
+                
+                // Close old connection and create new one
+                eventSource.close()
+                const newEventSource = new EventSource(`${SERVER_HTTP_ENDPOINT}/api/projects/${projectId}/sync-stream`)
+                eventSourceRef.current = newEventSource
+                
+                // Reattach event handlers
+                newEventSource.onmessage = eventSource.onmessage
+                newEventSource.onerror = eventSource.onerror
+              }, retryDelay)
+            } else {
+              eventSource.close()
+              eventSourceRef.current = null
+              reject(new Error('Connection to sync stream failed after retries'))
+            }
+          }
+        }
+      )
+    },
+    [invalidateProjectFiles, invalidateProject]
+  )
+
+  return { syncWithProgress }
 }
 
 export function useRefreshProject() {

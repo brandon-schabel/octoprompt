@@ -63,11 +63,16 @@ import {
   BatchTestProviderRequestSchema,
   BatchTestProviderApiResponseSchema as BatchTestProviderResponseSchemaZ,
   ProviderHealthStatusListResponseSchema as ProviderHealthStatusListResponseSchemaZ,
+  ValidateCustomProviderRequestSchema,
+  ValidateCustomProviderResponseSchema,
   type TestProviderRequest,
   type TestProviderResponse,
   type BatchTestProviderRequest,
   type BatchTestProviderResponse,
-  type ProviderHealthStatus
+  type ProviderHealthStatus,
+  type ValidateCustomProviderRequest,
+  type CustomProviderFeatures,
+  type ProviderModel
 } from '@promptliano/schemas'
 
 import {
@@ -1490,6 +1495,19 @@ export class ProviderKeyService extends BaseApiClient {
       responseSchema: OperationSuccessResponseSchemaZ
     })
     return result
+  }
+
+  async validateCustomProvider(data: ValidateCustomProviderRequest) {
+    const validatedData = this.validateBody(ValidateCustomProviderRequestSchema, data)
+    const result = await this.request('POST', '/api/keys/validate-custom', {
+      body: validatedData,
+      responseSchema: ValidateCustomProviderResponseSchema
+    })
+    return result as DataResponseSchema<{
+      compatible: boolean
+      models: ProviderModel[]
+      features: CustomProviderFeatures
+    }>
   }
 }
 

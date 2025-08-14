@@ -48,12 +48,12 @@ async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: s
 /**
  * Convert database row to Ticket object with proper type conversions
  */
-function rowToTicket(row: any): Partial<Ticket> {
+function rowToTicket(row: any): Ticket {
   return {
     id: toNumber(row.id),
     projectId: toNumber(row.project_id),
-    title: toString(row.title),
-    overview: toString(row.overview),
+    title: toString(row.title) || '',
+    overview: toString(row.overview) || '',
     status: (row.status as 'open' | 'in_progress' | 'closed') || 'open',
     priority: (row.priority as 'low' | 'normal' | 'high') || 'normal',
     suggestedFileIds: toArray(row.suggested_file_ids, [], 'ticket.suggestedFileIds'),
@@ -79,12 +79,12 @@ function rowToTicket(row: any): Partial<Ticket> {
 /**
  * Convert database row to TicketTask object with proper type conversions
  */
-function rowToTask(row: any): Partial<TicketTask> {
+function rowToTask(row: any): TicketTask {
   return {
     id: toNumber(row.id),
     ticketId: toNumber(row.ticket_id),
-    content: toString(row.content),
-    description: toString(row.description),
+    content: toString(row.content) || '',
+    description: toString(row.description) || '',
     suggestedFileIds: toArray(row.suggested_file_ids, [], 'task.suggestedFileIds'),
     done: toBoolean(row.done),
     orderIndex: toNumber(row.order_index),

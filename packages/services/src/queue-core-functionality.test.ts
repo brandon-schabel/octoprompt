@@ -17,38 +17,43 @@ import {
 } from './queue-service'
 import { createProject } from './project-service'
 import { createTicket, createTask, getTicketById, updateTicket, updateTask, getTasks } from './ticket-service'
-import { clearAllData, resetTestDatabase } from '@promptliano/storage/src/test-utils'
+import { clearAllData, resetTestDatabase, resetDatabaseInstance } from '@promptliano/storage/src/test-utils'
 import { ticketStorage } from '@promptliano/storage'
+import { randomBytes } from 'crypto'
 
 describe('Queue Core Functionality', () => {
   let testProjectId: number
+  
+  // Generate unique suffix for this test suite
+  const suiteId = randomBytes(4).toString('hex')
 
   beforeEach(async () => {
     await resetTestDatabase()
 
+    const projectSuffix = randomBytes(4).toString('hex')
     const project = await createProject({
-      name: 'Core Test Project',
-      path: '/test/core-' + Date.now(),
-      created: Date.now(),
-      updated: Date.now()
+      name: `Core Test Project ${suiteId}-${projectSuffix}`,
+      path: `/test/core-${suiteId}-${projectSuffix}`
     })
     testProjectId = project.id
   })
 
   afterAll(async () => {
     await clearAllData()
+    resetDatabaseInstance()
   })
 
   describe('Queue CRUD Operations', () => {
     test('should create queue with defaults', async () => {
+      const queueSuffix = randomBytes(4).toString('hex')
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Default Queue',
+        name: `Default Queue ${suiteId}-${queueSuffix}`,
         description: 'Testing defaults'
       })
 
       expect(queue.id).toBeDefined()
-      expect(queue.name).toBe('Default Queue')
+      expect(queue.name).toBe(`Default Queue ${suiteId}-${queueSuffix}`)
       expect(queue.description).toBe('Testing defaults')
       expect(queue.status).toBe('active')
       expect(queue.maxParallelItems).toBe(1)
@@ -57,9 +62,10 @@ describe('Queue Core Functionality', () => {
     })
 
     test('should update queue properties', async () => {
+      const queueSuffix = randomBytes(4).toString('hex')
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Original Name',
+        name: `Original Name ${suiteId}-${queueSuffix}`,
         description: 'Original'
       })
 
@@ -76,9 +82,10 @@ describe('Queue Core Functionality', () => {
     })
 
     test('should pause and resume queue', async () => {
+      const queueSuffix = randomBytes(4).toString('hex')
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Pausable Queue'
+        name: `Pausable Queue ${suiteId}-${queueSuffix}`
       })
 
       expect(queue.status).toBe('active')
@@ -91,9 +98,10 @@ describe('Queue Core Functionality', () => {
     })
 
     test('should delete queue', async () => {
+      const queueSuffix = randomBytes(4).toString('hex')
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Deletable Queue'
+        name: `Deletable Queue ${suiteId}-${queueSuffix}`
       })
 
       await deleteQueue(queue.id)
@@ -106,9 +114,10 @@ describe('Queue Core Functionality', () => {
     let testQueue: any
 
     beforeEach(async () => {
+      const queueSuffix = randomBytes(4).toString('hex')
       testQueue = await createQueue({
         projectId: testProjectId,
-        name: 'Ticket Queue'
+        name: `Ticket Queue ${suiteId}-${queueSuffix}`
       })
     })
 
@@ -117,7 +126,8 @@ describe('Queue Core Functionality', () => {
         projectId: testProjectId,
         title: 'Test Ticket',
         status: 'open',
-        priority: 'high'
+        priority: 'high',
+        overview: ''
       })
 
       const enqueued = await enqueueTicket(ticket.id, testQueue.id, 10)
@@ -134,16 +144,17 @@ describe('Queue Core Functionality', () => {
         projectId: testProjectId,
         title: 'Dequeue Test',
         status: 'open',
-        priority: 'normal'
+        priority: 'normal',
+        overview: ''
       })
 
       await enqueueTicket(ticket.id, testQueue.id, 5)
       const dequeued = await dequeueTicket(ticket.id)
 
-      expect(dequeued.queueId).toBeUndefined()
-      expect(dequeued.queueStatus).toBeUndefined()
+      expect(dequeued.queueId == null).toBe(true)
+      expect(dequeued.queueStatus == null).toBe(true)
       expect(dequeued.queuePriority).toBe(0)
-      expect(dequeued.queuedAt).toBeUndefined()
+      expect(dequeued.queuedAt == null).toBe(true)
     })
 
     test('should get ticket queue status', async () => {
@@ -151,7 +162,8 @@ describe('Queue Core Functionality', () => {
         projectId: testProjectId,
         title: 'Status Test',
         status: 'open',
-        priority: 'low'
+        priority: 'low',
+        overview: ''
       })
 
       // Before enqueueing
@@ -169,7 +181,8 @@ describe('Queue Core Functionality', () => {
         projectId: testProjectId,
         title: 'Complete Test',
         status: 'in_progress',
-        priority: 'high'
+        priority: 'high',
+        overview: ''
       })
 
       await enqueueTicket(ticket.id, testQueue.id, 10)
@@ -190,16 +203,18 @@ describe('Queue Core Functionality', () => {
     let testTicket: any
 
     beforeEach(async () => {
+      const queueSuffix = randomBytes(4).toString('hex')
       testQueue = await createQueue({
         projectId: testProjectId,
-        name: 'Task Queue'
+        name: `Task Queue ${suiteId}-${queueSuffix}`
       })
 
       testTicket = await createTicket({
         projectId: testProjectId,
         title: 'Parent Ticket',
         status: 'open',
-        priority: 'normal'
+        priority: 'normal',
+        overview: ''
       })
     })
 
@@ -242,8 +257,8 @@ describe('Queue Core Functionality', () => {
 
       await enqueueTask(testTicket.id, task.id, testQueue.id, 8)
 
-      // Mark as in_progress
-      await updateTask(testTicket.id, task.id, { queueStatus: 'in_progress' })
+      // Mark as in_progress via queue
+      await getNextTaskFromQueue(testQueue.id, 'test-agent')
 
       // Complete the task (tasks require ticketId)
       await completeQueueItem('task', task.id, testTicket.id)
@@ -260,9 +275,10 @@ describe('Queue Core Functionality', () => {
     let testQueue: any
 
     beforeEach(async () => {
+      const queueSuffix = randomBytes(4).toString('hex')
       testQueue = await createQueue({
         projectId: testProjectId,
-        name: 'Stats Queue'
+        name: `Stats Queue ${suiteId}-${queueSuffix}`
       })
     })
 
@@ -273,7 +289,8 @@ describe('Queue Core Functionality', () => {
           projectId: testProjectId,
           title: `Ticket ${i + 1}`,
           status: 'open',
-          priority: 'normal'
+          priority: 'normal',
+          overview: ''
         })
         await enqueueTicket(ticket.id, testQueue.id, 5)
       }
@@ -294,19 +311,22 @@ describe('Queue Core Functionality', () => {
         projectId: testProjectId,
         title: 'Queued',
         status: 'open',
-        priority: 'high'
+        priority: 'high',
+        overview: ''
       })
       const ticket2 = await createTicket({
         projectId: testProjectId,
         title: 'Processing',
         status: 'in_progress',
-        priority: 'normal'
+        priority: 'normal',
+        overview: ''
       })
       const ticket3 = await createTicket({
         projectId: testProjectId,
         title: 'Done',
         status: 'closed',
-        priority: 'low'
+        priority: 'low',
+        overview: ''
       })
 
       // Enqueue all

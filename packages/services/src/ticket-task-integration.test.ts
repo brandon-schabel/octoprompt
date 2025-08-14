@@ -29,9 +29,7 @@ describe('Ticket-Task Integration', () => {
 
     const project = await createProject({
       name: 'Integration Test Project',
-      path: '/test/integration-' + Date.now(),
-      created: Date.now(),
-      updated: Date.now()
+      path: '/test/integration-' + Date.now()
     })
     testProjectId = project.id
   })
@@ -44,13 +42,13 @@ describe('Ticket-Task Integration', () => {
     test('should enqueue ticket with all its tasks', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Parent-Child Queue'
+        name: 'Parent-Child Queue ' + Date.now()
       })
 
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Parent Ticket',
-        description: 'Ticket with multiple tasks',
+        overview: 'Ticket with multiple tasks',
         status: 'open',
         priority: 'high'
       })
@@ -60,8 +58,7 @@ describe('Ticket-Task Integration', () => {
       for (let i = 0; i < 5; i++) {
         const task = await createTask(ticket.id, {
           content: `Task ${i + 1}`,
-          description: `Description for task ${i + 1}`,
-          orderIndex: i
+          description: `Description for task ${i + 1}`
         })
         tasks.push(task)
       }
@@ -90,12 +87,13 @@ describe('Ticket-Task Integration', () => {
     test('should handle task completion updating ticket progress', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Progress Queue'
+        name: 'Progress Queue ' + Date.now()
       })
 
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Progress Tracking',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
@@ -105,13 +103,13 @@ describe('Ticket-Task Integration', () => {
       const task2 = await createTask(ticket.id, { content: 'Task 2' })
       const task3 = await createTask(ticket.id, { content: 'Task 3' })
 
-      // Enqueue all
-      await enqueueTicketWithAllTasks(queue.id, ticket.id, 5)
+      // Enqueue tasks only
+      await enqueueTask(ticket.id, task1.id, queue.id, 5)
+      await enqueueTask(ticket.id, task2.id, queue.id, 5)
+      await enqueueTask(ticket.id, task3.id, queue.id, 5)
 
       // Complete first task
-      await updateTask(ticket.id, task1.id, {
-        queueStatus: 'in_progress'
-      })
+      await getNextTaskFromQueue(queue.id, 'agent-1')
       await completeQueueItem('task', task1.id, ticket.id)
 
       let tasks = await getTasks(ticket.id)
@@ -120,9 +118,7 @@ describe('Ticket-Task Integration', () => {
       expect(completed1?.queueStatus).toBe('completed')
 
       // Complete second task
-      await updateTask(ticket.id, task2.id, {
-        queueStatus: 'in_progress'
-      })
+      await getNextTaskFromQueue(queue.id, 'agent-2')
       await completeQueueItem('task', task2.id, ticket.id)
 
       tasks = await getTasks(ticket.id)
@@ -130,9 +126,7 @@ describe('Ticket-Task Integration', () => {
       expect(completed2?.done).toBe(true)
 
       // Complete third task
-      await updateTask(ticket.id, task3.id, {
-        queueStatus: 'in_progress'
-      })
+      await getNextTaskFromQueue(queue.id, 'agent-3')
       await completeQueueItem('task', task3.id, ticket.id)
 
       tasks = await getTasks(ticket.id)
@@ -148,12 +142,13 @@ describe('Ticket-Task Integration', () => {
     test('should remove tasks from queue when ticket is deleted', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Cascade Queue'
+        name: 'Cascade Queue ' + Date.now()
       })
 
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Deletable Ticket',
+        overview: '',
         status: 'open',
         priority: 'low'
       })
@@ -182,12 +177,13 @@ describe('Ticket-Task Integration', () => {
     test('should reflect task status in parent ticket', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Status Sync Queue'
+        name: 'Status Sync Queue ' + Date.now()
       })
 
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Status Parent',
+        overview: '',
         status: 'open',
         priority: 'high'
       })
@@ -211,7 +207,7 @@ describe('Ticket-Task Integration', () => {
       expect(currentTask?.queueStatus).toBe('in_progress')
 
       // Complete the task
-      await completeQueueItem('task', task.id, childTicket.id)
+      await completeQueueItem('task', task.id, ticket.id)
 
       // Verify task is marked done
       const finalTasks = await getTasks(ticket.id)
@@ -223,12 +219,13 @@ describe('Ticket-Task Integration', () => {
     test('should mark ticket complete when all tasks done', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Completion Queue'
+        name: 'Completion Queue ' + Date.now()
       })
 
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Auto-Complete Ticket',
+        overview: '',
         status: 'in_progress',
         priority: 'normal'
       })
@@ -242,22 +239,19 @@ describe('Ticket-Task Integration', () => {
       await enqueueTask(ticket.id, task2.id, queue.id, 5)
 
       // Complete both tasks
-      await updateTask(ticket.id, task1.id, { queueStatus: 'in_progress' })
+      await getNextTaskFromQueue(queue.id, 'agent-a')
       await completeQueueItem('task', task1.id, ticket.id)
 
-      await updateTask(ticket.id, task2.id, { queueStatus: 'in_progress' })
+      await getNextTaskFromQueue(queue.id, 'agent-b')
       await completeQueueItem('task', task2.id, ticket.id)
 
       // Verify both tasks are done
       const tasks = await getTasks(ticket.id)
       expect(tasks.every((t) => t.done)).toBe(true)
 
-      // In a real implementation, you might have logic to auto-complete the ticket
-      // For now, we'll manually update it to show the expected behavior
-      await updateTicket(ticket.id, { status: 'closed' })
-
+      // Give queue auto-close a tick
       const finalTicket = await getTicketById(ticket.id)
-      expect(finalTicket.status).toBe('done')
+      expect(finalTicket.status).toBe('closed')
     })
   })
 
@@ -265,7 +259,7 @@ describe('Ticket-Task Integration', () => {
     test('should handle tickets and tasks in same queue', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Mixed Queue',
+        name: 'Mixed Queue ' + Date.now(),
         maxParallelItems: 5
       })
 
@@ -273,6 +267,7 @@ describe('Ticket-Task Integration', () => {
       const ticket1 = await createTicket({
         projectId: testProjectId,
         title: 'Ticket 1',
+        overview: '',
         status: 'open',
         priority: 'high'
       })
@@ -282,6 +277,7 @@ describe('Ticket-Task Integration', () => {
       const ticket2 = await createTicket({
         projectId: testProjectId,
         title: 'Ticket 2',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
@@ -303,21 +299,23 @@ describe('Ticket-Task Integration', () => {
       const item3 = await getNextTaskFromQueue(queue.id, 'agent-3')
 
       // Should get ticket1 and its tasks first (higher priority)
-      const ticket1Items = [item1, item2, item3].filter(
-        (item) => item.item && (item.item.id === ticket1.id || item.item.ticketId === ticket1.id)
-      )
+      const ticket1Items = [item1, item2, item3].filter((entry) => {
+        const it = entry.item as any
+        return it && (it.id === ticket1.id || ('ticketId' in it && it.ticketId === ticket1.id))
+      })
       expect(ticket1Items.length).toBeGreaterThanOrEqual(1)
     })
 
     test('should handle orphaned tasks gracefully', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Orphan Queue'
+        name: 'Orphan Queue ' + Date.now()
       })
 
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Parent for Orphan',
+        overview: '',
         status: 'open',
         priority: 'low'
       })
@@ -350,12 +348,13 @@ describe('Ticket-Task Integration', () => {
     test('should maintain task order within ticket', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Order Queue'
+        name: 'Order Queue ' + Date.now()
       })
 
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Ordered Tasks',
+        overview: '',
         status: 'open',
         priority: 'normal'
       })
@@ -363,10 +362,7 @@ describe('Ticket-Task Integration', () => {
       // Create tasks with specific order
       const tasks = []
       for (let i = 0; i < 4; i++) {
-        const task = await createTask(ticket.id, {
-          content: `Step ${i + 1}`,
-          orderIndex: i
-        })
+        const task = await createTask(ticket.id, { content: `Step ${i + 1}` })
         tasks.push(task)
       }
 
@@ -374,7 +370,7 @@ describe('Ticket-Task Integration', () => {
       const result = await enqueueTicketWithAllTasks(queue.id, ticket.id, 10)
 
       // Tasks should have descending priorities (earlier tasks = higher priority)
-      const sortedTasks = result.tasks.sort((a, b) => b.queuePriority - a.queuePriority)
+      const sortedTasks = result.tasks.sort((a, b) => (b.queuePriority ?? 0) - (a.queuePriority ?? 0))
 
       // First task should have highest priority
       expect(sortedTasks[0].orderIndex).toBe(0)
@@ -386,12 +382,13 @@ describe('Ticket-Task Integration', () => {
     test('should handle partial task completion', async () => {
       const queue = await createQueue({
         projectId: testProjectId,
-        name: 'Partial Queue'
+        name: 'Partial Queue ' + Date.now()
       })
 
       const ticket = await createTicket({
         projectId: testProjectId,
         title: 'Partial Completion',
+        overview: '',
         status: 'in_progress',
         priority: 'high'
       })
@@ -399,12 +396,13 @@ describe('Ticket-Task Integration', () => {
       // Create 5 tasks, mark 2 as already done
       const tasks = []
       for (let i = 0; i < 5; i++) {
-        const task = await createTask(ticket.id, {
-          content: `Task ${i + 1}`,
-          done: i < 2 // First 2 are already done
-        })
+        const task = await createTask(ticket.id, { content: `Task ${i + 1}` })
         tasks.push(task)
       }
+
+      // Mark first 2 as done
+      await updateTask(ticket.id, tasks[0].id, { done: true })
+      await updateTask(ticket.id, tasks[1].id, { done: true })
 
       // Enqueue ticket with tasks (should skip completed ones)
       const result = await enqueueTicketWithAllTasks(queue.id, ticket.id, 8)
@@ -414,7 +412,8 @@ describe('Ticket-Task Integration', () => {
 
       // Verify only incomplete tasks are in queue
       const enqueuedTaskIds = result.tasks.map((t) => t.id)
-      const incompleteTasks = tasks.filter((t) => !t.done)
+      const freshTasks = await getTasks(ticket.id)
+      const incompleteTasks = freshTasks.filter((t) => !t.done)
 
       for (const task of incompleteTasks) {
         expect(enqueuedTaskIds).toContain(task.id)

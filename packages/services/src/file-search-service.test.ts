@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from 'bun:test'
-import { DatabaseManager } from '@promptliano/storage'
+import { DatabaseManager, resetTestDatabase, clearAllData } from '@promptliano/storage'
 import { fileSearchService } from './file-search-service'
 import { fileIndexingService } from './file-indexing-service'
 import type { ProjectFile } from '@promptliano/schemas'
@@ -9,41 +9,35 @@ describe('FileSearchService', () => {
   let db: any
 
   beforeAll(async () => {
-    // Initialize database
+    // Reset and initialize test database with migrations
+    await resetTestDatabase()
+    
+    // Get database instance
     db = DatabaseManager.getInstance().getDatabase()
-
-    // Ensure test tables exist
-    await db.exec(`
-      CREATE VIRTUAL TABLE IF NOT EXISTS file_search_fts USING fts5(
-        file_id UNINDEXED,
-        project_id UNINDEXED,
-        path,
-        name,
-        extension UNINDEXED,
-        content,
-        summary,
-        keywords,
-        tokenize = 'porter unicode61 remove_diacritics 2'
-      )
-    `)
   })
 
   beforeEach(async () => {
-    // Clean up test data
-    db.prepare('DELETE FROM file_search_fts WHERE project_id = ?').run(testProjectId)
-    db.prepare('DELETE FROM file_search_metadata WHERE project_id = ?').run(testProjectId)
-    db.prepare('DELETE FROM file_keywords WHERE file_id LIKE ?').run(`test-${testProjectId}-%`)
-    db.prepare('DELETE FROM file_trigrams WHERE file_id LIKE ?').run(`test-${testProjectId}-%`)
-    db.prepare('DELETE FROM search_cache WHERE project_id = ?').run(testProjectId)
+    // Clean up test data - tables might not exist yet
+    try {
+      db.prepare('DELETE FROM file_search_fts WHERE project_id = ?').run(testProjectId)
+    } catch {}
+    try {
+      db.prepare('DELETE FROM file_search_metadata WHERE project_id = ?').run(testProjectId)
+    } catch {}
+    try {
+      db.prepare('DELETE FROM file_keywords WHERE file_id LIKE ?').run(`test-${testProjectId}-%`)
+    } catch {}
+    try {
+      db.prepare('DELETE FROM file_trigrams WHERE file_id LIKE ?').run(`test-${testProjectId}-%`)
+    } catch {}
+    try {
+      db.prepare('DELETE FROM search_cache WHERE project_id = ?').run(testProjectId)
+    } catch {}
   })
 
   afterAll(async () => {
-    // Final cleanup
-    db.prepare('DELETE FROM file_search_fts WHERE project_id = ?').run(testProjectId)
-    db.prepare('DELETE FROM file_search_metadata WHERE project_id = ?').run(testProjectId)
-    db.prepare('DELETE FROM file_keywords WHERE file_id LIKE ?').run(`test-${testProjectId}-%`)
-    db.prepare('DELETE FROM file_trigrams WHERE file_id LIKE ?').run(`test-${testProjectId}-%`)
-    db.prepare('DELETE FROM search_cache WHERE project_id = ?').run(testProjectId)
+    // Clean up all test data
+    await clearAllData()
   })
 
   const createTestFile = (id: string, path: string, content: string): ProjectFile => ({

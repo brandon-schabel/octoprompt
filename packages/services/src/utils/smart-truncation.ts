@@ -42,7 +42,7 @@ export class SmartTruncation {
   private static readonly FALLBACK_BLOCK_SIZE = 50 // Default block size when parsing fails
   private static readonly MIN_MEANINGFUL_TOKENS = 100 // Minimum tokens to consider adding content
   private static readonly PERCENT_MULTIPLIER = 100 // For percentage calculations
-  private static readonly DENSITY_ADJUSTMENT_FACTOR = 0.2 // Whitespace density adjustment
+  private static readonly DENSITY_ADJUSTMENT_FACTOR = 0.3 // Whitespace density adjustment
 
   /**
    * Estimate token count for text
@@ -62,8 +62,9 @@ export class SmartTruncation {
     const newlineCount = (text.match(/\n/g) || []).length
     const whitespaceRatio = (text.match(/\s/g) || []).length / text.length
 
-    // Code with more structure typically has fewer tokens
-    const densityFactor = 1 - whitespaceRatio * SmartTruncation.DENSITY_ADJUSTMENT_FACTOR
+    // Dense code (less whitespace) typically has more tokens per character
+    // Sparse code (more whitespace) has fewer tokens
+    const densityFactor = 1 + (1 - whitespaceRatio) * SmartTruncation.DENSITY_ADJUSTMENT_FACTOR
 
     return Math.ceil(baseEstimate * densityFactor)
   }
@@ -72,10 +73,21 @@ export class SmartTruncation {
    * Smart truncate file content preserving important sections
    */
   static truncate(content: string, options: TruncationOptions = {}): TruncatedContent {
-    const maxTokens = options.maxTokens || SmartTruncation.DEFAULT_MAX_TOKENS
+    const maxTokens = options.maxTokens ?? SmartTruncation.DEFAULT_MAX_TOKENS
     const tokenEstimator = options.tokenEstimator || this.estimateTokens
 
     const originalTokens = tokenEstimator(content)
+
+    // Handle maxTokens = 0 - return empty truncation
+    if (maxTokens === 0) {
+      return {
+        content: '\n// ... additional content truncated for summarization ...\n',
+        wasTruncated: true,
+        originalTokens,
+        truncatedTokens: 0,
+        preservedSections: []
+      }
+    }
 
     // If content fits, return as-is
     if (originalTokens <= maxTokens) {
@@ -217,6 +229,17 @@ export class SmartTruncation {
         if (sections.length > 0) break
       }
     }
+    
+    // Handle case where imports go to the end of the file
+    if (inImportBlock && blockLines.length > 0) {
+      sections.push({
+        type: 'imports',
+        content: blockLines.join('\n'),
+        priority: 10,
+        startLine: blockStart,
+        endLine: lines.length - 1
+      })
+    }
 
     return sections
   }
@@ -256,29 +279,27 @@ export class SmartTruncation {
       }
       // Export declarations
       else if (line.startsWith('export ') && !line.startsWith('export default')) {
-        // Find the end of the export declaration
+        // Determine if this is a function/class or a simple export
+        const isFunction = line.includes('function')
+        const isClass = line.includes('class')
+        const isInterface = line.includes('interface')
+        const isType = line.includes('type')
+        
         let endLine = i
-        let braceCount = 0
-        let inString = false
-        let stringChar = ''
-
-        for (let j = i; j < lines.length; j++) {
-          const chars = lines[j].split('')
-          for (const char of chars) {
-            if (!inString && (char === '"' || char === "'" || char === '`')) {
-              inString = true
-              stringChar = char
-            } else if (inString && char === stringChar) {
-              inString = false
-            } else if (!inString) {
-              if (char === '{') braceCount++
-              else if (char === '}') braceCount--
+        
+        if (isFunction || isClass) {
+          // For functions and classes, find the closing brace
+          endLine = this.findBlockEnd(lines, i)
+        } else if (isInterface || isType) {
+          // For interfaces and types, find the end
+          endLine = this.findBlockEnd(lines, i)
+        } else {
+          // For const/let/var exports, find the semicolon
+          for (let j = i; j < Math.min(i + 10, lines.length); j++) {
+            if (lines[j].includes(';')) {
+              endLine = j
+              break
             }
-          }
-
-          if (braceCount === 0 && lines[j].includes(';')) {
-            endLine = j
-            break
           }
         }
 
@@ -308,17 +329,18 @@ export class SmartTruncation {
   }
 
   /**
-   * Extract class definitions
+   * Extract class definitions (only non-exported ones, as exported ones are handled by extractExports)
    */
   private static extractClasses(lines: string[]): CodeSection[] {
     const sections: CodeSection[] = []
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      const classMatch = /^(export\s+)?(abstract\s+)?class\s+(\w+)/.exec(line)
+      // Only match non-exported classes (exported ones are handled by extractExports)
+      const classMatch = /^(?!export\s+)(abstract\s+)?class\s+(\w+)/.exec(line)
 
       if (classMatch) {
-        const className = classMatch[3]
+        const className = classMatch[2] // Group 2 is the class name
         const classEnd = this.findBlockEnd(lines, i)
 
         // For large classes, just keep the signature and public methods
@@ -360,19 +382,19 @@ export class SmartTruncation {
   }
 
   /**
-   * Extract function definitions
+   * Extract function definitions (only non-exported ones, as exported ones are handled by extractExports)
    */
   private static extractFunctions(lines: string[]): CodeSection[] {
     const sections: CodeSection[] = []
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      const funcMatch = /^(export\s+)?(async\s+)?function\s+(\w+)/.exec(line)
-      const arrowMatch = /^(export\s+)?const\s+(\w+)\s*=\s*(async\s+)?\(/.exec(line)
+      // Only match non-exported functions (exported ones are handled by extractExports)
+      const funcMatch = /^(?!export\s+)(async\s+)?function\s+(\w+)/.exec(line)
+      const arrowMatch = /^(?!export\s+)const\s+(\w+)\s*=\s*(async\s+)?\(/.exec(line)
 
       if (funcMatch || arrowMatch) {
-        const funcName = funcMatch ? funcMatch[3] : arrowMatch![2]
-        const isExported = (funcMatch && funcMatch[1]) || (arrowMatch && arrowMatch[1])
+        const funcName = funcMatch ? funcMatch[2] : arrowMatch![1] // Correct group indices
         const funcEnd = this.findBlockEnd(lines, i)
 
         // For large functions, keep signature and early return statements
@@ -381,7 +403,7 @@ export class SmartTruncation {
         sections.push({
           type: 'function',
           content: funcLines.join('\n') + (funcEnd > i + 10 ? '\n  // ... rest of function' : ''),
-          priority: isExported ? 6 : 4,
+          priority: 4,
           startLine: i,
           endLine: funcEnd,
           name: funcName
@@ -393,24 +415,24 @@ export class SmartTruncation {
   }
 
   /**
-   * Extract type and interface definitions
+   * Extract type and interface definitions (only non-exported ones, as exported ones are handled by extractExports)
    */
   private static extractTypes(lines: string[]): CodeSection[] {
     const sections: CodeSection[] = []
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      const typeMatch = /^(export\s+)?(type|interface)\s+(\w+)/.exec(line)
+      // Only match non-exported types/interfaces (exported ones are handled by extractExports)
+      const typeMatch = /^(?!export\s+)(type|interface)\s+(\w+)/.exec(line)
 
       if (typeMatch) {
-        const typeName = typeMatch[3]
-        const isExported = !!typeMatch[1]
+        const typeName = typeMatch[2] // Group 2 is the type name
         const typeEnd = this.findBlockEnd(lines, i)
 
         sections.push({
-          type: typeMatch[2] as 'interface' | 'type',
+          type: typeMatch[1] as 'interface' | 'type',
           content: lines.slice(i, typeEnd + 1).join('\n'),
-          priority: isExported ? 5 : 3,
+          priority: 3,
           startLine: i,
           endLine: typeEnd,
           name: typeName

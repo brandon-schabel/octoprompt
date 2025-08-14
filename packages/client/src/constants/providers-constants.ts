@@ -7,6 +7,7 @@ export type ModelProvider = {
   linkTitle: string
   description: string
   isLocal?: boolean
+  isCustom?: boolean
 }
 
 export const PROVIDERS = [
@@ -76,6 +77,15 @@ export const PROVIDERS = [
     isLocal: true,
     description:
       'Ollama is a lightweight terminal based tool for running LLMs on your local machine. Click the link to download the app. Once you have Ollama installed, Promptliano will automatically start pulling the models API and you can select and start chatting with them. You can change Ollama base URL in the settings.'
+  },
+  {
+    id: 'custom',
+    name: 'Custom Provider',
+    link: '#',
+    linkTitle: 'Configure custom provider',
+    isCustom: true,
+    description:
+      'Add any OpenAI API-compatible provider. This includes services like LocalAI, FastChat, vLLM, or any other service that implements the OpenAI API specification. You\'ll need to provide the base URL and API key for your custom provider.'
   }
 ] satisfies ModelProvider[]
 

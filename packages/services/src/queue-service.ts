@@ -10,6 +10,7 @@ import type {
 } from '@promptliano/schemas'
 import { queueStorage } from '@promptliano/storage'
 import { ticketStorage } from '@promptliano/storage'
+import { updateTicket as serviceUpdateTicket } from './ticket-service'
 import { ApiError } from '@promptliano/shared'
 
 // === Queue Management ===
@@ -394,6 +395,18 @@ export async function getNextTaskFromQueue(
           queueAgentId: agentId
         })
 
+        // Reflect progress on parent ticket
+        try {
+          const parentTicket = await ticketStorage.readTicket(ticket.id)
+          if (parentTicket) {
+            await ticketStorage.updateTicket(ticket.id, {
+              queueStatus: 'in_progress',
+              queueStartedAt: parentTicket.queueStartedAt || Date.now(),
+              queueAgentId: parentTicket.queueAgentId || agentId
+            })
+          }
+        } catch { }
+
         return { type: 'task', item: updatedTask }
       }
     }
@@ -546,6 +559,13 @@ export async function completeQueueItem(itemType: 'ticket' | 'task', itemId: num
         actualProcessingTime: task.queueStartedAt ? Date.now() - task.queueStartedAt : undefined,
         done: true
       })
+
+      // If all tasks are done, mark parent ticket completed/closed
+      try {
+        const tasks = await ticketStorage.readTasks(ticketId)
+        const allDone = Object.values(tasks).every((t) => t.done)
+        if (allDone) await serviceUpdateTicket(ticketId, { status: 'closed' })
+      } catch { }
     }
   } catch (error) {
     if (error instanceof ApiError) throw error

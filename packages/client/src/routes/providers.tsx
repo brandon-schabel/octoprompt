@@ -87,6 +87,7 @@ import type { ProviderKey, CreateProviderKeyBody } from '@promptliano/schemas'
 import { LocalProviderSection } from '@/components/providers/local-provider-section'
 import { ProviderCard } from '@/components/providers/provider-card'
 import { ProviderTestDialog } from '@/components/providers/provider-test-dialog'
+import { CustomProviderDialog } from '@/components/providers/custom-provider-dialog'
 import { useLocalModelStatus } from '@/hooks/use-local-model-status'
 import { useAppSettings } from '@/hooks/use-kv-local-storage'
 
@@ -104,6 +105,7 @@ function ProvidersPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'api' | 'local'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isCustomProviderDialogOpen, setIsCustomProviderDialogOpen] = useState(false)
   const [editingProvider, setEditingProvider] = useState<ProviderKey | null>(null)
   const [deletingProvider, setDeletingProvider] = useState<ProviderKey | null>(null)
   const [testingProvider, setTestingProvider] = useState<ProviderKey | null>(null)
@@ -536,7 +538,19 @@ function ProvidersPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Provider</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select 
+                          onValueChange={(value) => {
+                            if (value === 'custom') {
+                              // Open custom provider dialog instead
+                              setIsAddDialogOpen(false)
+                              setIsCustomProviderDialogOpen(true)
+                              form.reset()
+                            } else {
+                              field.onChange(value)
+                            }
+                          }} 
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder='Select a provider' />
@@ -546,7 +560,13 @@ function ProvidersPage() {
                             {PROVIDERS.map((provider) => (
                               <SelectItem key={provider.id} value={provider.id}>
                                 <div className='flex items-center gap-2'>
-                                  {provider.isLocal ? <Monitor className='h-4 w-4' /> : <Cloud className='h-4 w-4' />}
+                                  {provider.isLocal ? (
+                                    <Monitor className='h-4 w-4' />
+                                  ) : provider.isCustom ? (
+                                    <Settings className='h-4 w-4' />
+                                  ) : (
+                                    <Cloud className='h-4 w-4' />
+                                  )}
                                   {provider.name}
                                 </div>
                               </SelectItem>
@@ -656,6 +676,17 @@ function ProvidersPage() {
               onOpenChange={(open) => !open && setTestingProvider(null)}
             />
           )}
+
+          {/* Custom Provider Dialog */}
+          <CustomProviderDialog
+            open={isCustomProviderDialogOpen}
+            onOpenChange={setIsCustomProviderDialogOpen}
+            onSuccess={() => {
+              setIsCustomProviderDialogOpen(false)
+              // Refetch providers list to show the new custom provider
+              refetchHealth()
+            }}
+          />
         </div>
       </TooltipProvider>
     </ComponentErrorBoundary>

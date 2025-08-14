@@ -4,6 +4,7 @@ export * from './src/project-statistics-service'
 export * from './src/prompt-service'
 export * from './src/provider-key-service'
 export * from './src/provider-settings-service'
+export * from './src/custom-provider-validator'
 export * from './src/ticket-service'
 export * from './src/queue-service'
 // Explicit re-export to avoid CleanupResult ambiguity with file-sync-service-unified
@@ -125,3 +126,5 @@ export { VSCodeConfigParser } from './src/parsers/vscode-config-parser'
 export type { VSCodeSettings as ParserVSCodeSettings } from './src/parsers/vscode-config-parser'
 export { VSCodeSettingsSchema as ParserVSCodeSettingsSchema } from './src/parsers/vscode-config-parser'
 export * from './src/markdown-prompt-service'
+
+export * from './src/enhanced-summarization-service'

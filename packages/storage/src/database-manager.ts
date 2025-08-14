@@ -131,6 +131,22 @@ export class DatabaseManager {
     return DatabaseManager.instance
   }
 
+  /**
+   * Reset the singleton instance - used for test isolation
+   * This ensures each test suite gets a fresh database instance
+   */
+  static resetInstance(): void {
+    if (DatabaseManager.instance) {
+      // Close the current database connection if it exists
+      try {
+        DatabaseManager.instance.db.close()
+      } catch (error) {
+        // Ignore errors during close (database might already be closed)
+      }
+      DatabaseManager.instance = null
+    }
+  }
+
   private ensureDataDirectory(dbPath: string): void {
     const dir = path.dirname(dbPath)
     if (!fs.existsSync(dir)) {

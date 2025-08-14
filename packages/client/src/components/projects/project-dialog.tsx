@@ -4,12 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@promptliano/ui'
 import { Input } from '@promptliano/ui'
 import { Label } from '@promptliano/ui'
-import { Progress } from '@promptliano/ui'
-import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from '@/hooks/api/use-projects-api'
-import { useEffect, useState } from 'react'
-import { CreateProjectRequestBody } from '@promptliano/schemas'
+import { useCreateProject, useUpdateProject, useGetProject, useSyncProjectWithProgress } from '@/hooks/api/use-projects-api'
+import { useEffect, useState, useRef } from 'react'
+import { CreateProjectRequestBody, type SyncProgressEvent } from '@promptliano/schemas'
 import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import { DirectoryBrowserDialog } from './directory-browser-dialog'
+import { SyncProgressDialog } from './sync-progress-dialog'
 import { FolderOpen, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -28,16 +28,18 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
     path: ''
   })
   const [showDirectoryBrowser, setShowDirectoryBrowser] = useState(false)
+  const [showSyncProgress, setShowSyncProgress] = useState(false)
+  const [syncingProjectName, setSyncingProjectName] = useState<string>('')
 
   const { mutate: createProject, isPending: isCreating } = useCreateProject()
   const { mutate: updateProject, isPending: isUpdating } = useUpdateProject()
   const { data: projectData } = useGetProject(projectId ?? -1)
+  const { syncWithProgress } = useSyncProjectWithProgress()
 
   // We'll use this state to know when we have a newly created project to sync
   const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<number | null>(null)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [syncMessage, setSyncMessage] = useState<string>('')
-  const { mutate: syncProject } = useSyncProject()
+  const syncProgressRef = useRef<{ updateProgress: (event: SyncProgressEvent) => void } | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (projectData?.data?.id && projectId) {
@@ -57,29 +59,50 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
 
   // When newlyCreatedProjectId is set, we sync and then navigate
   useEffect(() => {
-    if (newlyCreatedProjectId) {
-      setIsSyncing(true)
-      setSyncMessage('Syncing project files... This may take a few minutes for large projects.')
-
-      syncProject(newlyCreatedProjectId, {
-        onSuccess: () => {
-          setIsSyncing(false)
-          setSyncMessage('')
-          toast.success('Project synced successfully!')
-          navigate({ to: '/projects' })
-          onOpenChange(false)
+    if (newlyCreatedProjectId && syncingProjectName) {
+      // Close the create dialog first
+      onOpenChange(false)
+      
+      // Show sync progress dialog
+      setShowSyncProgress(true)
+      
+      // Start SSE sync with progress tracking
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+      
+      syncWithProgress(
+        newlyCreatedProjectId, 
+        (event) => {
+          // Update progress in the dialog
+          syncProgressRef.current?.updateProgress(event)
         },
-        onError: (error) => {
-          setIsSyncing(false)
-          setSyncMessage('')
-          toast.error(`Sync failed: ${error.message}. You can retry sync from project settings.`)
-          // Still navigate to projects even if sync fails
+        abortController.signal
+      )
+        .then(() => {
+          toast.success('Project synced successfully!')
+          setShowSyncProgress(false)
           navigate({ to: '/projects' })
-          onOpenChange(false)
-        }
-      })
+        })
+        .catch((error) => {
+          if (error.message !== 'Sync cancelled') {
+            toast.error(`Sync failed: ${error.message}. You can retry sync from project settings.`)
+          }
+          // Still navigate to projects even if sync fails
+          setShowSyncProgress(false)
+          navigate({ to: '/projects' })
+        })
+        .finally(() => {
+          setNewlyCreatedProjectId(null)
+          setSyncingProjectName('')
+          abortControllerRef.current = null
+        })
+      
+      // Cleanup function to abort sync if component unmounts
+      return () => {
+        abortController.abort()
+      }
     }
-  }, [newlyCreatedProjectId, syncProject, navigate, onOpenChange])
+  }, [newlyCreatedProjectId, syncingProjectName, syncWithProgress, navigate, onOpenChange])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,8 +128,9 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
               selectedFiles: [],
               selectedPrompts: []
             }))
-            // Store the newly created project id to trigger sync in useEffect
+            // Store the newly created project id and name to trigger sync in useEffect
             setNewlyCreatedProjectId(response.data.id)
+            setSyncingProjectName(response.data.name)
           }
         }
       })
@@ -121,6 +145,13 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
 
     if (folderName) {
       setFormData((prev) => ({ ...prev, name: folderName.trim() }))
+    }
+  }
+
+  const handleCancelSync = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      toast.info('Sync cancelled. You can retry from project settings.')
     }
   }
 
@@ -177,21 +208,16 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
               </div>
             </div>
 
-            {/* Show sync progress when syncing */}
-            {isSyncing && (
-              <div className='space-y-3 p-4 bg-muted/50 rounded-lg'>
-                <div className='flex items-center gap-2'>
-                  <Loader2 className='h-4 w-4 animate-spin' />
-                  <span className='text-sm font-medium'>Syncing Project Files</span>
-                </div>
-                <Progress value={undefined} className='h-2' />
-                <p className='text-xs text-muted-foreground'>{syncMessage}</p>
-              </div>
-            )}
-
             <DialogFooter>
-              <Button type='submit' disabled={isCreating || isUpdating || isSyncing}>
-                {isSyncing ? 'Syncing...' : projectId ? 'Save Changes' : 'Create Project'}
+              <Button type='submit' disabled={isCreating || isUpdating}>
+                {isCreating || isUpdating ? (
+                  <>
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    {projectId ? 'Saving...' : 'Creating Project...'}
+                  </>
+                ) : (
+                  projectId ? 'Save Changes' : 'Create Project'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -203,6 +229,15 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
         onOpenChange={setShowDirectoryBrowser}
         onSelectPath={handleSelectPath}
         initialPath={formData.path || undefined}
+      />
+      
+      {/* Sync Progress Dialog */}
+      <SyncProgressDialog
+        open={showSyncProgress}
+        onOpenChange={setShowSyncProgress}
+        projectName={syncingProjectName}
+        ref={syncProgressRef}
+        onCancel={handleCancelSync}
       />
     </>
   )

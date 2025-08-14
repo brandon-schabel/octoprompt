@@ -10,6 +10,7 @@ export type APIProviders =
   | 'together'
   | 'lmstudio'
   | 'ollama'
+  | 'custom'
 
 export interface ModelOptions {
   frequencyPenalty?: number
@@ -53,6 +54,10 @@ export interface ProviderConfig {
   }
   lmstudio: {
     baseURL: string
+  }
+  custom?: {
+    baseURL?: string
+    headers?: Record<string, string>
   }
 }
 

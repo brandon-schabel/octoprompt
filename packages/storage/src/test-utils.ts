@@ -1,4 +1,4 @@
-import { getDb } from './database-manager'
+import { DatabaseManager, getDb } from './database-manager'
 
 /**
  * Utility functions for tests to ensure proper database isolation
@@ -71,6 +71,14 @@ export async function resetTestDatabase(): Promise<void> {
   // Ensure migrations are run
   const { runMigrations } = await import('./migrations/run-migrations')
   await runMigrations()
+}
+
+/**
+ * Reset database instance - ensures complete isolation between test suites
+ * Call this in afterAll() hooks to prevent state leakage between test files
+ */
+export function resetDatabaseInstance(): void {
+  DatabaseManager.resetInstance()
 }
 
 /**

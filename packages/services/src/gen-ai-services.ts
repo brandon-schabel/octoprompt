@@ -17,6 +17,7 @@ import { mapProviderErrorToApiError } from './error-mappers'
 import { retryOperation } from './utils/bulk-operations'
 import { getProviderUrl } from './provider-settings-service'
 import { LMStudioProvider } from './providers/lmstudio-provider'
+import { mergeHeaders } from './utils/header-sanitizer'
 
 const providersConfig = getProvidersConfig()
 
@@ -31,10 +32,28 @@ const PROVIDER_CAPABILITIES = {
   lmstudio: { structuredOutput: true, useCustomProvider: true }, // Uses custom provider for native json_schema support
   ollama: { structuredOutput: false, useCustomProvider: false }, // Still uses text fallback (TODO: add custom provider)
   xai: { structuredOutput: true, useCustomProvider: false },
-  together: { structuredOutput: true, useCustomProvider: false }
+  together: { structuredOutput: true, useCustomProvider: false },
+  custom: { structuredOutput: true, useCustomProvider: false } // Custom OpenAI-compatible providers
 } as const
 
 let providerKeysCache: ProviderKey[] | null = null
+
+// Helper function to get provider key configuration
+async function getProviderKeyById(provider: string, debug: boolean = false): Promise<ProviderKey | null> {
+  const providerKeyService = createProviderKeyService()
+  const keys = await providerKeyService.listKeysUncensored()
+  
+  // Find the default key for this provider, or the first one
+  const providerKeys = keys.filter(k => k.provider === provider)
+  const defaultKey = providerKeys.find(k => k.isDefault)
+  const key = defaultKey || providerKeys[0]
+  
+  if (debug && key) {
+    console.log(`[UnifiedProviderService] Found provider key for ${provider}: ${key.name}`)
+  }
+  
+  return key || null
+}
 
 export async function handleChatMessage({
   chatId,
@@ -278,6 +297,50 @@ async function getProviderLanguageModelInterface(
       const apiKey = await getKey('together', debug)
       if (!apiKey) throw new ApiError(400, 'Together API Key not found in DB.', 'TOGETHER_KEY_MISSING')
       return createOpenAI({ baseURL: 'https://api.together.xyz/v1', apiKey })(modelId)
+    }
+    // --- Custom OpenAI-Compatible Provider ---
+    case 'custom': {
+      // Get the provider key to access custom configuration
+      const customKey = await getProviderKeyById(provider, debug)
+      if (!customKey) {
+        throw new ApiError(400, 'Custom provider configuration not found', 'CUSTOM_PROVIDER_NOT_CONFIGURED')
+      }
+      
+      const baseURL = customKey.baseUrl || options.baseUrl
+      if (!baseURL) {
+        throw new ApiError(400, 'Base URL required for custom provider', 'CUSTOM_PROVIDER_URL_MISSING')
+      }
+      
+      const apiKey = await getKey('custom', debug)
+      if (!apiKey) {
+        throw new ApiError(400, 'API key required for custom provider', 'CUSTOM_PROVIDER_KEY_MISSING')
+      }
+      
+      // Ensure URL is properly formatted for OpenAI compatibility
+      const customUrl = baseURL.endsWith('/v1') ? baseURL : `${baseURL.replace(/\/$/, '')}/v1`
+      
+      if (debug) {
+        console.log(`[UnifiedProviderService] Using custom provider at: ${customUrl}`)
+      }
+      
+      // Prepare base headers for API key
+      const baseHeaders = {
+        'Authorization': `Bearer ${apiKey}`
+      }
+      
+      // Merge with sanitized custom headers
+      const sanitizedHeaders = mergeHeaders(baseHeaders, customKey.customHeaders)
+      
+      // Remove the Authorization header since OpenAI SDK handles it separately
+      const { Authorization, ...customHeaders } = sanitizedHeaders
+      
+      // Use OpenAI SDK with custom configuration
+      return createOpenAI({
+        baseURL: customUrl,
+        apiKey,
+        headers: customHeaders,
+        compatibility: 'compatible' // Use compatible mode for flexibility
+      })(modelId)
     }
     // --- Local Providers ---
     case 'ollama': {
