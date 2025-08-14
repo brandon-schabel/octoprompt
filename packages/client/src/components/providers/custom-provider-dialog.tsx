@@ -121,7 +121,7 @@ export function CustomProviderDialog({ open, onOpenChange, onSuccess }: CustomPr
     }, {} as Record<string, string>)
 
     try {
-      await client.keys.createProviderKey({
+      await client.keys.createKey({
         name: values.name,
         provider: 'custom',
         key: values.apiKey,

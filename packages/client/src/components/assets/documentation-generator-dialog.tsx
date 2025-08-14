@@ -18,6 +18,7 @@ import { estimateTokenCount, formatTokenCount } from '@promptliano/shared'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { ProviderModelSelector, useModelSelection } from '@/components/model-selection'
 import { Separator } from '@promptliano/ui'
+import { APIProviders } from '@promptliano/schemas'
 
 interface DocumentationGeneratorDialogProps {
   open: boolean
@@ -104,11 +105,16 @@ export function DocumentationGeneratorDialog({
   const [isGenerating, setIsGenerating] = useState(false)
 
   // Model selection - Default to OpenRouter with Gemini 2.5 Pro
-  const { provider, model, setProvider, setModel } = useModelSelection({
+  const { provider, model, setProvider: setProviderBase, setModel } = useModelSelection({
     persistenceKey: 'documentation-generator-model',
     defaultProvider: 'openrouter',
     defaultModel: 'google/gemini-2.5-pro-preview'
   })
+
+  // Wrapper to handle string | APIProviders type
+  const setProvider = (newProvider: string | APIProviders) => {
+    setProviderBase(newProvider as APIProviders)
+  }
 
   const { copyToClipboard } = useCopyClipboard()
   const generateMutation = useGenerateStructuredData()
