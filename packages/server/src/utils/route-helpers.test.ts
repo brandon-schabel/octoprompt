@@ -1,7 +1,7 @@
 import { describe, expect, it, mock, beforeEach } from 'bun:test'
 import { z } from '@hono/zod-openapi'
 import { ApiError } from '@promptliano/shared'
-import { Context } from 'hono'
+import type { Context } from 'hono'
 import {
   createSuccessResponseSchema,
   createListResponseSchema,

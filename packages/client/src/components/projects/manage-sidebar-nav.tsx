@@ -67,6 +67,7 @@ export function ManageSidebarNav({ activeView, onViewChange, className }: Manage
             label: item.title
           }))
         }))}
+        activeItem={activeView}
         onItemClick={(item: any) => onViewChange(item.id as ManageView)}
       />
     </div>

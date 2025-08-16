@@ -1,5 +1,6 @@
 import React from 'react'
 import { useBranchesEnhanced } from '@/hooks/api/use-git-api'
+import type { GitBranchEnhanced } from '@promptliano/schemas'
 import {
   Select,
   SelectContent,
@@ -39,8 +40,8 @@ export function BranchSelector({ projectId, selectedBranch, onBranchChange }: Br
   }
 
   // Group branches into local and remote
-  const localBranches = branches.filter((b) => !b.isRemote)
-  const remoteBranches = branches.filter((b) => b.isRemote)
+  const localBranches = branches.filter((b: GitBranchEnhanced) => !b.isRemote)
+  const remoteBranches = branches.filter((b: GitBranchEnhanced) => b.isRemote)
 
   return (
     <Select value={selectedBranch || currentBranch} onValueChange={onBranchChange}>
@@ -54,7 +55,7 @@ export function BranchSelector({ projectId, selectedBranch, onBranchChange }: Br
         {localBranches.length > 0 && (
           <SelectGroup>
             <SelectLabel>Local Branches</SelectLabel>
-            {localBranches.map((branch) => (
+            {localBranches.map((branch: GitBranchEnhanced) => (
               <SelectItem key={branch.name} value={branch.name}>
                 <div className='flex flex-col gap-1 py-1'>
                   <div className='flex items-center gap-2'>
@@ -90,7 +91,7 @@ export function BranchSelector({ projectId, selectedBranch, onBranchChange }: Br
         {remoteBranches.length > 0 && (
           <SelectGroup>
             <SelectLabel>Remote Branches</SelectLabel>
-            {remoteBranches.map((branch) => (
+            {remoteBranches.map((branch: GitBranchEnhanced) => (
               <SelectItem key={branch.name} value={branch.name}>
                 <div className='flex flex-col gap-1 py-1'>
                   <div className='flex items-center gap-2'>

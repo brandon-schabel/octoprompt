@@ -123,8 +123,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
             )
           },
           enableSorting: true,
-          enableFiltering: true
-        }
+                  }
       },
       {
         type: 'custom',
@@ -160,8 +159,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
             )
           },
           enableSorting: true,
-          enableFiltering: true
-        }
+                  }
       },
       {
         type: 'custom',
@@ -177,8 +175,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
             )
           },
           enableSorting: true,
-          enableFiltering: false
-        }
+                  }
       },
       {
         type: 'custom',
@@ -198,8 +195,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
             )
           },
           enableSorting: true,
-          enableFiltering: true
-        }
+                  }
       },
       {
         type: 'custom',
@@ -230,8 +226,7 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
             return <span>-</span>
           },
           enableSorting: true,
-          enableFiltering: false
-        }
+                  }
       }
     ],
     actions: {

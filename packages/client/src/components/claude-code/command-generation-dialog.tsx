@@ -184,7 +184,7 @@ export function CommandGenerationDialog({
       setGenerationPhase('complete')
 
       // Extract the command data from the response
-      const generatedCommand = result.data
+      const generatedCommand = (result as any).data
 
       // Create a ClaudeCommand object for caching - needs all required fields
       const commandForCache: ClaudeCommand = {

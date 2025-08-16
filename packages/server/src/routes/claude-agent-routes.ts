@@ -38,7 +38,38 @@ const createClaudeAgentRoute = createRoute({
       required: true
     }
   },
-  responses: createStandardResponsesWithStatus(ClaudeAgentResponseSchema, 201, 'Agent created successfully')
+  responses: {
+    201: {
+      content: {
+        'application/json': { schema: ClaudeAgentResponseSchema }
+      },
+      description: 'Agent created successfully'
+    },
+    400: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Bad Request'
+    },
+    404: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Resource Not Found'
+    },
+    422: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Validation Error'
+    },
+    500: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Internal Server Error'
+    }
+  }
 })
 
 const listAllClaudeAgentsRoute = createRoute({
@@ -127,7 +158,7 @@ const suggestClaudeAgentsRoute = createRoute({
   responses: createStandardResponses(AgentSuggestionsResponseSchema)
 })
 
-export const claudeAgentRoutes = new OpenAPIHono()
+export const claudeAgentRoutes = new OpenAPIHono<{}>()
   .openapi(createClaudeAgentRoute, async (c) => {
     const body = c.req.valid('json')
     const { projectId } = c.req.valid('query')
@@ -143,7 +174,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
     }
 
     const createdAgent = await createAgent(project.path, { ...body, projectId: effectiveProjectId })
-    return c.json(successResponse(createdAgent), 201)
+    return c.json({ success: true, data: createdAgent } satisfies z.infer<typeof ClaudeAgentResponseSchema>, 201)
   })
   .openapi(listAllClaudeAgentsRoute, async (c) => {
     const { projectId } = c.req.valid('query')

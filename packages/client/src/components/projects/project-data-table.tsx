@@ -72,7 +72,6 @@ export function ProjectDataTable({
           header: () => null,
           cell: () => <Folder className='h-4 w-4 text-muted-foreground' />,
           enableSorting: false,
-          enableFiltering: false,
           meta: { width: '40px' }
         }
       },
@@ -81,8 +80,7 @@ export function ProjectDataTable({
         config: {
           accessorKey: 'name',
           header: 'Project Name',
-          enableSorting: true,
-          enableFiltering: true
+          enableSorting: true
         }
       },
       {
@@ -92,7 +90,6 @@ export function ProjectDataTable({
           header: 'Path',
           formatFn: (value) => truncatePath(value, 45),
           enableSorting: true,
-          enableFiltering: true,
           className: 'text-xs text-muted-foreground font-mono'
         }
       },
@@ -155,7 +152,7 @@ export function ProjectDataTable({
           selection={{
             enabled: false
           }}
-          onRowClick={(project) => onSelectProject(project.id)}
+          onRowClick={(row) => onSelectProject(row.original.id)}
           getRowId={(project) => project.id.toString()}
           emptyMessage='No projects yet. Create your first project to get started.'
           className='h-[60vh]'

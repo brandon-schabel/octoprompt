@@ -180,7 +180,7 @@ export class JobClient extends BaseApiClient {
    * Create a new job
    */
   async createJob(job: CreateJobRequest): Promise<DataResponseSchema<Job>> {
-    return this.post('/api/jobs', job)
+    return this.post('/jobs', job)
   }
 
   /**
@@ -228,14 +228,14 @@ export class JobClient extends BaseApiClient {
     deleted: number
     preview?: Job[]
   }>> {
-    return this.post('/api/jobs/cleanup', options)
+    return this.post('/jobs/cleanup', options)
   }
 
   /**
    * Get job history for a specific job
    */
   async getJobHistory(jobId: number): Promise<DataResponseSchema<JobHistory[]>> {
-    return this.get(`/api/jobs/${jobId}/history`)
+    return this.get(`/jobs/${jobId}/history`)
   }
 
   /**
@@ -261,7 +261,7 @@ export class JobClient extends BaseApiClient {
     cancelled: number
     jobs: Job[]
   }>> {
-    return this.post('/api/jobs/bulk-cancel', criteria)
+    return this.post('/jobs/bulk-cancel', criteria)
   }
 
   /**

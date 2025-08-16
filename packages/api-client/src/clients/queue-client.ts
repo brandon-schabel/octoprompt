@@ -13,6 +13,7 @@ import type {
   GetNextTaskResponse,
   QueueTimeline
 } from '../types'
+import type { BatchEnqueueBody } from '@promptliano/schemas'
 
 // Import schemas
 import {
@@ -33,13 +34,6 @@ type TaskQueue = Queue
 type QueueWithStats = {
   queue: TaskQueue
   stats: QueueStats
-}
-type BatchEnqueueBody = {
-  items: Array<{
-    type: 'ticket' | 'task'
-    id: number
-    priority?: number
-  }>
 }
 
 /**

@@ -149,10 +149,13 @@ export function AppSidebar() {
     <ErrorBoundary>
       <>
         <Sidebar collapsible='icon' side='left' variant='sidebar'>
-          <SidebarHeader className='p-2 group-data-[collapsible=icon]:hidden'>
-            <div className='flex items-center justify-center relative'>
-              <Logo size='sm' className='absolute left-0' />
-              <span className='text-lg font-semibold'>Promptliano</span>
+          <SidebarHeader className='p-2'>
+            <div className='flex items-center justify-center relative group-data-[collapsible=icon]:justify-center'>
+              <Logo 
+                size='sm' 
+                className='absolute left-0 group-data-[collapsible=icon]:relative group-data-[collapsible=icon]:left-auto' 
+              />
+              <span className='text-lg font-semibold group-data-[collapsible=icon]:hidden'>Promptliano</span>
             </div>
           </SidebarHeader>
           <SidebarContent className='p-2'>

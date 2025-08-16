@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useCommitLogEnhanced } from '@/hooks/api/use-git-api'
+import type { GitLogEntry } from '@promptliano/api-client'
 import { ScrollArea } from '@promptliano/ui'
 import { Button } from '@promptliano/ui'
 import { Input } from '@promptliano/ui'
@@ -127,7 +128,7 @@ export function CommitList({ projectId }: CommitListProps) {
               {searchQuery && <p className='text-sm mt-2'>Try adjusting your search criteria</p>}
             </div>
           ) : (
-            commits.map((commit) => (
+            commits.map((commit: GitLogEntry) => (
               <CommitCard key={commit.hash} commit={commit} onClick={() => setSelectedCommitHash(commit.hash)} />
             ))
           )}

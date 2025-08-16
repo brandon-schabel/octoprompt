@@ -291,7 +291,7 @@ export function GitWorktreeView({ projectId, className }: GitWorktreeViewProps) 
                 </CardContent>
               </Card>
             ) : (
-              worktrees.map((worktree) => <WorktreeCard key={worktree.path} worktree={worktree} />)
+              worktrees.map((worktree: GitWorktree) => <WorktreeCard key={worktree.path} worktree={worktree} />)
             )}
           </div>
         </ScrollArea>

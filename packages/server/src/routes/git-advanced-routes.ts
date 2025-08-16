@@ -54,30 +54,9 @@ const getRemotesRoute = createRoute({
 })
 
 gitAdvancedRoutes.openapi(getRemotesRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const remotes = await gitService.getRemotes(projectId)
-
-    return c.json(successResponse(remotes))
-  } catch (error) {
-    console.error('[GetRemotes] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to get remotes'
-      },
-      500
-    )
-  }
+  const { projectId } = c.req.valid('param')
+  const remotes = await gitService.getRemotes(projectId)
+  return c.json(successResponse(remotes))
 })
 
 // Push route
@@ -102,34 +81,14 @@ const pushRoute = createRoute({
 })
 
 gitAdvancedRoutes.openapi(pushRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const { remote, branch, force, setUpstream } = c.req.valid('json')
+  const { projectId } = c.req.valid('param')
+  const { remote, branch, force, setUpstream } = c.req.valid('json')
 
-    await gitService.push(projectId, remote || 'origin', branch, { force, setUpstream })
+  await gitService.push(projectId, remote || 'origin', branch, { force, setUpstream })
 
-    return c.json(operationSuccessResponse(
-      `Successfully pushed to ${remote || 'origin'}${branch ? `/${branch}` : ''}`
-    ))
-  } catch (error) {
-    console.error('[Push] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to push changes'
-      },
-      500
-    )
-  }
+  return c.json(operationSuccessResponse(
+    `Successfully pushed to ${remote || 'origin'}${branch ? `/${branch}` : ''}`
+  ))
 })
 
 // Fetch route
@@ -330,30 +289,9 @@ const getTagsRoute = createRoute({
 })
 
 gitAdvancedRoutes.openapi(getTagsRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const tags = await gitService.getTags(projectId)
-
-    return c.json(successResponse(tags))
-  } catch (error) {
-    console.error('[GetTags] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to get tags'
-      },
-      500
-    )
-  }
+  const { projectId } = c.req.valid('param')
+  const tags = await gitService.getTags(projectId)
+  return c.json(successResponse(tags))
 })
 
 // Create tag route
@@ -553,30 +491,9 @@ const getStashListRoute = createRoute({
 })
 
 gitAdvancedRoutes.openapi(getStashListRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const stashes = await gitService.stashList(projectId)
-
-    return c.json(successResponse(stashes))
-  } catch (error) {
-    console.error('[GetStashList] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to get stash list'
-      },
-      500
-    )
-  }
+  const { projectId } = c.req.valid('param')
+  const stashes = await gitService.stashList(projectId)
+  return c.json(successResponse(stashes))
 })
 
 // Apply stash route

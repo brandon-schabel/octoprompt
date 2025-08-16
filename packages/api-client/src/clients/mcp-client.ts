@@ -208,13 +208,41 @@ export class MCPClient extends BaseApiClient {
    * Get global MCP configuration
    */
   async getGlobalConfig(): Promise<DataResponseSchema<MCPGlobalConfig>> {
-    return this.get('/mcp/global-config')
+    return this.get('/mcp/global/config')
   }
 
   /**
    * Update global MCP configuration
    */
   async updateGlobalConfig(data: Partial<MCPGlobalConfig>): Promise<DataResponseSchema<MCPGlobalConfig>> {
-    return this.patch('/mcp/global-config', data)
+    return this.patch('/mcp/global/config', data)
+  }
+
+  /**
+   * Get global MCP installations
+   */
+  async getGlobalInstallations(): Promise<DataResponseSchema<any>> {
+    return this.get('/mcp/global/installations')
+  }
+
+  /**
+   * Install global MCP for a tool
+   */
+  async installGlobalMCP(data: { tool: string; serverUrl?: string; debug?: boolean }): Promise<DataResponseSchema<any>> {
+    return this.post('/mcp/global/install', data)
+  }
+
+  /**
+   * Uninstall global MCP for a tool
+   */
+  async uninstallGlobalMCP(data: { tool: string }): Promise<DataResponseSchema<any>> {
+    return this.post('/mcp/global/uninstall', data)
+  }
+
+  /**
+   * Get global MCP status
+   */
+  async getGlobalStatus(): Promise<DataResponseSchema<any>> {
+    return this.get('/mcp/global/status')
   }
 }

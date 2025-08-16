@@ -41,8 +41,8 @@ export const useProjectFileMapWithoutContent = (projectId: number) => {
     if (!isValidProjectId) {
       return new Map()
     }
-    return buildProjectFileMapWithoutContent(fileData?.data ?? [])
-  }, [fileData?.data, isValidProjectId])
+    return buildProjectFileMapWithoutContent(fileData ?? [])
+  }, [fileData, isValidProjectId])
 }
 
 export const useProjectFileMap = (projectId: number) => {
@@ -58,10 +58,10 @@ export const useProjectFileMap = (projectId: number) => {
       return new Map()
     }
 
-    const files = fileData?.data ?? []
+    const files = fileData ?? []
     const map = buildProjectFileMap(files)
     return map
-  }, [fileData?.data, isValidProjectId])
+  }, [fileData, isValidProjectId])
 }
 
 // Hook for managing file selection with undo/redo support
@@ -93,7 +93,7 @@ export function useSelectedFiles({
 
   // Get all project files for CLAUDE.md detection
   const { data: projectFilesData } = useGetProjectFiles(projectId)
-  const projectFiles = projectFilesData?.data ?? []
+  const projectFiles = projectFilesData ?? []
 
   // Initialize CLAUDE.md detection (kept for backward compatibility)
   const { getClaudeMdForFile } = useClaudeMdDetection(projectFiles)

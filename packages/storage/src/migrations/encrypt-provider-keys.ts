@@ -32,6 +32,11 @@ async function migrateProviderKeys() {
     // Process each key
     for (const keyId of keyIds) {
       const key = allKeys[keyId]
+      
+      if (!key) {
+        console.log(`Key ${keyId} not found, skipping...`)
+        continue
+      }
 
       // Skip if already encrypted
       if (key.encrypted) {

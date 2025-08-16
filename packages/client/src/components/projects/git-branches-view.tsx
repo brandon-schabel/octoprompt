@@ -327,7 +327,7 @@ export function GitBranchesView({ projectId, className }: GitBranchesViewProps) 
                     <SelectValue placeholder={`Default: ${currentBranch || 'current branch'}`} />
                   </SelectTrigger>
                   <SelectContent>
-                    {branches.map((branch) => (
+                    {branches.map((branch: GitBranchEnhanced) => (
                       <SelectItem key={branch.name} value={branch.name}>
                         {branch.name}
                         {branch.current && ' (current)'}

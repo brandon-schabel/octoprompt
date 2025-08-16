@@ -542,20 +542,20 @@ export async function searchTickets(
   if (options.query) {
     const query = options.query.toLowerCase()
     tickets = tickets.filter(
-      (ticket) => ticket.title.toLowerCase().includes(query) || ticket.overview.toLowerCase().includes(query)
+      (ticket) => ticket.title.toLowerCase().includes(query) || ticket.overview?.toLowerCase().includes(query)
     )
   }
 
   // Status filter
   if (options.status) {
     const statuses = Array.isArray(options.status) ? options.status : [options.status]
-    tickets = tickets.filter((ticket) => statuses.includes(ticket.status))
+    tickets = tickets.filter((ticket) => ticket.status && statuses.includes(ticket.status))
   }
 
   // Priority filter
   if (options.priority) {
     const priorities = Array.isArray(options.priority) ? options.priority : [options.priority]
-    tickets = tickets.filter((ticket) => priorities.includes(ticket.priority))
+    tickets = tickets.filter((ticket) => ticket.priority && priorities.includes(ticket.priority))
   }
 
   // Date range filter
@@ -570,7 +570,7 @@ export async function searchTickets(
   // Has files filter
   if (options.hasFiles !== undefined) {
     tickets = tickets.filter((ticket) =>
-      options.hasFiles ? ticket.suggestedFileIds.length > 0 : ticket.suggestedFileIds.length === 0
+      options.hasFiles ? (ticket.suggestedFileIds?.length ?? 0) > 0 : (ticket.suggestedFileIds?.length ?? 0) === 0
     )
   }
 
@@ -1039,7 +1039,7 @@ export async function getTicketFiles(ticketId: number): Promise<Array<{ id: stri
 
   // Return basic file info based on suggested file IDs
   // In a real implementation, this would query the files table
-  return ticket.suggestedFileIds.map((fileId) => ({
+  return (ticket.suggestedFileIds ?? []).map((fileId) => ({
     id: fileId,
     name: `file-${fileId}`,
     path: `path/to/${fileId}`

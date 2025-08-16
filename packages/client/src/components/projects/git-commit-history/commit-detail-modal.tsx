@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useCommitDetail } from '@/hooks/api/use-git-api'
+import type { GitFileDiff } from '@promptliano/api-client'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@promptliano/ui'
 import { ScrollArea } from '@promptliano/ui'
 import { Button } from '@promptliano/ui'
@@ -200,7 +201,7 @@ export function CommitDetailModal({ projectId, commitHash, open, onOpenChange }:
               <TabsContent value='files'>
                 <ScrollArea className='h-[400px]'>
                   <div className='space-y-2'>
-                    {commitData?.files?.map((file, index) => (
+                    {commitData?.files?.map((file: GitFileDiff, index: number) => (
                       <div
                         key={index}
                         className='flex items-center justify-between p-3 rounded-md hover:bg-accent cursor-pointer'

@@ -45,8 +45,7 @@ export function TicketDataTable({
           accessorKey: 'title',
           header: 'Title',
           enableSorting: true,
-          enableFiltering: true,
-          className: 'font-semibold'
+                    className: 'font-semibold'
         }
       },
       {
@@ -57,8 +56,7 @@ export function TicketDataTable({
           truncate: true,
           maxLength: 100,
           enableSorting: false,
-          enableFiltering: true,
-          className: 'text-muted-foreground'
+                    className: 'text-muted-foreground'
         }
       },
       {
@@ -68,8 +66,7 @@ export function TicketDataTable({
           header: 'Priority',
           statuses: priorityConfig,
           enableSorting: true,
-          enableFiltering: true
-        }
+                  }
       },
       {
         type: 'status',
@@ -78,8 +75,7 @@ export function TicketDataTable({
           header: 'Status',
           statuses: statusConfig,
           enableSorting: true,
-          enableFiltering: true
-        }
+                  }
       },
       {
         type: 'date',

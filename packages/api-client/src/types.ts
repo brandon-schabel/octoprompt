@@ -85,6 +85,7 @@ export type {
 // Ticket and Queue types
 export type {
   Ticket,
+  TicketTask,
   CreateTicketBody,
   UpdateTicketBody,
   CreateTaskBody,
@@ -95,15 +96,15 @@ export type {
   QueueItem,
   QueueStats,
   EnqueueItemBody,
-  QueueWithStats,
-  TicketTask
+  QueueWithStats
 } from '@promptliano/schemas'
 
 // Import types that will be redefined locally to avoid conflicts
 import type {
   GetNextTaskResponse as SchemaGetNextTaskResponse,
   QueueTimeline as SchemaQueueTimeline,
-  TicketWithTaskCount as SchemaTicketWithTaskCount
+  TicketWithTaskCount as SchemaTicketWithTaskCount,
+  TicketTask
 } from '@promptliano/schemas'
 
 // Define Task alias for backwards compatibility
@@ -116,6 +117,7 @@ export type Queue = {
   projectId: number
   status?: 'active' | 'paused' | 'inactive'
   maxParallelItems?: number
+  totalCompletedItems: number
   created: number
   updated: number
 }

@@ -41,7 +41,7 @@ class ProjectStorage extends BaseStorage<Project, ProjectsStorage> {
   )
 
   protected rowToEntity(row: any): Project {
-    return this.converter(row)
+    return this.converter(row) as Project
   }
 
   protected getSelectColumns(): string[] {
@@ -107,7 +107,7 @@ class ProjectFileStorage extends BaseStorage<ProjectFile, ProjectFilesStorage> {
   )
 
   protected rowToEntity(row: any): ProjectFile {
-    return this.converter(row)
+    return this.converter(row) as ProjectFile
   }
 
   protected getSelectColumns(): string[] {

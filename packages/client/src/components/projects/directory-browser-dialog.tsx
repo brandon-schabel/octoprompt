@@ -12,7 +12,7 @@ import {
 } from '@promptliano/ui'
 import { ChevronRight, Folder, FolderOpen, Home, ChevronUp } from 'lucide-react'
 import { useBrowseDirectory } from '@/hooks/api/use-browse-directory'
-import type { DirectoryEntry } from '@promptliano/schemas'
+import type { DirectoryEntry, BrowseDirectoryResponse } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 
 interface DirectoryBrowserDialogProps {
@@ -37,10 +37,11 @@ export function DirectoryBrowserDialog({ open, onOpenChange, onSelectPath, initi
         { path: initialPath },
         {
           onSuccess: (data) => {
-            setCurrentPath(data.data.currentPath)
-            setSelectedPath(data.data.currentPath)
-            setEntries(data.data.entries)
-            setParentPath(data.data.parentPath)
+            const response = data as BrowseDirectoryResponse
+            setCurrentPath(response.data.currentPath)
+            setSelectedPath(response.data.currentPath)
+            setEntries(response.data.entries)
+            setParentPath(response.data.parentPath)
           }
         }
       )
@@ -51,11 +52,12 @@ export function DirectoryBrowserDialog({ open, onOpenChange, onSelectPath, initi
     browseDirectory(
       { path },
       {
-        onSuccess: (data) => {
-          setCurrentPath(data.data.currentPath)
-          setSelectedPath(data.data.currentPath)
-          setEntries(data.data.entries)
-          setParentPath(data.data.parentPath)
+        onSuccess: (data: unknown) => {
+          const response = data as BrowseDirectoryResponse
+          setCurrentPath(response.data.currentPath)
+          setSelectedPath(response.data.currentPath)
+          setEntries(response.data.entries)
+          setParentPath(response.data.parentPath)
         }
       }
     )
@@ -76,11 +78,12 @@ export function DirectoryBrowserDialog({ open, onOpenChange, onSelectPath, initi
     browseDirectory(
       undefined, // No path means home directory
       {
-        onSuccess: (data) => {
-          setCurrentPath(data.data.currentPath)
-          setSelectedPath(data.data.currentPath)
-          setEntries(data.data.entries)
-          setParentPath(data.data.parentPath)
+        onSuccess: (data: unknown) => {
+          const response = data as BrowseDirectoryResponse
+          setCurrentPath(response.data.currentPath)
+          setSelectedPath(response.data.currentPath)
+          setEntries(response.data.entries)
+          setParentPath(response.data.parentPath)
         }
       }
     )

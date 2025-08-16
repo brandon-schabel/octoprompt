@@ -91,13 +91,15 @@ function analyzeFormComplexity<T extends z.ZodType>(config: HybridFormConfig<T>)
   // Check validation complexity
   const hasComplexValidation = config.fields.some(field => {
     // Check for custom validation on fields that support it
-    if ('validation' in field && field.validation?.custom) return true
+    if (field.type === 'text' && field.validation?.custom) return true
+    if (field.type === 'email' && field.validation?.custom) return true
+    if (field.type === 'tags' && field.validation?.custom) return true
     
     // Check email-specific validation
-    if (field.type === 'email' && 'validation' in field && field.validation?.allowPlusSymbol) return true
+    if (field.type === 'email' && field.validation?.allowPlusSymbol) return true
     
     // Check date field constraints
-    if (field.type === 'date' && ('minDate' in field || 'maxDate' in field || 'disabledDates' in field)) return true
+    if (field.type === 'date' && (field.minDate || field.maxDate || field.disabledDates)) return true
     
     return false
   })

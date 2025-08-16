@@ -18,7 +18,7 @@ import type {
   MarkdownContentValidation
 } from '@promptliano/schemas'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query'
 import { useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -274,7 +274,7 @@ const PROJECT_KEYS = {
 }
 
 // --- Query Hooks ---
-export function useGetProjects() {
+export function useGetProjects(): UseQueryResult<DataResponseSchema<Project[]>, Error> {
   const client = useApiClient()
 
   return useQuery({
@@ -285,7 +285,7 @@ export function useGetProjects() {
   })
 }
 
-export function useGetProject(projectId: number) {
+export function useGetProject(projectId: number): UseQueryResult<DataResponseSchema<Project>, Error> {
   const client = useApiClient()
 
   return useQuery({
@@ -688,7 +688,7 @@ export function useGetProjectPrompts(projectId: number) {
   return useQuery({
     queryKey: PROMPT_KEYS.projectPrompts(projectId),
     queryFn: () =>
-      client ? client.prompts.listProjectPrompts(projectId) : Promise.reject(new Error('Client not connected')),
+      client ? client.prompts.getProjectPrompts(projectId) : Promise.reject(new Error('Client not connected')),
     enabled: !!client && !!projectId && projectId !== -1,
     staleTime: 5 * 60 * 1000
   })
@@ -1615,7 +1615,7 @@ export function useSmartCaching() {
         queryClient.prefetchQuery({
           queryKey: PROMPT_KEYS.projectPrompts(projectId),
           queryFn: () =>
-            client ? client.prompts.listProjectPrompts(projectId) : Promise.reject(new Error('Client not connected'))
+            client ? client.prompts.getProjectPrompts(projectId) : Promise.reject(new Error('Client not connected'))
         })
       ])
     },

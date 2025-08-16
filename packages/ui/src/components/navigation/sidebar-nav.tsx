@@ -3,6 +3,8 @@ import { cn } from '../../utils'
 import { Button } from '../core/button'
 import { Badge } from '../core/badge'
 import { ScrollArea } from '../data/scroll-area'
+import { Tooltip, TooltipContent, TooltipTrigger } from '../core/tooltip'
+import { useSidebar } from '../layout/sidebar'
 import { type LucideIcon } from 'lucide-react'
 
 export interface SidebarNavItem<T extends string = string> {
@@ -202,7 +204,10 @@ export function SectionedSidebarNav<T extends string = string>({
                   const isDisabled = item.enabled === false
                   const itemVariant = item.variant || variant
 
-                  return (
+                  const { state, isMobile } = useSidebar()
+                  const shouldShowTooltip = state === 'collapsed' && !isMobile
+                  
+                  const buttonElement = (
                     <Button
                       key={item.id}
                       variant={isActive ? 'secondary' : 'ghost'}
@@ -223,7 +228,6 @@ export function SectionedSidebarNav<T extends string = string>({
                         }
                       }}
                       disabled={isDisabled}
-                      title={item.label} // Add tooltip for collapsed state
                     >
                       <Icon className='h-4 w-4 shrink-0' />
                       
@@ -250,6 +254,19 @@ export function SectionedSidebarNav<T extends string = string>({
                       </div>
                     </Button>
                   )
+                  
+                  if (shouldShowTooltip) {
+                    return (
+                      <Tooltip key={item.id}>
+                        <TooltipTrigger asChild>{buttonElement}</TooltipTrigger>
+                        <TooltipContent side='right' align='center'>
+                          {item.label}
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  }
+                  
+                  return buttonElement
                 })}
               </div>
             </div>

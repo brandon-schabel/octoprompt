@@ -187,7 +187,7 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
       {/* Commands Grid */}
       {!isLoading && !error && (
         <div className='space-y-6'>
-          {Object.entries(commandsByNamespace).map(([namespace, namespaceCommands]) => (
+          {Object.entries(commandsByNamespace).map(([namespace, namespaceCommands]: [string, any]) => (
             <div key={namespace}>
               {namespace !== 'root' && (
                 <div className='flex items-center gap-2 mb-3'>

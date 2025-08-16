@@ -149,7 +149,7 @@ export class MigrationRunner {
       await migration.up(this.config.adapter)
     } else {
       // For SQL string migrations, would need SQL adapter
-      throw new ApiError('SQL string migrations not supported with current adapter', 501)
+      throw new ApiError(501, 'SQL string migrations not supported with current adapter', 'UNSUPPORTED_MIGRATION')
     }
   }
 
@@ -425,7 +425,7 @@ export async function getMigrationStatus(
 }> {
   const runner = new MigrationRunner({ adapter, migrations })
   const applied = await (runner as any).getAppliedMigrations()
-  const appliedVersions = new Set(applied.map((m) => m.version))
+  const appliedVersions = new Set(applied.map((m: MigrationHistoryEntry) => m.version))
   const pending = migrations.filter((m) => !appliedVersions.has(m.version))
 
   return {

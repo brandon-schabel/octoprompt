@@ -206,7 +206,7 @@ export function HooksView({ projectId, projectName }: HooksViewProps) {
       {/* Hooks List - Organized by Event Type */}
       {!isLoading && !error && !projectError && (
         <div className='space-y-6'>
-          {Object.entries(groupedHooks).map(([event, eventHooks]) => (
+          {Object.entries(groupedHooks).map(([event, eventHooks]: [string, any]) => (
             <div key={event} className='space-y-4'>
               <div className='flex items-center gap-2'>
                 <Badge className={cn('px-3 py-1', eventColorClasses[event as HookEvent])}>{event}</Badge>

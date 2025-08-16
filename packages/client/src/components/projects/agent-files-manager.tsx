@@ -123,14 +123,14 @@ export function AgentFilesManager({ projectId }: AgentFilesManagerProps) {
     ]
 
     allFiles.forEach((file: any) => {
-      const statusInfo = statusMap.get(file.path)
+      const statusInfo = statusMap.get(file.path) as any
       transformedFiles.push({
         path: file.path,
         filename: file.path.split('/').pop() || file.name || 'Unknown',
         exists: file.exists,
-        hasInstructions: statusInfo?.hasInstructions || file.hasInstructions || false,
-        version: statusInfo?.instructionVersion,
-        needsUpdate: statusInfo?.isOutdated || false,
+        hasInstructions: (statusInfo && typeof statusInfo === 'object' && statusInfo.hasInstructions) || file.hasInstructions || false,
+        version: (statusInfo && typeof statusInfo === 'object' && statusInfo.instructionVersion) || undefined,
+        needsUpdate: (statusInfo && typeof statusInfo === 'object' && statusInfo.isOutdated) || false,
         type: file.type,
         scope: file.scope || file.source,
         writable: file.writable

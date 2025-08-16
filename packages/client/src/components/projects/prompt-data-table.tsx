@@ -67,8 +67,7 @@ export function PromptDataTable({
           accessorKey: 'name',
           header: 'Prompt Name',
           enableSorting: true,
-          enableFiltering: true,
-          truncate: true,
+                    truncate: true,
           maxLength: 40
         }
       },
@@ -81,8 +80,7 @@ export function PromptDataTable({
             <FormatTokenCount tokenContent={row.original.content || ''} />
           ),
           enableSorting: true,
-          enableFiltering: false,
-          accessorFn: (row) => row.content?.length || 0
+                    accessorFn: (row) => row.content?.length || 0
         }
       },
       {
@@ -100,8 +98,7 @@ export function PromptDataTable({
             )
           },
           enableSorting: true,
-          enableFiltering: false,
-          accessorFn: (row) => row.content?.length || 0
+                    accessorFn: (row) => row.content?.length || 0
         }
       },
       {

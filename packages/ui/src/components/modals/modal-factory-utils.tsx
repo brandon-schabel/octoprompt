@@ -55,7 +55,7 @@ export const modalPresets = {
 // FORM CONFIG BUILDERS
 // =============================================
 
-export function createEntityFormConfig<T extends z.ZodSchema<any>>(
+export function createEntityFormConfig<T extends z.ZodType>(
   schema: T,
   options: {
     excludeFields?: (keyof z.infer<T>)[]
@@ -116,11 +116,11 @@ function inferFieldType(zodField: any): string {
 // =============================================
 
 export interface EnhancedCrudModalOptions<T extends Record<string, any>> extends Omit<CrudModalConfig<T>, 'formConfig'> {
-  schema?: z.ZodSchema<T>
-  formConfig?: FormConfig<z.ZodSchema<T>>
+  schema?: z.ZodType<T>
+  formConfig?: FormConfig<z.ZodType<T>>
   fields?: {
-    create?: FormConfig<z.ZodSchema<T>>
-    edit?: FormConfig<z.ZodSchema<T>>
+    create?: FormConfig<z.ZodType<T>>
+    edit?: FormConfig<z.ZodType<T>>
     view?: {
       fields: (keyof T)[]
       formatters?: Partial<Record<keyof T, (value: any) => React.ReactNode>>

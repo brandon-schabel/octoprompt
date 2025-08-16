@@ -15,7 +15,7 @@ export function TaskEmptyState({ onAddTask, onAutoGenerate, hasOverview, isGener
       icon={ListTodo}
       title="No tasks yet"
       description="Break down this ticket into smaller, actionable tasks to track progress effectively."
-      action={
+      actions={
         <div className='flex flex-col gap-2 w-full max-w-xs'>
           <Button variant='outline' size='sm' onClick={onAddTask} className='w-full'>
             <Plus className='mr-2 h-3 w-3' />
@@ -38,7 +38,7 @@ export function TaskEmptyState({ onAddTask, onAutoGenerate, hasOverview, isGener
           )}
         </div>
       }
-      tips={['Good tasks are specific, measurable, and achievable']}
+      tip='Good tasks are specific, measurable, and achievable'
       className="bg-muted/20"
     />
   )

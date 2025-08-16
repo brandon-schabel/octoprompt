@@ -150,7 +150,7 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
     findSuggestedFilesMutation.mutate(
       {
         projectId: activeProjectTabState?.selectedProjectId ?? -1,
-        prompt: `Please find the relevant files for the following prompt: ${localUserPrompt}`
+        params: { userInput: `Please find the relevant files for the following prompt: ${localUserPrompt}` }
       },
       {
         onSuccess: (recommendedFiles) => {
@@ -178,8 +178,8 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
       },
       {
         onSuccess: (recommendedPrompts) => {
-          if (recommendedPrompts && recommendedPrompts.length > 0) {
-            setSuggestedPrompts(recommendedPrompts)
+          if (recommendedPrompts?.prompts && recommendedPrompts.prompts.length > 0) {
+            setSuggestedPrompts(recommendedPrompts.prompts)
             setShowPromptSuggestions(true)
           } else {
             toast.info('No relevant prompts found for your input')

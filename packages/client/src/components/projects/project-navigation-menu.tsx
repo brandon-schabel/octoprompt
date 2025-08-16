@@ -73,14 +73,31 @@ export function ProjectNavigationMenu({
   const { copyToClipboard } = useCopyClipboard()
 
   // Check if project has MCP configuration
-  const { data: mcpConfigData } = useQuery({
+  const { data: mcpConfigData, error: mcpConfigError } = useQuery({
     queryKey: ['mcp-project-config', selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId || !client) return null
-      const result = await client.mcpProjectConfig.loadProjectConfig(selectedProjectId)
-      return result.data
+      try {
+        const result = await client.mcpProjectConfig.loadProjectConfig(selectedProjectId)
+        return result.data
+      } catch (error: any) {
+        // Handle 404 errors for non-existent projects gracefully
+        if (error.status === 404 || error.message?.includes('not found')) {
+          console.warn(`Project ${selectedProjectId} not found for MCP config`)
+          return null
+        }
+        throw error
+      }
     },
-    enabled: !!selectedProjectId && !!client
+    enabled: !!selectedProjectId && !!client,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 404 errors
+      if (error?.status === 404 || error?.message?.includes('not found')) {
+        return false
+      }
+      // Retry other errors up to 3 times
+      return failureCount < 3
+    }
   })
 
   const hasProjectMcpConfig = !!mcpConfigData?.config

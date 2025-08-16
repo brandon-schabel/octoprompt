@@ -1,9 +1,12 @@
 import { Buffer } from 'buffer'
 
+// Define BufferSource type for compatibility
+type BufferSource = ArrayBufferView | ArrayBuffer
+
 // Environment detection
 const isServerEnvironment = typeof process !== 'undefined' && process.env && (
   process.env.NODE_ENV === 'test' || 
-  typeof globalThis.window === 'undefined'
+  typeof (globalThis as any).window === 'undefined'
 )
 
 // Conditional storage import for server/test environments

@@ -161,11 +161,11 @@ export function DocumentationGeneratorDialog({
       })
 
       let generatedContent = ''
-      if (response.success && response.data?.output) {
-        if (typeof response.data.output === 'string') {
-          generatedContent = response.data.output
-        } else if (response.data.output.content) {
-          generatedContent = response.data.output.content
+      if ((response as any).success && (response as any).data?.output) {
+        if (typeof (response as any).data.output === 'string') {
+          generatedContent = (response as any).data.output
+        } else if ((response as any).data.output.content) {
+          generatedContent = (response as any).data.output.content
         }
       }
 

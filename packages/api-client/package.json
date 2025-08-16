@@ -1,7 +1,7 @@
 {
   "name": "@promptliano/api-client",
   "version": "0.9.2",
-  "module": "api-client.ts",
+  "module": "src/index.ts",
   "type": "module",
   "scripts": {
     "build": "tsc",

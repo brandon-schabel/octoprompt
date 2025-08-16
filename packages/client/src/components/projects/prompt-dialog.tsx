@@ -65,7 +65,7 @@ export function PromptDialog({ open, editPromptId, promptForm, projectId, onClos
         content: values.content
       })
 
-      if (!result.success) {
+      if (!result) {
         toast.error('Failed to create prompt')
         return
       }

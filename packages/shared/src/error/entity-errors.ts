@@ -93,6 +93,13 @@ export class EntityErrors {
   }
 
   /**
+   * Invalid relationship error (400) - alias for mismatch
+   */
+  static invalidRelationship(childEntity: string, childId: number | string, parentEntity: string, parentId: number | string): never {
+    return EntityErrors.mismatch(childEntity, childId, parentEntity, parentId)
+  }
+
+  /**
    * Missing required field (400)
    */
   static missingRequired(entity: string, field: string): never {
@@ -177,6 +184,18 @@ export class EntityErrors {
   }
 
   /**
+   * Delete operation failed (500)
+   */
+  static deleteFailed(entity: string, id: number | string, reason?: string): never {
+    throw new ApiError(
+      500,
+      `Failed to delete ${entity} ${id}${reason ? `: ${reason}` : ''}`,
+      `${entity.toUpperCase().replace(/\s+/g, '_')}_DELETE_FAILED`,
+      { id, reason }
+    )
+  }
+
+  /**
    * Transaction error (500)
    */
   static transactionError(operation: string, error: any): never {
@@ -238,6 +257,10 @@ export function createEntityErrorFactory(entityName: string) {
     dbReadError: (error: any, context?: string) => EntityErrors.dbReadError(entityName, error, context),
     dbWriteError: (error: any, context?: string) => EntityErrors.dbWriteError(entityName, error, context),
     dbDeleteError: (error: any, context?: string) => EntityErrors.dbDeleteError(entityName, error, context),
+    deleteFailed: (id: number | string, reason?: string) => 
+      EntityErrors.deleteFailed(entityName, id, reason),
+    invalidRelationship: (childId: number | string, parentEntity: string, parentId: number | string) => 
+      EntityErrors.invalidRelationship(entityName, childId, parentEntity, parentId),
     notPermitted: (operation: string, reason?: string) => 
       EntityErrors.notPermitted(entityName, operation, reason),
     custom: (statusCode: number, message: string, code: string, details?: any) => 

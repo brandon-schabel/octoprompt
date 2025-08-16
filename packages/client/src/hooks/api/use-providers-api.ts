@@ -138,11 +138,12 @@ export function useTestProvider() {
       return client.keys.testProvider(data)
     },
     onSuccess: (response) => {
-      if (response.data.success) {
+      const typedResponse = response as any
+      if (typedResponse.data.success) {
         toast.success(`Provider connected successfully`)
         queryClient.invalidateQueries({ queryKey: providerKeys.health() })
       } else {
-        toast.error(`Provider test failed: ${response.data.error}`)
+        toast.error(`Provider test failed: ${typedResponse.data.error}`)
       }
     },
     onError: (error: any) => {
@@ -162,9 +163,10 @@ export function useBatchTestProviders() {
       return client.keys.batchTestProviders(data)
     },
     onSuccess: (response) => {
-      const results = response.data.results
-      const successCount = results.filter((r) => r.success).length
-      const failCount = results.filter((r) => !r.success).length
+      const typedResponse = response as any
+      const results = typedResponse.data.results
+      const successCount = results.filter((r: any) => r.success).length
+      const failCount = results.filter((r: any) => !r.success).length
 
       if (successCount > 0 && failCount === 0) {
         toast.success(`All ${successCount} providers tested successfully`)

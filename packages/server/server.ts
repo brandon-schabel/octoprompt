@@ -39,11 +39,11 @@ export async function instantiateServer({
 }: ServerConfig = {}): Promise<Server> {
   logger.info(`Starting server initialization on port ${port}...`)
   const server = serve({
-    // idleTimeout of 255 seconds (4.25 minutes) to support long-running operations
+    // idleTimeout of 255 seconds (4.25 minutes) to support long-running operations  
     // like asset generation which can take up to 3 minutes
     idleTimeout: 255,
     port,
-    async fetch(req: Request): Promise<Response | undefined> {
+    fetch: async (req: Request): Promise<Response> => {
       const url = new URL(req.url)
 
       if (url.pathname === '/') {
@@ -53,7 +53,11 @@ export async function instantiateServer({
       if (url.pathname === '/ws') {
         const clientId = crypto.randomUUID()
         const upgraded: boolean = server.upgrade(req, { data: { clientId } })
-        return upgraded ? undefined : new Response('WebSocket upgrade failed', { status: 400 })
+        if (upgraded) {
+          // Return a dummy response that won't be used since the connection is upgraded
+          return new Response(null, { status: 101 })
+        }
+        return new Response('WebSocket upgrade failed', { status: 400 })
       }
 
       // FIXED: Always return API responses for API routes, regardless of status code

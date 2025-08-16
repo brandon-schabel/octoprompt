@@ -83,7 +83,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(function FileP
   return (
     <div id='outer-area' className={`flex flex-col h-full overflow-hidden ${className}`}>
       <div className='flex flex-col flex-1 min-h-0'>
-        {projectData?.data && <ProjectHeader projectData={projectData.data} />}
+        {projectData && <ProjectHeader projectData={projectData} />}
         <div className='flex-1 overflow-auto p-4 space-y-6'>
           <FileExplorer
             ref={{

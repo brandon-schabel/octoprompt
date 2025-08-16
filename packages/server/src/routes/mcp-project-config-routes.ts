@@ -241,6 +241,18 @@ mcpProjectConfigApp
       if (error instanceof ApiError) {
         return c.json({ success: false, error: { message: error.message, code: error.code } }, error.status)
       }
+      
+      // Handle project not found error specifically
+      if (error instanceof Error && error.message.includes('not found')) {
+        return c.json({ 
+          success: false, 
+          error: { 
+            message: error.message, 
+            code: 'PROJECT_NOT_FOUND' 
+          } 
+        }, 404)
+      }
+      
       return c.json({ success: false, error: { message: 'Internal server error' } }, 500)
     }
   })

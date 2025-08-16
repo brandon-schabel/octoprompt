@@ -49,8 +49,7 @@ export function ProjectSettingsTab() {
   const { data: autoIncludeClaudeMd } = useProjectTabField('autoIncludeClaudeMd')
   const { data: instructionFileSettings } = useProjectTabField('instructionFileSettings')
 
-  const { data: projectResponse } = useGetProject(projectId!)
-  const projectData = projectResponse?.data
+  const { data: projectData } = useGetProject(projectId!)
   const { copyToClipboard } = useCopyClipboard()
   const [showAgentFiles, setShowAgentFiles] = useState(false)
   const [showTroubleshooting, setShowTroubleshooting] = useState(false)

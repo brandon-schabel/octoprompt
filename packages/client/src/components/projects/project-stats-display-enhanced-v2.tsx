@@ -26,8 +26,7 @@ const formatNumber = (num: number) => {
 }
 
 export function ProjectStatsDisplayEnhanced({ projectId }: ProjectStatsDisplayEnhancedProps) {
-  const { data: response, isLoading, error } = useGetProjectStatistics(projectId)
-  const statistics = response?.data
+  const { data: statistics, isLoading, error } = useGetProjectStatistics(projectId)
 
   if (isLoading) {
     return (
@@ -62,8 +61,6 @@ export function ProjectStatsDisplayEnhanced({ projectId }: ProjectStatsDisplayEn
           value: Math.floor((statistics.ticketStats?.totalTickets || 0) * 0.85)
         }}
         title="Weekly Activity"
-        showPercentage
-        showTrend
       />
 
       {/* Metric Cards Row */}
@@ -73,28 +70,24 @@ export function ProjectStatsDisplayEnhanced({ projectId }: ProjectStatsDisplayEn
           value={formatNumber(statistics.fileStats?.totalFiles || 0)}
           description={formatBytes(statistics.fileStats?.totalSize || 0)}
           icon={FileText}
-          variant='default'
         />
         <MetricCard
           label='Active Tickets'
           value={statistics.ticketStats?.totalTickets || 0}
           description={`${statistics.ticketStats?.ticketsByStatus?.open || 0} open`}
           icon={Circle}
-          variant='primary'
         />
         <MetricCard
           label='Task Completion'
           value={`${Math.round(statistics.taskStats?.completionRate || 0)}%`}
           description={`${statistics.taskStats?.completedTasks || 0} of ${statistics.taskStats?.totalTasks || 0}`}
           icon={CheckCircle2}
-          variant='success'
         />
         <MetricCard
           label='Total Prompts'
           value={statistics.promptStats?.totalPrompts || 0}
           description={`~${formatNumber(statistics.promptStats?.totalTokens || 0)} tokens`}
           icon={Sparkles}
-          variant='warning'
         />
       </div>
 

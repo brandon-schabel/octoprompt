@@ -224,7 +224,7 @@ export function SessionsView({ projectId, projectName, onSelectSession }: Sessio
       ) : (
         <ScrollArea className='h-[calc(100vh-250px)]'>
           <div className='grid gap-4 pr-4'>
-            {sessions.map((session) => (
+            {sessions.map((session: any) => (
               <SessionCard
                 key={session.sessionId}
                 session={session}

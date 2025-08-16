@@ -104,7 +104,38 @@ const createHookRoute = createRoute({
     params: ProjectPathParamsSchema,
     body: { content: { 'application/json': { schema: CreateHookRequestSchema } } }
   },
-  responses: createStandardResponsesWithStatus(HookApiResponseSchema, 201, 'Hook created successfully')
+  responses: {
+    201: {
+      content: {
+        'application/json': { schema: HookApiResponseSchema }
+      },
+      description: 'Hook created successfully'
+    },
+    400: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Bad Request'
+    },
+    404: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Resource Not Found'
+    },
+    422: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Validation Error'
+    },
+    500: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Internal Server Error'
+    }
+  }
 })
 
 const updateHookRoute = createRoute({
@@ -218,7 +249,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
     try {
       const hook = await claudeHookService.createHook(decodedPath, body)
 
-      return c.json(successResponse(hook), 201)
+      return c.json({ success: true, data: hook } satisfies z.infer<typeof HookApiResponseSchema>, 201)
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(

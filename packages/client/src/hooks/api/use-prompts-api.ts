@@ -43,7 +43,7 @@ export function useGetProjectPrompts(projectId: number) {
     queryFn: async () => {
       if (!client) throw new Error('API client not initialized')
       const response = await client.prompts.getProjectPrompts(projectId)
-      return response.data
+      return response
     },
     enabled: !!client && !!projectId,
     staleTime: 5 * 60 * 1000
@@ -168,7 +168,7 @@ export function useSuggestPrompts() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: async ({ projectId, params }: { projectId: number; params: { prompt: string; limit?: number } }) => {
+    mutationFn: async ({ projectId, params }: { projectId: number; params: { userInput: string; limit?: number } }) => {
       if (!client) throw new Error('API client not initialized')
       const response = await client.prompts.suggestPrompts(projectId, params)
       return response.data

@@ -27,12 +27,9 @@ import {
   TicketSuggestFilesBodySchema,
   OperationSuccessResponseSchema as OperationSuccessResponseSchemaZ
 } from '@promptliano/schemas'
+import type { ReorderTasksBody } from '@promptliano/schemas'
 
 // Additional types for ticket operations
-
-type ReorderTasksBody = {
-  taskIds: number[]
-}
 
 /**
  * Ticket API client for managing tickets, tasks, and AI-powered suggestions

@@ -814,11 +814,9 @@ export async function getQueueTimeline(queueId: number): Promise<{
                    (item.task ? `Task: ${item.task.content}` : 'Unknown Item')
 
       // Estimate processing time (default 30 minutes if not available)
-      const estimatedProcessingTime = item.ticket?.estimatedHours ? 
-        item.ticket.estimatedHours * 60 * 60 * 1000 : // Convert hours to ms
-        (item.task?.estimatedHours ? 
-          item.task.estimatedHours * 60 * 60 * 1000 :
-          30 * 60 * 1000) // 30 minutes default
+      const estimatedProcessingTime = item.task?.estimatedHours ? 
+        item.task.estimatedHours * 60 * 60 * 1000 : // Convert hours to ms
+        30 * 60 * 1000 // 30 minutes default
 
       const estimatedStartTime = runningTime
       const estimatedEndTime = runningTime + estimatedProcessingTime

@@ -591,6 +591,38 @@ export const ticketStorage = {
   readTask: (ticketId: number, taskId: number) => taskStorageInstance.getTaskById(taskId),
   readTasks: (ticketId: number) => taskStorageInstance.readTicketTasks(ticketId),
   generateTaskId: () => taskStorageInstance.generateId(),
+  enqueueTask: async (taskId: number, queueId: number, priority: number = 0) => {
+    const position = await queueStorageInstance.getNextQueuePosition(queueId)
+    const now = Date.now()
+    const updates: Partial<TicketTask> = {
+      queueId,
+      queuePosition: position,
+      queueStatus: 'queued' as any,
+      queuePriority: priority || 0,
+      queuedAt: now,
+      updated: now
+    }
+    await taskStorageInstance.update(taskId, updates)
+    return true
+  },
+  dequeueTask: async (taskId: number) => {
+    const updates = {
+      queueId: undefined,
+      queuePosition: undefined,
+      queueStatus: undefined,
+      queuePriority: undefined,
+      queuedAt: undefined,
+      queueStartedAt: undefined,
+      queueCompletedAt: undefined,
+      queueAgentId: undefined,
+      queueErrorMessage: undefined,
+      estimatedProcessingTime: undefined,
+      actualProcessingTime: undefined,
+      updated: Date.now()
+    }
+    await taskStorageInstance.update(taskId, updates)
+    return true
+  },
   
   // Queue methods
   getNextQueuePosition: (queueId: number) => queueStorageInstance.getNextQueuePosition(queueId),

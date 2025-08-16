@@ -53,7 +53,7 @@ export function TicketListEmptyState({
       icon={ClipboardList}
       title="Start organizing your work"
       description="Create tickets to track features, bugs, and tasks. Break them down into smaller, actionable items to stay organized and productive."
-      action={
+      actions={
         <Button onClick={onCreateTicket} size='lg'>
           <Plus className='mr-2 h-4 w-4' />
           Create Your First Ticket

@@ -19,8 +19,7 @@ export function ProjectSettingsDialog() {
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
   const { data: projectId } = useProjectTabField('selectedProjectId')
 
-  const { data: projectResponse } = useGetProject(projectId!)
-  const projectData = projectResponse?.data
+  const { data: projectData } = useGetProject(projectId!)
   const { copyToClipboard } = useCopyClipboard()
 
   const { isPending: isSyncing, mutate: syncProject } = useSyncProject()

@@ -45,8 +45,8 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
         { projectId: projectId ?? -1, data: { userContext: expandedValue } },
         {
           onSuccess: (resp) => {
-            if (resp.success && resp.data?.optimizedPrompt) {
-              setOptimizedPrompt(resp.data.optimizedPrompt)
+            if (resp.optimizedPrompt) {
+              setOptimizedPrompt(resp.optimizedPrompt)
               setPromptimizeDialogOpen(true)
             } else {
               toast.error('Optimization failed or no prompt returned')

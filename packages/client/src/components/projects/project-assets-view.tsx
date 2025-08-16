@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { SvgInlinePreview } from '@/components/svg-inline-preview'
-import { MarkdownInlinePreview } from '@/components/markdown-inline-preview'
+import { MarkdownInlinePreview } from '@promptliano/ui'
 import { MarkdownPreview } from '@/components/markdown-preview'
 
 interface ProjectAssetsViewProps {

@@ -142,7 +142,7 @@ export function QueueSelectionDialog({ isOpen, onClose, ticketId, projectId }: Q
                                     <Inbox className='h-4 w-4 text-muted-foreground' />
                                     <span className='font-semibold'>{queueData.queue.name}</span>
                                     <Badge variant='outline' className='text-xs'>
-                                      {getQueueStatusIcon(queueData.queue.status)}
+                                      {getQueueStatusIcon(queueData.queue.status ?? 'inactive')}
                                       {queueData.queue.status}
                                     </Badge>
                                   </div>

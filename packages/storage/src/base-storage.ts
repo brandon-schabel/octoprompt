@@ -20,7 +20,7 @@ export interface BaseEntity {
  * @template TEntity - The entity type (must match Zod schema)
  * @template TStorage - The storage map type (Record<string, TEntity>)
  */
-export abstract class BaseStorage<TEntity, TStorage = Record<string, TEntity>> {
+export abstract class BaseStorage<TEntity extends BaseEntity, TStorage = Record<string, TEntity>> {
   /**
    * Table name in the database
    */
@@ -139,7 +139,7 @@ export abstract class BaseStorage<TEntity, TStorage = Record<string, TEntity>> {
           VALUES (${placeholders})
         `)
 
-        for (const entity of Object.values(validated) as TEntity[]) {
+        for (const entity of Object.values(validated as Record<string, TEntity>)) {
           const values = this.getInsertValues(entity)
           insertQuery.run(...values)
         }
@@ -354,7 +354,7 @@ export abstract class BaseStorage<TEntity, TStorage = Record<string, TEntity>> {
    */
   async list(): Promise<TEntity[]> {
     const storage = await this.readAll()
-    return Object.values(storage) as TEntity[]
+    return Object.values(storage as Record<string, TEntity>)
   }
 
   /**

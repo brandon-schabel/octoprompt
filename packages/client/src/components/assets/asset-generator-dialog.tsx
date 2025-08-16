@@ -780,7 +780,7 @@ function prepareUserInput(assetType: string, formData: CommonFormData & Partial<
   }
 
   // Handle SVG asset types
-  const [width, height] = formData.dimensions.split('x')
+  const [width, height] = formData.dimensions?.split('x') || ['', '']
 
   let assetTypeDescription = ''
   switch (assetType) {

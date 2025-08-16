@@ -9,6 +9,9 @@ export { TicketClient } from './clients/ticket-client'
 export { QueueClient } from './clients/queue-client'
 export { GitClient } from './clients/git-client'
 export { MCPClient } from './clients/mcp-client'
+export { PromptClient } from './clients/prompt-client'
+export { MarkdownClient } from './clients/markdown-client'
+export { FlowClient } from './clients/flow-client'
 
 // Import all clients for composition
 import { ProjectClient } from './clients/project-client'
@@ -17,6 +20,9 @@ import { TicketClient } from './clients/ticket-client'
 import { QueueClient } from './clients/queue-client'
 import { GitClient } from './clients/git-client'
 import { MCPClient } from './clients/mcp-client'
+import { PromptClient } from './clients/prompt-client'
+import { MarkdownClient } from './clients/markdown-client'
+import { FlowClient } from './clients/flow-client'
 
 import type { ApiConfig } from './base-client'
 
@@ -34,10 +40,11 @@ export class PromptlianoClient {
   public readonly queues: QueueClient
   public readonly git: GitClient
   public readonly mcp: MCPClient
+  public readonly prompts: PromptClient
+  public readonly markdown: MarkdownClient
+  public readonly flow: FlowClient
 
-  // Backwards compatibility aliases
-  public readonly prompts: any // Will need to implement these separately
-  public readonly markdown: any
+  // Backwards compatibility aliases - not yet implemented
   public readonly agents: any
   public readonly commands: any
   public readonly claudeCode: any
@@ -50,7 +57,7 @@ export class PromptlianoClient {
   public readonly mcpInstallation: any
   public readonly mcpProjectConfig: any
   public readonly mcpGlobalConfig: any
-  public readonly flow: any
+  // Flow service is now properly implemented above
 
   constructor(config: ApiConfig) {
     // Initialize the main service clients
@@ -60,6 +67,9 @@ export class PromptlianoClient {
     this.queues = new QueueClient(config)
     this.git = new GitClient(config)
     this.mcp = new MCPClient(config)
+    this.prompts = new PromptClient(config)
+    this.markdown = new MarkdownClient(config)
+    this.flow = new FlowClient(config)
 
     // For backwards compatibility, map MCP sub-services
     this.mcpAnalytics = this.mcp
@@ -69,8 +79,6 @@ export class PromptlianoClient {
 
     // Placeholder implementations for services not yet modularized
     // These would need to be implemented as separate client modules
-    this.prompts = null
-    this.markdown = null
     this.agents = null
     this.commands = null
     this.claudeCode = null
@@ -79,7 +87,7 @@ export class PromptlianoClient {
     this.genAi = null
     this.system = null
     this.agentFiles = null
-    this.flow = null
+    // Flow service is now properly implemented above
 
     // Log a warning about incomplete modularization
     if (typeof console !== 'undefined') {
@@ -112,6 +120,9 @@ export const TicketService = TicketClient
 export const QueueService = QueueClient
 export const GitService = GitClient
 export const MCPService = MCPClient
+export const PromptService = PromptClient
+export const MarkdownService = MarkdownClient
+export const FlowService = FlowClient
 
 // Additional legacy aliases that might be used
 export const MCPAnalyticsService = MCPClient

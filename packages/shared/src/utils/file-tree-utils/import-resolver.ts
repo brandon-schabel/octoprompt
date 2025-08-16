@@ -145,6 +145,7 @@ function resolveAliasImport(importPath: string, currentFilePath: string, tsconfi
     if (importPath === prefix || importPath.startsWith(prefix + '/')) {
       const remainder = importPath.slice(prefix.length).replace(/^\//, '')
       const targetPatterns = aliases[aliasKey]
+      if (!targetPatterns) continue
       const resolvedPaths: string[] = []
       for (const pattern of targetPatterns) {
         const basePattern = pattern.replace(/\/\*$/, '')

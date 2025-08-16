@@ -261,13 +261,15 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
             {/* Git options - only show if git is available */}
             {gitStatus &&
-              gitStatus.files.length > 0 &&
+              gitStatus.success &&
+              gitStatus.data &&
+              gitStatus.data.files.length > 0 &&
               (() => {
-                const changedFiles = gitStatus.files.filter(
-                  (file) => file.status !== 'unchanged' && file.status !== 'ignored'
+                const changedFiles = gitStatus.data.files.filter(
+                  (file: any) => file.status !== 'unchanged' && file.status !== 'ignored'
                 )
-                const stagedFiles = changedFiles.filter((file) => file.staged)
-                const unstagedFiles = changedFiles.filter((file) => !file.staged)
+                const stagedFiles = changedFiles.filter((file: any) => file.staged)
+                const unstagedFiles = changedFiles.filter((file: any) => !file.staged)
 
                 if (changedFiles.length === 0) return null
 
@@ -280,11 +282,11 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                     <DropdownMenuItem
                       onClick={() => {
                         const filesWithChanges = changedFiles
-                          .map((file) => {
+                          .map((file: any) => {
                             const projectFile = projectFiles.find((pf) => pf.path === file.path)
                             return projectFile?.id
                           })
-                          .filter((id): id is number => id !== undefined)
+                          .filter((id: any): id is number => id !== undefined)
 
                         if (filesWithChanges.length > 0) {
                           selectFiles([...new Set([...selectedFiles, ...filesWithChanges])])
@@ -303,11 +305,11 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                       <DropdownMenuItem
                         onClick={() => {
                           const stagedFileIds = stagedFiles
-                            .map((file) => {
+                            .map((file: any) => {
                               const projectFile = projectFiles.find((pf) => pf.path === file.path)
                               return projectFile?.id
                             })
-                            .filter((id): id is number => id !== undefined)
+                            .filter((id: any): id is number => id !== undefined)
 
                           if (stagedFileIds.length > 0) {
                             selectFiles([...new Set([...selectedFiles, ...stagedFileIds])])
@@ -327,11 +329,11 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                       <DropdownMenuItem
                         onClick={() => {
                           const unstagedFileIds = unstagedFiles
-                            .map((file) => {
+                            .map((file: any) => {
                               const projectFile = projectFiles.find((pf) => pf.path === file.path)
                               return projectFile?.id
                             })
-                            .filter((id): id is number => id !== undefined)
+                            .filter((id: any): id is number => id !== undefined)
 
                           if (unstagedFileIds.length > 0) {
                             selectFiles([...new Set([...selectedFiles, ...unstagedFileIds])])
@@ -448,8 +450,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                   onViewFile={(file) => {
                     // Check if file has git changes and show diff by default
                     const gitFileStatus =
-                      gitStatus
-                        ? gitStatus.files.find((f) => f.path === file?.path)
+                      gitStatus && gitStatus.success && gitStatus.data
+                        ? gitStatus.data.files.find((f: any) => f.path === file?.path)
                         : null
                     const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged' ? true : false
                     handleViewFile(file as ProjectFile, false, hasChanges)
@@ -473,8 +475,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                 onViewFile={(file) => {
                   // Check if file has git changes and show diff by default
                   const gitFileStatus =
-                    gitStatus
-                      ? gitStatus.files.find((f) => f.path === file?.path)
+                    gitStatus && gitStatus.success && gitStatus.data
+                      ? gitStatus.data.files.find((f: any) => f.path === file?.path)
                       : null
                   const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged' ? true : false
                   handleViewFile(file as ProjectFile, false, hasChanges)

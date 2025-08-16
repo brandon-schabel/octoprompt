@@ -6,7 +6,7 @@ import {
   createStandardMappings,
   getInsertColumnsFromMappings,
   getInsertValuesFromEntity,
-  FieldMapping
+  type FieldMapping
 } from './utils/storage-helpers'
 import { ApiError } from '@promptliano/shared'
 import { SqliteConverters } from '@promptliano/shared/src/utils/sqlite-converters'

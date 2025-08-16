@@ -152,7 +152,7 @@ export function useGetProjectSummary(projectId: number) {
     queryFn: async () => {
       if (!client) throw new Error('API client not initialized')
       const response = await client.projects.getProjectSummary(projectId)
-      return response.data
+      return response
     },
     enabled: !!client && !!projectId,
     staleTime: 5 * 60 * 1000
@@ -183,7 +183,7 @@ export function useSyncProject() {
     mutationFn: async (projectId: number) => {
       if (!client) throw new Error('API client not initialized')
       const response = await client.projects.syncProject(projectId)
-      return response.data
+      return response
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.all })
@@ -216,7 +216,7 @@ export function useOptimizeUserInput() {
   return useMutation({
     mutationFn: async ({ projectId, data }: { projectId: number; data: any }) => {
       if (!client) throw new Error('API client not initialized')
-      const response = await client.projects.optimizeUserInput(projectId, data)
+      const response = await client.prompts.optimizeUserInput(projectId, data)
       return response.data
     },
     onError: (error: any) => {

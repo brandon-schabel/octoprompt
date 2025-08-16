@@ -99,12 +99,12 @@ export function FileViewerDialog({
   const { data: gitStatus } = useProjectGitStatus(projectId, open && !!projectId)
   const gitFileStatus = useMemo(() => {
     if (!gitStatus || !viewedFile) return null
-    return gitStatus.files.find((f) => f.path === viewedFile.path)
+    return (gitStatus as any).data?.files?.find((f: any) => f.path === viewedFile.path)
   }, [gitStatus, viewedFile])
 
   const hasGitChanges = gitFileStatus && gitFileStatus.status !== 'unchanged'
   const hasStaged =
-    gitStatus && viewedFile ? gitStatus.staged.includes(viewedFile.path) : false
+    gitStatus && viewedFile ? (gitStatus as any).data?.staged?.includes(viewedFile.path) : false
   const hasUnstaged = gitFileStatus ? !gitFileStatus.staged : false
 
   // File diff data

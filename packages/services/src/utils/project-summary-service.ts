@@ -322,7 +322,10 @@ export async function getFullProjectSummary(projectId: number): Promise<string> 
     includeImports: true,
     includeExports: true,
     progressive: false,
-    includeMetrics: false
+    includeMetrics: false,
+    groupAware: true,
+    includeRelationships: true,
+    contextWindow: 4000
   })
   return result.summary
 }
@@ -335,7 +338,10 @@ export async function getCompactProjectSummary(projectId: number): Promise<strin
     includeImports: true,
     includeExports: true,
     progressive: false,
-    includeMetrics: false
+    includeMetrics: false,
+    groupAware: true,
+    includeRelationships: true,
+    contextWindow: 4000
   })
   return result.summary
 }

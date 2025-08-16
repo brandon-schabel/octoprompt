@@ -9,7 +9,6 @@ import {
   gitStashSchema as GitStashSchema,
   ProjectIdParamsSchema
 } from '@promptliano/schemas'
-import { z } from 'zod'
 
 // Define missing schemas locally
 const CreateStashBodySchema = z.object({
@@ -28,7 +27,7 @@ const DropStashBodySchema = z.object({
   stashRef: z.string().optional().default('stash@{0}')
 })
 import * as gitService from '@promptliano/services'
-import { createStandardResponses, createRouteHandler, successResponse, operationSuccessResponse } from '../../utils/route-helpers'
+import { createStandardResponses, createStandardResponsesWithStatus, createRouteHandler, successResponse, operationSuccessResponse } from '../../utils/route-helpers'
 
 // Response schemas
 const StashListResponseSchema = z.object({
@@ -63,13 +62,11 @@ const createStashRoute = createRoute({
       required: false
     }
   },
-  responses: {
-    201: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Stash created successfully'
-    },
-    ...createStandardResponses(OperationSuccessResponseSchema)
-  }
+  responses: createStandardResponsesWithStatus(
+    OperationSuccessResponseSchema,
+    201,
+    'Stash created successfully'
+  )
 })
 
 // Apply stash
@@ -87,10 +84,6 @@ const applyStashRoute = createRoute({
     }
   },
   responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Stash applied successfully'
-    },
     ...createStandardResponses(OperationSuccessResponseSchema)
   }
 })
@@ -110,10 +103,6 @@ const popStashRoute = createRoute({
     }
   },
   responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Stash popped successfully'
-    },
     ...createStandardResponses(OperationSuccessResponseSchema)
   }
 })
@@ -133,10 +122,6 @@ const dropStashRoute = createRoute({
     }
   },
   responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Stash dropped successfully'
-    },
     ...createStandardResponses(OperationSuccessResponseSchema)
   }
 })
@@ -156,7 +141,7 @@ export const gitStashRoutes = new OpenAPIHono()
       async ({ params, body }) => {
         await gitService.stash(params!.projectId, body?.message)
         gitService.clearGitStatusCache(params!.projectId)
-        return operationSuccessResponse('Stash created successfully', 201)
+        return operationSuccessResponse('Stash created successfully')
       }
     )
   )

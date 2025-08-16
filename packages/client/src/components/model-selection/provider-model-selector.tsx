@@ -66,14 +66,14 @@ export function ProviderModelSelector({
       ]
     }
     
-    const allProviders = providersData.data.map(p => ({
+    const allProviders = providersData.data.map((p: any) => ({
       value: p.id,
       label: p.name
     }))
     
     // Apply filter if specified
     if (filterProviders && filterProviders.length > 0) {
-      return allProviders.filter((option) => filterProviders.includes(option.value as APIProviders))
+      return allProviders.filter((option: any) => filterProviders.includes(option.value as APIProviders))
     }
     
     return allProviders
@@ -87,7 +87,7 @@ export function ProviderModelSelector({
       filteredModels = filteredModels.filter(filterModels)
     }
 
-    return filteredModels.map((m) => ({
+    return filteredModels.map((m: any) => ({
       value: m.id,
       label: m.name
     }))
@@ -95,7 +95,7 @@ export function ProviderModelSelector({
 
   // Auto-select first model when provider changes or current model is invalid
   useEffect(() => {
-    const isCurrentModelValid = comboboxOptions.some((model) => model.value === currentModel)
+    const isCurrentModelValid = comboboxOptions.some((model: any) => model.value === currentModel)
     if ((!currentModel || !isCurrentModelValid) && comboboxOptions.length > 0) {
       onModelChange(comboboxOptions[0].value)
     }
@@ -129,7 +129,7 @@ export function ProviderModelSelector({
           <SelectValue placeholder='Select provider' />
         </SelectTrigger>
         <SelectContent>
-          {availableProviders.map((option) => (
+          {availableProviders.map((option: any) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>
