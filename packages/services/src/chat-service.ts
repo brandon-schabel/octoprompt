@@ -6,6 +6,7 @@ import {
   type ExtendedChatMessage
 } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
+import { ErrorFactory, assertExists, handleZodError } from './utils/error-factory'
 import { chatStorage, type ChatMessagesStorage } from '@promptliano/storage' // New import
 import { ZodError } from 'zod'
 import { normalizeToUnixMs } from '@promptliano/shared'
@@ -35,12 +36,7 @@ export function createChatService() {
     } catch (error) {
       if (error instanceof ZodError) {
         console.error(`Validation failed for new chat data: ${error.message}`, error.flatten().fieldErrors)
-        throw new ApiError(
-          500,
-          `Internal validation error creating chat.`,
-          'CHAT_VALIDATION_ERROR',
-          error.flatten().fieldErrors
-        )
+        handleZodError(error, 'Chat', 'create')
       }
       throw error // Should not happen if data is constructed correctly
     }
@@ -49,16 +45,12 @@ export function createChatService() {
 
     if (options?.copyExisting && options?.currentChatId) {
       if (!allChats[options.currentChatId]) {
-        throw new ApiError(
-          404,
-          `Referenced chat with ID ${options.currentChatId} not found for copying.`,
-          'REFERENCED_CHAT_NOT_FOUND'
-        )
+        ErrorFactory.notFound('Referenced Chat', options.currentChatId)
       }
     }
     if (allChats[chatId]) {
       // Extremely unlikely with UUIDs but good to check
-      throw new ApiError(509, `Chat ID conflict for ${chatId}`, 'CHAT_ID_CONFLICT')
+      ErrorFactory.duplicate("Chat", "ID", chatId)
     }
 
     allChats[chatId] = newChatData
@@ -116,11 +108,11 @@ export function createChatService() {
   async function updateChatTimestamp(chatId: number): Promise<void> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
-      throw new ApiError(404, `Chat with ID ${chatId} not found for timestamp update.`, 'CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Chat", chatId)
     }
     const chat = allChats[chatId]
     if (!chat) {
-      throw new ApiError(404, `Chat with ID ${chatId} not found for timestamp update.`, 'CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Chat", chatId)
     }
     chat.updated = normalizeToUnixMs(new Date())
     try {
@@ -128,12 +120,7 @@ export function createChatService() {
       await chatStorage.writeChats(allChats)
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ApiError(
-          500,
-          `Validation failed updating chat timestamp for ${chatId}.`,
-          'CHAT_VALIDATION_ERROR',
-          error.flatten().fieldErrors
-        )
+        handleZodError(error, 'Chat timestamp', 'update')
       }
       throw error
     }
@@ -142,11 +129,7 @@ export function createChatService() {
   async function saveMessage(message: ExtendedChatMessage): Promise<ExtendedChatMessage> {
     const allChats = await chatStorage.readChats()
     if (!allChats[message.chatId]) {
-      throw new ApiError(
-        404,
-        `Chat with ID ${message.chatId} not found. Cannot save message.`,
-        'CHAT_NOT_FOUND_FOR_MESSAGE'
-      )
+      ErrorFactory.notFound('Chat', message.chatId)
     }
 
     const messageId = message.id || chatStorage.generateId()
@@ -166,12 +149,7 @@ export function createChatService() {
     } catch (error) {
       if (error instanceof ZodError) {
         console.error(`Validation failed for new message data: ${error.message}`, error.flatten().fieldErrors)
-        throw new ApiError(
-          500,
-          `Internal validation error saving message.`,
-          'MESSAGE_VALIDATION_ERROR',
-          error.flatten().fieldErrors
-        )
+        handleZodError(error, 'Message', 'save')
       }
       throw error
     }
@@ -193,25 +171,17 @@ export function createChatService() {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
       // This check could be redundant if readChatMessages implies chat existence
-      throw new ApiError(404, `Chat with ID ${chatId} not found.`, 'CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Chat", chatId)
     }
 
     const chatMessages = await chatStorage.readChatMessages(chatId)
     if (!chatMessages[messageId]) {
-      throw new ApiError(
-        404,
-        `Message with ID ${messageId} not found in chat ${chatId} for update.`,
-        'MESSAGE_NOT_FOUND'
-      )
+      ErrorFactory.notFound("Message", messageId)
     }
 
     const message = chatMessages[messageId]
     if (!message) {
-      throw new ApiError(
-        404,
-        `Message with ID ${messageId} not found in chat ${chatId} for content update.`,
-        'MESSAGE_NOT_FOUND'
-      )
+      ErrorFactory.notFound("Message", messageId)
     }
     message.content = content
     // message.updated = new Date().toISOString(); // If messages had an updatedAt field
@@ -224,12 +194,7 @@ export function createChatService() {
           `Validation failed updating message content for ${messageId}: ${error.message}`,
           error.flatten().fieldErrors
         )
-        throw new ApiError(
-          500,
-          `Internal validation error updating message.`,
-          'MESSAGE_VALIDATION_ERROR',
-          error.flatten().fieldErrors
-        )
+        handleZodError(error, 'Message', 'update')
       }
       throw error
     }
@@ -248,7 +213,7 @@ export function createChatService() {
   async function getChatMessages(chatId: number): Promise<ChatMessage[]> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
-      throw new ApiError(404, `Chat with ID ${chatId} not found.`, 'CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Chat", chatId)
     }
 
     const chatMessagesData = await chatStorage.readChatMessages(chatId)
@@ -260,12 +225,12 @@ export function createChatService() {
   async function updateChat(chatId: number, title: string): Promise<Chat> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
-      throw new ApiError(404, `Chat with ID ${chatId} not found for update.`, 'CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Chat", chatId)
     }
 
     const chat = allChats[chatId]
     if (!chat) {
-      throw new ApiError(404, `Chat with ID ${chatId} not found for update.`, 'CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Chat", chatId)
     }
     chat.title = title
     chat.updated = normalizeToUnixMs(new Date())
@@ -275,12 +240,7 @@ export function createChatService() {
     } catch (error) {
       if (error instanceof ZodError) {
         console.error(`Validation failed updating chat ${chatId}: ${error.message}`, error.flatten().fieldErrors)
-        throw new ApiError(
-          500,
-          `Internal validation error updating chat.`,
-          'CHAT_VALIDATION_ERROR',
-          error.flatten().fieldErrors
-        )
+        handleZodError(error, 'Chat', 'update')
       }
       throw error
     }
@@ -291,7 +251,7 @@ export function createChatService() {
   async function deleteChat(chatId: number): Promise<void> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
-      throw new ApiError(404, `Chat with ID ${chatId} not found for deletion.`, 'CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Chat", chatId)
     }
 
     delete allChats[chatId]
@@ -303,19 +263,11 @@ export function createChatService() {
   async function deleteMessage(chatId: number, messageId: number): Promise<void> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
-      throw new ApiError(
-        404,
-        `Chat with ID ${chatId} not found when attempting to delete message ${messageId}.`,
-        'CHAT_NOT_FOUND'
-      )
+      ErrorFactory.notFound("Chat", chatId)
     }
     const chatMessages = await chatStorage.readChatMessages(chatId)
     if (!chatMessages[messageId]) {
-      throw new ApiError(
-        404,
-        `Message with ID ${messageId} not found in chat ${chatId} for deletion.`,
-        'MESSAGE_NOT_FOUND'
-      )
+      ErrorFactory.notFound("Message", messageId)
     }
 
     delete chatMessages[messageId]
@@ -327,7 +279,7 @@ export function createChatService() {
     const allChats = await chatStorage.readChats()
     const sourceChat = allChats[sourceChatId]
     if (!sourceChat) {
-      throw new ApiError(404, `Source chat with ID ${sourceChatId} not found for forking.`, 'SOURCE_CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Source chat", sourceChatId)
     }
 
     const newTitle = `Fork of ${sourceChat.title} (${new Date().toLocaleTimeString()})`
@@ -388,17 +340,13 @@ export function createChatService() {
     const allChats = await chatStorage.readChats()
     const sourceChat = allChats[sourceChatId]
     if (!sourceChat) {
-      throw new ApiError(404, `Source chat with ID ${sourceChatId} not found.`, 'SOURCE_CHAT_NOT_FOUND')
+      ErrorFactory.notFound("Source chat", sourceChatId)
     }
 
     const sourceMessagesAll = await chatStorage.readChatMessages(sourceChatId)
     const startMessage = sourceMessagesAll[messageId]
     if (!startMessage) {
-      throw new ApiError(
-        404,
-        `Starting message with ID ${messageId} not found in chat ${sourceChatId}.`,
-        'MESSAGE_NOT_FOUND'
-      )
+      ErrorFactory.notFound("Starting message", messageId)
     }
     // No need for: if (startMessage.chat_id !== sourceChatId) as we fetched from the correct file.
 
@@ -422,11 +370,7 @@ export function createChatService() {
 
     if (indexOfStart === -1) {
       // Should not happen if startMessage was found above
-      throw new ApiError(
-        500,
-        `Internal error: Could not re-find the starting message ${messageId} in chat sequence.`,
-        'MESSAGE_SEQUENCE_ERROR'
-      )
+      ErrorFactory.operationFailed('message sequence processing', `Could not re-find the starting message ${messageId} in chat sequence`)
     }
 
     const messagesToConsider = sourceMessagesArray.slice(0, indexOfStart + 1)

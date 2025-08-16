@@ -8,7 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Ticket, TicketTask } from '@promptliano/schemas'
 import { useApiClient } from './use-api-client'
-import { useInvalidateTickets } from './use-tickets-api'
+import { useInvalidateTickets } from '@/hooks/api/use-tickets-api'
 import { commonErrorHandler } from './common-mutation-error-handler'
 import { QUEUE_REFETCH_INTERVAL } from '@/lib/constants'
 

@@ -9,9 +9,7 @@
     "build:prod": "tsc -b tsconfig.app.json && ENVIRONMENT=prod vite build",
     "preview": "vite preview",
     "test": "bun test",
-    "test:watch": "bun test --watch",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "test:watch": "bun test --watch"
   },
   "dependencies": {
     "@ai-sdk/react": "^1.2.9",
@@ -51,10 +49,6 @@
     "@tanstack/react-router": "^1.129.8",
     "@tanstack/react-table": "^8.20.6",
     "@tanstack/router-plugin": "^1.97.25",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-http": "^2.4.4",
-    "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-shell": "^2.2.2",
     "@types/react-dropzone": "^5.1.0",
     "babel-plugin-react-compiler": "^19.1.0-rc.1",
     "class-variance-authority": "^0.7.1",
@@ -84,7 +78,6 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-query-devtools": "^5.65.1",
     "@tanstack/router-devtools": "^1.97.25",

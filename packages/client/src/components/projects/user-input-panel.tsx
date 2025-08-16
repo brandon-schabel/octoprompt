@@ -28,7 +28,7 @@ import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectFile } from '@promptliano/schemas'
-import { buildPromptContent, calculateTotalTokens } from 'shared/src/utils/projects-utils'
+import { buildPromptContent, calculateTotalTokens } from '@promptliano/shared/src/utils/projects-utils'
 
 export type UserInputPanelRef = {
   focusPrompt: () => void

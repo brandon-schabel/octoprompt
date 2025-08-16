@@ -9,6 +9,7 @@ import {
   type GlobalInstallationRecord
 } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
+import { createStandardResponses, successResponse } from '../utils/route-helpers'
 import * as path from 'path'
 import * as fs from 'fs/promises'
 
@@ -29,6 +30,7 @@ const GlobalMCPConfigSchema = z.object({
   globalEnv: z.record(z.string()).optional()
 })
 
+// Define record schema first
 const GlobalInstallationRecordSchema = z.object({
   tool: z.string(),
   installedAt: z.number(),
@@ -36,6 +38,71 @@ const GlobalInstallationRecordSchema = z.object({
   serverName: z.string(),
   version: z.string().optional()
 })
+
+// Response schemas
+const GlobalMCPConfigResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: GlobalMCPConfigSchema
+  })
+  .openapi('GlobalMCPConfigResponse')
+
+const GlobalInstallationsResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      installations: z.array(GlobalInstallationRecordSchema),
+      toolStatuses: z.array(
+        z.object({
+          tool: z.string(),
+          name: z.string(),
+          installed: z.boolean(),
+          hasGlobalPromptliano: z.boolean(),
+          configPath: z.string().optional()
+        })
+      )
+    })
+  })
+  .openapi('GlobalInstallationsResponse')
+
+const GlobalInstallResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      message: z.string(),
+      configPath: z.string().optional(),
+      backedUp: z.boolean().optional(),
+      backupPath: z.string().optional()
+    })
+  })
+  .openapi('GlobalInstallResponse')
+
+const GlobalUninstallResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      message: z.string()
+    })
+  })
+  .openapi('GlobalUninstallResponse')
+
+const GlobalStatusResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      configExists: z.boolean(),
+      configPath: z.string(),
+      lastModified: z.number().optional(),
+      totalInstallations: z.number(),
+      installedTools: z.array(z.string()),
+      installation: z.object({
+        supported: z.boolean(),
+        scriptPath: z.string(),
+        scriptExists: z.boolean()
+      })
+    })
+  })
+  .openapi('GlobalStatusResponse')
 
 const GlobalInstallBodySchema = z.object({
   tool: z.enum(['claude-desktop', 'vscode', 'cursor', 'continue', 'claude-code', 'windsurf']),
@@ -75,19 +142,7 @@ const handleApiError = (error: unknown, c: any) => {
 const getGlobalConfigRoute = createRoute({
   method: 'get',
   path: '/api/mcp/global/config',
-  responses: {
-    200: {
-      description: 'Global MCP configuration',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: GlobalMCPConfigSchema
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(GlobalMCPConfigResponseSchema),
   tags: ['MCP Global'],
   description: 'Get global MCP configuration'
 })
@@ -104,19 +159,7 @@ const updateGlobalConfigRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      description: 'Updated global configuration',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: GlobalMCPConfigSchema
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(GlobalMCPConfigResponseSchema),
   tags: ['MCP Global'],
   description: 'Update global MCP configuration'
 })
@@ -124,30 +167,7 @@ const updateGlobalConfigRoute = createRoute({
 const getGlobalInstallationsRoute = createRoute({
   method: 'get',
   path: '/api/mcp/global/installations',
-  responses: {
-    200: {
-      description: 'List of global installations',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              installations: z.array(GlobalInstallationRecordSchema),
-              toolStatuses: z.array(
-                z.object({
-                  tool: z.string(),
-                  name: z.string(),
-                  installed: z.boolean(),
-                  hasGlobalPromptliano: z.boolean(),
-                  configPath: z.string().optional()
-                })
-              )
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(GlobalInstallationsResponseSchema),
   tags: ['MCP Global'],
   description: 'Get all global MCP installations'
 })
@@ -164,24 +184,7 @@ const installGlobalMCPRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      description: 'Installation result',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              message: z.string(),
-              configPath: z.string().optional(),
-              backedUp: z.boolean().optional(),
-              backupPath: z.string().optional()
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(GlobalInstallResponseSchema),
   tags: ['MCP Global'],
   description: 'Install Promptliano MCP globally for a tool'
 })
@@ -198,21 +201,7 @@ const uninstallGlobalMCPRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      description: 'Uninstall result',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              message: z.string()
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(GlobalUninstallResponseSchema),
   tags: ['MCP Global'],
   description: 'Uninstall global Promptliano MCP for a tool'
 })
@@ -220,30 +209,7 @@ const uninstallGlobalMCPRoute = createRoute({
 const getGlobalStatusRoute = createRoute({
   method: 'get',
   path: '/api/mcp/global/status',
-  responses: {
-    200: {
-      description: 'Global MCP status',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              configExists: z.boolean(),
-              configPath: z.string(),
-              lastModified: z.number().optional(),
-              totalInstallations: z.number(),
-              installedTools: z.array(z.string()),
-              installation: z.object({
-                supported: z.boolean(),
-                scriptPath: z.string(),
-                scriptExists: z.boolean()
-              })
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(GlobalStatusResponseSchema),
   tags: ['MCP Global'],
   description: 'Get global MCP installation status'
 })
@@ -255,10 +221,7 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
       await mcpGlobalConfigService.initialize()
       const config = await mcpGlobalConfigService.getGlobalConfig()
 
-      return c.json({
-        success: true,
-        data: config
-      })
+      return c.json(successResponse(config))
     } catch (error) {
       return handleApiError(error, c)
     }
@@ -270,10 +233,7 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
       await mcpGlobalConfigService.initialize()
       const updatedConfig = await mcpGlobalConfigService.updateGlobalConfig(updates)
 
-      return c.json({
-        success: true,
-        data: updatedConfig
-      })
+      return c.json(successResponse(updatedConfig))
     } catch (error) {
       return handleApiError(error, c)
     }
@@ -288,19 +248,16 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
       // Get current tool statuses
       const toolStatuses = await mcpInstallationService.detectGlobalInstallations()
 
-      return c.json({
-        success: true,
-        data: {
-          installations,
-          toolStatuses: toolStatuses.map((tool) => ({
-            tool: tool.tool,
-            name: tool.name,
-            installed: tool.installed,
-            hasGlobalPromptliano: tool.hasPromptliano || false,
-            configPath: tool.configPath
-          }))
-        }
-      })
+      return c.json(successResponse({
+        installations,
+        toolStatuses: toolStatuses.map((tool) => ({
+          tool: tool.tool,
+          name: tool.name,
+          installed: tool.installed,
+          hasGlobalPromptliano: tool.hasPromptliano || false,
+          configPath: tool.configPath
+        }))
+      }))
     } catch (error) {
       return handleApiError(error, c)
     }
@@ -316,15 +273,12 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
         throw new ApiError(500, result.message, 'INSTALL_FAILED')
       }
 
-      return c.json({
-        success: true,
-        data: {
-          message: result.message,
-          configPath: result.configPath,
-          backedUp: result.backedUp,
-          backupPath: result.backupPath
-        }
-      })
+      return c.json(successResponse({
+        message: result.message,
+        configPath: result.configPath,
+        backedUp: result.backedUp,
+        backupPath: result.backupPath
+      }))
     } catch (error) {
       return handleApiError(error, c)
     }
@@ -340,12 +294,9 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
         throw new ApiError(500, result.message, 'UNINSTALL_FAILED')
       }
 
-      return c.json({
-        success: true,
-        data: {
-          message: result.message
-        }
-      })
+      return c.json(successResponse({
+        message: result.message
+      }))
     } catch (error) {
       return handleApiError(error, c)
     }
@@ -376,24 +327,21 @@ export const mcpGlobalConfigRoutes = new OpenAPIHono()
         scriptExists = false
       }
 
-      return c.json({
-        success: true,
-        data: {
-          configExists: true,
-          configPath: path.join(
-            process.env.HOME || process.env.USERPROFILE || '',
-            '.promptliano/global-mcp-config.json'
-          ),
-          lastModified: Date.now(),
-          totalInstallations: installations.length,
-          installedTools: installations.map((i) => i.tool),
-          installation: {
-            supported: true,
-            scriptPath,
-            scriptExists
-          }
+      return c.json(successResponse({
+        configExists: true,
+        configPath: path.join(
+          process.env.HOME || process.env.USERPROFILE || '',
+          '.promptliano/global-mcp-config.json'
+        ),
+        lastModified: Date.now(),
+        totalInstallations: installations.length,
+        installedTools: installations.map((i) => i.tool),
+        installation: {
+          supported: true,
+          scriptPath,
+          scriptExists
         }
-      })
+      }))
     } catch (error) {
       return handleApiError(error, c)
     }

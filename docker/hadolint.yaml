@@ -1,0 +1,114 @@
+# Hadolint configuration for Dockerfile linting
+# https://github.com/hadolint/hadolint
+
+# Ignore specific rules
+ignored:
+  # DL3008: Pin versions in apt-get install
+  # We want to get security updates automatically
+  - DL3008
+  
+  # DL3009: Delete the apt-get lists after installing
+  # We already do this with rm -rf /var/lib/apt/lists/*
+  - DL3009
+  
+  # DL3018: Pin versions in apk add (Alpine)
+  # We want to get security updates automatically
+  - DL3018
+  
+  # DL3006: Always tag the version of an image explicitly
+  # We use latest for base images intentionally
+  - DL3006
+
+# Trust specific registries
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - ghcr.io
+  - registry.hub.docker.com
+  - docker.pkg.github.com
+
+# Set label schema
+label-schema:
+  # OCI Image Format Specification
+  - name: "org.opencontainers.image.title"
+    type: "string"
+    required: true
+  - name: "org.opencontainers.image.description"
+    type: "string"
+    required: true
+  - name: "org.opencontainers.image.version"
+    type: "string"
+    required: false
+  - name: "org.opencontainers.image.vendor"
+    type: "string"
+    required: false
+  - name: "org.opencontainers.image.source"
+    type: "url"
+    required: false
+  - name: "org.opencontainers.image.documentation"
+    type: "url"
+    required: false
+
+# Strict mode settings
+strict-labels: true
+
+# Failure threshold (error, warning, info, style, ignore, none)
+failure-threshold: "warning"
+
+# Format (json, checkstyle, codeclimate, gitlab_codeclimate, codacy, sonarqube)
+format: "tty"
+
+# Override specific rules
+override:
+  error:
+    # These should always be errors
+    - DL3002  # USER should be the last instruction
+    - DL3003  # Use WORKDIR instead of cd
+    - DL3004  # Do not use sudo
+    - DL3007  # Using latest tag
+    - DL3020  # Use COPY instead of ADD for files and folders
+    - DL3021  # COPY with more than 2 arguments requires destination to end with /
+    - DL3023  # Multiple consecutive RUN instructions
+    - DL3024  # FROM aliases (FROM image AS alias) defined and not used
+    - DL3025  # Use arguments JSON notation for CMD and ENTRYPOINT
+    - DL4000  # MAINTAINER is deprecated
+    - DL4001  # Either use wget or curl but not both
+    - DL4003  # Multiple CMD instructions found
+    - DL4004  # Multiple ENTRYPOINT instructions found
+    - DL4005  # Use SHELL to change the default shell
+    - SC2039  # Use of non-POSIX features
+    - SC2046  # Quote to prevent word splitting
+    - SC2086  # Double quote to prevent globbing
+
+  warning:
+    # These are warnings - we should fix but not block CI
+    - DL3027  # Do not use apt
+    - DL3029  # Do not use --platform flag with FROM
+    - DL3045  # COPY to a relative destination
+    - DL3047  # wget without progress bar
+    - DL3048  # Invalid label key
+    - DL3049  # Label is missing
+    - DL3050  # Superfluous label(s) present
+    - DL3051  # Label value is empty
+    - DL3052  # Label is not a valid URL
+    - DL3053  # Label is not a valid time format
+    - DL3054  # Label is not a valid SPDX license identifier
+    - DL3055  # Label is not a valid git hash
+    - DL3056  # Label does not conform to semantic versioning
+    - DL3057  # HEALTHCHECK instruction missing
+    - DL3058  # Multiple HEALTHCHECK instructions
+    - DL3059  # Multiple consecutive RUN instructions
+    - DL3060  # yarn cache clean missing
+    - SC1091  # Not following sourced files
+
+  info:
+    # These are informational only
+    - DL3015  # Avoid additional packages by specifying --no-install-recommends
+    - DL3032  # yum clean all missing
+    - DL3033  # Specify yum version with yum install -y <package>-<version>
+    - DL3036  # zypper clean missing
+    - DL3037  # Specify zypper version with zypper install -y <package>=<version>
+    - DL3038  # dnf clean all missing
+    - DL3040  # dnf version not specified
+    - DL3041  # Specify dnf version with dnf install -y <package>-<version>
+    - DL3042  # pip cache not cleaned

@@ -3,6 +3,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { OperationSuccessResponseSchema, ApiErrorResponseSchema } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 import { generateTabName, getProjectById } from '@promptliano/services'
+import { createStandardResponses, successResponse } from '../utils/route-helpers'
 
 const projectTabNameGenerateRoute = createRoute({
   method: 'post',
@@ -28,24 +29,16 @@ const projectTabNameGenerateRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: OperationSuccessResponseSchema
-        }
-      },
-      description: 'Tab name generated successfully'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      },
-      description: 'Failed to generate tab name'
-    }
-  },
+  responses: createStandardResponses(
+    z.object({
+      success: z.literal(true),
+      data: z.object({
+        name: z.string(),
+        status: z.literal('success'),
+        generatedAt: z.string()
+      })
+    })
+  ),
   tags: ['Project Tabs'],
   operationId: 'generateProjectTabName',
   summary: 'Generate an AI-powered name for a project tab'
@@ -53,7 +46,7 @@ const projectTabNameGenerateRoute = createRoute({
 
 export const projectTabRoutes = new OpenAPIHono().openapi(projectTabNameGenerateRoute, async (c) => {
   try {
-    const { projectId, tabData, existingNames } = await c.req.json()
+    const { projectId, tabData, existingNames } = c.req.valid('json')
 
     // Get project information
     const project = await getProjectById(projectId)
@@ -68,17 +61,11 @@ export const projectTabRoutes = new OpenAPIHono().openapi(projectTabNameGenerate
 
     const generatedName = await generateTabName(project.name, selectedFiles, context)
 
-    return c.json(
-      {
-        success: true,
-        data: {
-          name: generatedName,
-          status: 'success',
-          generatedAt: new Date().toISOString()
-        }
-      } satisfies z.infer<typeof OperationSuccessResponseSchema>,
-      200
-    )
+    return c.json(successResponse({
+      name: generatedName,
+      status: 'success' as const,
+      generatedAt: new Date().toISOString()
+    }))
   } catch (error) {
     console.error('Failed to generate tab name:', error)
 

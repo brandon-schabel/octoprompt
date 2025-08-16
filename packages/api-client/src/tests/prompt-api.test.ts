@@ -13,22 +13,36 @@ describe('Prompt API Tests', () => {
 
   beforeAll(async () => {
     console.log('Starting Prompt API Tests...')
+    
+    // Ensure we're in test environment
+    if (process.env.NODE_ENV !== 'test') {
+      throw new Error('Tests must run in NODE_ENV=test environment')
+    }
+
     client = createPromptlianoClient({ baseUrl: BASE_URL })
+
+    // Verify client is properly initialized
+    if (!client || !client.projects) {
+      throw new Error('API client not properly initialized')
+    }
 
     // Create a test project for prompt association tests
     try {
       const projectResult = await client.projects.createProject({
         name: 'Test Project for Prompts',
-        path: `/test/prompts_${Date.now()}`,
+        path: `/tmp/test/prompts_${Date.now()}`,
         description: 'Temporary project for testing prompts'
       })
       if (projectResult.success) {
         testProjectId = projectResult.data.id
+        console.log(`✅ Test project created with ID: ${testProjectId}`)
       } else {
-        throw new Error('Failed to create test project for prompts.')
+        throw new Error(`Failed to create test project: ${JSON.stringify(projectResult)}`)
       }
     } catch (error) {
-      console.error('Failed to create test project in beforeAll:', error)
+      console.error('❌ Failed to create test project in beforeAll:', error)
+      // For prompts tests, we can continue without a project for global prompt tests
+      console.warn('⚠️  Continuing tests without project - project-specific tests will be skipped')
     }
   })
 

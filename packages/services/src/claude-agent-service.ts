@@ -10,11 +10,12 @@ import {
 
 import { ApiError, promptsMap } from '@promptliano/shared'
 import { ZodError } from 'zod'
+import { ErrorFactory, assertExists, handleZodError } from './utils/error-factory'
 import { generateStructuredData } from './gen-ai-services'
 import { getCompactProjectSummary } from './utils/project-summary-service'
 import * as path from 'path'
 import * as fs from 'fs/promises'
-import { relativePosix, toPosixPath, toOSPath } from './utils/path-utils'
+import { relativePosix, toPosixPath, toOSPath } from '@promptliano/shared'
 
 export async function createAgent(projectPath: string, data: CreateClaudeAgentBody): Promise<ClaudeAgent> {
   const now = Date.now()
@@ -26,7 +27,7 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
     // Check if agent with this ID already exists
     const existingAgent = await claudeAgentStorage.getAgentById(projectPath, agentId)
     if (existingAgent) {
-      throw new ApiError(409, `Agent with ID '${agentId}' already exists.`, 'AGENT_ALREADY_EXISTS')
+      throw ErrorFactory.duplicate('Agent', 'ID', agentId)
     }
 
     // Prepare file path
@@ -45,7 +46,11 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
       updated: now
     }
 
-    ClaudeAgentSchema.parse(newAgentData) // Validate before saving
+    try {
+      ClaudeAgentSchema.parse(newAgentData) // Validate before saving
+    } catch (error) {
+      handleZodError(error, 'Agent', 'creating')
+    }
 
     // Write agent to filesystem
     const savedAgent = await claudeAgentStorage.writeAgent(projectPath, agentId, newAgentData)
@@ -56,24 +61,14 @@ export async function createAgent(projectPath: string, data: CreateClaudeAgentBo
       projectId: data.projectId
     }
   } catch (error) {
-    if (error instanceof ZodError) {
-      console.error(`Validation failed for new agent data: ${error.message}`, error.flatten().fieldErrors)
-      throw new ApiError(
-        500,
-        'Internal validation error creating agent.',
-        'AGENT_VALIDATION_ERROR',
-        error.flatten().fieldErrors
-      )
-    }
-    throw error
+    if (error instanceof ApiError) throw error
+    throw ErrorFactory.createFailed('Agent', error instanceof Error ? error.message : 'Unknown error')
   }
 }
 
 export async function getAgentById(projectPath: string, agentId: string): Promise<ClaudeAgent> {
   const agent = await claudeAgentStorage.getAgentById(projectPath, agentId)
-  if (!agent) {
-    throw new ApiError(404, `Agent with ID ${agentId} not found.`, 'AGENT_NOT_FOUND')
-  }
+  assertExists(agent, 'Agent', agentId)
   return agent
 }
 
@@ -98,10 +93,7 @@ export async function updateAgent(
   data: UpdateClaudeAgentBody
 ): Promise<ClaudeAgent> {
   const existingAgent = await claudeAgentStorage.getAgentById(projectPath, agentId)
-
-  if (!existingAgent) {
-    throw new ApiError(404, `Agent with ID ${agentId} not found for update.`, 'AGENT_NOT_FOUND')
-  }
+  assertExists(existingAgent, 'Agent', agentId)
 
   const updatedAgentData: ClaudeAgent = {
     ...existingAgent,
@@ -128,16 +120,7 @@ export async function updateAgent(
   try {
     ClaudeAgentSchema.parse(updatedAgentData)
   } catch (error) {
-    if (error instanceof ZodError) {
-      console.error(`Validation failed updating agent ${agentId}: ${error.message}`, error.flatten().fieldErrors)
-      throw new ApiError(
-        500,
-        'Internal validation error updating agent.',
-        'AGENT_VALIDATION_ERROR',
-        error.flatten().fieldErrors
-      )
-    }
-    throw error
+    handleZodError(error, 'Agent', 'updating')
   }
 
   const savedAgent = await claudeAgentStorage.writeAgent(projectPath, agentId, updatedAgentData)
@@ -215,11 +198,7 @@ Based on this project's structure and the user's context, suggest ${limit} speci
     return result.object
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to suggest agents: ${error instanceof Error ? error.message : String(error)}`,
-      'SUGGEST_AGENTS_FAILED'
-    )
+    throw ErrorFactory.operationFailed('suggest agents', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -283,13 +262,13 @@ export async function suggestAgentForTask(
   // Priority mappings for common task types
   const agentPriorities: Record<string, string[]> = {
     'zod-schema-architect': ['schema', 'zod', 'validation', 'data model', 'type'],
-    'frontend-shadcn-expert': ['ui', 'component', 'frontend', 'react', 'shadcn', 'button', 'form', 'page'],
+    'promptliano-ui-architect': ['ui', 'component', 'frontend', 'react', 'shadcn', 'button', 'form', 'page'],
     'hono-bun-api-architect': ['api', 'endpoint', 'route', 'hono', 'rest', 'http'],
     'promptliano-service-architect': ['service', 'business logic', 'storage'],
     'promptliano-mcp-tool-creator': ['mcp', 'tool', 'claude'],
     'staff-engineer-code-reviewer': ['review', 'quality', 'refactor', 'improve'],
     'code-modularization-expert': ['modularize', 'split', 'refactor', 'organize'],
-    'sqlite-json-migration-expert': ['migration', 'database', 'sqlite', 'table'],
+    'promptliano-sqlite-expert': ['migration', 'database', 'sqlite', 'table'],
     'tanstack-router-expert': ['route', 'router', 'navigation', 'tanstack'],
     'vercel-ai-sdk-expert': ['ai', 'llm', 'vercel', 'streaming', 'chat'],
     'simple-git-integration-expert': ['git', 'version', 'commit', 'branch'],

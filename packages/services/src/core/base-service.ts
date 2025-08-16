@@ -7,8 +7,8 @@ import type { BaseStorage, BaseEntity } from '@promptliano/storage'
  */
 export abstract class BaseService<
   TEntity extends BaseEntity,
-  TCreate extends Omit<TEntity, 'id' | 'created' | 'updated'>,
-  TUpdate extends Partial<Omit<TEntity, 'id' | 'created' | 'updated'>>
+  TCreate = Omit<TEntity, 'id' | 'created' | 'updated'>,
+  TUpdate = Partial<Omit<TEntity, 'id' | 'created' | 'updated'>>
 > {
   protected abstract entityName: string
   protected abstract storage: BaseStorage<TEntity, any>
@@ -30,7 +30,16 @@ export abstract class BaseService<
    * Create a new entity
    */
   async create(data: TCreate): Promise<TEntity> {
-    return safeAsync(() => this.storage.create(data), {
+    // Transform TCreate to TEntity by adding auto-generated fields
+    const now = Date.now()
+    const entityData = {
+      ...data,
+      id: 0, // Will be set by storage layer
+      created: now,
+      updated: now
+    } as unknown as TEntity
+
+    return safeAsync(() => this.storage.create(entityData), {
       entityName: this.entityName,
       action: 'creating',
       details: { data }
@@ -79,7 +88,13 @@ export abstract class BaseService<
    * Update an entity
    */
   async update(id: number, data: TUpdate): Promise<TEntity> {
-    const updated = await safeAsync(() => this.storage.update(id, data), {
+    // Transform TUpdate to Partial<TEntity> by ensuring it's compatible
+    const updateData = {
+      ...data,
+      updated: Date.now()
+    } as Partial<TEntity>
+
+    const updated = await safeAsync(() => this.storage.update(id, updateData), {
       entityName: this.entityName,
       action: 'updating',
       details: { id, data }

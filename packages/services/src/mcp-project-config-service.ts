@@ -10,7 +10,7 @@ import { z } from 'zod'
 import { createLogger } from './utils/logger'
 import { EventEmitter } from 'events'
 import { getProjectById } from './project-service'
-import { toPosixPath, toOSPath, joinPosix } from './utils/path-utils'
+import { toPosixPath, toOSPath, joinPosix } from '@promptliano/shared'
 
 const logger = createLogger('MCPProjectConfigService')
 

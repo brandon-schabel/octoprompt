@@ -9,12 +9,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run build && bun run test",
-    "publish:dry": "npm publish --dry-run",
-    "docs:generate": "typedoc",
-    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api-markdown",
-    "docs:watch": "typedoc --watch",
-    "docs:serve": "npx serve docs/api",
-    "docs:clean": "rm -rf docs/api docs/api-markdown"
+    "publish:dry": "npm publish --dry-run"
   },
   "files": [
     "dist",

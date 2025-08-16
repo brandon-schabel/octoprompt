@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { createPromptlianoClient, PromptlianoClient } from '@promptliano/api-client'
 import { useGetAppSettings, useSetKvValue } from '@/hooks/use-kv-local-storage'
-import { customFetch } from '@/lib/tauri-fetch-fixed'
 import { toast } from 'sonner'
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error'
@@ -68,8 +67,7 @@ export function PromptlianoClientProvider({ children }: PromptlianoClientProvide
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json'
-        },
-        customFetch
+        }
       })
 
       const response = await testClient.system.healthCheck()
@@ -92,8 +90,7 @@ export function PromptlianoClientProvider({ children }: PromptlianoClientProvide
           timeout: 30000,
           headers: {
             'Content-Type': 'application/json'
-          },
-          customFetch
+          }
         })
 
         // Test the connection

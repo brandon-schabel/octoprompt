@@ -24,7 +24,7 @@ const defaultConfig: TaskAnalysisConfig = {
 // ============================================================================
 
 export class TaskAnalyzer {
-  constructor(private config: TaskAnalysisConfig = defaultConfig) {}
+  constructor(private config: TaskAnalysisConfig = defaultConfig) { }
 
   // Analyze and decompose a complex task
   analyzeTask(taskDescription: string, depth: number = 0): E.Either<Error, DecomposedTask> {
@@ -259,10 +259,10 @@ export class TaskAnalyzer {
     const lowerDesc = description.toLowerCase()
 
     const agentMappings: Record<string, string[]> = {
-      'frontend-shadcn-expert': ['ui', 'component', 'frontend', 'react', 'button', 'form'],
+      'promptliano-ui-architect': ['ui', 'component', 'frontend', 'react', 'button', 'form'],
       'hono-bun-api-architect': ['api', 'endpoint', 'route', 'rest', 'http'],
       'zod-schema-architect': ['schema', 'validation', 'type', 'zod'],
-      'sqlite-json-migration-expert': ['database', 'migration', 'sqlite', 'table'],
+      'promptliano-sqlite-expert': ['database', 'migration', 'sqlite', 'table'],
       'staff-engineer-code-reviewer': ['review', 'quality', 'refactor', 'improve'],
       'promptliano-service-architect': ['service', 'business logic', 'architecture'],
       'test-writer': ['test', 'spec', 'testing', 'coverage'],

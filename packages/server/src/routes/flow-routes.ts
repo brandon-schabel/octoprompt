@@ -7,6 +7,7 @@
 
 import { OpenAPIHono, z, createRoute } from '@hono/zod-openapi'
 import { flowService } from '@promptliano/services'
+import { createStandardResponses, successResponse, operationSuccessResponse } from '../utils/route-helpers'
 import {
   TicketSchema,
   TicketTaskSchema,
@@ -64,16 +65,7 @@ const getFlowDataRoute = createRoute({
       projectId: z.coerce.number()
     })
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: FlowDataSchema
-        }
-      },
-      description: 'Flow data retrieved successfully'
-    }
-  },
+  responses: createStandardResponses(FlowDataSchema),
   tags: ['Flow'],
   summary: 'Get complete flow data for a project'
 })
@@ -93,16 +85,7 @@ const getFlowItemsRoute = createRoute({
       projectId: z.coerce.number()
     })
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.array(FlowItemSchema)
-        }
-      },
-      description: 'Flow items retrieved successfully'
-    }
-  },
+  responses: createStandardResponses(z.array(FlowItemSchema)),
   tags: ['Flow'],
   summary: 'Get all flow items as a flat list'
 })
@@ -122,19 +105,10 @@ const getUnqueuedItemsRoute = createRoute({
       projectId: z.coerce.number()
     })
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            tickets: z.array(TicketSchema),
-            tasks: z.array(TicketTaskSchema)
-          })
-        }
-      },
-      description: 'Unqueued items retrieved successfully'
-    }
-  },
+  responses: createStandardResponses(z.object({
+    tickets: z.array(TicketSchema),
+    tasks: z.array(TicketTaskSchema)
+  })),
   tags: ['Flow'],
   summary: 'Get all unqueued tickets and tasks'
 })
@@ -167,16 +141,7 @@ const enqueueTicketRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: TicketSchema
-        }
-      },
-      description: 'Ticket enqueued successfully'
-    }
-  },
+  responses: createStandardResponses(TicketSchema),
   tags: ['Flow'],
   summary: 'Enqueue a ticket to a queue'
 })
@@ -214,16 +179,7 @@ const enqueueTaskRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: TicketTaskSchema
-        }
-      },
-      description: 'Task enqueued successfully'
-    }
-  },
+  responses: createStandardResponses(TicketTaskSchema),
   tags: ['Flow'],
   summary: 'Enqueue a task to a queue'
 })
@@ -251,16 +207,7 @@ const dequeueTicketRoute = createRoute({
         .transform((val) => val === 'true')
     })
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: TicketSchema
-        }
-      },
-      description: 'Ticket dequeued successfully'
-    }
-  },
+  responses: createStandardResponses(TicketSchema),
   tags: ['Flow'],
   summary: 'Remove a ticket from its queue'
 })
@@ -287,16 +234,7 @@ const dequeueTaskRoute = createRoute({
       taskId: z.coerce.number()
     })
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: TicketTaskSchema
-        }
-      },
-      description: 'Task dequeued successfully'
-    }
-  },
+  responses: createStandardResponses(TicketTaskSchema),
   tags: ['Flow'],
   summary: 'Remove a task from its queue'
 })
@@ -326,16 +264,7 @@ const moveItemRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: FlowItemSchema
-        }
-      },
-      description: 'Item moved successfully'
-    }
-  },
+  responses: createStandardResponses(FlowItemSchema),
   tags: ['Flow'],
   summary: 'Move an item between queues or to unqueued'
 })
@@ -368,12 +297,7 @@ const reorderRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: z.object({ success: z.boolean() }) } },
-      description: 'Reordered successfully'
-    }
-  },
+  responses: createStandardResponses(z.object({ success: z.boolean() })),
   tags: ['Flow'],
   summary: 'Persist new order for items in a queue'
 })
@@ -403,16 +327,7 @@ const startProcessingRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({ success: z.boolean() })
-        }
-      },
-      description: 'Processing started successfully'
-    }
-  },
+  responses: createStandardResponses(z.object({ success: z.boolean() })),
   tags: ['Flow'],
   summary: 'Mark an item as being processed'
 })
@@ -440,16 +355,7 @@ const completeProcessingRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({ success: z.boolean() })
-        }
-      },
-      description: 'Processing completed successfully'
-    }
-  },
+  responses: createStandardResponses(z.object({ success: z.boolean() })),
   tags: ['Flow'],
   summary: 'Mark an item as completed'
 })
@@ -477,16 +383,7 @@ const failProcessingRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({ success: z.boolean() })
-        }
-      },
-      description: 'Processing failure recorded successfully'
-    }
-  },
+  responses: createStandardResponses(z.object({ success: z.boolean() })),
   tags: ['Flow'],
   summary: 'Mark an item as failed'
 })
@@ -521,19 +418,10 @@ const bulkMoveRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            movedCount: z.number()
-          })
-        }
-      },
-      description: 'Items moved successfully'
-    }
-  },
+  responses: createStandardResponses(z.object({
+    success: z.boolean(),
+    movedCount: z.number()
+  })),
   tags: ['Flow'],
   summary: 'Move multiple items to a queue or unqueued'
 })

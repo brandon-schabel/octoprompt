@@ -1,0 +1,333 @@
+name: Docker Publish
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag'
+        required: true
+        default: 'latest'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DOCKER_HUB_IMAGE: promptliano/promptliano
+
+jobs:
+  # Build binaries first
+  build-binaries:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build binaries
+        run: bun run scripts/build-binaries.ts
+
+      - name: Upload binaries as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: dist/
+          retention-days: 7
+
+  # Build and push multi-arch images
+  build-and-push:
+    name: Build and Push ${{ matrix.dockerfile }}
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write  # For signing
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile:
+          - alpine
+          - distroless
+          - production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        if: matrix.dockerfile != 'production'
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: dist/
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+        continue-on-error: true  # Don't fail if Docker Hub credentials not set
+
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION=${{ github.event.release.tag_name }}
+            VERSION=${VERSION#v}
+          else
+            VERSION=latest
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate Docker tags
+        id: tags
+        run: |
+          TAGS=""
+          
+          # GitHub Container Registry tags
+          if [ "${{ matrix.dockerfile }}" == "production" ] && [ "${{ steps.version.outputs.version }}" == "latest" ]; then
+            # Production is the default latest
+            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
+          elif [ "${{ steps.version.outputs.version }}" != "latest" ]; then
+            # Version tags
+            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+            TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-${{ matrix.dockerfile }}"
+            
+            # Also tag production as main version
+            if [ "${{ matrix.dockerfile }}" == "production" ]; then
+              TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            fi
+          else
+            # Branch tags for non-releases
+            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ matrix.dockerfile }}"
+          fi
+          
+          # Docker Hub tags (only for releases)
+          if [ "${{ secrets.DOCKER_HUB_USERNAME }}" != "" ] && [ "${{ steps.version.outputs.version }}" != "latest" ]; then
+            if [ "${{ matrix.dockerfile }}" == "production" ]; then
+              TAGS="$TAGS,${{ env.DOCKER_HUB_IMAGE }}:${{ steps.version.outputs.version }}"
+              TAGS="$TAGS,${{ env.DOCKER_HUB_IMAGE }}:latest"
+            else
+              TAGS="$TAGS,${{ env.DOCKER_HUB_IMAGE }}:${{ steps.version.outputs.version }}-${{ matrix.dockerfile }}"
+            fi
+          fi
+          
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            ${{ env.DOCKER_HUB_IMAGE }}
+          labels: |
+            org.opencontainers.image.title=Promptliano
+            org.opencontainers.image.description=AI-powered prompt management platform
+            org.opencontainers.image.vendor=Promptliano
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.dockerfile=Dockerfile.${{ matrix.dockerfile }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        id: build
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-${{ matrix.dockerfile }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.dockerfile }}.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.dockerfile }}
+          path: sbom-${{ matrix.dockerfile }}.spdx.json
+          retention-days: 30
+
+      # Optional: Sign the image with cosign
+      - name: Install cosign
+        if: github.event_name == 'release'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image with cosign
+        if: github.event_name == 'release'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}
+
+  # Create release notes with Docker instructions
+  release-notes:
+    name: Update Release Notes
+    if: github.event_name == 'release'
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Update release with Docker instructions
+        uses: softprops/action-gh-release@v2
+        with:
+          append_body: true
+          body: |
+            
+            ## Docker Images
+            
+            This release is available as Docker images:
+            
+            ### GitHub Container Registry
+            ```bash
+            # Production image (recommended)
+            docker pull ghcr.io/${{ github.repository }}:${{ github.event.release.tag_name }}
+            
+            # Alpine variant (smaller)
+            docker pull ghcr.io/${{ github.repository }}:${{ github.event.release.tag_name }}-alpine
+            
+            # Distroless variant (most secure)
+            docker pull ghcr.io/${{ github.repository }}:${{ github.event.release.tag_name }}-distroless
+            ```
+            
+            ### Docker Hub
+            ```bash
+            # Production image
+            docker pull promptliano/promptliano:${{ github.event.release.tag_name }}
+            
+            # Alpine variant
+            docker pull promptliano/promptliano:${{ github.event.release.tag_name }}-alpine
+            ```
+            
+            ### Running the Container
+            ```bash
+            docker run -d \
+              --name promptliano \
+              -p 3147:3147 \
+              -v promptliano-data:/data \
+              ghcr.io/${{ github.repository }}:${{ github.event.release.tag_name }}
+            ```
+            
+            ### Docker Compose
+            ```yaml
+            services:
+              promptliano:
+                image: ghcr.io/${{ github.repository }}:${{ github.event.release.tag_name }}
+                ports:
+                  - "3147:3147"
+                volumes:
+                  - promptliano-data:/data
+                environment:
+                  - NODE_ENV=production
+            
+            volumes:
+              promptliano-data:
+            ```
+
+  # Summary
+  publish-summary:
+    name: Publish Summary
+    if: always()
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## Docker Publish Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.build-and-push.result }}" == "success" ]; then
+            echo "✅ Docker images published successfully" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Published Images" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+              VERSION=${GITHUB_REF#refs/tags/v}
+              echo "**Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "#### GitHub Container Registry" >> $GITHUB_STEP_SUMMARY
+              echo '```bash' >> $GITHUB_STEP_SUMMARY
+              echo "docker pull ghcr.io/${{ github.repository }}:$VERSION" >> $GITHUB_STEP_SUMMARY
+              echo "docker pull ghcr.io/${{ github.repository }}:$VERSION-alpine" >> $GITHUB_STEP_SUMMARY
+              echo "docker pull ghcr.io/${{ github.repository }}:$VERSION-distroless" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            else
+              echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "#### GitHub Container Registry" >> $GITHUB_STEP_SUMMARY
+              echo '```bash' >> $GITHUB_STEP_SUMMARY
+              echo "docker pull ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
+              echo "docker pull ghcr.io/${{ github.repository }}:main-alpine" >> $GITHUB_STEP_SUMMARY
+              echo "docker pull ghcr.io/${{ github.repository }}:main-distroless" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Image Variants" >> $GITHUB_STEP_SUMMARY
+            echo "- **Production**: Full-featured image with 4-stage build" >> $GITHUB_STEP_SUMMARY
+            echo "- **Alpine**: Lightweight image (~249MB) for general use" >> $GITHUB_STEP_SUMMARY
+            echo "- **Distroless**: Ultra-secure minimal image (~100MB)" >> $GITHUB_STEP_SUMMARY
+            
+          else
+            echo "❌ Docker image publish failed" >> $GITHUB_STEP_SUMMARY
+          fi

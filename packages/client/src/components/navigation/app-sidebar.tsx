@@ -7,7 +7,7 @@ import { ProjectDialog } from '@/components/projects/project-dialog'
 import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
 import { useRecentProjects } from '@/hooks/use-recent-projects'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { appConfig } from '@promptliano/config'
+import packageJson from '../../../package.json'
 import {
   FolderIcon,
   MessageSquareIcon,
@@ -33,22 +33,51 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   useSidebar,
-  SidebarRail
+  SidebarRail,
+  SectionedSidebarNav
 } from '@promptliano/ui' // Correct path to your sidebar.tsx
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ServerStatusIndicator } from '@/components/navigation/server-status-indicator'
 
-const mainNavItems = [
+const navigationSections = [
   {
-    id: 'projects',
-    title: 'Projects',
-    to: '/projects',
-    icon: FolderIcon,
-    routeIds: ['/projects']
+    title: 'Core',
+    items: [
+      {
+        id: 'projects',
+        title: 'Projects',
+        href: '/projects',
+        icon: FolderIcon,
+        routeIds: ['/projects']
+      },
+      { 
+        id: 'chat', 
+        title: 'Chat', 
+        href: '/chat', 
+        icon: MessageSquareIcon, 
+        routeIds: ['/chat']
+      }
+    ]
   },
-  { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
-  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] },
-  { id: 'providers', title: 'Providers', to: '/providers', icon: Cloud, routeIds: ['/providers'] }
+  {
+    title: 'Tools',
+    items: [
+      { 
+        id: 'prompts', 
+        title: 'Prompts', 
+        href: '/prompts', 
+        icon: LightbulbIcon, 
+        routeIds: ['/prompts'] 
+      },
+      { 
+        id: 'providers', 
+        title: 'Providers', 
+        href: '/providers', 
+        icon: Cloud, 
+        routeIds: ['/providers'] 
+      }
+    ]
+  }
 ]
 
 export function AppSidebar() {
@@ -127,24 +156,19 @@ export function AppSidebar() {
             </div>
           </SidebarHeader>
           <SidebarContent className='p-2'>
-            <SidebarMenu>
-              <div className='pt-1'></div>
-              {mainNavItems.map((item) => {
-                const isActive = matches.some((match) => item.routeIds.includes(match.routeId))
-                return (
-                  <SidebarMenuItem key={item.id} className='flex items-center w-full justify-center gap-2'>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                      <Link to={item.to} search={item.search || undefined}>
-                        <item.icon className='h-4 w-4 flex-shrink-0' />
-                        {<span className='truncate'>{item.title}</span>}
-                      </Link>
-                    </SidebarMenuButton>
-                    {/* Example Badge - replace with actual data */}
-                    {/* {item.id === 'chat' && <SidebarMenuBadge>5</SidebarMenuBadge>} */}
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
+            <SectionedSidebarNav
+              sections={navigationSections.map(section => ({
+                ...section,
+                items: section.items.map(item => ({
+                  ...item,
+                  label: item.title,
+                  isActive: matches.some((match) => item.routeIds.includes(match.routeId))
+                }))
+              }))}
+              onItemClick={(item: any) => {
+                navigate({ to: item.href })
+              }}
+            />
 
             {/* Recent Projects Section */}
             {open && recentProjects.length > 0 && projectData && (
@@ -154,7 +178,7 @@ export function AppSidebar() {
                 </div>
                 <SidebarMenu>
                   {recentProjects
-                    .map((id) => projectData.data.find((p) => p.id === id))
+                    .map((id) => projectData?.find((p) => p.id === id))
                     .filter(Boolean)
                     .slice(0, 3)
                     .map((project) => {
@@ -207,7 +231,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2 text-xs text-muted-foreground'>
-                <span className='px-3'>v{appConfig.version}</span>
+                <span className='px-3'>v{packageJson.version}</span>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
@@ -223,7 +247,7 @@ export function AppSidebar() {
             <div className='mt-4'>
               <ProjectList
                 loading={projectsLoading}
-                projects={projectData?.data ?? []}
+                projects={projectData ?? []}
                 selectedProjectId={selectedProjectId ?? null}
                 onSelectProject={handleSelectProjectInDialog}
                 onEditProject={handleEditProjectInDialog}

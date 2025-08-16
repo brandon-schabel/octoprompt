@@ -3,10 +3,10 @@
 // - Removed all 39 individual tool definitions
 // - Now exports only consolidated tool functionality
 
-// MCP Tool Types
+// MCP Tool Types - must match MCP SDK's expected schema
 export interface MCPToolInputSchema {
   type: 'object'
-  properties: Record<
+  properties?: Record<
     string,
     {
       type: string
@@ -16,6 +16,8 @@ export interface MCPToolInputSchema {
     }
   >
   required?: string[]
+  // Allow additional properties to match MCP SDK passthrough mode
+  [key: string]: unknown
 }
 
 export interface MCPToolContent {
@@ -30,7 +32,7 @@ export interface MCPToolResponse {
 
 export interface MCPToolDefinition<TArgs = any> {
   name: string
-  description: string
+  description?: string  // Optional to match MCP SDK Tool schema
   inputSchema: MCPToolInputSchema
   handler: (args: TArgs, projectId?: number) => Promise<MCPToolResponse>
 }

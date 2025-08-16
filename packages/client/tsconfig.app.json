@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2021",
+    "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     /* Bundler mode */
@@ -17,12 +17,12 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
+    "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
       "@ui": ["./src/components/ui"],
       "@ui/*": ["./src/components/ui/*"],
-      "@/*": ["./src/*"],
-      "shared/*": ["../shared/*"]
+      "@/*": ["./src/*"]
     },
     "types": ["bun-types"]
   },

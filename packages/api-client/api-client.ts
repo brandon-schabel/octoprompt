@@ -1499,7 +1499,7 @@ export class ProviderKeyService extends BaseApiClient {
 
   async validateCustomProvider(data: ValidateCustomProviderRequest) {
     const validatedData = this.validateBody(ValidateCustomProviderRequestSchema, data)
-    const result = await this.request('POST', '/api/keys/validate-custom', {
+    const result = await this.request('POST', '/keys/validate-custom', {
       body: validatedData,
       responseSchema: ValidateCustomProviderResponseSchema
     })
@@ -1616,17 +1616,10 @@ export class SystemService extends BaseApiClient {
   async healthCheck() {
     const result = await this.request('GET', '/health', {
       responseSchema: z.object({
-        success: z.boolean(),
-        data: z
-          .object({
-            status: z.string(),
-            version: z.string().optional(),
-            uptime: z.number().optional()
-          })
-          .optional()
+        success: z.boolean()
       })
     })
-    return result as DataResponseSchema<{ status: string; version?: string; uptime?: number }>
+    return result as { success: boolean }
   }
 }
 
@@ -3213,63 +3206,6 @@ export class MCPInstallationService extends BaseApiClient {
   }
 }
 
-export class JobService extends BaseApiClient {
-  async listJobs(filter?: any) {
-    const result = await this.request('GET', '/jobs', {
-      params: filter,
-      responseSchema: z.object({
-        success: z.boolean(),
-        jobs: z.array(z.any())
-      })
-    })
-    return result.jobs
-  }
-
-  async getJob(jobId: number) {
-    const result = await this.request('GET', `/jobs/${jobId}`, {
-      responseSchema: z.any()
-    })
-    return result
-  }
-
-  async getProjectJobs(projectId: number) {
-    const result = await this.request('GET', `/jobs/project/${projectId}`, {
-      responseSchema: z.object({
-        success: z.boolean(),
-        jobs: z.array(z.any())
-      })
-    })
-    return result.jobs
-  }
-
-  async cancelJob(jobId: number) {
-    const result = await this.request('POST', `/jobs/${jobId}/cancel`, {
-      responseSchema: z.object({
-        success: z.boolean()
-      })
-    })
-    return result
-  }
-
-  async retryJob(jobId: number) {
-    const result = await this.request('POST', `/jobs/${jobId}/retry`, {
-      responseSchema: z.any()
-    })
-    return result
-  }
-
-  async cleanupJobs(olderThanDays?: number) {
-    const result = await this.request('POST', '/jobs/cleanup', {
-      body: { olderThanDays },
-      responseSchema: z.object({
-        success: z.boolean(),
-        deletedCount: z.number(),
-        message: z.string()
-      })
-    })
-    return result
-  }
-}
 
 // MCP Global Config Service
 export class MCPGlobalConfigService extends BaseApiClient {
@@ -3660,7 +3596,7 @@ export class MarkdownService extends BaseApiClient {
       formData.append('validateContent', String(options.validateContent))
     }
 
-    const result = await this.request('POST', '/prompts/import-markdown', {
+    const result = await this.request('POST', '/prompts/import', {
       body: formData,
       responseSchema: BulkImportResponseSchema
     })
@@ -3691,7 +3627,7 @@ export class MarkdownService extends BaseApiClient {
       queryParams.append('sanitizeContent', String(options.sanitizeContent))
     }
 
-    const result = await this.request('GET', `/prompts/export-markdown?${queryParams}`, {
+    const result = await this.request('GET', `/prompts/${promptId}/export?${queryParams}`, {
       expectTextResponse: true
     })
 
@@ -3712,7 +3648,7 @@ export class MarkdownService extends BaseApiClient {
 
     const validatedData = this.validateBody(BatchExportRequestSchema, requestData)
 
-    const result = await this.request('POST', '/prompts/export-markdown-batch', {
+    const result = await this.request('POST', '/prompts/export-batch', {
       body: validatedData,
       responseSchema: MarkdownExportResponseSchema
     })
@@ -3808,7 +3744,6 @@ export class PromptlianoClient {
   public readonly flow: FlowService
   public readonly git: GitService
   public readonly mcpAnalytics: MCPAnalyticsService
-  public readonly jobs: JobService
   public readonly agentFiles: AgentFilesService
   public readonly mcpInstallation: MCPInstallationService
   public readonly mcpProjectConfig: MCPProjectConfigService
@@ -3832,7 +3767,6 @@ export class PromptlianoClient {
     this.flow = new FlowService(config)
     this.git = new GitService(config)
     this.mcpAnalytics = new MCPAnalyticsService(config)
-    this.jobs = new JobService(config)
     this.agentFiles = new AgentFilesService(config)
     this.mcpInstallation = new MCPInstallationService(config)
     this.mcpProjectConfig = new MCPProjectConfigService(config)

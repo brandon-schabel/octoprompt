@@ -6,7 +6,7 @@ import {
   useDeleteTask,
   useReorderTasks,
   useAutoGenerateTasks
-} from '../../hooks/api/use-tickets-api'
+} from '@/hooks/api/use-tickets-api'
 import { Input } from '@promptliano/ui'
 import { Button } from '@promptliano/ui'
 import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Circle } from 'lucide-react'

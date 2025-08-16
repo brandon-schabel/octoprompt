@@ -53,12 +53,12 @@ When working in this package, these agents MUST be used:
    - Focus on component reusability and performance
 
 3. **Package-Specific Agents**
-   - Use `frontend-shadcn-expert` for React component development
+   - Use `promptliano-ui-architect` for React component development
    - Use `tanstack-router-expert` for routing implementation
    - Use `framer-motion-expert` for animations and interactions
    - Use `seo-optimization-expert` for search engine optimization
    - Use `performance-expert` for Core Web Vitals optimization
-   - Use `promptliano-ui-builder` for using @promptliano/ui components
+   - Use `promptliano-ui-architect` for using @promptliano/ui components
 
 ### Proactive Usage
 

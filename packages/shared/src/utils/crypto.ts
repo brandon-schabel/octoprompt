@@ -1,5 +1,39 @@
 import { Buffer } from 'buffer'
-import { encryptionKeyStorage } from '@promptliano/storage'
+
+// Environment detection
+const isServerEnvironment = typeof process !== 'undefined' && process.env && (
+  process.env.NODE_ENV === 'test' || 
+  typeof window === 'undefined'
+)
+
+// Conditional storage import for server/test environments
+let encryptionKeyStorage: { getKey: () => string }
+
+if (isServerEnvironment) {
+  try {
+    // Dynamic import to avoid bundling issues in client
+    const { encryptionKeyStorage: storage } = require('@promptliano/storage')
+    encryptionKeyStorage = storage
+  } catch (error) {
+    // Fallback for test environment
+    encryptionKeyStorage = {
+      getKey: () => {
+        const testKey = process.env.PROMPTLIANO_ENCRYPTION_KEY
+        if (!testKey) {
+          throw new Error('PROMPTLIANO_ENCRYPTION_KEY environment variable required for server/test')
+        }
+        return testKey
+      }
+    }
+  }
+} else {
+  // Client environment - throw clear error
+  encryptionKeyStorage = {
+    getKey: () => {
+      throw new Error('Encryption operations not available in client environment')
+    }
+  }
+}
 
 const KEY_LENGTH = 32 // 256 bits
 const IV_LENGTH = 16 // 128 bits

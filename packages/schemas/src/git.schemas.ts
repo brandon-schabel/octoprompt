@@ -208,12 +208,16 @@ export const gitBranchListResponseSchema = z.object({
   message: z.string().optional()
 })
 
+export type GitBranchListResponse = z.infer<typeof gitBranchListResponseSchema>
+
 export const gitLogResponseSchema = z.object({
   success: z.boolean(),
   data: z.array(gitLogEntrySchema).optional(),
   hasMore: z.boolean().optional(),
   message: z.string().optional()
 })
+
+export type GitLogResponse = z.infer<typeof gitLogResponseSchema>
 
 export const gitCreateBranchRequestSchema = z.object({
   name: z.string(),

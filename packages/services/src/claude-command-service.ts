@@ -15,7 +15,7 @@ import { ValidationError, NotFoundError, ConflictError, ServiceError, ErrorHandl
 import { ZodError } from 'zod'
 import { generateStructuredData } from './gen-ai-services'
 import { getCompactProjectSummary } from './utils/project-summary-service'
-import { ClaudeCommandParser } from './parsers'
+import { ClaudeCommandParser } from '@promptliano/shared'
 import { HIGH_MODEL_CONFIG } from '@promptliano/config'
 
 export async function createCommand(projectPath: string, data: CreateClaudeCommandBody): Promise<ClaudeCommand> {

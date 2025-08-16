@@ -1,6 +1,7 @@
 // Last 5 changes: Fixed imports to use Promptliano package structure
 import { ApiError } from '@promptliano/shared'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
+import { createStandardResponses, standardResponses, successResponse, operationSuccessResponse } from '../utils/route-helpers'
 import {
   createTicket,
   getTicketById,
@@ -125,6 +126,17 @@ const BulkTasksResponseSchema = z
   })
   .openapi('BulkTasksResponse')
 
+// Custom schema for completeTicket response
+const CompleteTicketResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      ticket: TicketSchema,
+      tasks: z.array(TicketTaskSchema)
+    })
+  })
+  .openapi('CompleteTicketResponse')
+
 const CreateTicketBodySchema = ticketsApiValidation.create.body.openapi('CreateTicketBody')
 const UpdateTicketBodySchema = ticketsApiValidation.update.body.openapi('UpdateTicketBody')
 const TicketIdParamsSchema = z
@@ -205,8 +217,7 @@ const createTicketRoute = createRoute({
       content: { 'application/json': { schema: TicketResponseSchema } },
       description: 'Ticket created successfully'
     },
-    400: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+    ...standardResponses
   }
 })
 
@@ -218,14 +229,7 @@ const getTicketRoute = createRoute({
   request: {
     params: TicketIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TicketResponseSchema } },
-      description: 'Ticket retrieved successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TicketResponseSchema)
 })
 
 const updateTicketRoute = createRoute({
@@ -237,14 +241,7 @@ const updateTicketRoute = createRoute({
     params: TicketIdParamsSchema,
     body: { content: { 'application/json': { schema: UpdateTicketBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TicketResponseSchema } },
-      description: 'Ticket updated successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TicketResponseSchema)
 })
 
 const completeTicketRoute = createRoute({
@@ -255,24 +252,7 @@ const completeTicketRoute = createRoute({
   request: {
     params: TicketIdParamsSchema
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.literal(true),
-            data: z.object({
-              ticket: TicketSchema,
-              tasks: z.array(TicketTaskSchema)
-            })
-          })
-        }
-      },
-      description: 'Ticket completed successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(CompleteTicketResponseSchema)
 })
 
 const deleteTicketRoute = createRoute({
@@ -283,14 +263,7 @@ const deleteTicketRoute = createRoute({
   request: {
     params: TicketIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Ticket deleted successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const linkFilesRoute = createRoute({
@@ -302,14 +275,7 @@ const linkFilesRoute = createRoute({
     params: TicketIdParamsSchema,
     body: { content: { 'application/json': { schema: LinkFilesBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: LinkedFilesResponseSchema } },
-      description: 'Files linked successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(LinkedFilesResponseSchema)
 })
 
 const suggestTasksRoute = createRoute({
@@ -321,14 +287,7 @@ const suggestTasksRoute = createRoute({
     params: TicketIdParamsSchema,
     body: { content: { 'application/json': { schema: SuggestTasksBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: SuggestedTasksResponseSchema } },
-      description: 'Tasks suggested successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(SuggestedTasksResponseSchema)
 })
 
 const suggestFilesRoute = createRoute({
@@ -340,14 +299,7 @@ const suggestFilesRoute = createRoute({
     params: TicketIdParamsSchema,
     body: { content: { 'application/json': { schema: SuggestFilesBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: SuggestedFilesResponseSchema } },
-      description: 'Files suggested successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(SuggestedFilesResponseSchema)
 })
 
 const listTicketsByProjectRoute = createRoute({
@@ -359,13 +311,7 @@ const listTicketsByProjectRoute = createRoute({
     params: ProjectIdParamsSchema,
     query: StatusQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TicketListResponseSchema } },
-      description: 'Tickets listed successfully'
-    },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TicketListResponseSchema)
 })
 
 const listTicketsWithCountRoute = createRoute({
@@ -377,13 +323,7 @@ const listTicketsWithCountRoute = createRoute({
     params: ProjectIdParamsSchema,
     query: StatusQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TicketWithTaskCountListResponseSchema } },
-      description: 'Tickets with counts listed successfully'
-    },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TicketWithTaskCountListResponseSchema)
 })
 
 const listTicketsWithTasksRoute = createRoute({
@@ -395,13 +335,7 @@ const listTicketsWithTasksRoute = createRoute({
     params: ProjectIdParamsSchema,
     query: StatusQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TicketWithTasksListResponseSchema } },
-      description: 'Tickets with tasks listed successfully'
-    },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TicketWithTasksListResponseSchema)
 })
 
 const createTaskRoute = createRoute({
@@ -414,9 +348,11 @@ const createTaskRoute = createRoute({
     body: { content: { 'application/json': { schema: CreateTaskBodySchema } } }
   },
   responses: {
-    201: { content: { 'application/json': { schema: TaskResponseSchema } }, description: 'Task created successfully' },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+    201: {
+      content: { 'application/json': { schema: TaskResponseSchema } },
+      description: 'Task created successfully'
+    },
+    ...standardResponses
   }
 })
 
@@ -428,14 +364,7 @@ const getTasksRoute = createRoute({
   request: {
     params: TicketIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TaskListResponseSchema } },
-      description: 'Tasks retrieved successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TaskListResponseSchema)
 })
 
 const updateTaskRoute = createRoute({
@@ -447,11 +376,7 @@ const updateTaskRoute = createRoute({
     params: TicketTaskIdParamsSchema,
     body: { content: { 'application/json': { schema: UpdateTaskBodySchema } } }
   },
-  responses: {
-    200: { content: { 'application/json': { schema: TaskResponseSchema } }, description: 'Task updated successfully' },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Task not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TaskResponseSchema)
 })
 
 const deleteTaskRoute = createRoute({
@@ -462,14 +387,7 @@ const deleteTaskRoute = createRoute({
   request: {
     params: TicketTaskIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Task deleted successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Task not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const reorderTasksRoute = createRoute({
@@ -481,14 +399,7 @@ const reorderTasksRoute = createRoute({
     params: TicketIdParamsSchema,
     body: { content: { 'application/json': { schema: ReorderTasksBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TaskListResponseSchema } },
-      description: 'Tasks reordered successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TaskListResponseSchema)
 })
 
 const autoGenerateTasksRoute = createRoute({
@@ -499,14 +410,7 @@ const autoGenerateTasksRoute = createRoute({
   request: {
     params: TicketIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TaskListResponseSchema } },
-      description: 'Tasks generated successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Ticket not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(TaskListResponseSchema)
 })
 
 const getTasksForTicketsRoute = createRoute({
@@ -517,13 +421,7 @@ const getTasksForTicketsRoute = createRoute({
   request: {
     query: BulkTasksQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: BulkTasksResponseSchema } },
-      description: 'Tasks retrieved successfully'
-    },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(BulkTasksResponseSchema)
 })
 
 // Helper function to parse string ID to number

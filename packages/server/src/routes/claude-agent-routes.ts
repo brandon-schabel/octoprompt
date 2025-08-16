@@ -22,6 +22,7 @@ import {
   getProjectById
 } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
+import { createStandardResponses, createStandardResponsesWithStatus, successResponse, operationSuccessResponse } from '../utils/route-helpers'
 
 const createClaudeAgentRoute = createRoute({
   method: 'post',
@@ -37,28 +38,7 @@ const createClaudeAgentRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    201: {
-      content: { 'application/json': { schema: ClaudeAgentResponseSchema } },
-      description: 'Agent created successfully'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Bad Request - projectId required'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Referenced project not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponsesWithStatus(ClaudeAgentResponseSchema, 201, 'Agent created successfully')
 })
 
 const listAllClaudeAgentsRoute = createRoute({
@@ -71,24 +51,7 @@ const listAllClaudeAgentsRoute = createRoute({
       projectId: z.coerce.number().optional()
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ClaudeAgentListResponseSchema } },
-      description: 'Successfully retrieved all agents'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Bad Request - projectId required'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ClaudeAgentListResponseSchema)
 })
 
 const getClaudeAgentByIdRoute = createRoute({
@@ -102,28 +65,7 @@ const getClaudeAgentByIdRoute = createRoute({
       projectId: z.coerce.number().optional()
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ClaudeAgentResponseSchema } },
-      description: 'Successfully retrieved agent'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Bad Request - projectId required'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Agent not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ClaudeAgentResponseSchema)
 })
 
 const updateClaudeAgentRoute = createRoute({
@@ -141,28 +83,7 @@ const updateClaudeAgentRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ClaudeAgentResponseSchema } },
-      description: 'Agent updated successfully'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Bad Request - projectId required'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Agent not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ClaudeAgentResponseSchema)
 })
 
 const deleteClaudeAgentRoute = createRoute({
@@ -176,28 +97,7 @@ const deleteClaudeAgentRoute = createRoute({
       projectId: z.coerce.number().optional()
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Agent deleted successfully'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Bad Request - projectId required'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Agent not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const listProjectClaudeAgentsRoute = createRoute({
@@ -208,24 +108,7 @@ const listProjectClaudeAgentsRoute = createRoute({
   request: {
     params: ProjectIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ClaudeAgentListResponseSchema } },
-      description: 'Successfully retrieved project agents'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ClaudeAgentListResponseSchema)
 })
 
 const suggestClaudeAgentsRoute = createRoute({
@@ -241,24 +124,7 @@ const suggestClaudeAgentsRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: AgentSuggestionsResponseSchema } },
-      description: 'Successfully retrieved suggested agents'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(AgentSuggestionsResponseSchema)
 })
 
 export const claudeAgentRoutes = new OpenAPIHono()
@@ -277,7 +143,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
     }
 
     const createdAgent = await createAgent(project.path, { ...body, projectId: effectiveProjectId })
-    return c.json({ success: true, data: createdAgent } satisfies z.infer<typeof ClaudeAgentResponseSchema>, 201)
+    return c.json(successResponse(createdAgent), 201)
   })
   .openapi(listAllClaudeAgentsRoute, async (c) => {
     const { projectId } = c.req.valid('query')
@@ -292,7 +158,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
     }
 
     const agents = await listAgents(project.path)
-    return c.json({ success: true, data: agents } satisfies z.infer<typeof ClaudeAgentListResponseSchema>, 200)
+    return c.json(successResponse(agents))
   })
   .openapi(getClaudeAgentByIdRoute, async (c) => {
     const { agentId } = c.req.valid('param')
@@ -308,7 +174,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
     }
 
     const agent = await getAgentById(project.path, agentId)
-    return c.json({ success: true, data: agent } satisfies z.infer<typeof ClaudeAgentResponseSchema>, 200)
+    return c.json(successResponse(agent))
   })
   .openapi(updateClaudeAgentRoute, async (c) => {
     const { agentId } = c.req.valid('param')
@@ -325,7 +191,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
     }
 
     const updatedAgent = await updateAgent(project.path, agentId, body)
-    return c.json({ success: true, data: updatedAgent } satisfies z.infer<typeof ClaudeAgentResponseSchema>, 200)
+    return c.json(successResponse(updatedAgent))
   })
   .openapi(deleteClaudeAgentRoute, async (c) => {
     const { agentId } = c.req.valid('param')
@@ -341,12 +207,7 @@ export const claudeAgentRoutes = new OpenAPIHono()
     }
 
     await deleteAgent(project.path, agentId)
-    return c.json(
-      { success: true, message: 'Agent deleted successfully.' } satisfies z.infer<
-        typeof OperationSuccessResponseSchema
-      >,
-      200
-    )
+    return c.json(operationSuccessResponse('Agent deleted successfully.'))
   })
   .openapi(listProjectClaudeAgentsRoute, async (c) => {
     const { projectId } = c.req.valid('param')
@@ -356,16 +217,13 @@ export const claudeAgentRoutes = new OpenAPIHono()
     }
     // Use listAgents to read all agents from the project's .claude/agents directory
     const agents = await listAgents(project.path)
-    return c.json({ success: true, data: agents } satisfies z.infer<typeof ClaudeAgentListResponseSchema>, 200)
+    return c.json(successResponse(agents))
   })
   .openapi(suggestClaudeAgentsRoute, async (c) => {
     const { projectId } = c.req.valid('param')
-    const { userInput, limit } = c.req.valid('json')
-    const suggestedAgents = await suggestAgents(projectId, userInput, limit)
-    return c.json(
-      { success: true, data: { agents: suggestedAgents } } satisfies z.infer<typeof AgentSuggestionsResponseSchema>,
-      200
-    )
+    const { userContext, limit } = c.req.valid('json')
+    const suggestedAgents = await suggestAgents(projectId, userContext, limit)
+    return c.json(successResponse(suggestedAgents))
   })
 
 export type ClaudeAgentRouteTypes = typeof claudeAgentRoutes

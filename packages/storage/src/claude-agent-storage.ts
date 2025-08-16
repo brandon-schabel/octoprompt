@@ -2,7 +2,7 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import { z, ZodError } from 'zod'
 import { ClaudeAgentSchema, type ClaudeAgent } from '@promptliano/schemas'
-import { toPosixPath, joinPosix, MarkdownParser } from '@promptliano/services'
+import { toPosixPath, joinPosix, MarkdownParser } from '@promptliano/shared'
 import { ensureString, ensureNumber } from '@promptliano/shared/src/utils/sqlite-converters'
 
 // Allowed agent colors (must match ClaudeAgentSchema enum values)

@@ -21,7 +21,6 @@ export {
   AIAssistantAction,
   GitManagerAction,
   TabManagerAction,
-  JobManagerAction,
   FileSummarizationManagerAction
 } from './tools/shared'
 

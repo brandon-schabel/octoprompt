@@ -67,7 +67,7 @@ export const ticketManagerTool: MCPToolDefinition = {
             const ticketList = tickets
               .map(
                 (t) =>
-                  `${t.id}: ${t.title} [${t.status}/${t.priority}] - ${t.overview.substring(0, 50)}${t.overview.length > 50 ? '...' : ''}`
+                  `${t.id}: ${t.title} [${t.status}/${t.priority}] - ${(t.overview || '').substring(0, 50)}${(t.overview || '').length > 50 ? '...' : ''}`
               )
               .join('\n')
             return {
@@ -83,9 +83,9 @@ Project ID: ${ticket.projectId}
 Status: ${ticket.status}
 Priority: ${ticket.priority}
 Overview: ${ticket.overview}
-Suggested Files: ${ticket.suggestedFileIds.join(', ') || 'None'}
-Suggested Agents: ${ticket.suggestedAgentIds.join(', ') || 'None'}
-Suggested Prompts: ${ticket.suggestedPromptIds.join(', ') || 'None'}
+Suggested Files: ${ticket.suggestedFileIds?.join(', ') || 'None'}
+Suggested Agents: ${ticket.suggestedAgentIds?.join(', ') || 'None'}
+Suggested Prompts: ${ticket.suggestedPromptIds?.join(', ') || 'None'}
 Created: ${new Date(ticket.created).toLocaleString()}
 Updated: ${new Date(ticket.updated).toLocaleString()}`
             return {

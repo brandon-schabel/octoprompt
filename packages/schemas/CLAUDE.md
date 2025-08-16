@@ -21,7 +21,7 @@ When working in this package, these agents MUST be used:
 3. **Package-Specific Agents**
    - Use `zod-schema-architect` for schema design and validation patterns
    - Use `hono-bun-api-architect` when schemas integrate with API routes
-   - Use `sqlite-json-migration-expert` when schemas affect database structure
+   - Use `promptliano-sqlite-expert` when schemas affect database structure
 
 ### Proactive Usage
 

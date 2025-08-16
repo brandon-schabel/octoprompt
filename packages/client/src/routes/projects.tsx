@@ -87,7 +87,7 @@ export function ProjectsPage() {
     }
   }, [search.section, navigate])
 
-  const { data: allProjectsData, isLoading: projectsLoading, isFetching: projectsFetching } = useGetProjects()
+  const { data: allProjectsData, isLoading: projectsLoading, isFetching: projectsFetching, isSuccess: projectsQuerySuccess } = useGetProjects()
   const { isConnected, isConnecting, hasError } = useServerConnection()
   const [tabs] = useGetProjectTabs()
   const { createProjectTab: createProjectTabFromHook } = useCreateProjectTab()
@@ -100,7 +100,7 @@ export function ProjectsPage() {
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null)
   const [hasInitializedFromUrl, setHasInitializedFromUrl] = useState(false)
 
-  const projects = allProjectsData?.data || []
+  const projects = allProjectsData || []
   const [initDelayDone, setInitDelayDone] = useState(false)
   useEffect(() => {
     const t = setTimeout(() => setInitDelayDone(true), 500)
@@ -232,7 +232,8 @@ export function ProjectsPage() {
     projectsLoading ||
     projectsFetching ||
     !hasInitializedFromUrl ||
-    !initDelayDone
+    !initDelayDone ||
+    (isConnected && !projectsQuerySuccess)
 
   let content
   if (preparing) {

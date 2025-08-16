@@ -1,5 +1,5 @@
 import React from 'react'
-// import { useLinkFilesToTicket } from '../../hooks/api/use-tickets-api'
+// import { useLinkFilesToTicket } from '@/hooks/api/use-tickets-api'
 import { type ProjectFile } from '@promptliano/schemas'
 
 interface TicketAttachmentsPanelProps {

@@ -5,7 +5,6 @@ import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamReq
 
 import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest } from '@promptliano/schemas'
 
-// packages/client/src/hooks/api/use-keys-api-v2.ts
 import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@promptliano/schemas'
 
 import type { CreateClaudeAgentBody, UpdateClaudeAgentBody, ClaudeAgent } from '@promptliano/schemas'

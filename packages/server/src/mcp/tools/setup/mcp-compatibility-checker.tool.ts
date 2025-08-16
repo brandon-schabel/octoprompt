@@ -67,9 +67,14 @@ export const mcpCompatibilityCheckerTool: MCPToolDefinition = {
             const issues: string[] = []
             const warnings: string[] = []
             // Check editor compatibility
-            const editorReq: { minVersion: string; mcpSupport: boolean; extension?: string } | undefined =
-              requirements[editor.toLowerCase() as keyof typeof requirements]
-            if (!editorReq) {
+            const editorReq = requirements[editor.toLowerCase() as keyof typeof requirements]
+            
+            // Type guard to ensure we have a valid editor requirement object
+            const isValidEditorReq = (req: unknown): req is { minVersion: string; mcpSupport: boolean; extension?: string } => {
+              return typeof req === 'object' && req !== null && 'minVersion' in req && 'mcpSupport' in req
+            }
+            
+            if (!editorReq || !isValidEditorReq(editorReq)) {
               issues.push(`Editor '${editor}' is not supported`)
             } else {
               if (!editorReq.mcpSupport) {
@@ -141,7 +146,13 @@ export const mcpCompatibilityCheckerTool: MCPToolDefinition = {
             )
             const results = environments.map((env: { editor: string; version: string; os: string }) => {
               const editorReq = requirements[env.editor?.toLowerCase() as keyof typeof requirements]
-              const compatible = editorReq ? env.version >= editorReq.minVersion : false
+              
+              // Type guard to ensure we have a valid editor requirement object
+              const isValidEditorReq = (req: unknown): req is { minVersion: string; mcpSupport: boolean; extension?: string } => {
+                return typeof req === 'object' && req !== null && 'minVersion' in req && 'mcpSupport' in req
+              }
+              
+              const compatible = editorReq && isValidEditorReq(editorReq) ? env.version >= editorReq.minVersion : false
               return `${env.editor} v${env.version} on ${env.os}: ${compatible ? '✅' : '❌'}`
             })
             return {

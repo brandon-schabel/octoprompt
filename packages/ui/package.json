@@ -22,9 +22,9 @@
     "tailwind",
     "typescript"
   ],
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
   "type": "module",
   "sideEffects": [
     "*.css",
@@ -32,9 +32,9 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
     },
     "./styles": {
       "import": "./dist/index.css",
@@ -60,12 +60,7 @@
     "prepublishOnly": "bun run test:build && bun run build",
     "test:build": "bun run typecheck",
     "size": "bun run build && du -sh dist/*",
-    "pack:dry": "npm pack --dry-run",
-    "docs:generate": "typedoc",
-    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api-markdown",
-    "docs:watch": "typedoc --watch",
-    "docs:serve": "npx serve docs/api",
-    "docs:clean": "rm -rf docs/api docs/api-markdown"
+    "pack:dry": "npm pack --dry-run"
   },
   "publishConfig": {
     "access": "public",
@@ -138,7 +133,10 @@
       "optional": true
     }
   },
-  "dependencies": {},
+  "dependencies": {
+    "@tanstack/react-form": "^1.19.2",
+    "@tanstack/zod-form-adapter": "^0.42.1"
+  },
   "devDependencies": {
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",

@@ -50,7 +50,7 @@ When working in this package, these agents MUST be used:
    - Use `hono-bun-api-architect` for API endpoint development
    - Use `promptliano-mcp-tool-creator` for MCP tool implementation
    - Use `zod-schema-architect` for request/response validation schemas
-   - Use `sqlite-json-migration-expert` for database optimization
+   - Use `promptliano-sqlite-expert` for database optimization
 
 ### Proactive Usage
 

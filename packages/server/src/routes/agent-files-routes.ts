@@ -14,6 +14,7 @@ import {
   type DetectedAgentFile
 } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
+import { createStandardResponses, successResponse } from '../utils/route-helpers'
 
 // Schemas
 const DetectedAgentFileResponseSchema = z.object({
@@ -26,6 +27,61 @@ const DetectedAgentFileResponseSchema = z.object({
   hasInstructions: z.boolean().optional(),
   instructionVersion: z.string().optional(),
   metadata: z.record(z.any()).optional()
+})
+
+const AgentFilesDetectionResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    projectFiles: z.array(DetectedAgentFileResponseSchema),
+    globalFiles: z.array(DetectedAgentFileResponseSchema),
+    suggestedFiles: z.array(
+      z.object({
+        type: z.string(),
+        name: z.string(),
+        suggestedPath: z.string()
+      })
+    )
+  })
+})
+
+const AgentFileUpdateResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string(),
+    backedUp: z.boolean().optional(),
+    filePath: z.string()
+  })
+})
+
+const AgentFileRemoveResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string()
+  })
+})
+
+const AgentFileStatusResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    currentVersion: z.string(),
+    files: z.array(
+      z.object({
+        path: z.string(),
+        exists: z.boolean(),
+        hasInstructions: z.boolean(),
+        instructionVersion: z.string().optional(),
+        isOutdated: z.boolean()
+      })
+    )
+  })
+})
+
+const AgentFileCreateResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string(),
+    filePath: z.string()
+  })
 })
 
 const UpdateAgentFileBodySchema = z.object({
@@ -49,29 +105,7 @@ const detectAgentFilesRoute = createRoute({
       projectId: z.coerce.number().int().positive()
     })
   },
-  responses: {
-    200: {
-      description: 'Detected agent files',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              projectFiles: z.array(DetectedAgentFileResponseSchema),
-              globalFiles: z.array(DetectedAgentFileResponseSchema),
-              suggestedFiles: z.array(
-                z.object({
-                  type: z.string(),
-                  name: z.string(),
-                  suggestedPath: z.string()
-                })
-              )
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(AgentFilesDetectionResponseSchema),
   tags: ['Agent Files'],
   description: 'Detect agent instruction files for a project'
 })
@@ -91,23 +125,7 @@ const updateAgentFileRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      description: 'Update result',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              message: z.string(),
-              backedUp: z.boolean().optional(),
-              filePath: z.string()
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(AgentFileUpdateResponseSchema),
   tags: ['Agent Files'],
   description: 'Update an agent file with Promptliano instructions'
 })
@@ -129,21 +147,7 @@ const removeInstructionsRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      description: 'Remove result',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              message: z.string()
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(AgentFileRemoveResponseSchema),
   tags: ['Agent Files'],
   description: 'Remove Promptliano instructions from an agent file'
 })
@@ -156,30 +160,7 @@ const getAgentFileStatusRoute = createRoute({
       projectId: z.coerce.number().int().positive()
     })
   },
-  responses: {
-    200: {
-      description: 'Agent files status',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              currentVersion: z.string(),
-              files: z.array(
-                z.object({
-                  path: z.string(),
-                  exists: z.boolean(),
-                  hasInstructions: z.boolean(),
-                  instructionVersion: z.string().optional(),
-                  isOutdated: z.boolean()
-                })
-              )
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(AgentFileStatusResponseSchema),
   tags: ['Agent Files'],
   description: 'Check status of agent files and instruction versions'
 })
@@ -199,22 +180,7 @@ const createAgentFileRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      description: 'Create result',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              message: z.string(),
-              filePath: z.string()
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(AgentFileCreateResponseSchema),
   tags: ['Agent Files'],
   description: 'Create a new agent file with instructions'
 })
@@ -237,31 +203,50 @@ export const agentFilesRoutes = new OpenAPIHono()
       // Convert to response format with instruction status
       const enhancedProjectFiles = await Promise.all(
         projectFiles.map(async (file) => {
-          if (file.exists && file.content) {
-            const hasInstructions = file.content.includes('PROMPTLIANO_MCP_INSTRUCTIONS_START')
-            const versionMatch = file.content.match(/PROMPTLIANO_MCP_INSTRUCTIONS_START v([\d.]+)/)
-
-            return {
-              ...file,
-              hasInstructions,
-              instructionVersion: versionMatch ? versionMatch[1] : undefined
-            }
+          const hasInstructions = file.exists && file.content ? file.content.includes('PROMPTLIANO_MCP_INSTRUCTIONS_START') : false
+          const versionMatch = file.content?.match(/PROMPTLIANO_MCP_INSTRUCTIONS_START v([\d.]+)/)
+          
+          // Only include properties defined in the schema
+          return {
+            type: file.type,
+            name: file.name,
+            path: file.path,
+            scope: file.scope,
+            exists: file.exists,
+            writable: file.writable,
+            hasInstructions,
+            instructionVersion: versionMatch ? versionMatch[1] : undefined,
+            metadata: file.metadata
           }
-          return { ...file, hasInstructions: false }
         })
       )
 
-      // Get suggested files
-      const suggestedFiles = agentFileDetectionService.getSuggestedFiles(project.path, projectFiles)
+      // Convert global files to match schema
+      const enhancedGlobalFiles = globalFiles.map(file => ({
+        type: file.type,
+        name: file.name,
+        path: file.path,
+        scope: file.scope,
+        exists: file.exists,
+        writable: file.writable,
+        hasInstructions: file.exists && file.content ? file.content.includes('PROMPTLIANO_MCP_INSTRUCTIONS_START') : false,
+        instructionVersion: file.content?.match(/PROMPTLIANO_MCP_INSTRUCTIONS_START v([\d.]+)/)?.[1],
+        metadata: file.metadata
+      }))
 
-      return c.json({
-        success: true,
-        data: {
-          projectFiles: enhancedProjectFiles,
-          globalFiles,
-          suggestedFiles
-        }
-      })
+      // Get suggested files
+      const suggestedFilesRaw = agentFileDetectionService.getSuggestedFiles(project.path, projectFiles)
+      const suggestedFiles = suggestedFilesRaw.map(pattern => ({
+        type: pattern.type,
+        name: pattern.name,
+        suggestedPath: pattern.suggestedPath || ''
+      }))
+
+      return c.json(successResponse({
+        projectFiles: enhancedProjectFiles,
+        globalFiles: enhancedGlobalFiles,
+        suggestedFiles
+      }))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(500, `Failed to detect agent files: ${error}`)
@@ -289,14 +274,11 @@ export const agentFilesRoutes = new OpenAPIHono()
         throw new ApiError(500, result.message, 'UPDATE_FAILED')
       }
 
-      return c.json({
-        success: true,
-        data: {
-          message: result.message,
-          backedUp: result.backedUp,
-          filePath
-        }
-      })
+      return c.json(successResponse({
+        message: result.message,
+        backedUp: result.backedUp,
+        filePath
+      }))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(500, `Failed to update agent file: ${error}`)
@@ -318,12 +300,9 @@ export const agentFilesRoutes = new OpenAPIHono()
         throw new ApiError(500, result.message, 'REMOVE_FAILED')
       }
 
-      return c.json({
-        success: true,
-        data: {
-          message: result.message
-        }
-      })
+      return c.json(successResponse({
+        message: result.message
+      }))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(500, `Failed to remove instructions: ${error}`)
@@ -349,13 +328,10 @@ export const agentFilesRoutes = new OpenAPIHono()
         isOutdated: file.hasInstructions && agentInstructionService.isOutdated(file.instructionVersion)
       }))
 
-      return c.json({
-        success: true,
-        data: {
-          currentVersion,
-          files: fileStatuses
-        }
-      })
+      return c.json(successResponse({
+        currentVersion,
+        files: fileStatuses
+      }))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(500, `Failed to get agent file status: ${error}`)
@@ -400,13 +376,10 @@ export const agentFilesRoutes = new OpenAPIHono()
         throw new ApiError(500, updateResult.message, 'UPDATE_FAILED')
       }
 
-      return c.json({
-        success: true,
-        data: {
-          message: 'Successfully created agent file with instructions',
-          filePath
-        }
-      })
+      return c.json(successResponse({
+        message: 'Successfully created agent file with instructions',
+        filePath
+      }))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(500, `Failed to create agent file: ${error}`)

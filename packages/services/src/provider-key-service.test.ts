@@ -283,7 +283,7 @@ describe('provider-key-service (File Storage)', () => {
 
   test('updateKey throws ApiError if key not found', async () => {
     await expect(svc.updateKey(9999, { key: 'some_key' })).rejects.toThrow(
-      new ApiError(404, `Provider key with ID 9999 not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE')
+      new ApiError(404, `Provider Key with ID 9999 not found`, 'PROVIDER_KEY_NOT_FOUND')
     )
   })
 

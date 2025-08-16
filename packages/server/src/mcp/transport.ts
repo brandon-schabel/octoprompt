@@ -785,6 +785,19 @@ async function handleResourcesRead(
         } else if (urlParts[2] === 'files' && urlParts[3]) {
           // Individual file resource
           const fileId = parseInt(urlParts[3])
+          
+          // Ensure projectId is valid before parsing
+          if (!projectId) {
+            return {
+              jsonrpc: '2.0',
+              id,
+              error: {
+                ...JSON_RPC_ERRORS.INVALID_PARAMS,
+                message: 'Project ID is required for file resources'
+              }
+            }
+          }
+          
           const files = await getProjectFiles(parseInt(projectId))
           const file = files?.find((f) => f.id === fileId)
 

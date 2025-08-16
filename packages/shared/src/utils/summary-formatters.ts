@@ -286,5 +286,5 @@ function findCommonPrefix(paths: string[]): string {
     }
   }
 
-  return prefix
+  return prefix ?? ''
 }

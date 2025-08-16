@@ -31,7 +31,7 @@ When working in this package, these agents MUST be used:
    - Focus on storage class patterns and migration strategies
 
 3. **Package-Specific Agents**
-   - Use `sqlite-json-migration-expert` for database changes and migrations
+   - Use `promptliano-sqlite-expert` for database changes and migrations
    - Use `zod-schema-architect` for validation schemas
    - Use `promptliano-service-architect` when storage impacts services
 
@@ -87,9 +87,146 @@ class MyStorage {
 - Automatic migration execution
 - Unique ID generation with collision avoidance
 
-### 2. Storage Class Pattern
+### 2. BaseStorage Abstract Class Pattern ⭐ **NEW PATTERN**
 
-Each entity follows a consistent storage class pattern:
+All storage classes now extend the `BaseStorage` abstract class for consistency and reduced duplication:
+
+```typescript
+import { BaseStorage } from './base-storage'
+import { EntitySchema, type Entity } from '@promptliano/schemas'
+
+export class EntityStorage extends BaseStorage<Entity> {
+  protected tableName = 'entities'
+  protected schema = EntitySchema
+
+  // BaseStorage provides these methods automatically:
+  // - readAll(projectId): Promise<Record<string, Entity>>
+  // - writeAll(projectId, entities): Promise<Record<string, Entity>>
+  // - readById(id, projectId?): Promise<Entity | null>
+  // - writeById(id, entity, projectId?): Promise<Entity>
+  // - deleteById(id, projectId?): Promise<boolean>
+  // - exists(id, projectId?): Promise<boolean>
+
+  // Implement required abstract methods
+  protected convertRowToEntity(row: any): Entity {
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      name: row.name,
+      description: row.description || '',
+      tags: this.safeJsonParse(row.tags, []),
+      metadata: this.safeJsonParse(row.metadata, {}),
+      created: row.created_at,
+      updated: row.updated_at
+    }
+  }
+
+  protected convertEntityToRow(entity: Entity): any {
+    return {
+      id: entity.id,
+      project_id: entity.projectId,
+      name: entity.name,
+      description: entity.description,
+      tags: JSON.stringify(entity.tags || []),
+      metadata: JSON.stringify(entity.metadata || {}),
+      created_at: entity.created,
+      updated_at: entity.updated
+    }
+  }
+
+  protected getSelectQuery(): string {
+    return `
+      SELECT id, project_id, name, description, tags, metadata, created_at, updated_at
+      FROM entities
+      WHERE project_id = ?
+      ORDER BY created_at DESC
+    `
+  }
+
+  protected getInsertQuery(): string {
+    return `
+      INSERT INTO entities (id, project_id, name, description, tags, metadata, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `
+  }
+
+  protected getUpdateQuery(): string {
+    return `
+      UPDATE entities 
+      SET name = ?, description = ?, tags = ?, metadata = ?, updated_at = ?
+      WHERE id = ? AND project_id = ?
+    `
+  }
+
+  protected getDeleteQuery(): string {
+    return 'DELETE FROM entities WHERE project_id = ?'
+  }
+
+  // Add entity-specific methods as needed
+  async findByName(projectId: number, name: string): Promise<Entity | null> {
+    const db = this.getDb().getDatabase()
+    const query = db.prepare('SELECT * FROM entities WHERE project_id = ? AND name = ?')
+    const row = query.get(projectId, name) as any
+    return row ? this.convertRowToEntity(row) : null
+  }
+}
+
+export const entityStorage = new EntityStorage()
+```
+
+### 3. Storage Helper Utilities ⭐ **NEW UTILITIES**
+
+The storage layer now includes comprehensive helper utilities:
+
+```typescript
+import { 
+  validateData, 
+  safeJsonParse, 
+  generateEntityId, 
+  formatSQLError,
+  createStorageHelpers 
+} from './utils/storage-helpers'
+
+// Validation helper with detailed error messages
+const validatedEntity = await validateData(rawData, EntitySchema, 'Entity creation')
+
+// Safe JSON parsing with fallbacks
+const tags = safeJsonParse(row.tags, [], 'entity.tags')
+
+// Generate unique IDs with collision avoidance
+const newId = generateEntityId()
+
+// SQL error formatting for consistent error messages
+try {
+  query.run(values)
+} catch (error) {
+  throw formatSQLError(error, 'entity creation', { projectId, entityId })
+}
+```
+
+### 4. Transaction Helper Utilities ⭐ **NEW PATTERN**
+
+```typescript
+import { withTransaction, executeBulkOperation } from './utils/transaction-helpers'
+
+// Automatic transaction wrapping
+await withTransaction(async (db) => {
+  await entityStorage.create(entity1)
+  await entityStorage.create(entity2)
+  await relatedStorage.update(relatedId, data)
+})
+
+// Bulk operations with transaction safety
+const results = await executeBulkOperation(
+  entities,
+  async (entity) => entityStorage.create(entity),
+  { continueOnError: false, batchSize: 100 }
+)
+```
+
+### 5. Legacy Storage Class Pattern
+
+For reference, the old pattern (being migrated to BaseStorage):
 
 ```typescript
 // packages/storage/src/entity-storage.ts

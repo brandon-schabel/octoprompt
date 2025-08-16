@@ -12,7 +12,7 @@ Promptliano uses GitHub Actions for continuous integration, testing, building, a
 
 #### 1. **Package-Specific CI Workflows**
 
-- `client.yml` - Client package CI (React/Tauri app)
+- `client.yml` - Client package CI (React app)
 - `server.yml` - Server package CI (Hono/Bun backend)
 - `services.yml` - Services package CI (business logic)
 - `shared.yml` - Shared utilities CI
@@ -25,7 +25,6 @@ Promptliano uses GitHub Actions for continuous integration, testing, building, a
 
 #### 3. **Release Workflows**
 
-- `tauri-release.yml` - Desktop app releases (Windows/Mac/Linux)
 - `release-binaries.yml` - Server binary releases
 - `deploy-website.yml` - Website deployment
 

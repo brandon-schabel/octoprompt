@@ -1,0 +1,1252 @@
+{
+  "timestamp": "2025-08-15T16:24:08.138Z",
+  "config": {
+    "name": "Promptliano Pattern Performance Benchmark",
+    "iterations": 1000,
+    "warmupIterations": 100,
+    "datasets": {
+      "small": 100,
+      "medium": 1000,
+      "large": 10000
+    },
+    "memoryTrackingEnabled": true,
+    "gcForceEnabled": true
+  },
+  "suite": {
+    "results": [
+      {
+        "name": "createStandardResponses",
+        "category": "Route Helpers",
+        "avgExecutionTime": 1.45757100000023,
+        "minExecutionTime": 0.5830000000059954,
+        "maxExecutionTime": 43.1249999999892,
+        "totalExecutionTime": 1457.57100000023,
+        "operationsPerSecond": 686072.925435428,
+        "memoryUsage": {
+          "heapUsed": 1967975,
+          "heapTotal": 24055718,
+          "external": 2673716,
+          "rss": 95547523
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createStandardResponsesWithStatus",
+        "category": "Route Helpers",
+        "avgExecutionTime": 1.3580029999998702,
+        "minExecutionTime": 0.6249999999994316,
+        "maxExecutionTime": 34.3340000000012,
+        "totalExecutionTime": 1358.00299999987,
+        "operationsPerSecond": 736375.398287114,
+        "memoryUsage": {
+          "heapUsed": 1967975,
+          "heapTotal": 24029078,
+          "external": 2706030,
+          "rss": 102271599
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "successResponse",
+        "category": "Route Helpers",
+        "avgExecutionTime": 0.21149999999970248,
+        "minExecutionTime": 0.08299999998939711,
+        "maxExecutionTime": 37.082999999995536,
+        "totalExecutionTime": 211.49999999970248,
+        "operationsPerSecond": 4728132.387713507,
+        "memoryUsage": {
+          "heapUsed": 1967975,
+          "heapTotal": 20117430,
+          "external": 2722259,
+          "rss": 103792771
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "operationSuccessResponse",
+        "category": "Route Helpers",
+        "avgExecutionTime": 0.16416599999992343,
+        "minExecutionTime": 0.08299999998939711,
+        "maxExecutionTime": 21.625000000000227,
+        "totalExecutionTime": 164.16599999992343,
+        "operationsPerSecond": 6091395.295009116,
+        "memoryUsage": {
+          "heapUsed": 1967975,
+          "heapTotal": 20118462,
+          "external": 2716120,
+          "rss": 105398272
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "withErrorHandling",
+        "category": "Route Helpers",
+        "avgExecutionTime": 0.5717700000001003,
+        "minExecutionTime": 0.2909999999900492,
+        "maxExecutionTime": 32.91600000000017,
+        "totalExecutionTime": 571.7700000001003,
+        "operationsPerSecond": 1748954.999387559,
+        "memoryUsage": {
+          "heapUsed": 1967975,
+          "heapTotal": 20195860,
+          "external": 2738835,
+          "rss": 105643082
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "validateEntities_small",
+        "category": "Route Helpers",
+        "avgExecutionTime": 27.03206999999993,
+        "minExecutionTime": 20.25000000000432,
+        "maxExecutionTime": 86.29100000000278,
+        "totalExecutionTime": 2703.206999999993,
+        "operationsPerSecond": 36993.09745794542,
+        "memoryUsage": {
+          "heapUsed": 1967975,
+          "heapTotal": 21428142,
+          "external": 2804838,
+          "rss": 111906980
+        },
+        "iterations": 100,
+        "datasetSize": 100,
+        "success": true
+      },
+      {
+        "name": "validateEntities_medium",
+        "category": "Route Helpers",
+        "avgExecutionTime": 173.95365000000203,
+        "minExecutionTime": 137.0420000000081,
+        "maxExecutionTime": 798.7500000000125,
+        "totalExecutionTime": 17395.3650000002,
+        "operationsPerSecond": 5748.657760271131,
+        "memoryUsage": {
+          "heapUsed": 16744824,
+          "heapTotal": 39861453,
+          "external": 2840231,
+          "rss": 139763548
+        },
+        "iterations": 100,
+        "datasetSize": 1000,
+        "success": true
+      },
+      {
+        "name": "validateEntities_large",
+        "category": "Route Helpers",
+        "avgExecutionTime": 1554.3054399999994,
+        "minExecutionTime": 1398.8750000000323,
+        "maxExecutionTime": 2587.6250000000027,
+        "totalExecutionTime": 155430.54399999994,
+        "operationsPerSecond": 643.3741877658232,
+        "memoryUsage": {
+          "heapUsed": 34612391,
+          "heapTotal": 69796495,
+          "external": 2893565,
+          "rss": 186257572
+        },
+        "iterations": 100,
+        "datasetSize": 10000,
+        "success": true
+      },
+      {
+        "name": "ErrorFactory.notFound",
+        "category": "Error Factory",
+        "avgExecutionTime": 1.3677409999996257,
+        "minExecutionTime": 0.9159999999610591,
+        "maxExecutionTime": 54.75000000001273,
+        "totalExecutionTime": 1367.7409999996257,
+        "operationsPerSecond": 731132.57553899,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 25135866,
+          "external": 2908042,
+          "rss": 186820690
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "ErrorFactory.validationFailed",
+        "category": "Error Factory",
+        "avgExecutionTime": 0.957248999999706,
+        "minExecutionTime": 0.7079999999746178,
+        "maxExecutionTime": 40.582999999969616,
+        "totalExecutionTime": 957.248999999706,
+        "operationsPerSecond": 1044660.2712568068,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24858403,
+          "external": 2920771,
+          "rss": 187482112
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "ErrorFactory.operationFailed",
+        "category": "Error Factory",
+        "avgExecutionTime": 1.1147569999974962,
+        "minExecutionTime": 0.8749999999508873,
+        "maxExecutionTime": 39.249999999981355,
+        "totalExecutionTime": 1114.7569999974962,
+        "operationsPerSecond": 897056.4885461549,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24883356,
+          "external": 2926330,
+          "rss": 187498496
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "ErrorFactory.permissionDenied",
+        "category": "Error Factory",
+        "avgExecutionTime": 0.9299179999998728,
+        "minExecutionTime": 0.7079999999746178,
+        "maxExecutionTime": 38.41699999998127,
+        "totalExecutionTime": 929.9179999998728,
+        "operationsPerSecond": 1075363.6342130562,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24895889,
+          "external": 2932276,
+          "rss": 187498496
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "ErrorFactory.duplicate",
+        "category": "Error Factory",
+        "avgExecutionTime": 1.0724230000003558,
+        "minExecutionTime": 0.8749999999508873,
+        "maxExecutionTime": 34.29199999999355,
+        "totalExecutionTime": 1072.4230000003558,
+        "operationsPerSecond": 932467.8788124352,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24916320,
+          "external": 2935786,
+          "rss": 187498496
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "ErrorFactory.invalidState",
+        "category": "Error Factory",
+        "avgExecutionTime": 1.084851000001379,
+        "minExecutionTime": 0.8749999999508873,
+        "maxExecutionTime": 31.208999999989828,
+        "totalExecutionTime": 1084.851000001379,
+        "operationsPerSecond": 921785.5723954063,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24925348,
+          "external": 2942306,
+          "rss": 187498496
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "ErrorFactory.databaseError",
+        "category": "Error Factory",
+        "avgExecutionTime": 1.0882979999993267,
+        "minExecutionTime": 0.8329999999432403,
+        "maxExecutionTime": 33.167000000048574,
+        "totalExecutionTime": 1088.2979999993267,
+        "operationsPerSecond": 918865.9723721064,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24935195,
+          "external": 2948839,
+          "rss": 187514880
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createEntityErrorFactory",
+        "category": "Error Factory",
+        "avgExecutionTime": 0.24731500000007145,
+        "minExecutionTime": 0.08299999990413198,
+        "maxExecutionTime": 26.50000000005548,
+        "totalExecutionTime": 247.31500000007145,
+        "operationsPerSecond": 4043426.399529794,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 25003270,
+          "external": 2954649,
+          "rss": 187514880
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "assertExists_success",
+        "category": "Error Factory",
+        "avgExecutionTime": 0.1388320000017984,
+        "minExecutionTime": 0.08299999990413198,
+        "maxExecutionTime": 13.874999999984539,
+        "totalExecutionTime": 138.8320000017984,
+        "operationsPerSecond": 7202950.328361229,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24905589,
+          "external": 2963335,
+          "rss": 187514880
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "assertUpdateSucceeded",
+        "category": "Error Factory",
+        "avgExecutionTime": 0.11902100000099836,
+        "minExecutionTime": 0.08299999990413198,
+        "maxExecutionTime": 10.208999999917978,
+        "totalExecutionTime": 119.02100000099836,
+        "operationsPerSecond": 8401878.659997916,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24872821,
+          "external": 2966230,
+          "rss": 187514880
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "assertDeleteSucceeded",
+        "category": "Error Factory",
+        "avgExecutionTime": 0.11958300000128474,
+        "minExecutionTime": 0.04200000000764703,
+        "maxExecutionTime": 10.24999999992815,
+        "totalExecutionTime": 119.58300000128474,
+        "operationsPerSecond": 8362392.647694542,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24856437,
+          "external": 2968362,
+          "rss": 187514880
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "withErrorContext",
+        "category": "Error Factory",
+        "avgExecutionTime": 0.46622599999966496,
+        "minExecutionTime": 0.20799999992959783,
+        "maxExecutionTime": 21.333000000026914,
+        "totalExecutionTime": 466.22599999966496,
+        "operationsPerSecond": 2144882.524785659,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 24899101,
+          "external": 2980292,
+          "rss": 187523809
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createApiResponseSchema",
+        "category": "Schema Factories",
+        "avgExecutionTime": 11.015959999999865,
+        "minExecutionTime": 8.999999999900865,
+        "maxExecutionTime": 73.20900000001984,
+        "totalExecutionTime": 11015.959999999865,
+        "operationsPerSecond": 90777.38118148688,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 29949583,
+          "external": 3007899,
+          "rss": 187552498
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createListResponseSchema",
+        "category": "Schema Factories",
+        "avgExecutionTime": 8.803351999997984,
+        "minExecutionTime": 7.2499999999990905,
+        "maxExecutionTime": 95.70800000005875,
+        "totalExecutionTime": 8803.351999997984,
+        "operationsPerSecond": 113593.09499384201,
+        "memoryUsage": {
+          "heapUsed": 48200173,
+          "heapTotal": 31860564,
+          "external": 3039278,
+          "rss": 187696628
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createPaginatedResponseSchema",
+        "category": "Schema Factories",
+        "avgExecutionTime": 23.78567499999977,
+        "minExecutionTime": 20.83299999992505,
+        "maxExecutionTime": 564.12499999999,
+        "totalExecutionTime": 23785.67499999977,
+        "operationsPerSecond": 42042.111480965315,
+        "memoryUsage": {
+          "heapUsed": 39887532,
+          "heapTotal": 47782191,
+          "external": 3049960,
+          "rss": 187751481
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createBaseEntitySchema",
+        "category": "Schema Factories",
+        "avgExecutionTime": 16.710500000000124,
+        "minExecutionTime": 14.583000000016,
+        "maxExecutionTime": 539.9169999999458,
+        "totalExecutionTime": 16710.500000000124,
+        "operationsPerSecond": 59842.613925375816,
+        "memoryUsage": {
+          "heapUsed": 20764925,
+          "heapTotal": 41878938,
+          "external": 3060799,
+          "rss": 187760640
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createEntitySchemas",
+        "category": "Schema Factories",
+        "avgExecutionTime": 30.438419999995386,
+        "minExecutionTime": 26.874999999904503,
+        "maxExecutionTime": 600.5000000000109,
+        "totalExecutionTime": 30438.419999995385,
+        "operationsPerSecond": 32853.21642845297,
+        "memoryUsage": {
+          "heapUsed": 20750591,
+          "heapTotal": 50316993,
+          "external": 3099891,
+          "rss": 187882422
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createCrudSchemas",
+        "category": "Schema Factories",
+        "avgExecutionTime": 62.51364600000039,
+        "minExecutionTime": 55.16699999998309,
+        "maxExecutionTime": 632.9999999999245,
+        "totalExecutionTime": 62513.64600000039,
+        "operationsPerSecond": 15996.507386563148,
+        "memoryUsage": {
+          "heapUsed": 21246928,
+          "heapTotal": 57006399,
+          "external": 3123870,
+          "rss": 187911668
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createSearchQuerySchema",
+        "category": "Schema Factories",
+        "avgExecutionTime": 24.24757299999657,
+        "minExecutionTime": 20.999999999958163,
+        "maxExecutionTime": 513.6660000000575,
+        "totalExecutionTime": 24247.57299999657,
+        "operationsPerSecond": 41241.24092749989,
+        "memoryUsage": {
+          "heapUsed": 21407431,
+          "heapTotal": 48426705,
+          "external": 3140211,
+          "rss": 187924480
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "schema_validation",
+        "category": "Schema Factories",
+        "avgExecutionTime": 3.4482630000006793,
+        "minExecutionTime": 1.9169999999348875,
+        "maxExecutionTime": 96.7080000000351,
+        "totalExecutionTime": 3448.2630000006793,
+        "operationsPerSecond": 290001.0817039776,
+        "memoryUsage": {
+          "heapUsed": 20905458,
+          "heapTotal": 27216536,
+          "external": 3343499,
+          "rss": 188938830
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "schema_validation_small",
+        "category": "Schema Factories",
+        "avgExecutionTime": 0,
+        "minExecutionTime": null,
+        "maxExecutionTime": null,
+        "totalExecutionTime": 0,
+        "operationsPerSecond": null,
+        "memoryUsage": {
+          "heapUsed": 20905458,
+          "heapTotal": 26579968,
+          "external": 3509806,
+          "rss": 190038016
+        },
+        "iterations": 10,
+        "datasetSize": 100,
+        "success": false,
+        "error": "[\n  {\n    \"received\": \"pending\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"active\",\n      \"inactive\"\n    ],\n    \"path\": [\n      \"status\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'active' | 'inactive', received 'pending'\"\n  }\n]"
+      },
+      {
+        "name": "schema_validation_medium",
+        "category": "Schema Factories",
+        "avgExecutionTime": 0,
+        "minExecutionTime": null,
+        "maxExecutionTime": null,
+        "totalExecutionTime": 0,
+        "operationsPerSecond": null,
+        "memoryUsage": {
+          "heapUsed": 20905458,
+          "heapTotal": 25465856,
+          "external": 3521299,
+          "rss": 190152704
+        },
+        "iterations": 10,
+        "datasetSize": 1000,
+        "success": false,
+        "error": "[\n  {\n    \"received\": \"pending\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"active\",\n      \"inactive\"\n    ],\n    \"path\": [\n      \"status\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'active' | 'inactive', received 'pending'\"\n  }\n]"
+      },
+      {
+        "name": "schema_validation_large",
+        "category": "Schema Factories",
+        "avgExecutionTime": 0,
+        "minExecutionTime": null,
+        "maxExecutionTime": null,
+        "totalExecutionTime": 0,
+        "operationsPerSecond": null,
+        "memoryUsage": {
+          "heapUsed": 20905458,
+          "heapTotal": 28546048,
+          "external": 3580027,
+          "rss": 190447616
+        },
+        "iterations": 10,
+        "datasetSize": 10000,
+        "success": false,
+        "error": "[\n  {\n    \"received\": \"pending\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"active\",\n      \"inactive\"\n    ],\n    \"path\": [\n      \"status\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'active' | 'inactive', received 'pending'\"\n  }\n]"
+      },
+      {
+        "name": "createCrudHooks",
+        "category": "Hook Factory",
+        "avgExecutionTime": 0.5456249999996317,
+        "minExecutionTime": 0.12500000002546585,
+        "maxExecutionTime": 25.12500000000273,
+        "totalExecutionTime": 545.6249999996317,
+        "operationsPerSecond": 1832760.5956484308,
+        "memoryUsage": {
+          "heapUsed": 20905458,
+          "heapTotal": 28380512,
+          "external": 3586723,
+          "rss": 190572331
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createQueryHook",
+        "category": "Hook Factory",
+        "avgExecutionTime": 0.20630000000164728,
+        "minExecutionTime": 0.08299999990413198,
+        "maxExecutionTime": 17.00000000005275,
+        "totalExecutionTime": 206.30000000164728,
+        "operationsPerSecond": 4847309.743053879,
+        "memoryUsage": {
+          "heapUsed": 20905458,
+          "heapTotal": 25200001,
+          "external": 3568063,
+          "rss": 190588273
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createMutationHook",
+        "category": "Hook Factory",
+        "avgExecutionTime": 0.24600100000134262,
+        "minExecutionTime": 0.08299999990413198,
+        "maxExecutionTime": 23.791999999957625,
+        "totalExecutionTime": 246.00100000134262,
+        "operationsPerSecond": 4065024.1258960012,
+        "memoryUsage": {
+          "heapUsed": 20905458,
+          "heapTotal": 25207095,
+          "external": 3576670,
+          "rss": 190595072
+        },
+        "iterations": 1000,
+        "success": true
+      },
+      {
+        "name": "createOptimisticMutation",
+        "category": "Hook Factory",
+        "avgExecutionTime": 0.23994300000083513,
+        "minExecutionTime": 0.08299999990413198,
+        "maxExecutionTime": 21.166999999991276,
+        "totalExecutionTime": 239.94300000083513,
+        "operationsPerSecond": 4167656.485067368,
+        "memoryUsage": {
+          "heapUsed": 20905458,
+          "heapTotal": 25192038,
+          "external": 3590456,
+          "rss": 190595072
+        },
+        "iterations": 1000,
+        "success": true
+      }
+    ],
+    "totalTime": 735.682417,
+    "summary": {
+      "routeHelpers": [
+        {
+          "name": "createStandardResponses",
+          "category": "Route Helpers",
+          "avgExecutionTime": 1.45757100000023,
+          "minExecutionTime": 0.5830000000059954,
+          "maxExecutionTime": 43.1249999999892,
+          "totalExecutionTime": 1457.57100000023,
+          "operationsPerSecond": 686072.925435428,
+          "memoryUsage": {
+            "heapUsed": 1967975,
+            "heapTotal": 24055718,
+            "external": 2673716,
+            "rss": 95547523
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createStandardResponsesWithStatus",
+          "category": "Route Helpers",
+          "avgExecutionTime": 1.3580029999998702,
+          "minExecutionTime": 0.6249999999994316,
+          "maxExecutionTime": 34.3340000000012,
+          "totalExecutionTime": 1358.00299999987,
+          "operationsPerSecond": 736375.398287114,
+          "memoryUsage": {
+            "heapUsed": 1967975,
+            "heapTotal": 24029078,
+            "external": 2706030,
+            "rss": 102271599
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "successResponse",
+          "category": "Route Helpers",
+          "avgExecutionTime": 0.21149999999970248,
+          "minExecutionTime": 0.08299999998939711,
+          "maxExecutionTime": 37.082999999995536,
+          "totalExecutionTime": 211.49999999970248,
+          "operationsPerSecond": 4728132.387713507,
+          "memoryUsage": {
+            "heapUsed": 1967975,
+            "heapTotal": 20117430,
+            "external": 2722259,
+            "rss": 103792771
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "operationSuccessResponse",
+          "category": "Route Helpers",
+          "avgExecutionTime": 0.16416599999992343,
+          "minExecutionTime": 0.08299999998939711,
+          "maxExecutionTime": 21.625000000000227,
+          "totalExecutionTime": 164.16599999992343,
+          "operationsPerSecond": 6091395.295009116,
+          "memoryUsage": {
+            "heapUsed": 1967975,
+            "heapTotal": 20118462,
+            "external": 2716120,
+            "rss": 105398272
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "withErrorHandling",
+          "category": "Route Helpers",
+          "avgExecutionTime": 0.5717700000001003,
+          "minExecutionTime": 0.2909999999900492,
+          "maxExecutionTime": 32.91600000000017,
+          "totalExecutionTime": 571.7700000001003,
+          "operationsPerSecond": 1748954.999387559,
+          "memoryUsage": {
+            "heapUsed": 1967975,
+            "heapTotal": 20195860,
+            "external": 2738835,
+            "rss": 105643082
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "validateEntities_small",
+          "category": "Route Helpers",
+          "avgExecutionTime": 27.03206999999993,
+          "minExecutionTime": 20.25000000000432,
+          "maxExecutionTime": 86.29100000000278,
+          "totalExecutionTime": 2703.206999999993,
+          "operationsPerSecond": 36993.09745794542,
+          "memoryUsage": {
+            "heapUsed": 1967975,
+            "heapTotal": 21428142,
+            "external": 2804838,
+            "rss": 111906980
+          },
+          "iterations": 100,
+          "datasetSize": 100,
+          "success": true
+        },
+        {
+          "name": "validateEntities_medium",
+          "category": "Route Helpers",
+          "avgExecutionTime": 173.95365000000203,
+          "minExecutionTime": 137.0420000000081,
+          "maxExecutionTime": 798.7500000000125,
+          "totalExecutionTime": 17395.3650000002,
+          "operationsPerSecond": 5748.657760271131,
+          "memoryUsage": {
+            "heapUsed": 16744824,
+            "heapTotal": 39861453,
+            "external": 2840231,
+            "rss": 139763548
+          },
+          "iterations": 100,
+          "datasetSize": 1000,
+          "success": true
+        },
+        {
+          "name": "validateEntities_large",
+          "category": "Route Helpers",
+          "avgExecutionTime": 1554.3054399999994,
+          "minExecutionTime": 1398.8750000000323,
+          "maxExecutionTime": 2587.6250000000027,
+          "totalExecutionTime": 155430.54399999994,
+          "operationsPerSecond": 643.3741877658232,
+          "memoryUsage": {
+            "heapUsed": 34612391,
+            "heapTotal": 69796495,
+            "external": 2893565,
+            "rss": 186257572
+          },
+          "iterations": 100,
+          "datasetSize": 10000,
+          "success": true
+        }
+      ],
+      "errorFactory": [
+        {
+          "name": "ErrorFactory.notFound",
+          "category": "Error Factory",
+          "avgExecutionTime": 1.3677409999996257,
+          "minExecutionTime": 0.9159999999610591,
+          "maxExecutionTime": 54.75000000001273,
+          "totalExecutionTime": 1367.7409999996257,
+          "operationsPerSecond": 731132.57553899,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 25135866,
+            "external": 2908042,
+            "rss": 186820690
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "ErrorFactory.validationFailed",
+          "category": "Error Factory",
+          "avgExecutionTime": 0.957248999999706,
+          "minExecutionTime": 0.7079999999746178,
+          "maxExecutionTime": 40.582999999969616,
+          "totalExecutionTime": 957.248999999706,
+          "operationsPerSecond": 1044660.2712568068,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24858403,
+            "external": 2920771,
+            "rss": 187482112
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "ErrorFactory.operationFailed",
+          "category": "Error Factory",
+          "avgExecutionTime": 1.1147569999974962,
+          "minExecutionTime": 0.8749999999508873,
+          "maxExecutionTime": 39.249999999981355,
+          "totalExecutionTime": 1114.7569999974962,
+          "operationsPerSecond": 897056.4885461549,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24883356,
+            "external": 2926330,
+            "rss": 187498496
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "ErrorFactory.permissionDenied",
+          "category": "Error Factory",
+          "avgExecutionTime": 0.9299179999998728,
+          "minExecutionTime": 0.7079999999746178,
+          "maxExecutionTime": 38.41699999998127,
+          "totalExecutionTime": 929.9179999998728,
+          "operationsPerSecond": 1075363.6342130562,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24895889,
+            "external": 2932276,
+            "rss": 187498496
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "ErrorFactory.duplicate",
+          "category": "Error Factory",
+          "avgExecutionTime": 1.0724230000003558,
+          "minExecutionTime": 0.8749999999508873,
+          "maxExecutionTime": 34.29199999999355,
+          "totalExecutionTime": 1072.4230000003558,
+          "operationsPerSecond": 932467.8788124352,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24916320,
+            "external": 2935786,
+            "rss": 187498496
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "ErrorFactory.invalidState",
+          "category": "Error Factory",
+          "avgExecutionTime": 1.084851000001379,
+          "minExecutionTime": 0.8749999999508873,
+          "maxExecutionTime": 31.208999999989828,
+          "totalExecutionTime": 1084.851000001379,
+          "operationsPerSecond": 921785.5723954063,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24925348,
+            "external": 2942306,
+            "rss": 187498496
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "ErrorFactory.databaseError",
+          "category": "Error Factory",
+          "avgExecutionTime": 1.0882979999993267,
+          "minExecutionTime": 0.8329999999432403,
+          "maxExecutionTime": 33.167000000048574,
+          "totalExecutionTime": 1088.2979999993267,
+          "operationsPerSecond": 918865.9723721064,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24935195,
+            "external": 2948839,
+            "rss": 187514880
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createEntityErrorFactory",
+          "category": "Error Factory",
+          "avgExecutionTime": 0.24731500000007145,
+          "minExecutionTime": 0.08299999990413198,
+          "maxExecutionTime": 26.50000000005548,
+          "totalExecutionTime": 247.31500000007145,
+          "operationsPerSecond": 4043426.399529794,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 25003270,
+            "external": 2954649,
+            "rss": 187514880
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "assertExists_success",
+          "category": "Error Factory",
+          "avgExecutionTime": 0.1388320000017984,
+          "minExecutionTime": 0.08299999990413198,
+          "maxExecutionTime": 13.874999999984539,
+          "totalExecutionTime": 138.8320000017984,
+          "operationsPerSecond": 7202950.328361229,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24905589,
+            "external": 2963335,
+            "rss": 187514880
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "assertUpdateSucceeded",
+          "category": "Error Factory",
+          "avgExecutionTime": 0.11902100000099836,
+          "minExecutionTime": 0.08299999990413198,
+          "maxExecutionTime": 10.208999999917978,
+          "totalExecutionTime": 119.02100000099836,
+          "operationsPerSecond": 8401878.659997916,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24872821,
+            "external": 2966230,
+            "rss": 187514880
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "assertDeleteSucceeded",
+          "category": "Error Factory",
+          "avgExecutionTime": 0.11958300000128474,
+          "minExecutionTime": 0.04200000000764703,
+          "maxExecutionTime": 10.24999999992815,
+          "totalExecutionTime": 119.58300000128474,
+          "operationsPerSecond": 8362392.647694542,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24856437,
+            "external": 2968362,
+            "rss": 187514880
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "withErrorContext",
+          "category": "Error Factory",
+          "avgExecutionTime": 0.46622599999966496,
+          "minExecutionTime": 0.20799999992959783,
+          "maxExecutionTime": 21.333000000026914,
+          "totalExecutionTime": 466.22599999966496,
+          "operationsPerSecond": 2144882.524785659,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 24899101,
+            "external": 2980292,
+            "rss": 187523809
+          },
+          "iterations": 1000,
+          "success": true
+        }
+      ],
+      "schemaFactories": [
+        {
+          "name": "createApiResponseSchema",
+          "category": "Schema Factories",
+          "avgExecutionTime": 11.015959999999865,
+          "minExecutionTime": 8.999999999900865,
+          "maxExecutionTime": 73.20900000001984,
+          "totalExecutionTime": 11015.959999999865,
+          "operationsPerSecond": 90777.38118148688,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 29949583,
+            "external": 3007899,
+            "rss": 187552498
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createListResponseSchema",
+          "category": "Schema Factories",
+          "avgExecutionTime": 8.803351999997984,
+          "minExecutionTime": 7.2499999999990905,
+          "maxExecutionTime": 95.70800000005875,
+          "totalExecutionTime": 8803.351999997984,
+          "operationsPerSecond": 113593.09499384201,
+          "memoryUsage": {
+            "heapUsed": 48200173,
+            "heapTotal": 31860564,
+            "external": 3039278,
+            "rss": 187696628
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createPaginatedResponseSchema",
+          "category": "Schema Factories",
+          "avgExecutionTime": 23.78567499999977,
+          "minExecutionTime": 20.83299999992505,
+          "maxExecutionTime": 564.12499999999,
+          "totalExecutionTime": 23785.67499999977,
+          "operationsPerSecond": 42042.111480965315,
+          "memoryUsage": {
+            "heapUsed": 39887532,
+            "heapTotal": 47782191,
+            "external": 3049960,
+            "rss": 187751481
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createBaseEntitySchema",
+          "category": "Schema Factories",
+          "avgExecutionTime": 16.710500000000124,
+          "minExecutionTime": 14.583000000016,
+          "maxExecutionTime": 539.9169999999458,
+          "totalExecutionTime": 16710.500000000124,
+          "operationsPerSecond": 59842.613925375816,
+          "memoryUsage": {
+            "heapUsed": 20764925,
+            "heapTotal": 41878938,
+            "external": 3060799,
+            "rss": 187760640
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createEntitySchemas",
+          "category": "Schema Factories",
+          "avgExecutionTime": 30.438419999995386,
+          "minExecutionTime": 26.874999999904503,
+          "maxExecutionTime": 600.5000000000109,
+          "totalExecutionTime": 30438.419999995385,
+          "operationsPerSecond": 32853.21642845297,
+          "memoryUsage": {
+            "heapUsed": 20750591,
+            "heapTotal": 50316993,
+            "external": 3099891,
+            "rss": 187882422
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createCrudSchemas",
+          "category": "Schema Factories",
+          "avgExecutionTime": 62.51364600000039,
+          "minExecutionTime": 55.16699999998309,
+          "maxExecutionTime": 632.9999999999245,
+          "totalExecutionTime": 62513.64600000039,
+          "operationsPerSecond": 15996.507386563148,
+          "memoryUsage": {
+            "heapUsed": 21246928,
+            "heapTotal": 57006399,
+            "external": 3123870,
+            "rss": 187911668
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createSearchQuerySchema",
+          "category": "Schema Factories",
+          "avgExecutionTime": 24.24757299999657,
+          "minExecutionTime": 20.999999999958163,
+          "maxExecutionTime": 513.6660000000575,
+          "totalExecutionTime": 24247.57299999657,
+          "operationsPerSecond": 41241.24092749989,
+          "memoryUsage": {
+            "heapUsed": 21407431,
+            "heapTotal": 48426705,
+            "external": 3140211,
+            "rss": 187924480
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "schema_validation",
+          "category": "Schema Factories",
+          "avgExecutionTime": 3.4482630000006793,
+          "minExecutionTime": 1.9169999999348875,
+          "maxExecutionTime": 96.7080000000351,
+          "totalExecutionTime": 3448.2630000006793,
+          "operationsPerSecond": 290001.0817039776,
+          "memoryUsage": {
+            "heapUsed": 20905458,
+            "heapTotal": 27216536,
+            "external": 3343499,
+            "rss": 188938830
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "schema_validation_small",
+          "category": "Schema Factories",
+          "avgExecutionTime": 0,
+          "minExecutionTime": null,
+          "maxExecutionTime": null,
+          "totalExecutionTime": 0,
+          "operationsPerSecond": null,
+          "memoryUsage": {
+            "heapUsed": 20905458,
+            "heapTotal": 26579968,
+            "external": 3509806,
+            "rss": 190038016
+          },
+          "iterations": 10,
+          "datasetSize": 100,
+          "success": false,
+          "error": "[\n  {\n    \"received\": \"pending\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"active\",\n      \"inactive\"\n    ],\n    \"path\": [\n      \"status\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'active' | 'inactive', received 'pending'\"\n  }\n]"
+        },
+        {
+          "name": "schema_validation_medium",
+          "category": "Schema Factories",
+          "avgExecutionTime": 0,
+          "minExecutionTime": null,
+          "maxExecutionTime": null,
+          "totalExecutionTime": 0,
+          "operationsPerSecond": null,
+          "memoryUsage": {
+            "heapUsed": 20905458,
+            "heapTotal": 25465856,
+            "external": 3521299,
+            "rss": 190152704
+          },
+          "iterations": 10,
+          "datasetSize": 1000,
+          "success": false,
+          "error": "[\n  {\n    \"received\": \"pending\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"active\",\n      \"inactive\"\n    ],\n    \"path\": [\n      \"status\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'active' | 'inactive', received 'pending'\"\n  }\n]"
+        },
+        {
+          "name": "schema_validation_large",
+          "category": "Schema Factories",
+          "avgExecutionTime": 0,
+          "minExecutionTime": null,
+          "maxExecutionTime": null,
+          "totalExecutionTime": 0,
+          "operationsPerSecond": null,
+          "memoryUsage": {
+            "heapUsed": 20905458,
+            "heapTotal": 28546048,
+            "external": 3580027,
+            "rss": 190447616
+          },
+          "iterations": 10,
+          "datasetSize": 10000,
+          "success": false,
+          "error": "[\n  {\n    \"received\": \"pending\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"active\",\n      \"inactive\"\n    ],\n    \"path\": [\n      \"status\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'active' | 'inactive', received 'pending'\"\n  }\n]"
+        }
+      ],
+      "hookFactory": [
+        {
+          "name": "createCrudHooks",
+          "category": "Hook Factory",
+          "avgExecutionTime": 0.5456249999996317,
+          "minExecutionTime": 0.12500000002546585,
+          "maxExecutionTime": 25.12500000000273,
+          "totalExecutionTime": 545.6249999996317,
+          "operationsPerSecond": 1832760.5956484308,
+          "memoryUsage": {
+            "heapUsed": 20905458,
+            "heapTotal": 28380512,
+            "external": 3586723,
+            "rss": 190572331
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createQueryHook",
+          "category": "Hook Factory",
+          "avgExecutionTime": 0.20630000000164728,
+          "minExecutionTime": 0.08299999990413198,
+          "maxExecutionTime": 17.00000000005275,
+          "totalExecutionTime": 206.30000000164728,
+          "operationsPerSecond": 4847309.743053879,
+          "memoryUsage": {
+            "heapUsed": 20905458,
+            "heapTotal": 25200001,
+            "external": 3568063,
+            "rss": 190588273
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createMutationHook",
+          "category": "Hook Factory",
+          "avgExecutionTime": 0.24600100000134262,
+          "minExecutionTime": 0.08299999990413198,
+          "maxExecutionTime": 23.791999999957625,
+          "totalExecutionTime": 246.00100000134262,
+          "operationsPerSecond": 4065024.1258960012,
+          "memoryUsage": {
+            "heapUsed": 20905458,
+            "heapTotal": 25207095,
+            "external": 3576670,
+            "rss": 190595072
+          },
+          "iterations": 1000,
+          "success": true
+        },
+        {
+          "name": "createOptimisticMutation",
+          "category": "Hook Factory",
+          "avgExecutionTime": 0.23994300000083513,
+          "minExecutionTime": 0.08299999990413198,
+          "maxExecutionTime": 21.166999999991276,
+          "totalExecutionTime": 239.94300000083513,
+          "operationsPerSecond": 4167656.485067368,
+          "memoryUsage": {
+            "heapUsed": 20905458,
+            "heapTotal": 25192038,
+            "external": 3590456,
+            "rss": 190595072
+          },
+          "iterations": 1000,
+          "success": true
+        }
+      ],
+      "columnFactory": []
+    },
+    "baseline": {
+      "routeHelpers": 219.88177125000016,
+      "errorFactory": 0.725517833333465,
+      "schemaFactories": 22.62042362499885,
+      "hookFactory": 0.30946725000086417,
+      "columnFactory": 0
+    }
+  },
+  "metadata": {
+    "nodeVersion": "v24.3.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "memoryLimit": "default"
+  }
+}

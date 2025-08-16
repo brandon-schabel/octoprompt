@@ -35,7 +35,7 @@ const mockPromptStorage = {
     mockPromptsDb = JSON.parse(JSON.stringify(data))
     return mockPromptsDb
   },
-  readPromptProjects: async () => JSON.parse(JSON.stringify(mockPromptProjectsDb)),
+  readPromptProjectAssociations: async () => JSON.parse(JSON.stringify(mockPromptProjectsDb)),
   writePromptProjects: async (data: PromptProject[]) => {
     mockPromptProjectsDb = JSON.parse(JSON.stringify(data))
     return mockPromptProjectsDb

@@ -37,16 +37,23 @@ routes/
 └── ...
 ```
 
-### Standard Route Pattern
+### Standard Route Pattern ⭐ **UPDATED WITH ROUTE HELPERS**
 
-Every route file follows this pattern:
+Every route file now follows this standardized pattern using route helpers:
 
 ```typescript
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { ApiErrorResponseSchema } from '@promptliano/schemas'
+import { 
+  createStandardResponses, 
+  createStandardResponsesWithStatus,
+  standardResponses,
+  successResponse, 
+  operationSuccessResponse 
+} from '../utils/route-helpers'
 import * as service from '@promptliano/services'
 
-// 1. Define schemas
+// 1. Define schemas (unchanged)
 const RequestSchema = z.object({
   // Request validation
 })
@@ -58,46 +65,185 @@ const ResponseSchema = z.object({
   })
 })
 
-// 2. Create route definition
-const exampleRoute = createRoute({
-  method: 'post',
+// 2. Create route definition with standardized responses
+const exampleGetRoute = createRoute({
+  method: 'get',
+  path: '/api/example/{id}',
+  tags: ['Example'],
+  summary: 'Get example by ID',
+  request: {
+    params: z.object({ id: z.string() })
+  },
+  responses: createStandardResponses(ResponseSchema) // ⭐ NEW: Standardized responses
+})
+
+const exampleCreateRoute = createRoute({
+  method: 'post', 
   path: '/api/example',
   tags: ['Example'],
-  summary: 'Brief description',
+  summary: 'Create new example',
   request: {
     body: { content: { 'application/json': { schema: RequestSchema } } }
   },
+  responses: createStandardResponsesWithStatus(ResponseSchema, 201, 'Example created successfully') // ⭐ NEW: 201 with standard errors
+})
+
+// 3. Export routes with enhanced error handling
+export const exampleRoutes = new OpenAPIHono()
+  .openapi(exampleGetRoute, async (c) => {
+    const { id } = c.req.valid('param')
+    const result = await service.getExample(parseInt(id))
+    
+    return c.json(successResponse(result)) // ⭐ NEW: Helper function
+  })
+  .openapi(exampleCreateRoute, async (c) => {
+    const body = c.req.valid('json')
+    const result = await service.createExample(body)
+
+    return c.json(successResponse(result), 201) // ⭐ NEW: Helper with status
+  })
+```
+
+### Available Route Helper Functions ⭐ **NEW UTILITIES**
+
+**Response Helper Functions:**
+```typescript
+// Standard response sets (replaces manual response definitions)
+createStandardResponses(successSchema: z.ZodTypeAny): ResponseObject
+createStandardResponsesWithStatus(schema: z.ZodTypeAny, statusCode: number, description: string): ResponseObject
+
+// Individual response builders
+successResponse<T>(data: T): { success: true, data: T }
+operationSuccessResponse(message?: string): { success: true, message: string }
+
+// Standard error responses for manual composition
+standardResponses: {
+  400: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Bad Request' },
+  404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Not Found' },
+  422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+  500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+}
+```
+
+**Error Handling Helpers:**
+```typescript
+// Automatic error boundary for route handlers
+withErrorHandling<T>(handler: (c: Context) => Promise<T>): (c: Context) => Promise<T>
+
+// Route parameter validation
+validateRouteParam(c: Context, paramName: string, type: 'number' | 'string'): number | string
+
+// Advanced route handler factory
+createRouteHandler<TParams, TQuery, TBody, TResponse>(
+  handler: (args: { params?: TParams, query?: TQuery, body?: TBody, c: Context }) => Promise<TResponse>
+): (c: Context) => Promise<Response>
+```
+
+### Migration from Old Pattern ⭐ **BEFORE/AFTER COMPARISON**
+
+**Before (Manual Response Definitions):**
+```typescript
+// Old pattern - 15+ lines of repetitive response definitions
+const oldRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{id}',
   responses: {
     200: {
-      content: { 'application/json': { schema: ResponseSchema } },
-      description: 'Success response'
+      content: { 'application/json': { schema: ProjectResponseSchema } },
+      description: 'Project retrieved successfully'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Project not found'  
     },
     422: {
       content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
+      description: 'Validation error'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal server error'
     }
   }
 })
+```
 
-// 3. Export routes
-export const exampleRoutes = new OpenAPIHono().openapi(exampleRoute, async (c) => {
-  const body = c.req.valid('json')
-  const result = await service.doSomething(body)
-
-  return c.json({
-    success: true,
-    data: result
-  })
+**After (Standardized Route Helpers):**
+```typescript
+// New pattern - 1 line with consistent error handling
+const newRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{id}',
+  responses: createStandardResponses(ProjectResponseSchema) // ⭐ Replaces 15+ lines
 })
 ```
 
-## Creating New API Routes
+### Special Response Patterns
+
+**For 201 Created Routes:**
+```typescript
+const createRoute = createRoute({
+  method: 'post',
+  path: '/api/projects',
+  responses: createStandardResponsesWithStatus(ProjectResponseSchema, 201, 'Project created successfully')
+})
+```
+
+**For Custom Status Codes with Standard Errors:**
+```typescript
+const customRoute = createRoute({
+  method: 'post',
+  path: '/api/complex-operation',
+  responses: {
+    202: {
+      content: { 'application/json': { schema: AcceptedResponseSchema } },
+      description: 'Operation accepted for processing'
+    },
+    409: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Resource conflict'
+    },
+    ...standardResponses // ⭐ Spread standard error responses
+  }
+})
+```
+
+**For Streaming/Binary Responses (Keep Manual):**
+```typescript
+const streamingRoute = createRoute({
+  method: 'get', 
+  path: '/api/stream',
+  responses: {
+    200: {
+      content: {
+        'text/event-stream': {
+          schema: z.string().openapi({ description: 'Server-sent events stream' })
+        }
+      },
+      description: 'Event stream'
+    },
+    ...standardResponses // ⭐ Still include standard errors
+  }
+})
+```
+
+## Creating New API Routes ⭐ **UPDATED PROCESS**
 
 ### 1. File Structure
 
-Create a new route file following the naming convention:
+Create a new route file following the naming convention and import the new route helpers:
 
 ```typescript
+// packages/server/src/routes/my-feature-routes.ts
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import { 
+  createStandardResponses, 
+  createStandardResponsesWithStatus,
+  standardResponses,
+  successResponse, 
+  operationSuccessResponse 
+} from '../utils/route-helpers' // ⭐ NEW: Import helpers
+import { ApiErrorResponseSchema } from '@promptliano/schemas'
 // packages/server/src/routes/feature-routes.ts
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { ApiErrorResponseSchema } from '@promptliano/schemas'

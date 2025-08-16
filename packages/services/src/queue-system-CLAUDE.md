@@ -178,7 +178,7 @@ await flowService.dequeueTask(taskId)
 ```typescript
 // AI agents pull next item from queue
 const nextItem = await queueService.getNextQueueItem(queueId, {
-  agentId: 'frontend-shadcn-expert',
+  agentId: 'promptliano-ui-architect',
   preferredType: 'task' // Prefer tasks over tickets
 })
 ```
@@ -299,7 +299,7 @@ mcp__promptliano__queue_processor(
   action: "get_next_task",
   data: {
     queueId: 123,
-    agentId: "frontend-shadcn-expert"
+    agentId: "promptliano-ui-architect"
   }
 )
 

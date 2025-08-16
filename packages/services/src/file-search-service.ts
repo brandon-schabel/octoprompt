@@ -1,6 +1,7 @@
 import type { ProjectFile, Ticket } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
 import { DatabaseManager } from '@promptliano/storage'
+import { ErrorFactory, withErrorContext } from './utils/error-factory'
 import type { Database, Statement } from 'bun:sqlite'
 import { getProjectFiles } from './project-service'
 import { fileIndexingService } from './file-indexing-service'
@@ -161,11 +162,7 @@ export class FileSearchService {
         }
       }
     } catch (error) {
-      throw new ApiError(
-        500,
-        `Search failed: ${error instanceof Error ? error.message : String(error)}`,
-        'SEARCH_FAILED'
-      )
+      throw ErrorFactory.operationFailed('file search', error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -345,11 +342,7 @@ export class FileSearchService {
       regex = new RegExp(options.query, options.caseSensitive ? 'g' : 'gi')
     } catch (error) {
       console.error(`[FileSearchService] Invalid regex pattern: ${options.query}`, error)
-      throw new ApiError(
-        400,
-        `Invalid regex pattern: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'INVALID_REGEX'
-      )
+      throw ErrorFactory.invalidParam('query', 'valid regex pattern', options.query)
     }
 
     try {
@@ -392,7 +385,7 @@ export class FileSearchService {
         }
       }
     } catch (error) {
-      throw new ApiError(400, 'Invalid regex pattern', 'INVALID_REGEX')
+      throw ErrorFactory.invalidParam('regex', 'valid regular expression', options.query)
     }
     return results
   }

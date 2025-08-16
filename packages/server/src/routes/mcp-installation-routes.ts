@@ -14,6 +14,7 @@ import {
   type MCPStatus
 } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
+import { createStandardResponses, successResponse } from '../utils/route-helpers'
 
 // Schemas
 const MCPToolInfoSchema = z.object({
@@ -24,6 +25,124 @@ const MCPToolInfoSchema = z.object({
   configExists: z.boolean().optional(),
   hasPromptliano: z.boolean().optional()
 })
+
+// Response schemas
+const DetectToolsResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      tools: z.array(MCPToolInfoSchema),
+      platform: z.string()
+    })
+  })
+  .openapi('DetectToolsResponse')
+
+const InstallationStatusResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      projectConfig: z
+        .object({
+          projectId: z.number(),
+          projectName: z.string(),
+          mcpEnabled: z.boolean(),
+          installedTools: z.array(
+            z.object({
+              tool: z.string(),
+              installedAt: z.number(),
+              configPath: z.string().optional(),
+              serverName: z.string()
+            })
+          ),
+          customInstructions: z.string().optional()
+        })
+        .nullable(),
+      connectionStatus: z.object({
+        connected: z.boolean(),
+        sessionId: z.string().optional(),
+        lastActivity: z.number().optional(),
+        projectId: z.number().optional()
+      })
+    })
+  })
+  .openapi('InstallationStatusResponse')
+
+const InstallResultResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      message: z.string(),
+      configPath: z.string().optional(),
+      backedUp: z.boolean().optional(),
+      backupPath: z.string().optional()
+    })
+  })
+  .openapi('InstallResultResponse')
+
+const UninstallResultResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      message: z.string()
+    })
+  })
+  .openapi('UninstallResultResponse')
+
+const GlobalMCPStatusResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      totalSessions: z.number(),
+      projectSessions: z.number(),
+      projectStatuses: z.array(
+        z.object({
+          projectId: z.number(),
+          connected: z.boolean(),
+          sessionId: z.string().optional(),
+          lastActivity: z.number().optional()
+        })
+      )
+    })
+  })
+  .openapi('GlobalMCPStatusResponse')
+
+const ProjectConfigResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      projectConfig: z.object({
+        projectId: z.number(),
+        projectName: z.string(),
+        mcpEnabled: z.boolean(),
+        installedTools: z.array(z.any()),
+        customInstructions: z.string().optional()
+      })
+    })
+  })
+  .openapi('ProjectConfigResponse')
+
+const BatchInstallResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      results: z.array(
+        z.object({
+          tool: z.string(),
+          success: z.boolean(),
+          message: z.string(),
+          configPath: z.string().optional(),
+          backedUp: z.boolean().optional(),
+          backupPath: z.string().optional()
+        })
+      ),
+      summary: z.object({
+        total: z.number(),
+        succeeded: z.number(),
+        failed: z.number()
+      })
+    })
+  })
+  .openapi('BatchInstallResponse')
 
 const MCPInstallBodySchema = z.object({
   tool: z.enum(['claude-desktop', 'vscode', 'cursor', 'continue', 'claude-code', 'windsurf']),
@@ -45,22 +164,7 @@ const MCPBatchInstallBodySchema = z.object({
 const detectInstalledToolsRoute = createRoute({
   method: 'get',
   path: '/api/mcp/installation/detect',
-  responses: {
-    200: {
-      description: 'Detected MCP tools',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              tools: z.array(MCPToolInfoSchema),
-              platform: z.string()
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(DetectToolsResponseSchema),
   tags: ['MCP Installation'],
   description: 'Detect installed MCP-compatible tools'
 })
@@ -73,42 +177,7 @@ const getInstallationStatusRoute = createRoute({
       projectId: z.coerce.number().int().positive()
     })
   },
-  responses: {
-    200: {
-      description: 'MCP installation status',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              projectConfig: z
-                .object({
-                  projectId: z.number(),
-                  projectName: z.string(),
-                  mcpEnabled: z.boolean(),
-                  installedTools: z.array(
-                    z.object({
-                      tool: z.string(),
-                      installedAt: z.number(),
-                      configPath: z.string().optional(),
-                      serverName: z.string()
-                    })
-                  ),
-                  customInstructions: z.string().optional()
-                })
-                .nullable(),
-              connectionStatus: z.object({
-                connected: z.boolean(),
-                sessionId: z.string().optional(),
-                lastActivity: z.number().optional(),
-                projectId: z.number().optional()
-              })
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(InstallationStatusResponseSchema),
   tags: ['MCP Installation'],
   description: 'Get MCP installation and connection status for a project'
 })
@@ -128,24 +197,7 @@ const installMCPRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      description: 'Installation result',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              message: z.string(),
-              configPath: z.string().optional(),
-              backedUp: z.boolean().optional(),
-              backupPath: z.string().optional()
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(InstallResultResponseSchema),
   tags: ['MCP Installation'],
   description: 'Install Promptliano MCP for a specific tool'
 })
@@ -165,21 +217,7 @@ const uninstallMCPRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      description: 'Uninstall result',
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              message: z.string()
-            })
-          })
-        }
-      }
-    }
-  },
+  responses: createStandardResponses(UninstallResultResponseSchema),
   tags: ['MCP Installation'],
   description: 'Uninstall Promptliano MCP for a specific tool'
 })
@@ -354,13 +392,10 @@ export const mcpInstallationRoutes = new OpenAPIHono()
       const tools = await mcpInstallationService.detectInstalledTools()
       const platform = process.platform
 
-      return c.json({
-        success: true,
-        data: {
-          tools,
-          platform
-        }
-      })
+      return c.json(successResponse({
+        tools,
+        platform
+      }))
     } catch (error) {
       throw new ApiError(500, `Failed to detect tools: ${error}`)
     }
@@ -382,13 +417,10 @@ export const mcpInstallationRoutes = new OpenAPIHono()
       // Get connection status
       const connectionStatus = await mcpConfigManager.getProjectStatus(projectId)
 
-      return c.json({
-        success: true,
-        data: {
-          projectConfig,
-          connectionStatus
-        }
-      })
+      return c.json(successResponse({
+        projectConfig,
+        connectionStatus
+      }))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(500, `Failed to get installation status: ${error}`)
@@ -424,15 +456,12 @@ export const mcpInstallationRoutes = new OpenAPIHono()
       const serverName = `promptliano-${project.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
       await mcpConfigManager.addInstalledTool(projectId, tool, result.configPath, serverName)
 
-      return c.json({
-        success: true,
-        data: {
-          message: result.message,
-          configPath: result.configPath,
-          backedUp: result.backedUp,
-          backupPath: result.backupPath
-        }
-      })
+      return c.json(successResponse({
+        message: result.message,
+        configPath: result.configPath,
+        backedUp: result.backedUp,
+        backupPath: result.backupPath
+      }))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(500, `Failed to install MCP: ${error}`)

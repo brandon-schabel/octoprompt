@@ -3,7 +3,7 @@
 // Import all tool groups
 import { documentationSearchTool, websiteDemoRunnerTool } from './website'
 import { mcpConfigGeneratorTool, mcpCompatibilityCheckerTool, mcpSetupValidatorTool } from './setup'
-import { tabManagerTool, jobManagerTool } from './ui'
+import { tabManagerTool } from './ui'
 import { aiAssistantTool, agentManagerTool } from './content'
 import { projectManagerTool, promptManagerTool, markdownPromptManagerTool } from './project'
 import { ticketManagerTool, taskManagerTool, queueManagerTool, queueProcessorTool } from './workflow'
@@ -38,7 +38,6 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   mcpSetupValidatorTool,
   // UI tools
   tabManagerTool,
-  jobManagerTool,
   // Command tool
   commandManagerTool,
   // Git tool

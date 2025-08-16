@@ -4,11 +4,13 @@
 // - Support for multiple AI agent configuration formats
 // - Global and project-specific file detection
 // - Added metadata extraction for each file type
+// - Converted to use ErrorFactory pattern for consistent error handling
 
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
 import { z } from 'zod'
+import { ErrorFactory, assertExists, withErrorContext } from './utils/error-factory'
 
 export const DetectedAgentFileSchema = z.object({
   type: z.string(),
@@ -218,39 +220,46 @@ export class AgentFileDetectionService {
   }
 
   async createAgentFile(filePath: string, initialContent: string = ''): Promise<{ success: boolean; message: string }> {
-    try {
-      const dir = path.dirname(filePath)
+    return withErrorContext(
+      async () => {
+        const dir = path.dirname(filePath)
 
-      // Ensure directory exists
-      await fs.mkdir(dir, { recursive: true })
-
-      // Check if file already exists
-      try {
-        await fs.access(filePath)
-        return {
-          success: false,
-          message: 'File already exists'
+        // Ensure directory exists
+        try {
+          await fs.mkdir(dir, { recursive: true })
+        } catch (error) {
+          throw ErrorFactory.fileSystemError('create directory', dir, error instanceof Error ? error.message : 'Unknown error')
         }
-      } catch {
-        // File doesn't exist, good to create
-      }
 
-      // Create the file
-      await fs.writeFile(filePath, initialContent, 'utf-8')
+        // Check if file already exists
+        try {
+          await fs.access(filePath)
+          throw ErrorFactory.duplicate('Agent file', 'path', filePath)
+        } catch (error) {
+          // If it's not our duplicate error, file doesn't exist - good to create
+          if (error instanceof Error && (error as any).code === 'DUPLICATE_ENTITY') throw error
+        }
 
-      return {
-        success: true,
-        message: 'Successfully created agent file'
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: `Failed to create agent file: ${error instanceof Error ? error.message : 'Unknown error'}`
-      }
-    }
+        // Create the file
+        try {
+          await fs.writeFile(filePath, initialContent, 'utf-8')
+        } catch (error) {
+          throw ErrorFactory.fileSystemError('create file', filePath, error instanceof Error ? error.message : 'Unknown error')
+        }
+
+        return {
+          success: true,
+          message: 'Successfully created agent file'
+        }
+      },
+      { entity: 'Agent File', action: 'create', id: filePath }
+    ).catch(error => ({
+      success: false,
+      message: `Failed to create agent file: ${error instanceof Error ? error.message : 'Unknown error'}`
+    }))
   }
 
-  getSuggestedFiles(projectPath: string, existingFiles: DetectedAgentFile[]): AgentFilePattern[] {
+  getSuggestedFiles(projectPath: string, existingFiles: DetectedAgentFile[]): (AgentFilePattern & { suggestedPath: string })[] {
     const existingTypes = new Set(existingFiles.map((f) => f.type))
 
     return this.patterns

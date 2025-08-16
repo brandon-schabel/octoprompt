@@ -89,8 +89,24 @@ export interface RateLimitConfig {
 }
 
 export interface ServerConfig {
+  // Core server settings
+  host: string
+  port: number
+  basePath: string
+  staticPath: string
+  idleTimeout: number
+  
+  // CORS configuration
   corsOrigin: string
   corsConfig: CorsConfig
+  
+  // Environment-specific
+  environment: 'development' | 'test' | 'production'
+  isDevEnv: boolean
+  isTestEnv: boolean
+  isProdEnv: boolean
+  
+  // Legacy compatibility (will be removed in future)
   serverHost: string
   serverPort: string | number
   devPort: number
@@ -98,9 +114,50 @@ export interface ServerConfig {
   clientPort: number
   clientUrl: string
   apiUrl: string
-  isDevEnv: boolean
-  isTestEnv: boolean
-  isProdEnv: boolean
+}
+
+export interface DatabaseConfig {
+  // Database file configuration
+  path: string
+  dataDir: string
+  
+  // Backup configuration
+  backupEnabled: boolean
+  backupInterval: number // milliseconds
+  maxBackups: number
+  
+  // Performance settings
+  walMode: boolean
+  cacheSize: number // MB
+  tempStore: 'memory' | 'file'
+  mmapSize: number // bytes
+  
+  // Platform-specific paths
+  platformDefaults: {
+    darwin: string // macOS
+    win32: string // Windows
+    linux: string // Linux
+    fallback: string // Other
+  }
+}
+
+export interface RuntimeConfig {
+  // Logging
+  logLevel: 'error' | 'warn' | 'info' | 'debug' | 'trace'
+  debugMode: boolean
+  
+  // Performance
+  maxRequestSize: string // e.g., '50mb'
+  timeout: number // milliseconds
+  compression: boolean
+  
+  // Feature flags
+  features: {
+    mcp: boolean
+    websocket: boolean
+    jobQueue: boolean
+    aiSummarization: boolean
+  }
 }
 
 export interface AppConfig {
@@ -112,6 +169,8 @@ export interface AppConfig {
 export interface GlobalConfig {
   app: AppConfig
   server: ServerConfig
+  database: DatabaseConfig
+  runtime: RuntimeConfig
   models: ModelConfig
   providers: ProviderConfig
   files: FilesConfig

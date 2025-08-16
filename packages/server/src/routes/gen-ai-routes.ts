@@ -2,13 +2,14 @@ import { createRoute, z } from '@hono/zod-openapi'
 
 import { ApiError } from '@promptliano/shared'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
+import { createStandardResponses, successResponse } from '../utils/route-helpers'
 import { ModelsQuerySchema } from '@promptliano/schemas'
 import {
   AiGenerateTextRequestSchema,
   AiGenerateTextResponseSchema,
   AiGenerateStructuredRequestSchema,
   AiGenerateStructuredResponseSchema,
-  StructuredDataSchemaConfig,
+  type StructuredDataSchemaConfig,
   ModelsListResponseSchema,
   structuredDataSchemas
 } from '@promptliano/schemas'
@@ -21,9 +22,9 @@ import {
   providerKeyService,
   updateProviderSettings
 } from '@promptliano/services' // Import the service instance
-import { APIProviders, ProviderKey } from '@promptliano/schemas'
+import { type APIProviders, type ProviderKey } from '@promptliano/schemas'
 import {
-  ProviderKeysConfig,
+  type ProviderKeysConfig,
   ModelFetcherService
 } from '@promptliano/services/src/model-providers/model-fetcher-service'
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@promptliano/services/src/model-providers/provider-defaults'
@@ -46,6 +47,16 @@ const FilenameSuggestionSchema = z
   })
   .openapi('FilenameSuggestionOutput')
 
+const ProvidersListResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    isCustom: z.boolean().optional(),
+    baseUrl: z.string().optional()
+  }))
+}).openapi('ProvidersListResponse')
+
 // Use the imported structuredDataSchemas from @promptliano/schemas
 // which now includes all our asset generators
 
@@ -54,28 +65,7 @@ const getProvidersRoute = createRoute({
   path: '/api/providers',
   tags: ['AI'],
   summary: 'Get all available providers including custom ones',
-  responses: {
-    200: {
-      content: {
-        'application/json': { 
-          schema: z.object({
-            success: z.literal(true),
-            data: z.array(z.object({
-              id: z.string(),
-              name: z.string(),
-              isCustom: z.boolean().optional(),
-              baseUrl: z.string().optional()
-            }))
-          }).openapi('ProvidersListResponse')
-        }
-      },
-      description: 'List of all available providers.'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ProvidersListResponseSchema)
 })
 
 const getModelsRoute = createRoute({
@@ -86,24 +76,7 @@ const getModelsRoute = createRoute({
   request: {
     query: ModelsQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ModelsListResponseSchema } },
-      description: 'Successfully retrieved model list'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Invalid provider or configuration error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ModelsListResponseSchema)
 })
 
 const generateTextRoute = createRoute({
@@ -117,20 +90,7 @@ const generateTextRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: AiGenerateTextResponseSchema } },
-      description: 'Successfully generated text'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error (invalid input)'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error or AI Provider Error'
-    }
-  }
+  responses: createStandardResponses(AiGenerateTextResponseSchema)
 })
 
 const generateStreamRoute = createRoute({
@@ -168,25 +128,7 @@ const generateStructuredRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: AiGenerateStructuredResponseSchema } }, // Uses the generic response schema
-      description: 'Successfully generated structured data'
-    },
-    400: {
-      // Bad Request for invalid schemaKey
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Bad Request: Invalid or unknown schemaKey provided.'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error (invalid input)'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error or AI Provider Error'
-    }
-  }
+  responses: createStandardResponses(AiGenerateStructuredResponseSchema)
 })
 
 const postAiGenerateTextRoute = createRoute({
@@ -205,26 +147,7 @@ const postAiGenerateTextRoute = createRoute({
       description: 'Prompt, provider, model, and options for text generation.'
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': { schema: AiGenerateTextResponseSchema } // Use the NEW response schema
-      },
-      description: 'Successfully generated text response.'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error (invalid request body)'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Bad Request (e.g., missing API key, invalid provider/model)'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error or AI provider communication error'
-    }
-  }
+  responses: createStandardResponses(AiGenerateTextResponseSchema)
 })
 
 // Schema for updating provider settings
@@ -250,22 +173,9 @@ const updateProviderSettingsRoute = createRoute({
       description: 'Provider settings to update'
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: OperationSuccessResponseSchema.extend({
-            data: UpdateProviderSettingsSchema
-          })
-        }
-      },
-      description: 'Successfully updated provider settings'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema.extend({
+    data: UpdateProviderSettingsSchema
+  }))
 })
 
 export const genAiRoutes = new OpenAPIHono()
@@ -296,13 +206,7 @@ export const genAiRoutes = new OpenAPIHono()
       // Combine both lists
       const allProviders = [...predefinedProviders, ...formattedCustomProviders]
       
-      return c.json(
-        {
-          success: true,
-          data: allProviders
-        },
-        200
-      )
+      return c.json(successResponse(allProviders))
     } catch (error) {
       console.error('Failed to fetch providers:', error)
       throw new ApiError(500, 'Failed to fetch providers', 'PROVIDERS_FETCH_ERROR')
@@ -335,13 +239,7 @@ export const genAiRoutes = new OpenAPIHono()
       systemMessage: body.systemMessage
     })
 
-    return c.json(
-      {
-        success: true,
-        data: { text: generatedText }
-      } satisfies z.infer<typeof AiGenerateTextResponseSchema>,
-      200
-    )
+    return c.json(successResponse({ text: generatedText }))
   })
   .openapi(generateStructuredRoute, async (c) => {
     const body = c.req.valid('json')
@@ -369,13 +267,7 @@ export const genAiRoutes = new OpenAPIHono()
       systemMessage: finalSystemPrompt
     })
 
-    return c.json(
-      {
-        success: true,
-        data: { output: result.object }
-      } satisfies z.infer<typeof AiGenerateStructuredResponseSchema>,
-      200
-    )
+    return c.json(successResponse({ output: result.object }))
   })
   .openapi(getModelsRoute, async (c) => {
     const { provider } = c.req.valid('query')
@@ -401,22 +293,10 @@ export const genAiRoutes = new OpenAPIHono()
               provider
             }))
             
-            return c.json(
-              {
-                success: true,
-                data: modelData
-              } satisfies z.infer<typeof ModelsListResponseSchema>,
-              200
-            )
+            return c.json(successResponse(modelData))
           } catch (error) {
             console.error(`Failed to fetch models for custom provider ${keyId}:`, error)
-            return c.json(
-              {
-                success: true,
-                data: [] // Return empty array on error
-              } satisfies z.infer<typeof ModelsListResponseSchema>,
-              200
-            )
+            return c.json(successResponse([]))
           }
         }
       }
@@ -453,13 +333,7 @@ export const genAiRoutes = new OpenAPIHono()
       provider
     }))
 
-    return c.json(
-      {
-        success: true,
-        data: modelData
-      } satisfies z.infer<typeof ModelsListResponseSchema>,
-      200
-    )
+    return c.json(successResponse(modelData))
   })
   .openapi(postAiGenerateTextRoute, async (c) => {
     const { prompt, options, systemMessage } = c.req.valid('json')
@@ -474,11 +348,7 @@ export const genAiRoutes = new OpenAPIHono()
       systemMessage
     })
 
-    const responsePayload: z.infer<typeof AiGenerateTextResponseSchema> = {
-      success: true,
-      data: { text: generatedText }
-    }
-    return c.json(responsePayload, 200)
+    return c.json(successResponse({ text: generatedText }))
   })
   .openapi(updateProviderSettingsRoute, async (c) => {
     const body = c.req.valid('json')
@@ -491,11 +361,5 @@ export const genAiRoutes = new OpenAPIHono()
       console.log('[GenAI Routes] Provider settings updated:', body)
     }
 
-    return c.json(
-      {
-        success: true,
-        data: updatedSettings
-      },
-      200
-    )
+    return c.json(successResponse(updatedSettings))
   })

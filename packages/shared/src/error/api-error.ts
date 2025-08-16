@@ -19,3 +19,5 @@ export class ApiError extends Error {
     }
   }
 }
+
+// ParseError is defined in domain-error.ts

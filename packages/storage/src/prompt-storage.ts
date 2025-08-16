@@ -1,385 +1,236 @@
-import { z, ZodError } from 'zod'
+import { z } from 'zod'
 import { PromptSchema, PromptProjectSchema, type Prompt, type PromptProject } from '@promptliano/schemas'
-import { DatabaseManager, getDb } from './database-manager'
+import { BaseStorage } from './base-storage'
+import { 
+  createEntityConverter,
+  createStandardMappings,
+  getInsertColumnsFromMappings,
+  getInsertValuesFromEntity,
+  FieldMapping
+} from './utils/storage-helpers'
 import { ApiError } from '@promptliano/shared'
-import { toNumber, SqliteConverters } from '@promptliano/shared/src/utils/sqlite-converters'
+import { SqliteConverters } from '@promptliano/shared/src/utils/sqlite-converters'
 
 // --- Schemas for Storage ---
-// Store all prompts (metadata) as a map (Record) keyed by promptId
 export const PromptsStorageSchema = z.record(z.string(), PromptSchema)
 export type PromptsStorage = z.infer<typeof PromptsStorageSchema>
 
-// Store all prompt-project associations
 export const PromptProjectsStorageSchema = z.array(PromptProjectSchema)
 export type PromptProjectsStorage = z.infer<typeof PromptProjectsStorageSchema>
 
-// --- Database Helper Functions ---
-
 /**
- * Validates data against a schema and returns the validated data.
+ * Prompt storage implementation using BaseStorage
  */
-async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: string): Promise<T> {
-  const validationResult = await schema.safeParseAsync(data)
-  if (!validationResult.success) {
-    console.error(`Zod validation failed for ${context}:`, validationResult.error.errors)
-    throw new ApiError(400, `Validation failed for ${context}`, 'VALIDATION_ERROR')
+class PromptStorage extends BaseStorage<Prompt, PromptsStorage> {
+  protected readonly tableName = 'prompts'
+  protected readonly entitySchema = PromptSchema as any
+  protected readonly storageSchema = PromptsStorageSchema as any
+
+  private readonly fieldMappings = {
+    id: { dbColumn: 'id', converter: (v: any) => SqliteConverters.toNumber(v) },
+    name: { dbColumn: 'name', converter: (v: any) => SqliteConverters.toString(v) },
+    content: { dbColumn: 'content', converter: (v: any) => SqliteConverters.toString(v) },
+    projectId: { dbColumn: 'project_id', converter: (v: any) => v === null || v === undefined ? undefined : SqliteConverters.toNumber(v) },
+    created: { dbColumn: 'created_at', converter: (v: any) => SqliteConverters.toTimestamp(v) },
+    updated: { dbColumn: 'updated_at', converter: (v: any) => SqliteConverters.toTimestamp(v) }
+  } as Record<keyof Prompt, FieldMapping>
+
+  private readonly converter = createEntityConverter(
+    this.entitySchema,
+    this.fieldMappings
+  )
+
+  protected rowToEntity(row: any): Prompt {
+    return this.converter(row)
   }
-  return validationResult.data
+
+  protected getSelectColumns(): string[] {
+    return ['id', 'name', 'content', 'project_id', 'created_at', 'updated_at']
+  }
+
+  protected getInsertColumns(): string[] {
+    return getInsertColumnsFromMappings(this.fieldMappings)
+  }
+
+  protected getInsertValues(entity: Prompt): any[] {
+    return getInsertValuesFromEntity(entity, this.fieldMappings)
+  }
+
+  // Convenience methods maintaining backward compatibility
+  async readPrompts(): Promise<PromptsStorage> {
+    return this.readAll()
+  }
+
+  async writePrompts(prompts: PromptsStorage): Promise<PromptsStorage> {
+    return this.writeAll(prompts)
+  }
+
+  async readPromptsByProject(projectId: number): Promise<PromptsStorage> {
+    return this.readAll('project_id = ?', [projectId])
+  }
+
+  async countPromptsByProject(projectId: number): Promise<number> {
+    return this.count('project_id = ?', [projectId])
+  }
+
+  async readPromptProjectAssociations(): Promise<PromptProjectsStorage> {
+    try {
+      const db = this.getDb()
+      const database = db.getDatabase()
+
+      const query = database.prepare(`
+        SELECT id, prompt_id, project_id
+        FROM prompt_projects
+        ORDER BY prompt_id, project_id
+      `)
+
+      const rows = query.all() as any[]
+      const associations: PromptProjectsStorage = []
+
+      for (const row of rows) {
+        const association: PromptProject = {
+          id: row.id,
+          promptId: row.prompt_id,
+          projectId: row.project_id
+        }
+
+        // Validate each association
+        const validated = await this.validateData(association, PromptProjectSchema, 'prompt-project association')
+        associations.push(validated)
+      }
+
+      return associations
+    } catch (error: any) {
+      console.error('Error reading prompt-project associations:', error)
+      throw new ApiError(500, 'Failed to read prompt-project associations', 'DB_READ_ERROR', error)
+    }
+  }
+
+  async writePromptProjectAssociations(associations: PromptProjectsStorage): Promise<PromptProjectsStorage> {
+    try {
+      const db = this.getDb()
+      const database = db.getDatabase()
+
+      // Validate input
+      const validated = await this.validateData(associations, PromptProjectsStorageSchema, 'prompt-project associations')
+
+      // Use transaction to ensure atomicity
+      database.transaction(() => {
+        // Clear existing associations
+        database.exec(`DELETE FROM prompt_projects`)
+
+        // Insert new associations
+        const insertStmt = database.prepare(`
+          INSERT INTO prompt_projects (prompt_id, project_id)
+          VALUES (?, ?)
+        `)
+
+        for (const association of validated) {
+          insertStmt.run(association.promptId, association.projectId)
+        }
+      })()
+
+      return validated
+    } catch (error: any) {
+      console.error('Error writing prompt-project associations:', error)
+      throw new ApiError(500, 'Failed to write prompt-project associations', 'DB_WRITE_ERROR', error)
+    }
+  }
+
+  async addPrompt(prompt: Prompt): Promise<Prompt> {
+    return this.add(prompt)
+  }
+
+  async replacePrompt(promptId: number, prompt: Prompt): Promise<boolean> {
+    try {
+      await this.update(promptId, prompt)
+      return true
+    } catch (error: any) {
+      if (error.code === 'NOT_FOUND') {
+        return false
+      }
+      throw error
+    }
+  }
+
+  async removePrompt(promptId: number): Promise<void> {
+    await this.delete(promptId)
+  }
+
+  async addPromptToProject(promptId: number, projectId: number): Promise<void> {
+    try {
+      const db = this.getDb()
+      const database = db.getDatabase()
+
+      const insertStmt = database.prepare(`
+        INSERT OR IGNORE INTO prompt_projects (prompt_id, project_id)
+        VALUES (?, ?)
+      `)
+
+      insertStmt.run(promptId, projectId)
+    } catch (error: any) {
+      console.error(`Error adding prompt ${promptId} to project ${projectId}:`, error)
+      throw new ApiError(500, 'Failed to add prompt to project', 'DB_WRITE_ERROR', error)
+    }
+  }
+
+  async removePromptFromProject(promptId: number, projectId: number): Promise<void> {
+    try {
+      const db = this.getDb()
+      const database = db.getDatabase()
+
+      const deleteStmt = database.prepare(`
+        DELETE FROM prompt_projects
+        WHERE prompt_id = ? AND project_id = ?
+      `)
+
+      deleteStmt.run(promptId, projectId)
+    } catch (error: any) {
+      console.error(`Error removing prompt ${promptId} from project ${projectId}:`, error)
+      throw new ApiError(500, 'Failed to remove prompt from project', 'DB_DELETE_ERROR', error)
+    }
+  }
+
+  async isPromptInProject(promptId: number, projectId: number): Promise<boolean> {
+    try {
+      const db = this.getDb()
+      const database = db.getDatabase()
+
+      const query = database.prepare(`
+        SELECT COUNT(*) as count
+        FROM prompt_projects
+        WHERE prompt_id = ? AND project_id = ?
+      `)
+
+      const result = query.get(promptId, projectId) as any
+      return result.count > 0
+    } catch (error: any) {
+      console.error(`Error checking if prompt ${promptId} is in project ${projectId}:`, error)
+      throw new ApiError(500, 'Failed to check prompt-project association', 'DB_READ_ERROR', error)
+    }
+  }
 }
 
-// --- Specific Data Accessors ---
+// Create singleton instance
+const promptStorageInstance = new PromptStorage()
 
+// Export the storage object for backward compatibility
 export const promptStorage = {
-  /** Reads all prompts from the database. */
-  async readPrompts(): Promise<PromptsStorage> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    // Query prompts directly from columns
-    const query = database.prepare(`
-      SELECT id, name, content, project_id, created_at, updated_at
-      FROM prompts
-      ORDER BY created_at DESC
-    `)
-
-    const rows = query.all() as any[]
-
-    // Convert rows to PromptsStorage
-    const prompts: PromptsStorage = {}
-    for (const row of rows) {
-      const prompt: Prompt = {
-        id: row.id,
-        name: row.name,
-        content: row.content,
-        projectId: row.project_id,
-        created: toNumber(row.created_at, Date.now()),
-        updated: toNumber(row.updated_at, Date.now())
-      }
-
-      // Validate the result
-      const validationResult = PromptSchema.safeParse(prompt)
-      if (!validationResult.success) {
-        console.error(`Skipping invalid prompt ${row.id}:`, validationResult.error.errors)
-        continue
-      }
-
-      prompts[String(validationResult.data.id)] = validationResult.data
-    }
-
-    return prompts
-  },
-
-  /** Writes all prompts to the database (replaces entire collection). */
-  async writePrompts(prompts: PromptsStorage): Promise<PromptsStorage> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    // Validate input
-    const validatedPrompts = await validateData(prompts, PromptsStorageSchema, 'prompts')
-
-    // Use transaction to ensure atomicity
-    database.transaction(() => {
-      // Clear existing prompts
-      database.exec(`DELETE FROM prompts`)
-
-      // Insert all prompts
-      const insertStmt = database.prepare(`
-        INSERT INTO prompts (id, name, content, project_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `)
-
-      for (const [id, prompt] of Object.entries(validatedPrompts)) {
-        const now = Date.now()
-        insertStmt.run(
-          prompt.id,
-          prompt.name,
-          prompt.content,
-          prompt.projectId || null,
-          prompt.created || now,
-          prompt.updated || now
-        )
-      }
-    })()
-
-    return validatedPrompts
-  },
-
-  /** Reads all prompt-project associations from the database. */
-  async readPromptProjects(): Promise<PromptProjectsStorage> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    // Query prompt-project associations directly from columns
-    const query = database.prepare(`
-      SELECT id, prompt_id, project_id, created_at
-      FROM prompt_projects
-      ORDER BY created_at DESC
-    `)
-
-    const rows = query.all() as any[]
-
-    // Convert rows to PromptProjectsStorage
-    const promptProjects: PromptProject[] = []
-    for (const row of rows) {
-      const association: PromptProject = {
-        id: row.id,
-        promptId: row.prompt_id,
-        projectId: row.project_id
-      }
-
-      // Validate the result
-      const validationResult = PromptProjectSchema.safeParse(association)
-      if (!validationResult.success) {
-        console.error(`Skipping invalid prompt-project association ${row.id}:`, validationResult.error.errors)
-        continue
-      }
-
-      promptProjects.push(validationResult.data)
-    }
-
-    return promptProjects
-  },
-
-  /** Writes all prompt-project associations to the database (replaces entire collection). */
-  async writePromptProjects(promptProjects: PromptProjectsStorage): Promise<PromptProjectsStorage> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    // Validate input
-    const validatedAssociations = await validateData(
-      promptProjects,
-      PromptProjectsStorageSchema,
-      'prompt-project associations'
-    )
-
-    // Use transaction to ensure atomicity
-    database.transaction(() => {
-      // Clear existing associations
-      database.exec(`DELETE FROM prompt_projects`)
-
-      // Insert all associations
-      const insertStmt = database.prepare(`
-        INSERT INTO prompt_projects (id, prompt_id, project_id, created_at)
-        VALUES (?, ?, ?, ?)
-      `)
-
-      for (const association of validatedAssociations) {
-        const now = Date.now()
-        insertStmt.run(association.id, association.promptId, association.projectId, now)
-      }
-    })()
-
-    return validatedAssociations
-  },
-
-  /** Gets a specific prompt by ID. */
-  async getPromptById(promptId: number): Promise<Prompt | null> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    const query = database.prepare(`
-      SELECT id, name, content, project_id, created_at, updated_at
-      FROM prompts
-      WHERE id = ?
-    `)
-
-    const row = query.get(promptId) as any
-
-    if (!row) {
-      return null
-    }
-
-    const prompt: Prompt = {
-      id: row.id,
-      name: row.name,
-      content: row.content,
-      projectId: row.project_id,
-      created: row.created_at,
-      updated: row.updated_at
-    }
-
-    // Validate before returning
-    return await validateData(prompt, PromptSchema, `prompt ${promptId}`)
-  },
-
-  /** Creates or updates a prompt. */
-  async upsertPrompt(prompt: Prompt): Promise<Prompt> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    // Validate the prompt
-    const validatedPrompt = await validateData(prompt, PromptSchema, `prompt ${prompt.id}`)
-    const now = Date.now()
-
-    // Check if exists
-    const existsQuery = database.prepare(`SELECT 1 FROM prompts WHERE id = ? LIMIT 1`)
-    const existingRow = existsQuery.get(validatedPrompt.id)
-
-    if (existingRow) {
-      // Update
-      const updateQuery = database.prepare(`
-        UPDATE prompts
-        SET name = ?, content = ?, project_id = ?, updated_at = ?
-        WHERE id = ?
-      `)
-      updateQuery.run(
-        validatedPrompt.name,
-        validatedPrompt.content,
-        validatedPrompt.projectId || null,
-        now,
-        validatedPrompt.id
-      )
-    } else {
-      // Insert
-      const insertQuery = database.prepare(`
-        INSERT INTO prompts (id, name, content, project_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `)
-      insertQuery.run(
-        validatedPrompt.id,
-        validatedPrompt.name,
-        validatedPrompt.content,
-        validatedPrompt.projectId || null,
-        validatedPrompt.created || now,
-        now
-      )
-    }
-
-    return validatedPrompt
-  },
-
-  /** Deletes a prompt and its associations. */
-  async deletePrompt(promptId: number): Promise<boolean> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    // Use transaction for deletion
-    const result = database.transaction(() => {
-      // Delete all associations for this prompt
-      const deleteAssocQuery = database.prepare(`DELETE FROM prompt_projects WHERE prompt_id = ?`)
-      deleteAssocQuery.run(promptId)
-
-      // Delete the prompt
-      const deletePromptQuery = database.prepare(`DELETE FROM prompts WHERE id = ?`)
-      return deletePromptQuery.run(promptId).changes > 0
-    })()
-
-    return result
-  },
-
-  /** Gets all prompts associated with a project. */
-  async getPromptsByProjectId(projectId: number): Promise<Prompt[]> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    // Get prompts directly assigned to the project
-    const directQuery = database.prepare(`
-      SELECT id, name, content, project_id, created_at, updated_at
-      FROM prompts
-      WHERE project_id = ?
-      ORDER BY created_at DESC
-    `)
-
-    // Get prompts through prompt_projects associations
-    const associatedQuery = database.prepare(`
-      SELECT p.id, p.name, p.content, p.project_id, p.created_at, p.updated_at
-      FROM prompts p
-      INNER JOIN prompt_projects pp ON p.id = pp.prompt_id
-      WHERE pp.project_id = ?
-      ORDER BY p.created_at DESC
-    `)
-
-    const directRows = directQuery.all(projectId) as any[]
-    const associatedRows = associatedQuery.all(projectId) as any[]
-
-    // Combine and deduplicate results
-    const promptMap = new Map<number, Prompt>()
-
-    for (const rows of [directRows, associatedRows]) {
-      for (const row of rows) {
-        if (!promptMap.has(row.id)) {
-          const prompt: Prompt = {
-            id: row.id,
-            name: row.name,
-            content: row.content,
-            projectId: row.project_id,
-            created: row.created_at,
-            updated: row.updated_at
-          }
-
-          // Validate before adding
-          try {
-            const validatedPrompt = await validateData(prompt, PromptSchema, `prompt ${row.id}`)
-            promptMap.set(row.id, validatedPrompt)
-          } catch (error) {
-            console.error(`Skipping invalid prompt ${row.id}:`, error)
-          }
-        }
-      }
-    }
-
-    return Array.from(promptMap.values())
-  },
-
-  /** Adds or updates a prompt-project association. */
-  async addPromptProjectAssociation(promptId: number, projectId: number): Promise<PromptProject> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    // Check if association already exists
-    const existsQuery = database.prepare(`
-      SELECT id FROM prompt_projects 
-      WHERE prompt_id = ? AND project_id = ?
-      LIMIT 1
-    `)
-    const existingRow = existsQuery.get(promptId, projectId) as any
-
-    if (existingRow) {
-      // Already exists, return it
-      return {
-        id: existingRow.id,
-        promptId,
-        projectId
-      }
-    }
-
-    // Create new association
-    const association: PromptProject = {
-      id: Date.now(),
-      promptId,
-      projectId
-    }
-
-    // Validate the association
-    const validatedAssociation = await validateData(association, PromptProjectSchema, 'prompt-project association')
-
-    // Insert
-    const insertQuery = database.prepare(`
-      INSERT INTO prompt_projects (id, prompt_id, project_id, created_at)
-      VALUES (?, ?, ?, ?)
-    `)
-    insertQuery.run(validatedAssociation.id, validatedAssociation.promptId, validatedAssociation.projectId, Date.now())
-
-    return validatedAssociation
-  },
-
-  /** Removes a prompt-project association. */
-  async removePromptProjectAssociation(promptId: number, projectId: number): Promise<boolean> {
-    const db = getDb()
-    const database = db.getDatabase()
-
-    const deleteQuery = database.prepare(`
-      DELETE FROM prompt_projects 
-      WHERE prompt_id = ? AND project_id = ?
-    `)
-    const result = deleteQuery.run(promptId, projectId)
-
-    return result.changes > 0
-  },
-
-  /** Generates a unique ID. */
-  generateId: (): number => {
-    const db = getDb()
-    return db.generateUniqueId('prompts')
-  }
+  readPrompts: () => promptStorageInstance.readPrompts(),
+  writePrompts: (prompts: PromptsStorage) => promptStorageInstance.writePrompts(prompts),
+  readPromptsByProject: (projectId: number) => promptStorageInstance.readPromptsByProject(projectId),
+  countPromptsByProject: (projectId: number) => promptStorageInstance.countPromptsByProject(projectId),
+  readPromptProjectAssociations: () => promptStorageInstance.readPromptProjectAssociations(),
+  writePromptProjectAssociations: (associations: PromptProjectsStorage) => 
+    promptStorageInstance.writePromptProjectAssociations(associations),
+  addPrompt: (prompt: Prompt) => promptStorageInstance.addPrompt(prompt),
+  replacePrompt: (promptId: number, prompt: Prompt) => promptStorageInstance.replacePrompt(promptId, prompt),
+  removePrompt: (promptId: number) => promptStorageInstance.removePrompt(promptId),
+  addPromptToProject: (promptId: number, projectId: number) => 
+    promptStorageInstance.addPromptToProject(promptId, projectId),
+  removePromptFromProject: (promptId: number, projectId: number) => 
+    promptStorageInstance.removePromptFromProject(promptId, projectId),
+  isPromptInProject: (promptId: number, projectId: number) => 
+    promptStorageInstance.isPromptInProject(promptId, projectId),
+  generateId: () => promptStorageInstance.generateId()
 }

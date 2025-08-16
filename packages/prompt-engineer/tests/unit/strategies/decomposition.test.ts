@@ -103,13 +103,13 @@ describe('Task Decomposition Strategy', () => {
       expect(dbResult._tag).toBe('Right')
 
       if (frontendResult._tag === 'Right') {
-        expect(frontendResult.right.suggestedAgent).toBe('frontend-shadcn-expert')
+        expect(frontendResult.right.suggestedAgent).toBe('promptliano-ui-architect')
       }
       if (apiResult._tag === 'Right') {
         expect(apiResult.right.suggestedAgent).toBe('hono-bun-api-architect')
       }
       if (dbResult._tag === 'Right') {
-        expect(dbResult.right.suggestedAgent).toBe('sqlite-json-migration-expert')
+        expect(dbResult.right.suggestedAgent).toBe('promptliano-sqlite-expert')
       }
     })
 

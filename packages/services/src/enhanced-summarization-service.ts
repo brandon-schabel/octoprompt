@@ -329,7 +329,7 @@ export class EnhancedSummarizationService {
         const relatedFiles = groupFiles.map((f) => ({
             id: f.id,
             name: f.name,
-            summary: f.summary
+            summary: f.summary ?? undefined
         }))
 
         const relationships = (group.relationships || []).map((rel) => {

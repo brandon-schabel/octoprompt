@@ -22,6 +22,7 @@ import { fixQueueStatusValuesMigration } from './021-fix-queue-status-values'
 import { fixPriorityOrderingMigration } from './022-fix-priority-ordering'
 import { dropQueueItemsTableMigration } from './023-drop-queue-items-table'
 import { providerKeysCustomFieldsMigration } from './025-provider-keys-custom-fields'
+import { dropJobTablesMigration } from './026-drop-job-tables'
 import type { Database } from 'bun:sqlite'
 
 interface Migration {
@@ -56,7 +57,8 @@ const migrations: Migration[] = [
   fixQueueStatusValuesMigration,
   fixPriorityOrderingMigration,
   dropQueueItemsTableMigration,
-  providerKeysCustomFieldsMigration
+  providerKeysCustomFieldsMigration,
+  dropJobTablesMigration
 ]
 
 /**

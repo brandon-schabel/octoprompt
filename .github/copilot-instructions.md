@@ -26,8 +26,8 @@ So whenever you are given a new feature or bug, you'll use the promptliano overv
 | ------------------------------------- | ------ | ---------------------------------------------------------------- |
 | **promptliano-planning-architect**    | opus   | Planning tickets/tasks with file suggestions, agent assignments  |
 | **staff-engineer-code-reviewer**      | opus   | MANDATORY after implementations for quality review               |
-| **frontend-shadcn-expert**            | opus   | React UI with shadcn/ui, Tanstack Query/Table                    |
-| **promptliano-ui-builder**            | opus   | Building with @promptliano/ui components                         |
+| **promptliano-ui-architect**            | opus   | React UI with shadcn/ui, Tanstack Query/Table                    |
+| **promptliano-ui-architect**            | opus   | Building with @promptliano/ui components                         |
 | **vercel-ai-sdk-expert**              | opus   | AI features: streaming chat, tool calling, structured generation |
 | **code-simplifier-auditor**           | opus   | Find duplication, complexity, inconsistencies                    |
 | **code-modularization-expert**        | opus   | Refactor large files into modules                                |
@@ -35,7 +35,7 @@ So whenever you are given a new feature or bug, you'll use the promptliano overv
 | **markdown-docs-writer**              | opus   | README, API docs, contribution guides                            |
 | **hono-bun-api-architect**            | sonnet | Hono API endpoints with Zod validation                           |
 | **typescript-type-safety-auditor**    | sonnet | Remove 'any' types, ensure type safety                           |
-| **sqlite-json-migration-expert**      | sonnet | Migrate JSON blobs to relational tables                          |
+| **promptliano-sqlite-expert**      | sonnet | Migrate JSON blobs to relational tables                          |
 | **tanstack-router-expert**            | sonnet | TanStack Router implementation, type-safe routes                 |
 | **promptliano-service-architect**     | sonnet | Service patterns, database communication                         |
 | **zod-schema-architect**              | sonnet | Design Zod schemas as single source of truth                     |
@@ -219,17 +219,17 @@ Always prefer suggestions before manual searching.
 | Package                          | Purpose                             | Relevant Agents                                              |
 | -------------------------------- | ----------------------------------- | ------------------------------------------------------------ |
 | **@promptliano/schemas**         | Zod schemas, single source of truth | zod-schema-architect, typescript-type-safety-auditor         |
-| **@promptliano/storage**         | SQLite persistence, migrations      | sqlite-json-migration-expert, promptliano-service-architect  |
+| **@promptliano/storage**         | SQLite persistence, migrations      | promptliano-sqlite-expert, promptliano-service-architect  |
 | **@promptliano/services**        | Business logic, orchestration       | promptliano-service-architect, simple-git-integration-expert |
 | **@promptliano/server**          | Hono API, MCP tools                 | hono-bun-api-architect, promptliano-mcp-tool-creator         |
 | **@promptliano/api-client**      | Type-safe API client                | typescript-type-safety-auditor                               |
-| **@promptliano/client**          | React app, main UI                  | frontend-shadcn-expert, tanstack-router-expert               |
-| **@promptliano/ui**              | Component library, shadcn/ui        | promptliano-ui-builder, frontend-shadcn-expert               |
-| **@promptliano/website**         | Marketing site                      | markdown-docs-writer, promptliano-ui-builder                 |
+| **@promptliano/client**          | React app, main UI                  | promptliano-ui-architect, tanstack-router-expert               |
+| **@promptliano/ui**              | Component library, shadcn/ui        | promptliano-ui-architect, promptliano-ui-architect               |
+| **@promptliano/website**         | Marketing site                      | markdown-docs-writer, promptliano-ui-architect                 |
 | **@promptliano/config**          | Shared configuration                | zod-schema-architect                                         |
 | **@promptliano/shared**          | Utilities, helpers                  | code-simplifier-auditor                                      |
 | **@promptliano/mcp-client**      | MCP protocol client                 | promptliano-mcp-tool-creator                                 |
-| **@promptliano/brand-kit**       | Design system, colors               | promptliano-ui-builder                                       |
+| **@promptliano/brand-kit**       | Design system, colors               | promptliano-ui-architect                                       |
 | **@promptliano/promptliano**     | CLI package                         | github-actions-workflow-architect                            |
 | **@promptliano/prompt-engineer** | Prompt optimization                 | vercel-ai-sdk-expert                                         |
 

@@ -13,7 +13,7 @@ import {
   useGetAllPrompts,
   useExportPromptAsMarkdown,
   useExportPromptsAsMarkdown
-} from '@/hooks/api/use-prompts-api'
+} from '@/hooks/api-hooks'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import {
   DropdownMenu,

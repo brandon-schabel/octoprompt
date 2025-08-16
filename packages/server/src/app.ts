@@ -10,11 +10,10 @@ import { ticketRoutes } from './routes/ticket-routes'
 import { queueRoutes } from './routes/queue-routes'
 import { flowRoutes } from './routes/flow-routes'
 import { browseDirectoryRoutes } from './routes/browse-directory-routes'
-import { mcpRoutes } from './routes/mcp-routes'
-import { gitRoutes } from './routes/git-routes'
+import { mcpRoutes } from './routes/mcp'
+import { gitRoutes } from './routes/git'
 import { gitAdvancedRoutes } from './routes/git-advanced-routes'
 import { activeTabRoutes } from './routes/active-tab-routes'
-import { jobApp } from './routes/job-routes'
 import { projectTabRoutes } from './routes/project-tab-routes'
 import { agentFilesRoutes } from './routes/agent-files-routes'
 import { claudeAgentRoutes } from './routes/claude-agent-routes'
@@ -190,7 +189,6 @@ app.route('/', mcpRoutes)
 app.route('/', gitRoutes)
 app.route('/', gitAdvancedRoutes)
 app.route('/', activeTabRoutes)
-app.route('/api/jobs', jobApp)
 app.route('/', projectTabRoutes)
 app.route('/', agentFilesRoutes)
 app.route('/', claudeAgentRoutes)

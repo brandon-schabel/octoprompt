@@ -223,7 +223,7 @@ PATTERNS: [Design patterns used]
 RELATES: [How it fits in the system]`
     }
 
-    return examples[extension] || examples.default
+    return examples[extension] ?? examples.default
   }
 
   /**

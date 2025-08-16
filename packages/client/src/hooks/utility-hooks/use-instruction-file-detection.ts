@@ -270,7 +270,7 @@ export function useInstructionFileDetection(projectFiles: ProjectFile[], project
    * In a real implementation, this would check the user's home directory
    */
   const getGlobalInstructionFiles = (): DetectedInstructionFile[] => {
-    // This is a placeholder - in a real Tauri app, we'd need to call
+    // This is a placeholder - in a real web app, we'd need to call
     // a backend service to check for global files
     return []
   }

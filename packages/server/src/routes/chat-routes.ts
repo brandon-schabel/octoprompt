@@ -3,6 +3,7 @@ import { createRoute, z } from '@hono/zod-openapi'
 import { createChatService, handleChatMessage } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
 import { ApiErrorResponseSchema, MessageRoleEnum, OperationSuccessResponseSchema } from '@promptliano/schemas'
+import { createStandardResponses, standardResponses, successResponse, operationSuccessResponse } from '../utils/route-helpers'
 import {
   ChatListResponseSchema,
   ChatResponseSchema,
@@ -21,7 +22,7 @@ import {
 } from '@promptliano/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
-import { APIProviders, ProviderKey } from '@promptliano/schemas'
+import { type APIProviders, type ProviderKey } from '@promptliano/schemas'
 import { stream } from 'hono/streaming'
 
 const chatService = createChatService()
@@ -32,16 +33,7 @@ const getAllChatsRoute = createRoute({
   path: '/api/chats',
   tags: ['Chats'],
   summary: 'Get all chat sessions',
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ChatListResponseSchema } },
-      description: 'Successfully retrieved all chats'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ChatListResponseSchema)
 })
 
 // POST /chats
@@ -66,18 +58,7 @@ const createChatRoute = createRoute({
       content: { 'application/json': { schema: ChatResponseSchema } },
       description: 'Chat created successfully'
     },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Referenced chat not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
+    ...standardResponses
   }
 })
 
@@ -90,24 +71,7 @@ const getChatMessagesRoute = createRoute({
   request: {
     params: GetMessagesParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: MessageListResponseSchema } },
-      description: 'Successfully retrieved messages'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Chat not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(MessageListResponseSchema)
 })
 
 const postAiChatSdkRoute = createRoute({
@@ -174,18 +138,7 @@ const forkChatRoute = createRoute({
       content: { 'application/json': { schema: ChatResponseSchema } },
       description: 'Chat forked successfully'
     },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Original chat not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
+    ...standardResponses
   }
 })
 
@@ -208,18 +161,7 @@ const forkChatFromMessageRoute = createRoute({
       content: { 'application/json': { schema: ChatResponseSchema } },
       description: 'Chat forked successfully from message'
     },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Original chat or message not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
+    ...standardResponses
   }
 })
 
@@ -232,24 +174,7 @@ const deleteMessageRoute = createRoute({
   request: {
     params: DeleteMessageParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Message deleted successfully'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Message not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 // PATCH /chats/{chatId}
@@ -266,24 +191,7 @@ const updateChatRoute = createRoute({
       description: 'Data to update for the chat'
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ChatResponseSchema } },
-      description: 'Chat updated successfully'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Chat not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ChatResponseSchema)
 })
 
 // DELETE /chats/{chatId}
@@ -295,24 +203,7 @@ const deleteChatRoute = createRoute({
   request: {
     params: DeleteChatParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Chat deleted successfully'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation error'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Chat not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 export const chatRoutes = new OpenAPIHono()
   .openapi(getAllChatsRoute, async (c) => {

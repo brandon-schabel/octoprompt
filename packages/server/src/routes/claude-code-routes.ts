@@ -11,6 +11,7 @@ import {
 } from '@promptliano/schemas'
 import { claudeCodeMCPService, claudeCodeImportService } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
+import { createStandardResponses, successResponse } from '../utils/route-helpers'
 
 // Response schema for MCP status
 const MCPStatusResponseSchema = z
@@ -52,20 +53,7 @@ const getMCPStatusRoute = createRoute({
   request: {
     params: ProjectIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: MCPStatusResponseSchema } },
-      description: 'Successfully retrieved MCP status'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(MCPStatusResponseSchema)
 })
 
 // Get sessions route
@@ -79,20 +67,7 @@ const getSessionsRoute = createRoute({
     params: ProjectIdParamsSchema,
     query: ClaudeSessionQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ClaudeSessionsResponseSchema } },
-      description: 'Successfully retrieved sessions'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ClaudeSessionsResponseSchema)
 })
 
 // Get session messages route
@@ -109,20 +84,7 @@ const getSessionMessagesRoute = createRoute({
     }),
     query: ClaudeMessageQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ClaudeMessagesResponseSchema } },
-      description: 'Successfully retrieved messages'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project or session not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ClaudeMessagesResponseSchema)
 })
 
 // Get project data route
@@ -135,20 +97,7 @@ const getProjectDataRoute = createRoute({
   request: {
     params: ProjectIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ClaudeProjectDataResponseSchema } },
-      description: 'Successfully retrieved project data'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ClaudeProjectDataResponseSchema)
 })
 
 // Import session to chat route
@@ -164,20 +113,7 @@ const importSessionRoute = createRoute({
       sessionId: z.string()
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ChatResponseSchema } },
-      description: 'Successfully imported session to chat'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project or session not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ChatResponseSchema)
 })
 
 export const claudeCodeRoutes = new OpenAPIHono()
@@ -186,10 +122,7 @@ export const claudeCodeRoutes = new OpenAPIHono()
     
     try {
       const status = await claudeCodeMCPService.getMCPStatus(projectId)
-      return c.json({ 
-        success: true, 
-        data: status 
-      } satisfies z.infer<typeof MCPStatusResponseSchema>, 200)
+      return c.json(successResponse(status))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -235,10 +168,7 @@ export const claudeCodeRoutes = new OpenAPIHono()
       const limit = query.limit || 50
       const paginated = sessions.slice(start, start + limit)
       
-      return c.json({ 
-        success: true, 
-        data: paginated 
-      } satisfies z.infer<typeof ClaudeSessionsResponseSchema>, 200)
+      return c.json(successResponse(paginated))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -277,10 +207,7 @@ export const claudeCodeRoutes = new OpenAPIHono()
       const limit = query.limit || 100
       const paginated = messages.slice(start, start + limit)
       
-      return c.json({ 
-        success: true, 
-        data: paginated 
-      } satisfies z.infer<typeof ClaudeMessagesResponseSchema>, 200)
+      return c.json(successResponse(paginated))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -300,10 +227,7 @@ export const claudeCodeRoutes = new OpenAPIHono()
         throw new ApiError(404, 'No Claude Code data found for this project')
       }
       
-      return c.json({ 
-        success: true, 
-        data: projectData 
-      } satisfies z.infer<typeof ClaudeProjectDataResponseSchema>, 200)
+      return c.json(successResponse(projectData))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -319,10 +243,7 @@ export const claudeCodeRoutes = new OpenAPIHono()
     try {
       const chat = await claudeCodeImportService.importSession(projectId, sessionId)
       
-      return c.json({ 
-        success: true, 
-        data: chat 
-      } satisfies z.infer<typeof ChatResponseSchema>, 200)
+      return c.json(successResponse(chat))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(

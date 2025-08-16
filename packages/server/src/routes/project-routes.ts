@@ -13,12 +13,13 @@ import {
   ProjectResponseMultiStatusSchema,
   ProjectSummaryResponseSchema,
   ProjectFileSchema,
-  ProjectFile,
+  type ProjectFile,
   SummaryOptionsSchema,
   BatchSummaryOptionsSchema
 } from '@promptliano/schemas'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
+import { createStandardResponses, successResponse, operationSuccessResponse } from '../utils/route-helpers'
 
 import { existsSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
@@ -192,13 +193,7 @@ const listProjectsRoute = createRoute({
   path: '/api/projects',
   tags: ['Projects'],
   summary: 'List all projects',
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProjectListResponseSchema } },
-      description: 'Successfully retrieved all projects'
-    },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(ProjectListResponseSchema)
 })
 
 const getProjectByIdRoute = createRoute({
@@ -207,18 +202,7 @@ const getProjectByIdRoute = createRoute({
   tags: ['Projects'],
   summary: 'Get a specific project by ID',
   request: { params: ProjectIdParamsSchema },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProjectResponseSchema } },
-      description: 'Successfully retrieved project details'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error (invalid projectId format)'
-    },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(ProjectResponseSchema)
 })
 
 const updateProjectRoute = createRoute({
@@ -230,15 +214,7 @@ const updateProjectRoute = createRoute({
     params: ProjectIdParamsSchema,
     body: { content: { 'application/json': { schema: UpdateProjectBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProjectResponseSchema } },
-      description: 'Project updated successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(ProjectResponseSchema)
 })
 
 const deleteProjectRoute = createRoute({
@@ -247,15 +223,7 @@ const deleteProjectRoute = createRoute({
   tags: ['Projects'],
   summary: 'Delete a project and its associated data',
   request: { params: ProjectIdParamsSchema },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Project deleted successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const syncProjectRoute = createRoute({
@@ -264,18 +232,7 @@ const syncProjectRoute = createRoute({
   tags: ['Projects', 'Files'],
   summary: 'Manually trigger a full file sync for a project',
   request: { params: ProjectIdParamsSchema },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Project sync initiated successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error during sync'
-    }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const syncProjectStreamRoute = createRoute({
@@ -313,15 +270,7 @@ const getProjectFilesRoute = createRoute({
       offset: z.coerce.number().int().nonnegative().optional().default(0).describe('Number of files to skip')
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: FileListResponseSchema } },
-      description: 'Successfully retrieved project files'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(FileListResponseSchema)
 })
 
 const getProjectFilesMetadataRoute = createRoute({
@@ -336,15 +285,7 @@ const getProjectFilesMetadataRoute = createRoute({
       offset: z.coerce.number().int().nonnegative().optional().default(0).describe('Number of files to skip')
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProjectFileWithoutContentListResponseSchema } },
-      description: 'Successfully retrieved project files metadata'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(ProjectFileWithoutContentListResponseSchema)
 })
 
 const updateFileContentRoute = createRoute({
@@ -356,18 +297,7 @@ const updateFileContentRoute = createRoute({
     params: FileIdParamsSchema,
     body: { content: { 'application/json': { schema: UpdateFileContentBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: FileResponseSchema } },
-      description: 'File content updated successfully (new version created)'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project or file not found'
-    },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(FileResponseSchema)
 })
 
 const bulkUpdateFilesRoute = createRoute({
@@ -379,15 +309,7 @@ const bulkUpdateFilesRoute = createRoute({
     params: ProjectIdParamsSchema,
     body: { content: { 'application/json': { schema: BulkUpdateFilesBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: BulkFilesResponseSchema } },
-      description: 'Files updated successfully (new versions created)'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(BulkFilesResponseSchema)
 })
 
 const refreshProjectRoute = createRoute({
@@ -399,18 +321,7 @@ const refreshProjectRoute = createRoute({
     params: ProjectIdParamsSchema,
     query: RefreshQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: FileListResponseSchema } },
-      description: 'Successfully refreshed project files'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error during refresh/sync'
-    }
-  }
+  responses: createStandardResponses(FileListResponseSchema)
 })
 
 const getProjectSummaryRoute = createRoute({
@@ -419,15 +330,7 @@ const getProjectSummaryRoute = createRoute({
   tags: ['Projects', 'Files', 'AI'],
   summary: 'Get a combined summary of all files in the project',
   request: { params: ProjectIdParamsSchema },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProjectSummaryResponseSchema } },
-      description: 'Successfully generated combined project summary'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(ProjectSummaryResponseSchema)
 })
 
 const getProjectSummaryAdvancedRoute = createRoute({
@@ -457,15 +360,7 @@ const getProjectSummaryAdvancedRoute = createRoute({
       description: 'Summary generation options'
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: z.any() } }, // Using any for now, should be EnhancedProjectSummaryResponseSchema
-      description: 'Successfully generated advanced project summary'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(z.any())
 })
 
 const getProjectSummaryMetricsRoute = createRoute({
@@ -474,15 +369,7 @@ const getProjectSummaryMetricsRoute = createRoute({
   tags: ['Projects', 'Files', 'AI'],
   summary: 'Get metrics about project summary generation',
   request: { params: ProjectIdParamsSchema },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: z.any() } }, // Metrics response
-      description: 'Successfully retrieved summary generation metrics'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(z.any())
 })
 
 const invalidateProjectSummaryCacheRoute = createRoute({
@@ -491,15 +378,7 @@ const invalidateProjectSummaryCacheRoute = createRoute({
   tags: ['Projects', 'Files', 'AI'],
   summary: 'Invalidate the project summary cache',
   request: { params: ProjectIdParamsSchema },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Successfully invalidated summary cache'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const suggestFilesRoute = createRoute({
@@ -511,18 +390,7 @@ const suggestFilesRoute = createRoute({
     params: ProjectIdParamsSchema,
     body: { content: { 'application/json': { schema: SuggestFilesBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: SuggestFilesResponseSchema } },
-      description: 'Successfully suggested files'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error or AI processing error'
-    }
-  }
+  responses: createStandardResponses(SuggestFilesResponseSchema)
 })
 
 const optimizeUserInputRoute = createRoute({
@@ -537,20 +405,7 @@ const optimizeUserInputRoute = createRoute({
       description: 'The user prompt context to optimize'
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OptimizePromptResponseSchema } },
-      description: 'Successfully optimized the prompt'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error or AI provider error during optimization'
-    }
-  }
+  responses: createStandardResponses(OptimizePromptResponseSchema)
 })
 
 // Batch summarization routes
@@ -563,15 +418,7 @@ const startBatchSummarizationRoute = createRoute({
     params: ProjectIdParamsSchema,
     body: { content: { 'application/json': { schema: StartBatchSummarizationBodySchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: BatchProgressResponseSchema } },
-      description: 'Batch summarization started successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(BatchProgressResponseSchema)
 })
 
 const getBatchProgressRoute = createRoute({
@@ -585,15 +432,7 @@ const getBatchProgressRoute = createRoute({
       batchId: z.string()
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: BatchProgressResponseSchema } },
-      description: 'Successfully retrieved batch progress'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Batch not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(BatchProgressResponseSchema)
 })
 
 const cancelBatchSummarizationRoute = createRoute({
@@ -607,15 +446,7 @@ const cancelBatchSummarizationRoute = createRoute({
       batchId: z.string()
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Batch summarization cancelled successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Batch not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const getSummarizationStatsRoute = createRoute({
@@ -626,15 +457,7 @@ const getSummarizationStatsRoute = createRoute({
   request: {
     params: ProjectIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: FileSummarizationStatsResponseSchema } },
-      description: 'Successfully retrieved summarization statistics'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(FileSummarizationStatsResponseSchema)
 })
 
 const previewFileGroupsRoute = createRoute({
@@ -656,15 +479,7 @@ const previewFileGroupsRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: FileGroupsResponseSchema } },
-      description: 'Successfully generated file groups preview'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+  responses: createStandardResponses(FileGroupsResponseSchema)
 })
 
 const getProjectStatisticsRoute = createRoute({
@@ -675,82 +490,73 @@ const getProjectStatisticsRoute = createRoute({
   request: {
     params: ProjectIdParamsSchema
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.literal(true),
-            data: z.object({
-              fileStats: z.object({
-                totalFiles: z.number(),
-                totalSize: z.number(),
-                filesByType: z.record(z.number()),
-                sizeByType: z.record(z.number()),
-                filesByCategory: z.object({
-                  source: z.number(),
-                  tests: z.number(),
-                  docs: z.number(),
-                  config: z.number(),
-                  other: z.number()
-                }),
-                filesWithSummaries: z.number(),
-                averageSummaryLength: z.number()
-              }),
-              ticketStats: z.object({
-                totalTickets: z.number(),
-                ticketsByStatus: z.object({
-                  open: z.number(),
-                  in_progress: z.number(),
-                  closed: z.number()
-                }),
-                ticketsByPriority: z.object({
-                  low: z.number(),
-                  normal: z.number(),
-                  high: z.number()
-                }),
-                averageTasksPerTicket: z.number()
-              }),
-              taskStats: z.object({
-                totalTasks: z.number(),
-                completedTasks: z.number(),
-                completionRate: z.number(),
-                tasksByTicket: z.array(
-                  z.object({
-                    ticketId: z.number(),
-                    ticketTitle: z.string(),
-                    totalTasks: z.number(),
-                    completedTasks: z.number()
-                  })
-                )
-              }),
-              promptStats: z.object({
-                totalPrompts: z.number(),
-                totalTokens: z.number(),
-                averagePromptLength: z.number(),
-                promptTypes: z.record(z.number())
-              }),
-              activityStats: z.object({
-                recentUpdates: z.number(),
-                lastUpdateTime: z.number(),
-                creationTrend: z.array(
-                  z.object({
-                    date: z.string(),
-                    files: z.number(),
-                    tickets: z.number(),
-                    tasks: z.number()
-                  })
-                )
-              })
+  responses: createStandardResponses(
+    z.object({
+      success: z.literal(true),
+      data: z.object({
+        fileStats: z.object({
+          totalFiles: z.number(),
+          totalSize: z.number(),
+          filesByType: z.record(z.number()),
+          sizeByType: z.record(z.number()),
+          filesByCategory: z.object({
+            source: z.number(),
+            tests: z.number(),
+            docs: z.number(),
+            config: z.number(),
+            other: z.number()
+          }),
+          filesWithSummaries: z.number(),
+          averageSummaryLength: z.number()
+        }),
+        ticketStats: z.object({
+          totalTickets: z.number(),
+          ticketsByStatus: z.object({
+            open: z.number(),
+            in_progress: z.number(),
+            closed: z.number()
+          }),
+          ticketsByPriority: z.object({
+            low: z.number(),
+            normal: z.number(),
+            high: z.number()
+          }),
+          averageTasksPerTicket: z.number()
+        }),
+        taskStats: z.object({
+          totalTasks: z.number(),
+          completedTasks: z.number(),
+          completionRate: z.number(),
+          tasksByTicket: z.array(
+            z.object({
+              ticketId: z.number(),
+              ticketTitle: z.string(),
+              totalTasks: z.number(),
+              completedTasks: z.number()
             })
-          })
-        }
-      },
-      description: 'Project statistics retrieved successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
+          )
+        }),
+        promptStats: z.object({
+          totalPrompts: z.number(),
+          totalTokens: z.number(),
+          averagePromptLength: z.number(),
+          promptTypes: z.record(z.number())
+        }),
+        activityStats: z.object({
+          recentUpdates: z.number(),
+          lastUpdateTime: z.number(),
+          creationTrend: z.array(
+            z.object({
+              date: z.string(),
+              files: z.number(),
+              tickets: z.number(),
+              tasks: z.number()
+            })
+          )
+        })
+      })
+    })
+  )
 })
 
 // --- Hono App Instance ---
@@ -800,11 +606,7 @@ export const projectRoutes = new OpenAPIHono()
     }
 
     if (httpStatus === 201) {
-      const payload = {
-        success: true,
-        data: createdProject
-      } satisfies z.infer<typeof ProjectResponseSchema>
-      return c.json(payload, 201)
+      return c.json(successResponse(createdProject), 201)
     } else {
       const payload = {
         success: true,
@@ -818,11 +620,7 @@ export const projectRoutes = new OpenAPIHono()
 
   .openapi(listProjectsRoute, async (c) => {
     const projects = await projectService.listProjects()
-    const payload = {
-      success: true,
-      data: projects
-    } satisfies z.infer<typeof ProjectListResponseSchema>
-    return c.json(payload, 200)
+    return c.json(successResponse(projects), 200)
   })
 
   .openapi(getProjectByIdRoute, async (c) => {
@@ -831,11 +629,7 @@ export const projectRoutes = new OpenAPIHono()
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    const payload = {
-      success: true,
-      data: project
-    } satisfies z.infer<typeof ProjectResponseSchema>
-    return c.json(payload, 200)
+    return c.json(successResponse(project), 200)
   })
 
   .openapi(updateProjectRoute, async (c) => {
@@ -845,11 +639,7 @@ export const projectRoutes = new OpenAPIHono()
     if (!updatedProject) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    const payload = {
-      success: true,
-      data: updatedProject
-    } satisfies z.infer<typeof ProjectResponseSchema>
-    return c.json(payload, 200)
+    return c.json(successResponse(updatedProject), 200)
   })
 
   .openapi(deleteProjectRoute, async (c) => {
@@ -859,11 +649,7 @@ export const projectRoutes = new OpenAPIHono()
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
     watchersManager.stopWatchingProject(projectId)
-    const payload: z.infer<typeof OperationSuccessResponseSchema> = {
-      success: true,
-      message: 'Project deleted successfully.'
-    }
-    return c.json(payload, 200)
+    return c.json(operationSuccessResponse('Project deleted successfully.'), 200)
   })
 
   .openapi(syncProjectRoute, async (c) => {
@@ -873,11 +659,7 @@ export const projectRoutes = new OpenAPIHono()
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
     await syncProject(project)
-    const payload: z.infer<typeof OperationSuccessResponseSchema> = {
-      success: true,
-      message: 'Project sync initiated.'
-    }
-    return c.json(payload, 200)
+    return c.json(operationSuccessResponse('Project sync initiated.'), 200)
   })
 
   .openapi(syncProjectStreamRoute, async (c) => {
@@ -940,11 +722,7 @@ export const projectRoutes = new OpenAPIHono()
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
     const files = await projectService.getProjectFiles(projectId, { limit, offset })
-    const payload = {
-      success: true,
-      data: files ?? []
-    } satisfies z.infer<typeof FileListResponseSchema>
-    return c.json(payload, 200)
+    return c.json(successResponse(files ?? []), 200)
   })
 
   .openapi(getProjectFilesMetadataRoute, async (c) => {
@@ -957,11 +735,7 @@ export const projectRoutes = new OpenAPIHono()
     const files = await projectService.getProjectFiles(projectId, { limit, offset })
     // Remove content from files for performance
     const filesWithoutContent = files?.map(({ content, ...fileMetadata }) => fileMetadata) ?? []
-    const payload = {
-      success: true,
-      data: filesWithoutContent
-    } satisfies z.infer<typeof ProjectFileWithoutContentListResponseSchema>
-    return c.json(payload, 200)
+    return c.json(successResponse(filesWithoutContent), 200)
   })
 
   .openapi(bulkUpdateFilesRoute, async (c) => {
@@ -983,11 +757,7 @@ export const projectRoutes = new OpenAPIHono()
       }
     }
 
-    const payload = {
-      success: true,
-      data: updatedFiles
-    } satisfies z.infer<typeof BulkFilesResponseSchema>
-    return c.json(payload, 200)
+    return c.json(successResponse(updatedFiles), 200)
   })
 
   .openapi(updateFileContentRoute, async (c) => {
@@ -996,11 +766,7 @@ export const projectRoutes = new OpenAPIHono()
 
     const updatedFile = await projectService.updateFileContent(projectId, fileId, content)
 
-    const payload = {
-      success: true,
-      data: updatedFile
-    } satisfies z.infer<typeof FileResponseSchema>
-    return c.json(payload, 200)
+    return c.json(successResponse(updatedFile), 200)
   })
 
   .openapi(refreshProjectRoute, async (c) => {
@@ -1016,11 +782,7 @@ export const projectRoutes = new OpenAPIHono()
       await syncProject(project)
     }
     const files = await projectService.getProjectFiles(projectId)
-    const payload = {
-      success: true,
-      data: files ?? []
-    } satisfies z.infer<typeof FileListResponseSchema>
-    return c.json(payload, 200)
+    return c.json(successResponse(files ?? []), 200)
   })
 
   .openapi(getProjectSummaryRoute, async (c) => {
@@ -1154,12 +916,7 @@ export const projectRoutes = new OpenAPIHono()
     try {
       const recommendedFiles = await projectService.suggestFiles(projectId, prompt, limit)
 
-      const payload = {
-        success: true,
-        data: recommendedFiles
-      } satisfies z.infer<typeof SuggestFilesResponseSchema>
-
-      return c.json(payload, 200)
+      return c.json(successResponse(recommendedFiles), 200)
     } catch (error: any) {
       console.error('[SuggestFiles Project] Error:', error)
       if (error instanceof ApiError) throw error
@@ -1189,36 +946,23 @@ export const projectRoutes = new OpenAPIHono()
           }
         }
       },
-      responses: {
-        200: {
-          content: {
-            'application/json': {
-              schema: z.object({
-                success: z.literal(true),
-                data: z.object({
-                  included: z.number(),
-                  skipped: z.number(),
-                  updatedFiles: z.array(ProjectFileSchema),
-                  skippedReasons: z
-                    .object({
-                      empty: z.number(),
-                      tooLarge: z.number(),
-                      errors: z.number()
-                    })
-                    .optional()
-                })
+      responses: createStandardResponses(
+        z.object({
+          success: z.literal(true),
+          data: z.object({
+            included: z.number(),
+            skipped: z.number(),
+            updatedFiles: z.array(ProjectFileSchema),
+            skippedReasons: z
+              .object({
+                empty: z.number(),
+                tooLarge: z.number(),
+                errors: z.number()
               })
-            }
-          },
-          description: 'Files summarized successfully'
-        },
-        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: {
-          content: { 'application/json': { schema: ApiErrorResponseSchema } },
-          description: 'Internal Server Error'
-        }
-      }
+              .optional()
+          })
+        })
+      )
     }),
     async (c) => {
       const { projectId } = c.req.valid('param')
@@ -1259,28 +1003,15 @@ export const projectRoutes = new OpenAPIHono()
           }
         }
       },
-      responses: {
-        200: {
-          content: {
-            'application/json': {
-              schema: z.object({
-                success: z.literal(true),
-                data: z.object({
-                  removedCount: z.number(),
-                  message: z.string()
-                })
-              })
-            }
-          },
-          description: 'Summaries removed successfully'
-        },
-        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: {
-          content: { 'application/json': { schema: ApiErrorResponseSchema } },
-          description: 'Internal Server Error'
-        }
-      }
+      responses: createStandardResponses(
+        z.object({
+          success: z.literal(true),
+          data: z.object({
+            removedCount: z.number(),
+            message: z.string()
+          })
+        })
+      )
     }),
     async (c) => {
       const { projectId } = c.req.valid('param')

@@ -124,7 +124,7 @@ export const hookManagerTool: MCPToolDefinition = {
 
           case HookManagerAction.GET: {
             const eventName = validateDataField<HookEvent>(data, 'eventName', 'string', 'PreToolUse')
-            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', 0)
+            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', '0')
 
             const hook = await claudeHookService.getHook(project.path, eventName, matcherIndex)
             if (!hook) {
@@ -163,7 +163,7 @@ Command: ${hook.command}`
 
           case HookManagerAction.UPDATE: {
             const eventName = validateDataField<HookEvent>(data, 'eventName', 'string', 'PreToolUse')
-            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', 0)
+            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', '0')
 
             const updateData: UpdateHookConfigBody = {
               event: eventName,
@@ -183,7 +183,7 @@ Command: ${hook.command}`
 
           case HookManagerAction.DELETE: {
             const eventName = validateDataField<HookEvent>(data, 'eventName', 'string', 'PreToolUse')
-            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', 0)
+            const matcherIndex = validateDataField<number>(data, 'matcherIndex', 'number', '0')
 
             await claudeHookService.deleteHook(project.path, eventName, matcherIndex)
             return {
@@ -217,21 +217,13 @@ data: ${JSON.stringify({ level: 'project', ...generatedHook }, null, 2)}`
 
             const testRequest: HookTestRequest = {
               event,
-              event,
               matcher,
               command,
-              timeout: data.timeout,
-              testData
+              timeout: data.timeout
             }
 
-            const result = await claudeHookService.testHook(project.path, testRequest)
-            const resultText = `Hook Test Results:
-Executed: ${result.executed ? 'Yes' : 'No'}
-Matched: ${result.matched ? 'Yes' : 'No'}
-Allowed: ${result.allowed !== undefined ? (result.allowed ? 'Yes' : 'No') : 'Not applicable'}
-Output: ${result.output || 'None'}
-Error: ${result.error || 'None'}
-Message: ${result.message || 'None'}`
+            const result = await claudeHookService.testHook(project.path, event, matcher, command, data.timeout, data.sampleToolName)
+            const resultText = `Hook Test Results:\n${result.message}`
             return {
               content: [{ type: 'text', text: resultText }]
             }
@@ -242,12 +234,9 @@ Message: ${result.message || 'None'}`
             const hooks = await claudeHookService.searchHooks(project.path, query)
             const results = hooks
               .map((hook) => {
-                const eventHooks = hook.matchers
-                  .map((matcher, idx) => `  [${idx}] ${matcher} → ${hook.command}`)
-                  .join('\n')
-                return `[${hook.level.toUpperCase()}] ${hook.event}:\n${eventHooks}`
+                return `${hook.event}[${hook.matcherIndex}]: ${hook.matcher} → ${hook.command}`
               })
-              .join('\n\n')
+              .join('\n')
             return {
               content: [{ type: 'text', text: results || 'No hooks found matching search criteria' }]
             }

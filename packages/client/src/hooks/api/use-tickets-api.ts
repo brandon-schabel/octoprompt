@@ -1,4 +1,3 @@
-// Last 5 changes: Created comprehensive ticket API hooks; Broadened invalidations; Wired flow invalidation on ticket complete; Added project-scoped invalidations; Invalidate flow + ticket detail on task update
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   CreateTicketBody,
@@ -14,6 +13,7 @@ import type {
 import { commonErrorHandler } from './common-mutation-error-handler'
 import { useApiClient } from './use-api-client'
 import { TICKETS_STALE_TIME, RETRY_MAX_ATTEMPTS, RETRY_MAX_DELAY } from '@/lib/constants'
+import { toast } from 'sonner'
 
 // Query keys for caching
 export const TICKET_KEYS = {
@@ -86,12 +86,9 @@ export function useInvalidateTickets() {
   }
 }
 
-// Hook exports
-
 // Ticket queries
 export function useGetTickets(projectId: number, status?: string) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: TICKET_KEYS.list(projectId, status),
@@ -107,7 +104,6 @@ export function useGetTickets(projectId: number, status?: string) {
 
 export function useGetTicket(ticketId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: TICKET_KEYS.detail(ticketId),
@@ -123,7 +119,6 @@ export function useGetTicket(ticketId: number) {
 
 export function useGetTicketsWithCounts(projectId: number, status?: string) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: TICKET_KEYS.withCounts(projectId, status),
@@ -139,7 +134,6 @@ export function useGetTicketsWithCounts(projectId: number, status?: string) {
 
 export function useGetTicketsWithTasks(projectId: number, status?: string) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: TICKET_KEYS.withTasks(projectId, status),
@@ -163,7 +157,6 @@ export function useGetTicketsWithTasks(projectId: number, status?: string) {
 // Task queries
 export function useGetTasks(ticketId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: TICKET_KEYS.tasks(ticketId),
@@ -180,7 +173,6 @@ export function useGetTasks(ticketId: number) {
 // Ticket mutations
 export function useCreateTicket() {
   const client = useApiClient()
-
   const { invalidateProjectTickets, setTicketDetail } = useInvalidateTickets()
 
   return useMutation({
@@ -190,10 +182,9 @@ export function useCreateTicket() {
       return response.data
     },
     onSuccess: (ticket) => {
-      // Invalidate all ticket lists for the project
       invalidateProjectTickets(ticket.projectId)
-      // Set the new ticket in cache
       setTicketDetail(ticket)
+      toast.success('Ticket created successfully')
     },
     onError: commonErrorHandler
   })
@@ -202,7 +193,6 @@ export function useCreateTicket() {
 export function useUpdateTicket() {
   const client = useApiClient()
   const queryClient = useQueryClient()
-
   const { invalidateProjectTickets, setTicketDetail, invalidateTicketData } = useInvalidateTickets()
 
   return useMutation({
@@ -212,32 +202,27 @@ export function useUpdateTicket() {
       return response.data
     },
     onSuccess: (ticket) => {
-      // Update the specific ticket in cache
       setTicketDetail(ticket)
-
-      // Invalidate the ticket detail and tasks
       invalidateTicketData(ticket.id)
-
-      // Invalidate all ticket lists for the project
       invalidateProjectTickets(ticket.projectId)
-
+      
       // Also invalidate the specific ticket with tasks query
-      // This ensures the detail view updates immediately
       queryClient.invalidateQueries({
         queryKey: ['tickets', 'withTasks', { projectId: ticket.projectId }],
         exact: false
       })
-
+      
       // Invalidate any queries that might contain this ticket
       queryClient.invalidateQueries({
         queryKey: ['tickets'],
         predicate: (query) => {
-          // Invalidate any query that might contain this ticket
           return query.queryKey.some(
             (key) => typeof key === 'object' && key !== null && 'projectId' in key && key.projectId === ticket.projectId
           )
         }
       })
+      
+      toast.success('Ticket updated successfully')
     },
     onError: commonErrorHandler
   })
@@ -255,18 +240,18 @@ export function useCompleteTicket() {
       return response.data
     },
     onSuccess: (result) => {
-      // Update the specific ticket
       invalidateTicketData(result.ticket.id)
-      // Invalidate project-scoped ticket lists
       invalidateProjectTickets(result.ticket.projectId)
-      // Invalidate all ticket queries (fallback)
       invalidateAllTickets()
+      
       // Also invalidate queue queries - completion may dequeue
       queryClient.invalidateQueries({ queryKey: ['flow'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['queues'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['queue-items'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['queue-stats'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['queues-with-stats'], exact: false })
+      
+      toast.success('Ticket completed successfully')
     },
     onError: commonErrorHandler
   })
@@ -274,8 +259,6 @@ export function useCompleteTicket() {
 
 export function useDeleteTicket() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const { invalidateAllTickets, removeTicket } = useInvalidateTickets()
 
   return useMutation({
@@ -284,11 +267,10 @@ export function useDeleteTicket() {
       await client.tickets.deleteTicket(ticketId)
       return { ticketId, projectId }
     },
-    onSuccess: ({ ticketId, projectId }) => {
-      // Remove the specific ticket from cache
+    onSuccess: ({ ticketId }) => {
       removeTicket(ticketId)
-      // Invalidate all ticket lists for the project
       invalidateAllTickets()
+      toast.success('Ticket deleted successfully')
     },
     onError: commonErrorHandler
   })
@@ -297,8 +279,6 @@ export function useDeleteTicket() {
 // Task mutations
 export function useCreateTask() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const { invalidateTicketTasks, invalidateAllTickets } = useInvalidateTickets()
 
   return useMutation({
@@ -308,10 +288,9 @@ export function useCreateTask() {
       return response.data
     },
     onSuccess: (task) => {
-      // Invalidate tasks for this ticket
       invalidateTicketTasks(task.ticketId)
-      // Invalidate all ticket queries to update counts
       invalidateAllTickets()
+      toast.success('Task created successfully')
     },
     onError: commonErrorHandler
   })
@@ -319,8 +298,6 @@ export function useCreateTask() {
 
 export function useUpdateTask() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const queryClient = useQueryClient()
   const { invalidateTicketTasks, invalidateAllTickets } = useInvalidateTickets()
 
@@ -331,19 +308,17 @@ export function useUpdateTask() {
       return response.data
     },
     onSuccess: (task, variables) => {
-      // Invalidate tasks for this ticket
       invalidateTicketTasks(task.ticketId)
-      // Invalidate all ticket queries to update counts
       invalidateAllTickets()
+      
       // Ensure ticket detail and flow/queue views refresh
       queryClient.invalidateQueries({ queryKey: TICKET_KEYS.detail(task.ticketId), exact: false })
-      // Invalidate withTasks queries that might contain this ticket's tasks
       queryClient.invalidateQueries({ queryKey: [...TICKET_KEYS.all, 'withTasks'], exact: false })
-      // Invalidate flow queries
       queryClient.invalidateQueries({ queryKey: ['flow'], exact: false })
-      // Force refetch of the specific task query
       queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(task.ticketId), refetchType: 'all' })
-
+      
+      toast.success('Task updated successfully')
+      
       // Log for debugging
       console.log('Task updated successfully:', {
         taskId: task.id,
@@ -357,8 +332,6 @@ export function useUpdateTask() {
 
 export function useDeleteTask() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const { invalidateTicketTasks, invalidateAllTickets } = useInvalidateTickets()
 
   return useMutation({
@@ -368,10 +341,9 @@ export function useDeleteTask() {
       return { ticketId, taskId }
     },
     onSuccess: ({ ticketId }) => {
-      // Invalidate tasks for this ticket
       invalidateTicketTasks(ticketId)
-      // Invalidate all ticket queries to update counts
       invalidateAllTickets()
+      toast.success('Task deleted successfully')
     },
     onError: commonErrorHandler
   })
@@ -379,8 +351,6 @@ export function useDeleteTask() {
 
 export function useReorderTasks() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const queryClient = useQueryClient()
   const { invalidateAllTickets } = useInvalidateTickets()
 
@@ -391,10 +361,9 @@ export function useReorderTasks() {
       return response.data
     },
     onSuccess: (tasks, { ticketId }) => {
-      // Update tasks in cache with the new order
       queryClient.setQueryData(TICKET_KEYS.tasks(ticketId), tasks)
-      // Invalidate all ticket queries to ensure consistency
       invalidateAllTickets()
+      toast.success('Tasks reordered successfully')
     },
     onError: commonErrorHandler
   })
@@ -403,7 +372,6 @@ export function useReorderTasks() {
 // AI-powered mutations
 export function useSuggestTasks() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useMutation({
     mutationFn: async ({ ticketId, userContext }: { ticketId: number; userContext?: string }) => {
@@ -417,7 +385,6 @@ export function useSuggestTasks() {
 
 export function useAutoGenerateTasks() {
   const client = useApiClient()
-
   const { invalidateTicketTasks, invalidateAllTickets } = useInvalidateTickets()
 
   return useMutation({
@@ -429,10 +396,9 @@ export function useAutoGenerateTasks() {
     onSuccess: (tasks) => {
       if (tasks.length > 0) {
         const ticketId = tasks[0].ticketId
-        // Invalidate tasks for this ticket
         invalidateTicketTasks(ticketId)
-        // Invalidate all ticket queries to update counts
         invalidateAllTickets()
+        toast.success(`Generated ${tasks.length} tasks`)
       }
     },
     onError: commonErrorHandler
@@ -441,7 +407,6 @@ export function useAutoGenerateTasks() {
 
 export function useSuggestFiles() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useMutation({
     mutationFn: async ({ ticketId, extraUserInput }: { ticketId: number; extraUserInput?: string }) => {

@@ -12,11 +12,6 @@ interface PackageJson {
   [key: string]: any
 }
 
-interface TauriConfig {
-  version?: string
-  [key: string]: any
-}
-
 async function updateJsonFile(filePath: string, updateFn: (data: any) => any) {
   try {
     const content = await readFile(filePath, 'utf-8')
@@ -29,16 +24,6 @@ async function updateJsonFile(filePath: string, updateFn: (data: any) => any) {
   }
 }
 
-async function updateCargoToml(filePath: string) {
-  try {
-    const content = await readFile(filePath, 'utf-8')
-    const updatedContent = content.replace(/version\s*=\s*"[^"]+"/, `version = "${VERSION}"`)
-    await writeFile(filePath, updatedContent)
-    console.log(`✅ Updated ${filePath}`)
-  } catch (error) {
-    console.error(`❌ Failed to update ${filePath}:`, error)
-  }
-}
 
 async function updateTypeScriptFile(filePath: string, patterns: Array<{ search: RegExp; replace: string }>) {
   try {
@@ -114,15 +99,6 @@ async function syncVersions() {
       version: VERSION
     }))
   }
-
-  // Update Tauri config
-  await updateJsonFile(join(ROOT_DIR, 'packages/client/src-tauri/tauri.conf.json'), (data: TauriConfig) => ({
-    ...data,
-    version: VERSION
-  }))
-
-  // Update Cargo.toml
-  await updateCargoToml(join(ROOT_DIR, 'packages/client/src-tauri/Cargo.toml'))
 
   // Update README.md
   await updateMarkdownFile(join(ROOT_DIR, 'README.md'))

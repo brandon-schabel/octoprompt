@@ -1,6 +1,6 @@
 # CLAUDE.md - Client Package
 
-You are an expert React/TypeScript/Tauri frontend developer working in the Promptliano client package. This package is a modern React application built with TanStack Router, TanStack Query, Tauri for desktop functionality, and shadcn/ui components.
+You are an expert React/TypeScript frontend developer working in the Promptliano client package. This package is a modern React web application built with TanStack Router, TanStack Query, and shadcn/ui components.
 
 ## Architecture Overview
 
@@ -9,7 +9,6 @@ You are an expert React/TypeScript/Tauri frontend developer working in the Promp
 - **React 19** with TypeScript
 - **TanStack Router** for file-based routing with type-safe search params
 - **TanStack Query** for server state management
-- **Tauri** for desktop application framework
 - **shadcn/ui** + Radix UI for component library
 - **Tailwind CSS** for styling
 - **Zod** for runtime type validation
@@ -30,7 +29,6 @@ packages/client/
 │   ├── services/           # Business logic and external services
 │   ├── types/              # TypeScript type definitions
 │   └── utils/              # Utility functions
-├── src-tauri/              # Tauri desktop application configuration
 └── public/                 # Static assets
 ```
 
@@ -51,7 +49,7 @@ When working in this package, these agents MUST be used:
    - Focus on component composition and reusability
 
 3. **Package-Specific Agents**
-   - Use `frontend-shadcn-expert` for React component development
+   - Use `promptliano-ui-architect` for React component development
    - Use `tanstack-router-expert` for routing implementation
    - Use `zod-schema-architect` for form validation schemas
    - Use `vercel-ai-sdk-expert` for AI chat integration features
@@ -394,50 +392,6 @@ export function ProjectForm() {
 }
 ```
 
-## Tauri Integration Patterns
-
-### Tauri-Specific Client Configuration
-
-```typescript
-// packages/client/src/hooks/promptliano-client.ts
-import { customFetch } from '@/lib/tauri-fetch-fixed'
-
-export const promptlianoClient = createPromptlianoClient({
-  baseUrl: SERVER_HTTP_ENDPOINT,
-  timeout: 30000,
-  customFetch // Tauri-compatible fetch wrapper
-})
-```
-
-### Sidecar Server Management
-
-```typescript
-// packages/client/src/hooks/use-sidecar-server.ts
-export function useSidecarServer() {
-  const [isStarting, setIsStarting] = useState(false)
-  const [isReady, setIsReady] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (window.__TAURI__) {
-      // Start Tauri sidecar server
-      startSidecarServer()
-    }
-  }, [])
-
-  return { isStarting, isReady, error }
-}
-```
-
-### Window Detection
-
-```typescript
-// Check if running in Tauri
-if (window.__TAURI__ && (isStarting || !isReady)) {
-  return <LoadingScreen message="Starting Promptliano server..." />
-}
-```
-
 ## UI Component Composition
 
 ### shadcn/ui Integration
@@ -757,11 +711,6 @@ test('hook returns expected values', () => {
 
 **Problem**: State not syncing between tabs
 **Solution**: Use the KV local storage hooks which handle cross-tab sync
-
-### 5. Tauri-Specific Issues
-
-**Problem**: Fetch requests failing in Tauri
-**Solution**: Use the custom Tauri fetch wrapper from `tauri-fetch-fixed.ts`
 
 ## Development Workflow
 

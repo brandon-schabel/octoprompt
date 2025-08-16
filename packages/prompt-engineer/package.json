@@ -37,12 +37,7 @@
     "test:coverage": "bun test --coverage",
     "test:ci": "bun test --ci",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx",
-    "docs:generate": "typedoc",
-    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api-markdown",
-    "docs:watch": "typedoc --watch",
-    "docs:serve": "npx serve docs/api",
-    "docs:clean": "rm -rf docs/api docs/api-markdown"
+    "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
     "@effect/platform": "^0.90.2",
