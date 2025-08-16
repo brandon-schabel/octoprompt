@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { useBranchesEnhanced } from '@/hooks/api/use-git-api'
+import type { GitBranchEnhanced } from '@promptliano/schemas'
 import {
   Command,
   CommandEmpty,
@@ -33,10 +34,10 @@ export function BranchSelectorSearchable({ projectId, selectedBranch, onBranchCh
 
   // Sort and filter branches
   const { localBranches, remoteBranches } = useMemo(() => {
-    const filtered = branches.filter((branch) => branch.name.toLowerCase().includes(search.toLowerCase()))
+    const filtered = branches.filter((branch: GitBranchEnhanced) => branch.name.toLowerCase().includes(search.toLowerCase()))
 
     // Sort: current branch first, then by last activity
-    const sorted = filtered.sort((a, b) => {
+    const sorted = filtered.sort((a: GitBranchEnhanced, b: GitBranchEnhanced) => {
       if (a.name === currentBranch) return -1
       if (b.name === currentBranch) return 1
       // TODO: Sort by actual date when relative time is fixed
@@ -44,8 +45,8 @@ export function BranchSelectorSearchable({ projectId, selectedBranch, onBranchCh
     })
 
     return {
-      localBranches: sorted.filter((b) => !b.isRemote),
-      remoteBranches: sorted.filter((b) => b.isRemote)
+      localBranches: sorted.filter((b: GitBranchEnhanced) => !b.isRemote),
+      remoteBranches: sorted.filter((b: GitBranchEnhanced) => b.isRemote)
     }
   }, [branches, currentBranch, search])
 
@@ -69,7 +70,7 @@ export function BranchSelectorSearchable({ projectId, selectedBranch, onBranchCh
   }
 
   // Find the display branch info
-  const displayBranch = branches.find((b) => b.name === activeBranch)
+  const displayBranch = branches.find((b: GitBranchEnhanced) => b.name === activeBranch)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -91,7 +92,7 @@ export function BranchSelectorSearchable({ projectId, selectedBranch, onBranchCh
 
             {localBranches.length > 0 && (
               <CommandGroup heading='Local Branches'>
-                {localBranches.map((branch) => (
+                {localBranches.map((branch: GitBranchEnhanced) => (
                   <CommandItem
                     key={branch.name}
                     value={branch.name}
@@ -120,7 +121,7 @@ export function BranchSelectorSearchable({ projectId, selectedBranch, onBranchCh
 
             {remoteBranches.length > 0 && (
               <CommandGroup heading='Remote Branches'>
-                {remoteBranches.map((branch) => (
+                {remoteBranches.map((branch: GitBranchEnhanced) => (
                   <CommandItem
                     key={branch.name}
                     value={branch.name}

@@ -219,7 +219,7 @@ async function testStreamingCapability(
     })
     
     // If we get a successful response with streaming headers, it likely supports streaming
-    return response.ok && response.headers.get('content-type')?.includes('text/event-stream')
+    return response.ok && (response.headers.get('content-type')?.includes('text/event-stream') ?? false)
   } catch {
     return false
   }

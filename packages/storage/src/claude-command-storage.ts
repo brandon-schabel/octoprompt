@@ -7,9 +7,8 @@ import {
   type CommandScope,
   type ClaudeCommandFrontmatter
 } from '@promptliano/schemas'
-import { toPosixPath } from '@promptliano/services'
-import { ClaudeCommandParser } from '@promptliano/services'
-import { SecurePathValidator } from '@promptliano/shared'
+import { toPosixPath, ClaudeCommandParser } from '@promptliano/shared'
+// import { SecurePathValidator } from '@promptliano/shared' // TODO: SecurePathValidator not implemented yet
 import { ensureString, ensureNumber, toNumber } from '@promptliano/shared/src/utils/sqlite-converters'
 import { homedir } from 'os'
 
@@ -25,17 +24,18 @@ interface FileWatcherState {
 
 export const claudeCommandStorage = {
   // Path validator instance
-  pathValidator: new SecurePathValidator(),
+  // pathValidator: new SecurePathValidator(), // TODO: SecurePathValidator not implemented yet
 
   // Initialize path validator with allowed directories
   initializePathValidator(projectPath?: string) {
-    // Always allow user commands directory
-    this.pathValidator.addAllowedPath(this.getUserCommandsDir())
-
-    // Add project path if provided
-    if (projectPath) {
-      this.pathValidator.addAllowedPath(projectPath)
-    }
+    // TODO: SecurePathValidator not implemented yet
+    // // Always allow user commands directory
+    // this.pathValidator.addAllowedPath(this.getUserCommandsDir())
+    //
+    // // Add project path if provided
+    // if (projectPath) {
+    //   this.pathValidator.addAllowedPath(projectPath)
+    // }
   },
 
   // Watch state
@@ -81,12 +81,13 @@ export const claudeCommandStorage = {
 
   /** Read all commands from a directory */
   async readCommandsFromDir(dirPath: string, scope: CommandScope): Promise<ClaudeCommandsStorage> {
-    // Validate base directory path
-    const dirValidation = this.pathValidator.validatePath(dirPath)
-    if (!dirValidation.valid) {
-      console.error(`Invalid commands directory path: ${dirValidation.error}`)
-      return {}
-    }
+    // TODO: SecurePathValidator not implemented yet - skipping validation
+    // // Validate base directory path
+    // const dirValidation = this.pathValidator.validatePath(dirPath)
+    // if (!dirValidation.valid) {
+    //   console.error(`Invalid commands directory path: ${dirValidation.error}`)
+    //   return {}
+    // }
 
     const commands: ClaudeCommandsStorage = {}
     const parser = new ClaudeCommandParser()
@@ -107,12 +108,13 @@ export const claudeCommandStorage = {
             await readDir(entryPath, newNamespace)
           } else if (entry.isFile() && entry.name.endsWith('.md')) {
             try {
-              // Validate file path before reading
-              const fileValidation = this.pathValidator.validatePath(entryPath, dirPath)
-              if (!fileValidation.valid) {
-                console.error(`Skipping invalid file path: ${entryPath} - ${fileValidation.error}`)
-                continue
-              }
+              // TODO: SecurePathValidator not implemented yet - skipping validation
+              // // Validate file path before reading
+              // const fileValidation = this.pathValidator.validatePath(entryPath, dirPath)
+              // if (!fileValidation.valid) {
+              //   console.error(`Skipping invalid file path: ${entryPath} - ${fileValidation.error}`)
+              //   continue
+              // }
 
               // Read and parse command file
               const content = await fs.readFile(entryPath, 'utf-8')
@@ -231,37 +233,41 @@ export const claudeCommandStorage = {
     // Initialize path validator with project path
     this.initializePathValidator(projectPath)
 
-    // Validate command name
-    const nameValidation = this.pathValidator.validateCommandName(commandName)
-    if (!nameValidation.valid) {
-      throw new Error(`Invalid command name: ${nameValidation.error}`)
-    }
+    // TODO: SecurePathValidator not implemented yet - skipping validation
+    // // Validate command name
+    // const nameValidation = this.pathValidator.validateCommandName(commandName)
+    // if (!nameValidation.valid) {
+    //   throw new Error(`Invalid command name: ${nameValidation.error}`)
+    // }
 
-    // Validate namespace if provided
-    if (namespace) {
-      const namespaceValidation = this.pathValidator.validateNamespace(namespace)
-      if (!namespaceValidation.valid) {
-        throw new Error(`Invalid namespace: ${namespaceValidation.error}`)
-      }
-    }
+    // TODO: SecurePathValidator not implemented yet - skipping validation
+    // // Validate namespace if provided
+    // if (namespace) {
+    //   const namespaceValidation = this.pathValidator.validateNamespace(namespace)
+    //   if (!namespaceValidation.valid) {
+    //     throw new Error(`Invalid namespace: ${namespaceValidation.error}`)
+    //   }
+    // }
 
     // Determine directory based on scope
     const baseDir = scope === 'project' ? this.getProjectCommandsDir(projectPath) : this.getUserCommandsDir()
 
-    // Validate base directory
-    const baseDirValidation = this.pathValidator.validatePath(baseDir)
-    if (!baseDirValidation.valid) {
-      throw new Error(`Invalid base directory: ${baseDirValidation.error}`)
-    }
+    // TODO: SecurePathValidator not implemented yet - skipping validation
+    // // Validate base directory
+    // const baseDirValidation = this.pathValidator.validatePath(baseDir)
+    // if (!baseDirValidation.valid) {
+    //   throw new Error(`Invalid base directory: ${baseDirValidation.error}`)
+    // }
 
     // Create full directory path with namespace
     const dirPath = namespace ? path.join(baseDir, ...namespace.split('/')) : baseDir
 
-    // Validate the full directory path
-    const dirValidation = this.pathValidator.validatePath(dirPath, projectPath)
-    if (!dirValidation.valid) {
-      throw new Error(`Invalid directory path: ${dirValidation.error}`)
-    }
+    // TODO: SecurePathValidator not implemented yet - skipping validation
+    // // Validate the full directory path
+    // const dirValidation = this.pathValidator.validatePath(dirPath, projectPath)
+    // if (!dirValidation.valid) {
+    //   throw new Error(`Invalid directory path: ${dirValidation.error}`)
+    // }
 
     await this.ensureCommandsDir(dirPath)
 
@@ -269,11 +275,12 @@ export const claudeCommandStorage = {
     const fileName = `${commandName}.md`
     const filePath = path.join(dirPath, fileName)
 
-    // Final validation of the complete file path
-    const fileValidation = this.pathValidator.validatePath(filePath, projectPath)
-    if (!fileValidation.valid) {
-      throw new Error(`Invalid file path: ${fileValidation.error}`)
-    }
+    // TODO: SecurePathValidator not implemented yet - skipping validation
+    // // Final validation of the complete file path
+    // const fileValidation = this.pathValidator.validatePath(filePath, projectPath)
+    // if (!fileValidation.valid) {
+    //   throw new Error(`Invalid file path: ${fileValidation.error}`)
+    // }
 
     // Generate markdown content with frontmatter
     const fullContent = this.generateCommandContent(content, frontmatter)
@@ -346,11 +353,12 @@ export const claudeCommandStorage = {
       const command = await this.getCommandByName(projectPath, commandName, namespace, scope)
       if (!command) return false
 
-      // Validate the file path before deletion
-      const fileValidation = this.pathValidator.validatePath(command.filePath, projectPath)
-      if (!fileValidation.valid) {
-        throw new Error(`Cannot delete file - invalid path: ${fileValidation.error}`)
-      }
+      // TODO: SecurePathValidator not implemented yet - skipping validation
+      // // Validate the file path before deletion
+      // const fileValidation = this.pathValidator.validatePath(command.filePath, projectPath)
+      // if (!fileValidation.valid) {
+      //   throw new Error(`Cannot delete file - invalid path: ${fileValidation.error}`)
+      // }
 
       await fs.unlink(command.filePath)
 

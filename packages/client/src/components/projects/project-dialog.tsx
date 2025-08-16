@@ -42,11 +42,11 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
   const abortControllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    if (projectData?.data?.id && projectId) {
+    if (projectData?.id && projectId) {
       setFormData({
-        name: projectData.data.name,
-        description: projectData.data.description ?? undefined,
-        path: projectData.data.path
+        name: projectData.name,
+        description: projectData.description ?? undefined,
+        path: projectData.path
       })
     } else {
       setFormData({
@@ -109,7 +109,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
     if (projectId) {
       // Editing existing project
       updateProject(
-        { projectId: projectId, data: formData },
+        { id: projectId, data: formData },
         {
           onSuccess: () => {
             onOpenChange(false)
@@ -120,17 +120,17 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
       // Creating new project
       createProject(formData, {
         onSuccess: (response) => {
-          if (response.data) {
+          if (response) {
             // Set newly created project as current
             updateActiveProjectTab((prev) => ({
               ...prev,
-              selectedProjectId: response?.data?.id || undefined,
+              selectedProjectId: response?.id || undefined,
               selectedFiles: [],
               selectedPrompts: []
             }))
             // Store the newly created project id and name to trigger sync in useEffect
-            setNewlyCreatedProjectId(response.data.id)
-            setSyncingProjectName(response.data.name)
+            setNewlyCreatedProjectId(response.id)
+            setSyncingProjectName(response.name)
           }
         }
       })

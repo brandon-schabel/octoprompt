@@ -41,7 +41,7 @@ export function QueueOverviewView({
   const totalQueued = queuesWithStats?.reduce((sum, q) => sum + q.stats.queuedItems, 0) || 0
   const totalInProgress = queuesWithStats?.reduce((sum, q) => sum + q.stats.inProgressItems, 0) || 0
   const totalCompleted = queuesWithStats?.reduce((sum, q) => sum + q.stats.completedItems, 0) || 0
-  const activeQueues = queuesWithStats?.filter((q) => q.queue.status === 'active').length || 0
+  const activeQueues = queuesWithStats?.filter((q) => (q.queue.status ?? 'active') === 'active').length || 0
 
   const handlePauseQueue = async (queue: QueueWithStats) => {
     const updateMutation = useUpdateQueue(queue.queue.id)

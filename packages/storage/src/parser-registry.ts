@@ -7,7 +7,7 @@ import {
   ClaudeCommandParser,
   VSCodeConfigParser,
   CursorConfigParser
-} from '@promptliano/services'
+} from '@promptliano/shared'
 
 export class ParserRegistry {
   private static instance: ParserRegistry
@@ -159,12 +159,12 @@ export class ParserRegistry {
     if (parser) return parser
 
     // Create new instance
-    parser = this.createParserInstance(config)
-    if (parser) {
-      this.parserInstances.set(instanceKey, parser)
+    const newParser = this.createParserInstance(config)
+    if (newParser !== null) {
+      this.parserInstances.set(instanceKey, newParser)
     }
 
-    return parser
+    return newParser
   }
 
   /** Create parser instance from config */

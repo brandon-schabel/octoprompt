@@ -1,0 +1,49 @@
+# Ultra-minimal Distroless Docker image for production
+# Assumes pre-built binary is available in dist/ directory
+# Build binary first with: bun run scripts/build-binaries.ts
+
+# Build arguments for flexibility
+ARG VERSION=*
+ARG ARCH=linux-x64
+
+# Use multi-arch distroless base for maximum security
+# This image has NO shell, package manager, or other utilities
+FROM gcr.io/distroless/base-debian12:nonroot
+
+# Set working directory
+WORKDIR /app
+
+# Copy pre-built binary and client assets
+# The nonroot user has UID 65532
+# Note: ARG must be redeclared after FROM to be available
+ARG VERSION=*
+ARG ARCH=linux-x64
+COPY --chown=65532:65532 dist/promptliano-${VERSION}-${ARCH}/promptliano /app/promptliano
+COPY --chown=65532:65532 dist/promptliano-${VERSION}-${ARCH}/client-dist /app/client-dist
+
+# Note: /data directory must be created via volume mount as distroless cannot create directories
+# Example: docker run -v promptliano-data:/data promptliano:distroless
+
+# Environment variables
+ENV NODE_ENV=production \
+    SERVER_PORT=3147 \
+    DATABASE_PATH=/data/promptliano.db \
+    PROMPTLIANO_DATA_DIR=/data \
+    CLIENT_PATH=/app/client-dist
+
+# The nonroot user is already set in the base image
+USER nonroot
+
+# Expose the application port
+EXPOSE 3147
+
+# Note: Distroless doesn't support HEALTHCHECK
+# Use Kubernetes/Docker Compose health probes instead
+# Health endpoint: GET http://localhost:3147/api/health
+
+# Run the application
+# Using ENTRYPOINT for immutability
+ENTRYPOINT ["/app/promptliano"]
+
+# Optional: Add CMD for flexibility in passing arguments
+# CMD []

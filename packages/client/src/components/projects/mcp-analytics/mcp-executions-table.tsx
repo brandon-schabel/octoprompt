@@ -2,7 +2,7 @@ import React from 'react'
 import { DataTable } from '@promptliano/ui'
 import { mcpExecutionsColumns, defaultColumnVisibility } from './mcp-executions-columns'
 import { useGetMCPExecutions } from '@/hooks/api/use-mcp-analytics-api'
-import type { MCPExecutionQuery } from '@promptliano/schemas'
+import type { MCPExecutionQuery, MCPToolExecution, MCPExecutionStatus } from '@promptliano/schemas'
 import type { PaginationState, SortingState, ColumnFiltersState } from '@tanstack/react-table'
 import { RefreshCw, Download, FileJson } from 'lucide-react'
 import { Button } from '@promptliano/ui'
@@ -11,6 +11,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 interface MCPExecutionsTableProps {
   projectId: number
   defaultPageSize?: number
+}
+
+interface ExportRowData {
+  toolName: string
+  inputParams: string | null
+  status: MCPExecutionStatus
+  startedAt: number
+  durationMs: number | null
+  outputSize: number | null
+  errorMessage: string | null
 }
 
 export function MCPExecutionsTable({ projectId, defaultPageSize = 20 }: MCPExecutionsTableProps) {
@@ -49,7 +59,7 @@ export function MCPExecutionsTable({ projectId, defaultPageSize = 20 }: MCPExecu
     const statusFilter = columnFilters.find((f) => f.id === 'status')
     if (statusFilter && Array.isArray(statusFilter.value)) {
       // Since API expects single status, take first one
-      baseQuery.status = statusFilter.value[0] as any
+      baseQuery.status = statusFilter.value[0] as MCPExecutionStatus
     }
 
     // Note: toolName and action filters are now handled client-side
@@ -73,7 +83,7 @@ export function MCPExecutionsTable({ projectId, defaultPageSize = 20 }: MCPExecu
 
     const selectedRows = Object.keys(rowSelection)
       .filter((key) => rowSelection[key])
-      .map((index) => data.executions[parseInt(index)])
+      .map((index) => data.executions[parseInt(index)] as MCPToolExecution)
 
     const dataToExport = selectedRows.length > 0 ? selectedRows : data.executions
 
@@ -89,7 +99,7 @@ export function MCPExecutionsTable({ projectId, defaultPageSize = 20 }: MCPExecu
     } else {
       // CSV export
       const headers = ['Tool', 'Action', 'Status', 'Started At', 'Duration (ms)', 'Output Size', 'Error']
-      const rows = dataToExport.map((exec) => {
+      const rows = dataToExport.map((exec: ExportRowData) => {
         const action = exec.inputParams
           ? (() => {
               try {
@@ -188,6 +198,6 @@ export function MCPExecutionsTable({ projectId, defaultPageSize = 20 }: MCPExecu
   )
 }
 
-function cn(...inputs: any[]) {
+function cn(...inputs: (string | undefined | null | boolean)[]) {
   return inputs.filter(Boolean).join(' ')
 }

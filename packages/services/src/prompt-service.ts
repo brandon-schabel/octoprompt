@@ -16,7 +16,7 @@ import { getCompactProjectSummary } from './utils/project-summary-service'
 
 // Utility function to populate projectId on prompts from associations
 async function populatePromptProjectId(prompt: Prompt): Promise<Prompt> {
-  const promptProjects = await promptStorage.readPromptProjects()
+  const promptProjects = await promptStorage.readPromptProjectAssociations()
   const association = promptProjects.find((link) => link.promptId === prompt.id)
   return {
     ...prompt,
@@ -26,7 +26,7 @@ async function populatePromptProjectId(prompt: Prompt): Promise<Prompt> {
 
 // Utility function to populate projectId on multiple prompts
 async function populatePromptsProjectIds(prompts: Prompt[]): Promise<Prompt[]> {
-  const promptProjects = await promptStorage.readPromptProjects()
+  const promptProjects = await promptStorage.readPromptProjectAssociations()
   const associationMap = new Map(promptProjects.map((link) => [link.promptId, link.projectId]))
 
   return prompts.map((prompt) => ({
@@ -82,7 +82,7 @@ export async function addPromptToProject(promptId: number, projectId: number): P
     throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND')
   }
 
-  let promptProjects = await promptStorage.readPromptProjects()
+  let promptProjects = await promptStorage.readPromptProjectAssociations()
 
   // Check if association already exists
   const existingLink = promptProjects.find((link) => link.promptId === promptId && link.projectId === projectId)
@@ -135,11 +135,11 @@ export async function addPromptToProject(promptId: number, projectId: number): P
   }
 
   promptProjects.push(newLink)
-  await promptStorage.writePromptProjects(promptProjects)
+  await promptStorage.writePromptProjectAssociations(promptProjects)
 }
 
 export async function removePromptFromProject(promptId: number, projectId: number): Promise<void> {
-  let promptProjects = await promptStorage.readPromptProjects()
+  let promptProjects = await promptStorage.readPromptProjectAssociations()
   const initialLinkCount = promptProjects.length
 
   promptProjects = promptProjects.filter((link) => !(link.promptId === promptId && link.projectId === projectId))
@@ -157,7 +157,7 @@ export async function removePromptFromProject(promptId: number, projectId: numbe
     )
   }
 
-  await promptStorage.writePromptProjects(promptProjects)
+  await promptStorage.writePromptProjectAssociations(promptProjects)
 }
 
 export async function getPromptById(promptId: number): Promise<Prompt> {
@@ -184,7 +184,7 @@ export const getPromptsByIds = async (promptIds: number[]): Promise<Prompt[]> =>
 }
 
 export async function listPromptsByProject(projectId: number): Promise<Prompt[]> {
-  const promptProjects = await promptStorage.readPromptProjects()
+  const promptProjects = await promptStorage.readPromptProjectAssociations()
   const relevantPromptIds = promptProjects.filter((link) => link.projectId === projectId).map((link) => link.promptId)
 
   if (relevantPromptIds.length === 0) {
@@ -241,19 +241,19 @@ export async function deletePrompt(promptId: number): Promise<boolean> {
   await promptStorage.writePrompts(allPrompts)
 
   // Also remove any associations for this prompt
-  let promptProjects = await promptStorage.readPromptProjects()
+  let promptProjects = await promptStorage.readPromptProjectAssociations()
   const initialLinkCount = promptProjects.length
   promptProjects = promptProjects.filter((link) => link.promptId !== promptId)
 
   if (promptProjects.length < initialLinkCount) {
-    await promptStorage.writePromptProjects(promptProjects)
+    await promptStorage.writePromptProjectAssociations(promptProjects)
   }
 
   return true
 }
 
 export async function getPromptProjects(promptId: number): Promise<PromptProject[]> {
-  const promptProjects = await promptStorage.readPromptProjects()
+  const promptProjects = await promptStorage.readPromptProjectAssociations()
   return promptProjects.filter((link) => link.promptId === promptId)
 }
 

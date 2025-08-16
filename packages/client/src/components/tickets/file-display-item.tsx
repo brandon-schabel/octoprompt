@@ -32,11 +32,11 @@ export function FileDisplayItem({ fileId, projectId, projectRoot = '', className
     // Try to find by ID first (if it's a number)
     const numericId = Number(fileId)
     if (!isNaN(numericId)) {
-      return filesResponse.data.find((f) => f.id === numericId)
+      return filesResponse.data.find((f: any) => f.id === numericId)
     }
 
     // Otherwise try to find by path
-    return filesResponse.data.find((f) => f.path === fileId)
+    return filesResponse.data.find((f: any) => f.path === fileId)
   }, [filesResponse, fileId])
 
   // Extract file name from path

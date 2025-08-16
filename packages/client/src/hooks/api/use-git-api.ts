@@ -13,7 +13,7 @@ import type {
   GitLogEnhancedResponse,
   GitBranchListEnhancedResponse,
   GitCommitDetailResponse
-} from '@promptliano/schemas'
+} from '@promptliano/api-client'
 
 export function useProjectGitStatus(projectId: number | undefined, enabled = true) {
   const client = useApiClient()
@@ -41,7 +41,7 @@ export function useProjectGitStatus(projectId: number | undefined, enabled = tru
 export function useGitFilesWithChanges(projectId: number | undefined) {
   const { data: gitStatus } = useProjectGitStatus(projectId)
 
-  if (!gitStatus || !gitStatus.success) {
+  if (!gitStatus || !gitStatus.success || !gitStatus.data) {
     return []
   }
 
@@ -234,10 +234,15 @@ export function useBranchesEnhanced(projectId: number | undefined, enabled = tru
       }
       if (!client) throw new Error('API client not initialized')
       const response = await client.git.getBranchesEnhanced(projectId)
-      if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch enhanced branches')
+      // Type assertion needed due to type resolution issues
+      const typedResponse = response as any as { success: boolean; data?: any; message?: string }
+      if (!typedResponse.success) {
+        throw new Error(typedResponse.message || 'Failed to fetch enhanced branches')
       }
-      return response
+      if (!typedResponse.data) {
+        throw new Error('No enhanced branches data returned')
+      }
+      return typedResponse.data
     },
     enabled: !!client && enabled && !!projectId,
     staleTime: 10000, // Consider branches stale after 10 seconds
@@ -366,10 +371,15 @@ export function useCommitLogEnhanced(projectId: number | undefined, params?: Git
       }
       if (!client) throw new Error('API client not initialized')
       const response = await client.git.getCommitLogEnhanced(projectId, params)
-      if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch enhanced commit log')
+      // Type assertion needed due to type resolution issues
+      const typedResponse = response as any as { success: boolean; data?: any; message?: string }
+      if (!typedResponse.success) {
+        throw new Error(typedResponse.message || 'Failed to fetch enhanced commit log')
       }
-      return response
+      if (!typedResponse.data) {
+        throw new Error('No enhanced commit log data returned')
+      }
+      return typedResponse.data
     },
     enabled: !!client && enabled && !!projectId,
     staleTime: 30000 // Consider log stale after 30 seconds
@@ -394,10 +404,15 @@ export function useCommitDetail(
       }
       if (!client) throw new Error('API client not initialized')
       const response = await client.git.getCommitDetail(projectId, hash, includeFileContents)
-      if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch commit details')
+      // Type assertion needed due to type resolution issues
+      const typedResponse = response as any as { success: boolean; data?: any; message?: string }
+      if (!typedResponse.success) {
+        throw new Error(typedResponse.message || 'Failed to fetch commit details')
       }
-      return response
+      if (!typedResponse.data) {
+        throw new Error('No commit details data returned')
+      }
+      return typedResponse.data
     },
     enabled: !!client && enabled && !!projectId && !!hash,
     staleTime: 60000 // Consider commit details stale after 1 minute
@@ -732,10 +747,15 @@ export function useGitWorktrees(projectId: number | undefined, enabled = true) {
       }
       if (!client) throw new Error('API client not initialized')
       const response = await client.git.worktrees.list(projectId)
-      if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch worktrees')
+      // Type assertion needed due to type resolution issues
+      const typedResponse = response as any as { success: boolean; data?: any; message?: string }
+      if (!typedResponse.success) {
+        throw new Error(typedResponse.message || 'Failed to fetch worktrees')
       }
-      return response.data
+      if (!typedResponse.data) {
+        throw new Error('No worktrees data returned')
+      }
+      return typedResponse.data
     },
     enabled: !!client && enabled && !!projectId
   })

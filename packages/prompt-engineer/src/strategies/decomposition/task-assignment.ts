@@ -50,7 +50,7 @@ export class AgentRegistry {
   private registerDefaultAgents(): void {
     const defaultAgents: AgentProfile[] = [
       {
-        id: 'frontend-shadcn-expert',
+        id: 'promptliano-ui-architect',
         name: 'Frontend ShadCN Expert',
         capabilities: ['ui', 'components', 'styling', 'react'],
         specializations: ['shadcn', 'tailwind', 'frontend', 'components'],
@@ -77,7 +77,7 @@ export class AgentRegistry {
         reliability: 0.98
       },
       {
-        id: 'sqlite-json-migration-expert',
+        id: 'promptliano-sqlite-expert',
         name: 'SQLite JSON Migration Expert',
         capabilities: ['database', 'migration', 'sql'],
         specializations: ['sqlite', 'migrations', 'json', 'normalization'],
@@ -234,7 +234,7 @@ export class TaskAssignmentEngine {
       allowParallelAgents: false,
       preferSpecialists: true
     }
-  ) {}
+  ) { }
 
   // Assign agents to all tasks in a graph
   assignAgents(graph: TaskGraph): E.Either<Error, TaskAssignment[]> {

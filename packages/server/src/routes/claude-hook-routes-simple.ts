@@ -2,7 +2,7 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import {
   ApiErrorResponseSchema,
   OperationSuccessResponseSchema,
-  HookResponseSchema,
+  HookApiResponseSchema,
   HookListResponseSchema,
   CreateHookRequestSchema,
   UpdateHookRequestSchema,
@@ -14,6 +14,7 @@ import {
 } from '@promptliano/schemas'
 import { claudeHookService } from '@promptliano/services'
 import { ApiError } from '@promptliano/shared'
+import { createStandardResponses, createStandardResponsesWithStatus, successResponse, operationSuccessResponse } from '../utils/route-helpers'
 
 // Parameter schemas
 const ProjectPathParamsSchema = z
@@ -78,20 +79,7 @@ const listHooksRoute = createRoute({
   request: {
     params: ProjectPathParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: HookListResponseSchema } },
-      description: 'Successfully retrieved hooks'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Invalid project path'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(HookListResponseSchema)
 })
 
 const getHookRoute = createRoute({
@@ -103,20 +91,7 @@ const getHookRoute = createRoute({
   request: {
     params: HookParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: HookResponseSchema } },
-      description: 'Successfully retrieved hook'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Hook not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(HookApiResponseSchema)
 })
 
 const createHookRoute = createRoute({
@@ -131,15 +106,33 @@ const createHookRoute = createRoute({
   },
   responses: {
     201: {
-      content: { 'application/json': { schema: HookResponseSchema } },
+      content: {
+        'application/json': { schema: HookApiResponseSchema }
+      },
       description: 'Hook created successfully'
     },
     400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Bad Request'
+    },
+    404: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
+      description: 'Resource Not Found'
+    },
+    422: {
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
       description: 'Validation Error'
     },
     500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      content: {
+        'application/json': { schema: ApiErrorResponseSchema }
+      },
       description: 'Internal Server Error'
     }
   }
@@ -155,24 +148,7 @@ const updateHookRoute = createRoute({
     params: HookParamsSchema,
     body: { content: { 'application/json': { schema: UpdateHookRequestSchema.partial() } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: HookResponseSchema } },
-      description: 'Hook updated successfully'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Hook not found'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(HookApiResponseSchema)
 })
 
 const deleteHookRoute = createRoute({
@@ -184,20 +160,7 @@ const deleteHookRoute = createRoute({
   request: {
     params: HookParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Hook deleted successfully'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Hook not found'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const generateHookRoute = createRoute({
@@ -210,20 +173,7 @@ const generateHookRoute = createRoute({
     params: ProjectPathParamsSchema,
     body: { content: { 'application/json': { schema: HookGenerationRequestSchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: HookGenerationResponseSchema } },
-      description: 'Hook generated successfully'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(HookGenerationResponseSchema)
 })
 
 const testHookRoute = createRoute({
@@ -236,20 +186,7 @@ const testHookRoute = createRoute({
     params: ProjectPathParamsSchema,
     body: { content: { 'application/json': { schema: HookTestRequestSchema } } }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: HookTestResponseSchema } },
-      description: 'Test response'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(HookTestResponseSchema)
 })
 
 const searchHooksRoute = createRoute({
@@ -262,20 +199,7 @@ const searchHooksRoute = createRoute({
     params: ProjectPathParamsSchema,
     query: SearchQuerySchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: HookListResponseSchema } },
-      description: 'Search completed successfully'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Invalid search parameters'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(HookListResponseSchema)
 })
 
 export const claudeHookRoutesSimple = new OpenAPIHono()
@@ -286,13 +210,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
     try {
       const hooks = await claudeHookService.listHooks(decodedPath)
 
-      return c.json(
-        {
-          success: true,
-          data: hooks
-        } satisfies z.infer<typeof HookListResponseSchema>,
-        200
-      )
+      return c.json(successResponse(hooks))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -313,13 +231,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
         throw new ApiError(404, `Hook not found for event ${eventName} at index ${matcherIndex}`)
       }
 
-      return c.json(
-        {
-          success: true,
-          data: hook
-        } satisfies z.infer<typeof HookResponseSchema>,
-        200
-      )
+      return c.json(successResponse(hook))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -337,13 +249,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
     try {
       const hook = await claudeHookService.createHook(decodedPath, body)
 
-      return c.json(
-        {
-          success: true,
-          data: hook
-        } satisfies z.infer<typeof HookResponseSchema>,
-        201
-      )
+      return c.json({ success: true, data: hook } satisfies z.infer<typeof HookApiResponseSchema>, 201)
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -365,13 +271,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
         throw new ApiError(404, `Hook not found for event ${eventName} at index ${matcherIndex}`)
       }
 
-      return c.json(
-        {
-          success: true,
-          data: hook
-        } satisfies z.infer<typeof HookResponseSchema>,
-        200
-      )
+      return c.json(successResponse(hook))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -388,13 +288,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
     try {
       await claudeHookService.deleteHook(decodedPath, eventName, matcherIndex)
 
-      return c.json(
-        {
-          success: true,
-          message: 'Hook deleted successfully'
-        } satisfies z.infer<typeof OperationSuccessResponseSchema>,
-        200
-      )
+      return c.json(operationSuccessResponse('Hook deleted successfully'))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -415,13 +309,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
         ...context
       })
 
-      return c.json(
-        {
-          success: true,
-          data: generatedHook
-        } satisfies z.infer<typeof HookGenerationResponseSchema>,
-        200
-      )
+      return c.json(successResponse(generatedHook))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -446,13 +334,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
         body.sampleToolName
       )
 
-      return c.json(
-        {
-          success: true,
-          data: result
-        } satisfies z.infer<typeof HookTestResponseSchema>,
-        200
-      )
+      return c.json(successResponse(result))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -470,13 +352,7 @@ export const claudeHookRoutesSimple = new OpenAPIHono()
     try {
       const hooks = await claudeHookService.searchHooks(decodedPath, q || '')
 
-      return c.json(
-        {
-          success: true,
-          data: hooks
-        } satisfies z.infer<typeof HookListResponseSchema>,
-        200
-      )
+      return c.json(successResponse(hooks))
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(

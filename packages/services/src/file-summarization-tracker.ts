@@ -9,7 +9,6 @@ import {
 import { ApiError } from '@promptliano/shared'
 import { getProjectFiles } from './project-service'
 import { logger } from './utils/logger'
-import { getJobQueue } from './job-service'
 import { getFileImportance } from './utils/file-importance-scorer'
 
 export interface TrackerOptions {
@@ -182,15 +181,6 @@ export class FileSummarizationTracker {
 
     this.progressMap.set(batchId, progress)
 
-    // Create a job for tracking
-    const jobQueue = getJobQueue()
-    jobQueue.createJob({
-      type: 'file-summarization',
-      input: { projectId, totalFiles, totalGroups },
-      projectId,
-      metadata: { batchId }
-    })
-
     return progress
   }
 
@@ -203,12 +193,6 @@ export class FileSummarizationTracker {
 
     const updatedProgress = { ...progress, ...updates }
     this.progressMap.set(batchId, updatedProgress)
-
-    // Update job progress
-    const progressPercent = Math.round((updatedProgress.processedFiles / updatedProgress.totalFiles) * 100)
-
-    // Note: Job queue doesn't have updateJob method, jobs update themselves
-    // We'll just track in our internal map
 
     return updatedProgress
   }

@@ -133,7 +133,7 @@ export function QueueSelectionDialog({ isOpen, onClose, ticketId, projectId }: Q
                               className={cn(
                                 'transition-all hover:shadow-md',
                                 isSelected && 'ring-2 ring-primary shadow-md',
-                                queueData.queue.status === 'paused' && 'opacity-60'
+                                (queueData.queue.status ?? 'active') === 'paused' && 'opacity-60'
                               )}
                             >
                               <CardContent className='p-4'>
@@ -142,8 +142,8 @@ export function QueueSelectionDialog({ isOpen, onClose, ticketId, projectId }: Q
                                     <Inbox className='h-4 w-4 text-muted-foreground' />
                                     <span className='font-semibold'>{queueData.queue.name}</span>
                                     <Badge variant='outline' className='text-xs'>
-                                      {getQueueStatusIcon(queueData.queue.status)}
-                                      {queueData.queue.status}
+                                      {getQueueStatusIcon(queueData.queue.status ?? 'inactive')}
+                                      {queueData.queue.status ?? 'inactive'}
                                     </Badge>
                                   </div>
                                   <Badge className={cn('text-xs', healthColor)}>{health}</Badge>

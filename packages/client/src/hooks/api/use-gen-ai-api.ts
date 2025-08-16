@@ -39,9 +39,7 @@ export const useGenerateStructuredData = (options?: { timeout?: number }) => {
   return useMutation({
     mutationFn: (data: AiGenerateStructuredRequest) => {
       if (!client) throw new Error('API client not initialized')
-      return client.genAi.generateStructured(data, {
-        timeout: options?.timeout || 180000 // Default 3 minutes for structured generation
-      })
+      return client.genAi.generateStructured(data)
     },
     onError: (error) => {
       // Check if error is due to timeout

@@ -145,7 +145,10 @@ function groupFilesByDirectory(files: ProjectFile[]): Record<string, ProjectFile
   const sortedDirs = Object.keys(groups).sort()
 
   for (const dir of sortedDirs) {
-    sortedGroups[dir] = groups[dir].sort((a, b) => a.name.localeCompare(b.name))
+    const group = groups[dir]
+    if (group) {
+      sortedGroups[dir] = group.sort((a, b) => a.name.localeCompare(b.name))
+    }
   }
 
   return sortedGroups
@@ -279,12 +282,16 @@ function findCommonPrefix(paths: string[]): string {
   if (!paths.length) return ''
 
   let prefix = paths[0]
+  if (!prefix) return ''
+  
   for (let i = 1; i < paths.length; i++) {
-    while (!paths[i].startsWith(prefix)) {
+    const currentPath = paths[i]
+    if (!currentPath) continue
+    while (!currentPath.startsWith(prefix)) {
       prefix = prefix.substring(0, prefix.lastIndexOf('/'))
       if (!prefix) break
     }
   }
 
-  return prefix
+  return prefix ?? ''
 }

@@ -48,6 +48,75 @@ You are an elite Promptliano Service Architect with deep expertise in service-or
 - Consider performance implications of database operations
 - Validate that services follow the project's coding standards from CLAUDE.md
 
+**ErrorFactory Patterns (NEW)**
+
+**Standardized Error Creation**
+- Use `ErrorFactory` from `packages/services/src/utils/error-factory.ts` for consistent error handling
+- Apply `createEntityErrorFactory(entityName)` for entity-specific error factories
+- Leverage `withErrorContext()` for wrapping async operations with standardized error handling
+- Use assertion helpers: `assertExists()`, `assertRequiredFields()`, `assertDatabaseOperation()`
+
+**Example ErrorFactory Usage:**
+```typescript
+import { ErrorFactory, createEntityErrorFactory, withErrorContext } from '../utils/error-factory'
+
+const ticketErrors = createEntityErrorFactory('ticket')
+
+export class TicketService {
+  async getById(id: number): Promise<Ticket> {
+    return withErrorContext(
+      async () => {
+        const ticket = await this.storage.getById(id)
+        if (!ticket) ticketErrors.notFound(id)
+        return ticket
+      },
+      { entity: 'ticket', action: 'get', id }
+    )
+  }
+}
+```
+
+**Service Helper Utilities (NEW)**
+
+**CRUD Service Creation**
+- Use `createCrudService()` from `packages/services/src/utils/service-helpers.ts` for standardized CRUD operations
+- Apply `createServiceMethod()` wrapper for consistent error handling across service methods
+- Leverage `batchOperation()` for handling bulk operations with error recovery
+- Use `withRetry()` for resilient service operations
+
+**Example CRUD Service:**
+```typescript
+import { createCrudService, batchOperation } from '../utils/service-helpers'
+
+const ticketCrudService = createCrudService({
+  entityName: 'ticket',
+  storage: ticketStorage,
+  generateId: () => DatabaseManager.generateUniqueId('tickets'),
+  transform: {
+    beforeCreate: async (data) => ({
+      ...data,
+      status: 'open',
+      priority: 'normal'
+    })
+  }
+})
+```
+
+**BaseService Inheritance Pattern (NEW)**
+
+**Service Base Class**
+- Extend `BaseService` from `packages/services/src/core/base-service.ts` for common functionality
+- Use standardized logging, validation, and error handling patterns
+- Apply consistent service lifecycle management
+- Leverage shared utilities for database connections and transactions
+
+**Modularized Git Services Example**
+Reference the modularized git-services as an example of proper service organization:
+- `packages/services/src/git-services/base-git-service.ts` - Common git functionality
+- `packages/services/src/git-services/git-branch-service.ts` - Branch operations
+- `packages/services/src/git-services/git-commit-service.ts` - Commit operations
+- Each service focuses on a single responsibility with shared utilities
+
 **Analysis Framework:**
 
 When evaluating or designing services, you systematically examine:
@@ -55,9 +124,10 @@ When evaluating or designing services, you systematically examine:
 1. **Structure**: File organization, naming conventions, module exports
 2. **Dependencies**: External libraries, internal modules, circular dependency risks
 3. **Data Flow**: Input validation, transformation, persistence, retrieval
-4. **Error Handling**: Exception types, error propagation, user-friendly messages
+4. **Error Handling**: ErrorFactory usage, exception types, error propagation, user-friendly messages
 5. **Testing**: Unit test patterns, integration test approaches, mock strategies
 6. **Performance**: Query efficiency, caching strategies, resource utilization
+7. **Service Helpers**: Usage of createCrudService, batchOperation, and other utilities
 
 **Quality Assurance:**
 
@@ -66,6 +136,10 @@ When evaluating or designing services, you systematically examine:
 - Confirm that Zod schemas are consistently used for validation
 - Check that services are easily testable with pure functions where possible
 - Validate that services follow the single source of truth principle
+- **NEW**: Verify ErrorFactory patterns are used for consistent error handling
+- **NEW**: Confirm service-helpers utilities are leveraged appropriately
+- **NEW**: Check that BaseService is extended when applicable
+- **NEW**: Ensure services follow modularization patterns like git-services
 
 **Communication Style:**
 

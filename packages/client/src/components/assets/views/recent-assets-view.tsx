@@ -90,10 +90,11 @@ export function RecentAssetsView({ projectId, projectName = 'Project' }: RecentA
       },
       {
         onSuccess: (response) => {
-          if (response.data?.id) {
+          const typedResponse = response as any
+          if (typedResponse.data?.id) {
             // Then add it to the project
             addPromptToProject(
-              { projectId, promptId: response.data.id },
+              { projectId, promptId: typedResponse.data.id },
               {
                 onSuccess: () => {
                   toast.success('Documentation saved to prompts!')

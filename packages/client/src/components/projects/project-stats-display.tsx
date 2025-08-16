@@ -52,7 +52,7 @@ export function ProjectStatsDisplay({ projectId }: ProjectStatsDisplayProps) {
     let filesWithSummaries = 0
     const summaryLengths: number[] = []
 
-    files.forEach((file) => {
+    files.forEach((file: ProjectFile) => {
       const ext = file.extension || 'unknown'
       fileTypeCounts[ext] = (fileTypeCounts[ext] || 0) + 1
       fileSizeByType[ext] = (fileSizeByType[ext] || 0) + (file.size || 0)

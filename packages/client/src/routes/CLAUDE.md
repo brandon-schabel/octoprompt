@@ -11,7 +11,7 @@ The client routes package implements file-based routing using TanStack Router v1
 When implementing new routes or modifying routing logic, you MUST use these specialized agents:
 
 1. **tanstack-router-expert** - For all routing implementation, navigation patterns, and route configuration
-2. **frontend-shadcn-expert** - For UI components within routes
+2. **promptliano-ui-architect** - For UI components within routes
 3. **zod-schema-architect** - For search parameter schema validation
 4. **staff-engineer-code-reviewer** - MANDATORY after implementing any route changes
 
@@ -20,7 +20,7 @@ When implementing new routes or modifying routing logic, you MUST use these spec
 ```typescript
 // 1. Use tanstack-router-expert to design route structure
 // 2. Use zod-schema-architect for search params schema
-// 3. Use frontend-shadcn-expert for UI components
+// 3. Use promptliano-ui-architect for UI components
 // 4. Use staff-engineer-code-reviewer to validate implementation
 ```
 

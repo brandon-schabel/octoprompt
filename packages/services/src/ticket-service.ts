@@ -13,6 +13,8 @@ import { TaskSuggestionsSchema, FileSuggestionsZodSchema } from '@promptliano/sc
 import { MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/config'
 import { ticketStorage } from '@promptliano/storage'
 import { ApiError } from '@promptliano/shared'
+import { ErrorFactory, assertExists, assertUpdateSucceeded, assertDeleteSucceeded } from './utils/error-factory'
+import { TicketErrors, TaskErrors, ProjectErrors } from '@promptliano/shared/src/error/entity-errors'
 import { getFullProjectSummary, getCompactProjectSummary } from './utils/project-summary-service'
 import { generateStructuredData } from './gen-ai-services'
 import { fileSuggestionStrategyService, FileSuggestionStrategyService } from './file-suggestion-strategy-service'
@@ -85,12 +87,7 @@ export async function fetchTaskSuggestionsForTicket(
   } catch (error) {
     // Handle case where project doesn't exist or has no files
     if (error instanceof ApiError && error.status === 404) {
-      throw new ApiError(
-        404,
-        `Cannot generate tasks: Project ${ticket.projectId} not found or has no files`,
-        'PROJECT_NOT_FOUND',
-        { ticketId: ticket.id, projectId: ticket.projectId }
-      )
+      throw ProjectErrors.notFound(ticket.projectId)
     }
     throw error
   }
@@ -127,7 +124,7 @@ export async function fetchTaskSuggestionsForTicket(
 
   const cfg = MEDIUM_MODEL_CONFIG
   if (!cfg.model) {
-    throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, 'CONFIG_ERROR')
+    ErrorFactory.missingRequired("model", "suggest-ticket-tasks")
   }
 
   try {
@@ -143,12 +140,7 @@ export async function fetchTaskSuggestionsForTicket(
     if (error instanceof ApiError) {
       throw error
     }
-    throw new ApiError(
-      500,
-      `Failed to generate task suggestions: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      'TASK_GENERATION_FAILED',
-      { ticketId: ticket.id, originalError: error }
-    )
+    ErrorFactory.operationFailed('task suggestion generation', error instanceof Error ? error.message : 'Unknown error')
   }
 }
 
@@ -178,7 +170,7 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
 export async function getTicketById(ticketId: number): Promise<Ticket> {
   const ticket = await ticketStorage.getTicketById(ticketId)
   if (!ticket) {
-    throw new ApiError(404, `Ticket with ID ${ticketId} not found.`, 'TICKET_NOT_FOUND')
+    throw TicketErrors.notFound(ticketId)
   }
   return ticket
 }
@@ -212,9 +204,7 @@ export async function updateTicket(ticketId: number, data: UpdateTicketBody): Pr
   }
 
   const success = await ticketStorage.replaceTicket(ticketId, updatedTicket)
-  if (!success) {
-    throw new ApiError(500, `Failed to update ticket ${ticketId}`, 'UPDATE_TICKET_FAILED')
-  }
+  assertUpdateSucceeded(success, 'Ticket', ticketId)
 
   return updatedTicket
 }
@@ -243,9 +233,7 @@ export async function completeTicket(ticketId: number): Promise<{ ticket: Ticket
 
   // Update the ticket
   const success = await ticketStorage.replaceTicket(ticketId, updatedTicket)
-  if (!success) {
-    throw new ApiError(500, `Failed to complete ticket ${ticketId}`, 'COMPLETE_TICKET_FAILED')
-  }
+  assertUpdateSucceeded(success, 'Ticket', ticketId)
 
   // Get all tasks for the ticket
   const tasks = await getTasks(ticketId)
@@ -331,11 +319,11 @@ export async function updateTask(ticketId: number, taskId: number, updates: Upda
 
   const existingTask = await ticketStorage.getTaskById(taskId)
   if (!existingTask) {
-    throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}.`, 'TASK_NOT_FOUND_FOR_TICKET')
+    throw TaskErrors.notFound(taskId)
   }
 
   if (existingTask.ticketId !== ticketId) {
-    throw new ApiError(400, `Task ${taskId} does not belong to ticket ${ticketId}`, 'TASK_TICKET_MISMATCH')
+    ErrorFactory.invalidRelationship('Task', taskId, 'Ticket', ticketId)
   }
 
   const now = Date.now()
@@ -354,9 +342,7 @@ export async function updateTask(ticketId: number, taskId: number, updates: Upda
   }
 
   const success = await ticketStorage.replaceTask(taskId, updatedTask)
-  if (!success) {
-    throw new ApiError(500, `Failed to update task ${taskId}`, 'UPDATE_TASK_FAILED')
-  }
+  assertUpdateSucceeded(success, 'Task', taskId)
 
   return updatedTask
 }
@@ -367,16 +353,16 @@ export async function deleteTask(ticketId: number, taskId: number): Promise<void
 
   const existingTask = await ticketStorage.getTaskById(taskId)
   if (!existingTask) {
-    throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}.`, 'TASK_NOT_FOUND_FOR_TICKET')
+    throw TaskErrors.notFound(taskId)
   }
 
   if (existingTask.ticketId !== ticketId) {
-    throw new ApiError(400, `Task ${taskId} does not belong to ticket ${ticketId}`, 'TASK_TICKET_MISMATCH')
+    ErrorFactory.invalidRelationship('Task', taskId, 'Ticket', ticketId)
   }
 
   const success = await ticketStorage.deleteTask(taskId)
   if (!success) {
-    throw new ApiError(500, `Failed to delete task ${taskId}`, 'DELETE_TASK_FAILED')
+    throw TaskErrors.deleteFailed(taskId, 'Delete operation returned false')
   }
 }
 
@@ -401,7 +387,7 @@ export async function reorderTasks(
     }
 
     if (existingTask.ticketId !== ticketId) {
-      throw new ApiError(400, `Task ${taskId} does not belong to ticket ${ticketId}`, 'TASK_TICKET_MISMATCH')
+      throw TaskErrors.invalidRelationship(taskId, 'Ticket', ticketId)
     }
 
     const updatedTask: TicketTask = {
@@ -430,12 +416,7 @@ export async function suggestTasksForTicket(ticketId: number, userContext?: stri
     if (error instanceof ApiError) {
       throw error
     }
-    throw new ApiError(
-      500,
-      `Failed to suggest tasks for ticket ${ticketId}: ${error.message || 'AI provider error'}`,
-      'TASK_SUGGESTION_FAILED',
-      { originalError: error }
-    )
+    ErrorFactory.operationFailed('task suggestion', error.message || 'AI provider error')
   }
 }
 
@@ -504,10 +485,11 @@ export async function suggestFilesForTicket(
     const suggestedFileIds = suggestionResponse.suggestions.map((id) => id.toString())
 
     // Merge with existing suggestions to preserve any manually added files
-    const allFileIds = [...new Set([...ticket.suggestedFileIds, ...suggestedFileIds])]
+    const existingSuggestions = ticket.suggestedFileIds || []
+    const allFileIds = [...new Set([...existingSuggestions, ...suggestedFileIds])]
 
     // Update the ticket with the new suggestions if there are new ones
-    if (suggestedFileIds.length > 0 && suggestedFileIds.some((id) => !ticket.suggestedFileIds.includes(id))) {
+    if (suggestedFileIds.length > 0 && suggestedFileIds.some((id) => !existingSuggestions.includes(id))) {
       await updateTicket(ticketId, {
         suggestedFileIds: allFileIds
       })
@@ -531,12 +513,7 @@ export async function suggestFilesForTicket(
       throw error
     }
     const errorMessage = (error as any)?.message || 'Error during file suggestion'
-    throw new ApiError(
-      500,
-      `Failed to suggest files for ticket ${ticketId}: ${errorMessage}`,
-      'FILE_SUGGESTION_FAILED',
-      { originalError: error }
-    )
+    ErrorFactory.operationFailed('file suggestion', errorMessage)
   }
 }
 
@@ -565,20 +542,20 @@ export async function searchTickets(
   if (options.query) {
     const query = options.query.toLowerCase()
     tickets = tickets.filter(
-      (ticket) => ticket.title.toLowerCase().includes(query) || ticket.overview.toLowerCase().includes(query)
+      (ticket) => ticket.title.toLowerCase().includes(query) || ticket.overview?.toLowerCase().includes(query)
     )
   }
 
   // Status filter
   if (options.status) {
     const statuses = Array.isArray(options.status) ? options.status : [options.status]
-    tickets = tickets.filter((ticket) => statuses.includes(ticket.status))
+    tickets = tickets.filter((ticket) => ticket.status && statuses.includes(ticket.status))
   }
 
   // Priority filter
   if (options.priority) {
     const priorities = Array.isArray(options.priority) ? options.priority : [options.priority]
-    tickets = tickets.filter((ticket) => priorities.includes(ticket.priority))
+    tickets = tickets.filter((ticket) => ticket.priority && priorities.includes(ticket.priority))
   }
 
   // Date range filter
@@ -593,7 +570,7 @@ export async function searchTickets(
   // Has files filter
   if (options.hasFiles !== undefined) {
     tickets = tickets.filter((ticket) =>
-      options.hasFiles ? ticket.suggestedFileIds.length > 0 : ticket.suggestedFileIds.length === 0
+      options.hasFiles ? (ticket.suggestedFileIds?.length ?? 0) > 0 : (ticket.suggestedFileIds?.length ?? 0) === 0
     )
   }
 
@@ -743,7 +720,7 @@ export async function batchCreateTickets(
   }
 
   if (tickets.length > 100) {
-    throw new ApiError(400, 'Batch size exceeded. Maximum 100 tickets per batch.', 'BATCH_SIZE_EXCEEDED')
+    throw TicketErrors.batchSizeExceeded(100, tickets.length)
   }
 
   for (const ticketData of tickets) {
@@ -774,7 +751,7 @@ export async function batchUpdateTickets(
   }
 
   if (updates.length > 100) {
-    throw new ApiError(400, 'Batch size exceeded. Maximum 100 tickets per batch.', 'BATCH_SIZE_EXCEEDED')
+    throw TicketErrors.batchSizeExceeded(100, updates.length)
   }
 
   for (const { ticketId, data } of updates) {
@@ -804,7 +781,7 @@ export async function batchDeleteTickets(ticketIds: number[]): Promise<BatchOper
   }
 
   if (ticketIds.length > 100) {
-    throw new ApiError(400, 'Batch size exceeded. Maximum 100 tickets per batch.', 'BATCH_SIZE_EXCEEDED')
+    throw TicketErrors.batchSizeExceeded(100, ticketIds.length)
   }
 
   for (const ticketId of ticketIds) {
@@ -838,7 +815,7 @@ export async function batchCreateTasks(
   }
 
   if (tasks.length > 100) {
-    throw new ApiError(400, 'Batch size exceeded. Maximum 100 tasks per batch.', 'BATCH_SIZE_EXCEEDED')
+    throw TaskErrors.batchSizeExceeded(100, tasks.length)
   }
 
   // Verify ticket exists first
@@ -872,7 +849,7 @@ export async function batchUpdateTasks(
   }
 
   if (updates.length > 100) {
-    throw new ApiError(400, 'Batch size exceeded. Maximum 100 tasks per batch.', 'BATCH_SIZE_EXCEEDED')
+    throw TaskErrors.batchSizeExceeded(100, updates.length)
   }
 
   for (const { ticketId, taskId, data } of updates) {
@@ -903,7 +880,7 @@ export async function batchDeleteTasks(
   }
 
   if (deletes.length > 100) {
-    throw new ApiError(400, 'Batch size exceeded. Maximum 100 tasks per batch.', 'BATCH_SIZE_EXCEEDED')
+    throw TaskErrors.batchSizeExceeded(100, deletes.length)
   }
 
   for (const { ticketId, taskId } of deletes) {
@@ -934,7 +911,7 @@ export async function batchMoveTasks(
   }
 
   if (moves.length > 100) {
-    throw new ApiError(400, 'Batch size exceeded. Maximum 100 tasks per batch.', 'BATCH_SIZE_EXCEEDED')
+    throw TaskErrors.batchSizeExceeded(100, moves.length)
   }
 
   for (const { taskId, fromTicketId, toTicketId } of moves) {
@@ -942,7 +919,7 @@ export async function batchMoveTasks(
       // Get the task
       const task = await ticketStorage.getTaskById(taskId)
       if (!task || task.ticketId !== fromTicketId) {
-        throw new ApiError(404, `Task ${taskId} not found in ticket ${fromTicketId}`, 'TASK_NOT_FOUND')
+        throw TaskErrors.notFound(taskId)
       }
 
       // Verify target ticket exists
@@ -1045,8 +1022,9 @@ export async function linkFilesToTicket(
   const ticket = await getTicketById(ticketId)
 
   // Update the ticket's suggested file IDs
+  const existingSuggestions = ticket.suggestedFileIds || []
   const updatedTicket = await updateTicket(ticketId, {
-    suggestedFileIds: [...new Set([...ticket.suggestedFileIds, ...fileIds])]
+    suggestedFileIds: [...new Set([...existingSuggestions, ...fileIds])]
   })
 
   // Return the linked files in the expected format
@@ -1061,7 +1039,7 @@ export async function getTicketFiles(ticketId: number): Promise<Array<{ id: stri
 
   // Return basic file info based on suggested file IDs
   // In a real implementation, this would query the files table
-  return ticket.suggestedFileIds.map((fileId) => ({
+  return (ticket.suggestedFileIds ?? []).map((fileId) => ({
     id: fileId,
     name: `file-${fileId}`,
     path: `path/to/${fileId}`
@@ -1177,7 +1155,7 @@ export async function getTaskWithContext(
 ): Promise<TicketTask & { files?: Array<{ id: string; path: string }> }> {
   const task = await ticketStorage.getTaskById(taskId)
   if (!task) {
-    throw new ApiError(404, `Task with ID ${taskId} not found.`, 'TASK_NOT_FOUND')
+    throw TaskErrors.notFound(taskId)
   }
   // In a real implementation, this would resolve file information
   // For now, return task with basic file info
@@ -1196,7 +1174,7 @@ export async function getTaskWithContext(
 export async function suggestFilesForTask(taskId: number, context?: string): Promise<string[]> {
   const task = await ticketStorage.getTaskById(taskId)
   if (!task) {
-    throw new ApiError(404, `Task with ID ${taskId} not found.`, 'TASK_NOT_FOUND')
+    throw TaskErrors.notFound(taskId)
   }
 
   const ticket = await getTicketById(task.ticketId)
@@ -1241,7 +1219,7 @@ export async function analyzeTaskComplexity(taskId: number): Promise<{
 }> {
   const task = await ticketStorage.getTaskById(taskId)
   if (!task) {
-    throw new ApiError(404, `Task with ID ${taskId} not found.`, 'TASK_NOT_FOUND')
+    throw TaskErrors.notFound(taskId)
   }
 
   const ticket = await getTicketById(task.ticketId)

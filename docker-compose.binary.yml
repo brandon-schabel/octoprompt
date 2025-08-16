@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  promptliano:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+      args:
+        VERSION: ${VERSION:-*}
+        ARCH: ${ARCH:-linux-x64}
+    image: promptliano:alpine
+    container_name: promptliano-server
+    ports:
+      - "3147:3147"
+    volumes:
+      # Persistent data storage
+      - promptliano-data:/data
+      
+      # MCP configuration (optional)
+      - ./config:/config
+      
+      # Project files (optional - mount your projects directory)
+      # - ~/Projects:/projects:ro
+      
+    environment:
+      - NODE_ENV=production
+      - SERVER_PORT=3147
+      - DATABASE_PATH=/data/promptliano.db
+      - PROMPTLIANO_DATA_DIR=/data
+      
+      # Optional: AI provider keys (if not stored in DB)
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      
+      # Optional: Custom configuration
+      # - CORS_ORIGIN=http://localhost:3000
+      # - RATE_LIMIT_ENABLED=true
+      
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3147/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    networks:
+      - promptliano-network
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Optional: Nginx reverse proxy for HTTPS
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: promptliano-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - promptliano
+  #   networks:
+  #     - promptliano-network
+
+volumes:
+  promptliano-data:
+    driver: local
+    # Let Docker manage the volume location for better portability
+    # Use 'docker volume inspect promptliano-data' to find the actual location
+
+networks:
+  promptliano-network:
+    driver: bridge

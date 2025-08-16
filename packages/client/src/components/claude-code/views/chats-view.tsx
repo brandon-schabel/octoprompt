@@ -222,7 +222,7 @@ export function ChatsView({ projectId, projectName, sessionId, onBack }: ChatsVi
   const navigate = useNavigate()
 
   const { data: sessions } = useClaudeSessions(projectId)
-  const currentSession = sessions?.find((s) => s.sessionId === sessionId)
+  const currentSession = sessions?.find((s: any) => s.sessionId === sessionId)
 
   const {
     data: messages,
@@ -421,7 +421,7 @@ export function ChatsView({ projectId, projectName, sessionId, onBack }: ChatsVi
       ) : (
         <ScrollArea className='flex-1 p-6' ref={scrollAreaRef}>
           <div className='max-w-4xl mx-auto'>
-            {messages.map((message, index) => (
+            {messages.map((message: any, index: number) => (
               <div
                 key={`${message.sessionId}-${message.timestamp}-${index}`}
                 ref={(el) => {

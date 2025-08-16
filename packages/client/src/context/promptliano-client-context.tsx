@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { createPromptlianoClient, PromptlianoClient } from '@promptliano/api-client'
 import { useGetAppSettings, useSetKvValue } from '@/hooks/use-kv-local-storage'
-import { customFetch } from '@/lib/tauri-fetch-fixed'
 import { toast } from 'sonner'
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error'
@@ -68,12 +67,12 @@ export function PromptlianoClientProvider({ children }: PromptlianoClientProvide
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json'
-        },
-        customFetch
+        }
       })
 
-      const response = await testClient.system.healthCheck()
-      return response.success === true
+      // Use projects.listProjects as a health check since system.healthCheck is not available in the new API client
+      const response = await testClient.projects.listProjects()
+      return response && 'success' in response && response.success === true
     } catch (error) {
       console.error('Connection test failed:', error)
       return false
@@ -92,8 +91,7 @@ export function PromptlianoClientProvider({ children }: PromptlianoClientProvide
           timeout: 30000,
           headers: {
             'Content-Type': 'application/json'
-          },
-          customFetch
+          }
         })
 
         // Test the connection

@@ -14,6 +14,7 @@ import {
   ProviderHealthStatusEnum
 } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
+import { ErrorFactory, assertExists, handleZodError, withErrorContext } from './utils/error-factory'
 import { logger } from './utils/logger'
 import { z } from '@hono/zod-openapi'
 import { normalizeToUnixMs } from '@promptliano/shared'
@@ -85,28 +86,21 @@ export function createProviderKeyService() {
     }
 
     // Validate the new key data against the schema before saving
-    const parseResult = ProviderKeySchema.safeParse(newKeyData)
-    if (!parseResult.success) {
-      console.error(`Validation failed for new provider key data: ${parseResult.error.message}`, {
+    try {
+      ProviderKeySchema.parse(newKeyData)
+    } catch (error) {
+      console.error(`Validation failed for new provider key data:`, {
         rawData: data,
-        constructedData: newKeyData,
-        error: parseResult.error.flatten()
+        constructedData: newKeyData
       })
-      throw new ApiError(
-        500,
-        'Internal validation error creating provider key.',
-        'PROVIDER_KEY_VALIDATION_ERROR',
-        parseResult.error.flatten()
-      )
+      handleZodError(error, 'Provider Key', 'creating')
     }
 
-    const validatedNewKey = parseResult.data
-
-    allKeys[validatedNewKey.id] = validatedNewKey
+    allKeys[newKeyData.id] = newKeyData
     await providerKeyStorage.writeProviderKeys(allKeys)
 
     // Return the key with decrypted value (similar to getKeyById)
-    return { ...validatedNewKey, key: data.key }
+    return { ...newKeyData, key: data.key }
   }
 
   async function listKeysCensoredKeys(): Promise<ProviderKey[]> {
@@ -154,12 +148,7 @@ export function createProviderKeyService() {
               keyId: key.id,
               provider: key.provider 
             })
-            throw new ApiError(
-              500, 
-              'Failed to decrypt provider key', 
-              'DECRYPTION_FAILED',
-              { keyId: key.id }
-            )
+            throw ErrorFactory.operationFailed('decrypt provider key', `Key ID: ${key.id}`)
           }
         }
         return key
@@ -213,7 +202,7 @@ export function createProviderKeyService() {
         return { ...foundKeyData, key: decryptedKey }
       } catch (error) {
         console.error(`Failed to decrypt key ${id}:`, error)
-        throw new ApiError(500, `Failed to decrypt provider key`, 'PROVIDER_KEY_DECRYPTION_FAILED', { id })
+        throw ErrorFactory.operationFailed('decrypt provider key', `Key ID: ${id}`)
       }
     }
 
@@ -224,9 +213,7 @@ export function createProviderKeyService() {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const existingKey = allKeys[id]
 
-    if (!existingKey) {
-      throw new ApiError(404, `Provider key with ID ${id} not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE')
-    }
+    assertExists(existingKey, 'Provider Key', id)
 
     const now = normalizeToUnixMs(new Date())
 
@@ -267,48 +254,42 @@ export function createProviderKeyService() {
       updatedKeyData.key = existingKey.key
     }
 
-    const parseResult = ProviderKeySchema.safeParse(updatedKeyData)
-    if (!parseResult.success) {
-      console.error(`Validation failed updating provider key ${id}: ${parseResult.error.message}`, {
+    try {
+      ProviderKeySchema.parse(updatedKeyData)
+    } catch (error) {
+      console.error(`Validation failed updating provider key ${id}:`, {
         id,
         updatePayload: data,
-        mergedData: updatedKeyData,
-        error: parseResult.error.flatten()
+        mergedData: updatedKeyData
       })
-      throw new ApiError(
-        500,
-        `Internal validation error updating provider key.`,
-        'PROVIDER_KEY_UPDATE_VALIDATION_ERROR',
-        parseResult.error.flatten()
-      )
+      handleZodError(error, 'Provider Key', 'updating')
     }
 
-    const validatedUpdatedKey = parseResult.data
-    allKeys[id] = validatedUpdatedKey
+    allKeys[id] = updatedKeyData
     await providerKeyStorage.writeProviderKeys(allKeys)
 
     // Return the key with decrypted value (similar to getKeyById)
     if (
-      validatedUpdatedKey.encrypted &&
-      validatedUpdatedKey.iv &&
-      validatedUpdatedKey.tag &&
-      validatedUpdatedKey.salt
+      updatedKeyData.encrypted &&
+      updatedKeyData.iv &&
+      updatedKeyData.tag &&
+      updatedKeyData.salt
     ) {
       try {
         const decryptedKey = await decryptKey({
-          encrypted: validatedUpdatedKey.key,
-          iv: validatedUpdatedKey.iv,
-          tag: validatedUpdatedKey.tag,
-          salt: validatedUpdatedKey.salt
+          encrypted: updatedKeyData.key,
+          iv: updatedKeyData.iv,
+          tag: updatedKeyData.tag,
+          salt: updatedKeyData.salt
         })
-        return { ...validatedUpdatedKey, key: decryptedKey }
+        return { ...updatedKeyData, key: decryptedKey }
       } catch (error) {
         console.error(`Failed to decrypt key ${id}:`, error)
-        throw new ApiError(500, `Failed to decrypt provider key`, 'PROVIDER_KEY_DECRYPTION_FAILED', { id })
+        throw ErrorFactory.operationFailed('decrypt provider key', `Key ID: ${id}`)
       }
     }
 
-    return validatedUpdatedKey
+    return updatedKeyData
   }
 
   async function deleteKey(id: number): Promise<boolean> {
@@ -455,7 +436,7 @@ export function createProviderKeyService() {
     const { provider, apiKey, url } = request
     
     // Use provider-specific timeout, or fallback to request timeout if specified
-    const providerTimeout = getProviderTimeout(provider, 'validation')
+    const providerTimeout = getProviderTimeout(provider as any, 'validation')
     const timeout = request.timeout || providerTimeout
 
     // Create fetch with timeout
@@ -471,7 +452,7 @@ export function createProviderKeyService() {
       switch (provider) {
         case 'openai':
           if (!apiKey) {
-            throw new ApiError(400, 'API key required for OpenAI provider', 'MISSING_API_KEY')
+            throw ErrorFactory.missingRequired('API key', 'OpenAI provider')
           }
           response = await fetch('https://api.openai.com/v1/models', {
             headers: {
@@ -481,11 +462,11 @@ export function createProviderKeyService() {
             signal: controller.signal
           })
           if (!response.ok) {
-            throw new ApiError(response.status, `OpenAI API error: ${response.statusText}`, 'PROVIDER_API_ERROR')
+            throw ErrorFactory.operationFailed('OpenAI API request', `${response.status}: ${response.statusText}`)
           }
-          const openaiData = await response.json()
+          const openaiData = await response.json() as { data?: Array<{ id: string }> }
           models =
-            openaiData.data?.map((model: any) => ({
+            openaiData.data?.map((model) => ({
               id: model.id,
               name: model.id,
               description: `OpenAI model: ${model.id}`
@@ -494,7 +475,7 @@ export function createProviderKeyService() {
 
         case 'anthropic':
           if (!apiKey) {
-            throw new ApiError(400, 'API key required for Anthropic provider', 'MISSING_API_KEY')
+            throw ErrorFactory.missingRequired('API key', 'Anthropic provider')
           }
           // Anthropic doesn't have a direct models endpoint, so we'll test with a simple request
           response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -519,9 +500,9 @@ export function createProviderKeyService() {
               { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', description: 'Powerful model for complex tasks' }
             ]
           } else if (response.status === 401) {
-            throw new ApiError(401, 'Invalid Anthropic API key', 'INVALID_API_KEY')
+            throw ErrorFactory.operationFailed('Anthropic authentication', 'Invalid API key')
           } else {
-            throw new ApiError(response.status, `Anthropic API error: ${response.statusText}`, 'PROVIDER_API_ERROR')
+            throw ErrorFactory.operationFailed('Anthropic API request', `${response.status}: ${response.statusText}`)
           }
           break
 
@@ -531,15 +512,11 @@ export function createProviderKeyService() {
             signal: controller.signal
           })
           if (!response.ok) {
-            throw new ApiError(
-              response.status,
-              `Ollama connection error: ${response.statusText}`,
-              'PROVIDER_CONNECTION_ERROR'
-            )
+            throw ErrorFactory.operationFailed('Ollama connection', `${response.status}: ${response.statusText}`)
           }
-          const ollamaData = await response.json()
+          const ollamaData = await response.json() as { models?: Array<{ name: string }> }
           models =
-            ollamaData.models?.map((model: any) => ({
+            ollamaData.models?.map((model) => ({
               id: model.name,
               name: model.name,
               description: `Ollama model: ${model.name}`
@@ -549,10 +526,10 @@ export function createProviderKeyService() {
         case 'custom': {
           // Test custom OpenAI-compatible provider
           if (!url) {
-            throw new ApiError(400, 'Base URL required for custom provider', 'MISSING_BASE_URL')
+            throw ErrorFactory.missingRequired('Base URL', 'custom provider')
           }
           if (!apiKey) {
-            throw new ApiError(400, 'API key required for custom provider', 'MISSING_API_KEY')
+            throw ErrorFactory.missingRequired('API key', 'custom provider')
           }
           
           // Test with OpenAI-compatible /v1/models endpoint
@@ -566,16 +543,12 @@ export function createProviderKeyService() {
           })
           
           if (!response.ok) {
-            throw new ApiError(
-              response.status,
-              `Custom provider API error: ${response.statusText}`,
-              'CUSTOM_PROVIDER_ERROR'
-            )
+            throw ErrorFactory.operationFailed('custom provider API request', `${response.status}: ${response.statusText}`)
           }
           
-          const customData = await response.json()
+          const customData = await response.json() as { data?: Array<{ id?: string; name?: string }> }
           models =
-            customData.data?.map((model: any) => ({
+            customData.data?.map((model) => ({
               id: model.id,
               name: model.id || model.name,
               description: `Custom provider model: ${model.id || model.name}`
@@ -589,15 +562,11 @@ export function createProviderKeyService() {
             signal: controller.signal
           })
           if (!response.ok) {
-            throw new ApiError(
-              response.status,
-              `LMStudio connection error: ${response.statusText}`,
-              'PROVIDER_CONNECTION_ERROR'
-            )
+            throw ErrorFactory.operationFailed('LMStudio connection', `${response.status}: ${response.statusText}`)
           }
-          const lmstudioData = await response.json()
+          const lmstudioData = await response.json() as { data?: Array<{ id: string }> }
           models =
-            lmstudioData.data?.map((model: any) => ({
+            lmstudioData.data?.map((model) => ({
               id: model.id,
               name: model.id,
               description: `LMStudio model: ${model.id}`
@@ -605,7 +574,7 @@ export function createProviderKeyService() {
           break
 
         default:
-          throw new ApiError(400, `Unsupported provider: ${provider}`, 'UNSUPPORTED_PROVIDER')
+          throw ErrorFactory.invalidParam('provider', 'supported provider type', provider)
       }
 
       return { models }

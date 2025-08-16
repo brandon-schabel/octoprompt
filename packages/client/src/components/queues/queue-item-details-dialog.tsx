@@ -45,13 +45,12 @@ export function QueueItemDetailsDialog({ item, projectId, open, onOpenChange }: 
   const task = tasks?.find((t) => t.id === item.taskId)
 
   // Fetch files for the project
-  const { data: filesResponse } = useGetProjectFiles(projectId)
-  const files = filesResponse?.data || []
+  const { data: files } = useGetProjectFiles(projectId)
 
   // Get file details from IDs
   const getFileDetails = (fileIds: string[]) => {
     return fileIds.map((id) => {
-      const file = files.find((f) => f.id.toString() === id)
+      const file = files?.find((f) => f.id.toString() === id)
       return file || { id, path: `Unknown file (ID: ${id})` }
     })
   }

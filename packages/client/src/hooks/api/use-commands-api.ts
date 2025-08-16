@@ -169,7 +169,8 @@ export function useGenerateCommand(projectId: number) {
       return client.commands.generateCommand(projectId, data)
     },
     onSuccess: (result) => {
-      toast.success(`Command '${result.data.name}' generated successfully`)
+      const typedResult = result as any
+      toast.success(`Command '${typedResult.data.name}' generated successfully`)
     },
     onError: (error: any) => {
       // Check if it's a timeout error

@@ -202,7 +202,7 @@ export class SmartTruncation {
     let blockLines: string[] = []
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+      const line = lines[i] ?? ''
       const isImport = /^import\s+/.test(line.trim()) || /^from\s+/.test(line.trim())
 
       if (
@@ -251,18 +251,19 @@ export class SmartTruncation {
     const sections: CodeSection[] = []
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
+      const line = lines[i]?.trim() ?? ''
 
       // Named exports
       if (line.startsWith('export {')) {
         let endLine = i
-        let content = lines[i]
+        let content = lines[i] ?? ''
 
         // Handle multi-line exports
         if (!line.includes('}')) {
           for (let j = i + 1; j < lines.length; j++) {
-            content += '\n' + lines[j]
-            if (lines[j].includes('}')) {
+            const lineContent = lines[j] ?? ''
+            content += '\n' + lineContent
+            if (lineContent.includes('}')) {
               endLine = j
               break
             }
@@ -296,7 +297,7 @@ export class SmartTruncation {
         } else {
           // For const/let/var exports, find the semicolon
           for (let j = i; j < Math.min(i + 10, lines.length); j++) {
-            if (lines[j].includes(';')) {
+            if (lines[j]?.includes(';')) {
               endLine = j
               break
             }
@@ -316,7 +317,7 @@ export class SmartTruncation {
       else if (line.startsWith('export default')) {
         sections.push({
           type: 'exports',
-          content: lines[i],
+          content: lines[i] ?? '',
           priority: 9,
           startLine: i,
           endLine: i,
@@ -335,7 +336,7 @@ export class SmartTruncation {
     const sections: CodeSection[] = []
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+      const line = lines[i] ?? ''
       // Only match non-exported classes (exported ones are handled by extractExports)
       const classMatch = /^(?!export\s+)(abstract\s+)?class\s+(\w+)/.exec(line)
 
@@ -388,7 +389,7 @@ export class SmartTruncation {
     const sections: CodeSection[] = []
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+      const line = lines[i] ?? ''
       // Only match non-exported functions (exported ones are handled by extractExports)
       const funcMatch = /^(?!export\s+)(async\s+)?function\s+(\w+)/.exec(line)
       const arrowMatch = /^(?!export\s+)const\s+(\w+)\s*=\s*(async\s+)?\(/.exec(line)
@@ -421,7 +422,7 @@ export class SmartTruncation {
     const sections: CodeSection[] = []
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+      const line = lines[i] ?? ''
       // Only match non-exported types/interfaces (exported ones are handled by extractExports)
       const typeMatch = /^(?!export\s+)(type|interface)\s+(\w+)/.exec(line)
 
@@ -450,13 +451,13 @@ export class SmartTruncation {
     const sections: CodeSection[] = []
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+      const line = lines[i] ?? ''
 
       // JSDoc comments
       if (line.trim().startsWith('/**')) {
         let endLine = i
         for (let j = i + 1; j < lines.length; j++) {
-          if (lines[j].includes('*/')) {
+          if (lines[j]?.includes('*/')) {
             endLine = j
             break
           }
@@ -582,7 +583,7 @@ export class SmartTruncation {
 
     for (const pattern of patterns) {
       const match = pattern.exec(line)
-      if (match) return match[1]
+      if (match && match[1]) return match[1]
     }
 
     return 'unnamed'

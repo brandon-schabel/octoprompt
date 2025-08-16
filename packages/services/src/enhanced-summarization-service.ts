@@ -289,7 +289,7 @@ export class EnhancedSummarizationService {
             const modelConfig = MODEL_CONFIGS[options.depth || 'standard']
 
             // Build context-aware prompt
-            const systemPrompt = options.groupAware ? this.buildGroupAwareSystemPrompt(options) : promptsMap.summarizeCode
+            const systemPrompt = options.groupAware ? this.buildGroupAwareSystemPrompt(options) : promptsMap.summarizationSteps
 
             const userPrompt = this.buildEnhancedUserPrompt(file, context, options)
 
@@ -329,7 +329,7 @@ export class EnhancedSummarizationService {
         const relatedFiles = groupFiles.map((f) => ({
             id: f.id,
             name: f.name,
-            summary: f.summary
+            summary: f.summary ?? undefined
         }))
 
         const relationships = (group.relationships || []).map((rel) => {
@@ -481,6 +481,9 @@ Provide a concise overview that captures:
             strategy: 'balanced',
             includeImports: true,
             includeExports: true,
+            progressive: false,
+            includeMetrics: false,
+            contextWindow: 3,
             groupAware: true,
             includeRelationships: true
         }
@@ -558,7 +561,14 @@ Provide summaries that are:
         if (options.includeExports && file.exports && file.exports.length > 0) {
             prompt += `\nExports:\n`
             file.exports.slice(0, 10).forEach((exp) => {
-                prompt += `- ${exp.name} (${exp.type})\n`
+                if (exp.type === 'named' && exp.specifiers && exp.specifiers.length > 0) {
+                    exp.specifiers.forEach((spec) => {
+                        const name = spec.exported || spec.local || 'unknown'
+                        prompt += `- ${name} (named)\n`
+                    })
+                } else {
+                    prompt += `- ${exp.type} export\n`
+                }
             })
         }
 

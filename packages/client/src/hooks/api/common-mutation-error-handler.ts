@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { ApiError } from 'shared/index'
+import { ApiError } from '@promptliano/shared/src/error/api-error'
 
 const constructErrorMessage = (error: ApiError) => {
   return `API Error [${error.code}]: ${error.message}`

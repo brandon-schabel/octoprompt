@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import { providerSchema, type APIProviders } from './provider-key.schemas'
 import { idSchemaSpec, idArraySchemaSpec } from './schema-utils'
-import { LOW_MODEL_CONFIG } from '@promptliano/config'
+import { DEFAULT_MODEL_EXAMPLES } from './model-defaults'
 
-const defaultModelConfigs = LOW_MODEL_CONFIG
+const defaultModelConfigs = DEFAULT_MODEL_EXAMPLES
 
 export const EDITOR_OPTIONS = [
   { value: 'vscode', label: 'VS Code' },
@@ -177,6 +177,11 @@ export const projectTabStateSchema = z
       .optional()
       .default(false)
       .openapi({ description: 'Whether Claude Code integration features are enabled for this project.' }),
+    assetsEnabled: z
+      .boolean()
+      .optional()
+      .default(false)
+      .openapi({ description: 'Whether the Assets tab is enabled for this project.' }),
     autoIncludeClaudeMd: z.boolean().optional().default(false).openapi({
       description: 'DEPRECATED: Use instructionFileSettings instead. Kept for backward compatibility.',
       example: true
@@ -544,6 +549,7 @@ export const createSafeGlobalState = (): GlobalState => ({
       promptsPanelCollapsed: true,
       selectedFilesCollapsed: false,
       claudeCodeEnabled: false,
+      assetsEnabled: false,
       autoIncludeClaudeMd: false,
       instructionFileSettings: {
         autoIncludeEnabled: false,

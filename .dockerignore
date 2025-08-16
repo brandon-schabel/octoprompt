@@ -1,28 +1,75 @@
-# Git files
+# Docker build context exclusions
+# This file is used for both binary-based and source-based builds
+
+# Version control
 .git
+.github
 .gitignore
 
-# Node modules (will be installed in Docker)
+# Dependencies (will be installed fresh in Docker)
 node_modules
-packages/client/node_modules
-packages/server/node_modules
-packages/shared/node_modules
+**/node_modules
+packages/*/node_modules
 
-# Local build artifacts
-dist
-build
-packages/server/dist
+# Build outputs (except dist for binary builds)
+packages/*/dist
+packages/server/client-dist
 packages/client/dist
-packages/server/client-dist # This is an output of client build, handled by COPY --from
+packages/website/.next
+*.tsbuildinfo
 
-# Local database files (a fresh one will be created in image)
-*.db
-*.db-journal
-packages/server/prisma/sqlite.db*
-
-# OS-specific files
+# Development files
+.env
+.env.local
+.env.*.local
+*.log
+*.pid
+*.seed
+*.pid.lock
 .DS_Store
 Thumbs.db
 
-# Environment files (should be passed at runtime)
-.env*
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+coverage
+.nyc_output
+
+# Documentation (except essential)
+*.md
+!README.md
+docs
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.temp
+
+# Database files
+*.db
+*.db-journal
+*.sqlite
+data
+
+
+# Cache directories
+.cache
+.parcel-cache
+.next
+
+# For binary-based builds, we only need dist
+# Uncomment these lines when using pre-built binaries:
+# **
+# !dist/promptliano-*-linux-*/
+# !dist/promptliano-*-linux-*/promptliano*
+# !dist/promptliano-*-linux-*/client-dist/
+# !dist/promptliano-*-linux-*/client-dist/**

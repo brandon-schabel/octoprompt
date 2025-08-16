@@ -10,12 +10,7 @@
     "test:queue": "bun test src/queue-*.test.ts --timeout 10000",
     "test:coverage": "bun test src/ --timeout 5000 --coverage",
     "test:watch": "bun test src/ --watch",
-    "typecheck": "tsc --noEmit",
-    "docs:generate": "typedoc",
-    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api-markdown",
-    "docs:watch": "typedoc --watch",
-    "docs:serve": "npx serve docs/api",
-    "docs:clean": "rm -rf docs/api docs/api-markdown"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@promptliano/config": "workspace:*",

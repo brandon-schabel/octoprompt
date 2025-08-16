@@ -69,27 +69,27 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
   const [activeTab, setActiveTab] = useState('input')
 
   // Common form data for all asset types
-  const [commonFormData, setCommonFormData] = useState({
+  const [commonFormData, setCommonFormData] = useState<CommonFormData>({
     name: '',
     description: '',
     additionalContext: ''
   })
 
   // SVG-specific form data
-  const [svgFormData, setSvgFormData] = useState({
+  const [svgFormData, setSvgFormData] = useState<SvgFormData>({
     style: 'modern',
     colors: '#000000',
     dimensions: '24x24'
   })
 
   // Markdown-specific form data
-  const [markdownFormData, setMarkdownFormData] = useState({
+  const [markdownFormData, setMarkdownFormData] = useState<MarkdownFormData>({
     documentFormat: 'standard',
     diagramType: 'auto',
     includeTableOfContents: true,
     targetAudience: 'developers',
     includeExamples: true,
-    sections: [] as string[]
+    sections: []
   })
 
   const [generatedContent, setGeneratedContent] = useState('')
@@ -190,11 +190,14 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
       console.log('API Response:', response)
 
       // Handle different response structures
-      if (response.success && response.data?.output) {
-        if (typeof response.data.output === 'string') {
-          generatedContent = response.data.output
-        } else if (response.data.output.content) {
-          generatedContent = response.data.output.content
+      if (response && typeof response === 'object' && 'success' in response && response.success) {
+        const responseData = response as { success: boolean; data?: { output?: string | { content?: string } } }
+        if (responseData.data?.output) {
+          if (typeof responseData.data.output === 'string') {
+            generatedContent = responseData.data.output
+          } else if (typeof responseData.data.output === 'object' && 'content' in responseData.data.output) {
+            generatedContent = responseData.data.output.content || ''
+          }
         }
       }
 
@@ -465,26 +468,47 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
   )
 }
 
+interface CommonFormData {
+  name: string
+  description: string
+  additionalContext: string
+}
+
+interface SvgFormData {
+  style: string
+  colors: string
+  dimensions: string
+}
+
+interface MarkdownFormData {
+  documentFormat: string
+  diagramType: string
+  includeTableOfContents: boolean
+  targetAudience: string
+  includeExamples: boolean
+  sections: string[]
+}
+
 // Helper function to render input form based on asset type
 function renderInputForm(
   assetType: string,
-  commonFormData: any,
-  setCommonFormData: (data: any) => void,
-  svgFormData: any,
-  setSvgFormData: (data: any) => void,
-  markdownFormData: any,
-  setMarkdownFormData: (data: any) => void
+  commonFormData: CommonFormData,
+  setCommonFormData: React.Dispatch<React.SetStateAction<CommonFormData>>,
+  svgFormData: SvgFormData,
+  setSvgFormData: React.Dispatch<React.SetStateAction<SvgFormData>>,
+  markdownFormData: MarkdownFormData,
+  setMarkdownFormData: React.Dispatch<React.SetStateAction<MarkdownFormData>>
 ) {
-  const updateCommonField = (field: string, value: string) => {
-    setCommonFormData((prev: any) => ({ ...prev, [field]: value }))
+  const updateCommonField = (field: keyof CommonFormData, value: string) => {
+    setCommonFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const updateSvgField = (field: string, value: string) => {
-    setSvgFormData((prev: any) => ({ ...prev, [field]: value }))
+  const updateSvgField = (field: keyof SvgFormData, value: string) => {
+    setSvgFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const updateMarkdownField = (field: string, value: any) => {
-    setMarkdownFormData((prev: any) => ({ ...prev, [field]: value }))
+  const updateMarkdownField = (field: keyof MarkdownFormData, value: string | boolean | string[]) => {
+    setMarkdownFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   // Check if it's a markdown asset type
@@ -732,7 +756,7 @@ function renderInputForm(
 }
 
 // Helper function to prepare user input for API
-function prepareUserInput(assetType: string, formData: any): string {
+function prepareUserInput(assetType: string, formData: CommonFormData & Partial<SvgFormData> & Partial<MarkdownFormData>): string {
   // Handle markdown asset types
   if (assetType === 'architecture-doc') {
     const formatNote = formData.documentFormat ? `\n\nDocument format: ${formData.documentFormat}` : ''
@@ -756,7 +780,7 @@ function prepareUserInput(assetType: string, formData: any): string {
   }
 
   // Handle SVG asset types
-  const [width, height] = formData.dimensions.split('x')
+  const [width, height] = formData.dimensions?.split('x') || ['', '']
 
   let assetTypeDescription = ''
   switch (assetType) {

@@ -1,12 +1,13 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi' //
 import { ApiError } from '@promptliano/shared'
+import { createStandardResponses, createStandardResponsesWithStatus, successResponse, operationSuccessResponse } from '../utils/route-helpers'
 import {
   CreateProviderKeyBodySchema,
   UpdateProviderKeyBodySchema,
   ProviderKeyIdParamsSchema,
   ProviderKeyResponseSchema,
   ProviderKeyListResponseSchema,
-  ProviderKey,
+  type ProviderKey,
   TestProviderRequestSchema,
   TestProviderApiResponseSchema,
   BatchTestProviderRequestSchema,
@@ -30,20 +31,7 @@ const createProviderKeyRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    201: {
-      content: { 'application/json': { schema: ProviderKeyResponseSchema } },
-      description: 'Provider key created successfully'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponsesWithStatus(ProviderKeyResponseSchema, 201, 'Provider key created successfully')
 })
 
 const listProviderKeysRoute = createRoute({
@@ -51,16 +39,7 @@ const listProviderKeysRoute = createRoute({
   path: '/api/keys',
   tags: ['Provider Keys'],
   summary: 'List all configured provider keys (excluding secrets)',
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProviderKeyListResponseSchema } },
-      description: 'Successfully retrieved provider keys'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ProviderKeyListResponseSchema)
 })
 
 const getProviderKeyByIdRoute = createRoute({
@@ -71,24 +50,7 @@ const getProviderKeyByIdRoute = createRoute({
   request: {
     params: ProviderKeyIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProviderKeyResponseSchema } },
-      description: 'Successfully retrieved provider key'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Provider key not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ProviderKeyResponseSchema)
 })
 
 const updateProviderKeyRoute = createRoute({
@@ -103,24 +65,7 @@ const updateProviderKeyRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProviderKeyResponseSchema } },
-      description: 'Provider key updated successfully'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Provider key not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ProviderKeyResponseSchema)
 })
 
 const deleteProviderKeyRoute = createRoute({
@@ -131,24 +76,7 @@ const deleteProviderKeyRoute = createRoute({
   request: {
     params: ProviderKeyIdParamsSchema
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Provider key deleted successfully'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Provider key not found'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 const testProviderRoute = createRoute({
@@ -163,24 +91,7 @@ const testProviderRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: TestProviderApiResponseSchema } },
-      description: 'Provider test completed successfully'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Invalid request parameters'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(TestProviderApiResponseSchema)
 })
 
 const batchTestProviderRoute = createRoute({
@@ -195,24 +106,7 @@ const batchTestProviderRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: BatchTestProviderApiResponseSchema } },
-      description: 'Batch provider tests completed successfully'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Invalid request parameters'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(BatchTestProviderApiResponseSchema)
 })
 
 const providerHealthRoute = createRoute({
@@ -238,16 +132,7 @@ const providerHealthRoute = createRoute({
         })
     })
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProviderHealthStatusListResponseSchema } },
-      description: 'Provider health status retrieved successfully'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ProviderHealthStatusListResponseSchema)
 })
 
 // Schema for provider settings update
@@ -268,20 +153,7 @@ const updateProviderSettingsRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Provider settings updated successfully'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 export const providerKeyRoutes = new OpenAPIHono()
@@ -371,24 +243,7 @@ const validateCustomProviderRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ValidateCustomProviderResponseSchema } },
-      description: 'Validation result'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation failed'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Invalid request'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(ValidateCustomProviderResponseSchema)
 })
 
 providerKeyRoutes.openapi(validateCustomProviderRoute, async (c) => {

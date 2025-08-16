@@ -5,9 +5,12 @@ import type {
   UpdateProviderKeyBody,
   ProviderKey,
   TestProviderRequest,
+  TestProviderResponse,
   BatchTestProviderRequest,
+  BatchTestProviderResponse,
   ProviderHealthStatus
 } from '@promptliano/schemas'
+import type { DataResponseSchema } from '@promptliano/api-client'
 import { toast } from 'sonner'
 
 // Query keys
@@ -24,45 +27,75 @@ export const providerKeys = {
 // Get all provider keys
 export function useGetProviderKeys() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
+  
   return useQuery({
     queryKey: providerKeys.list(),
     enabled: !!client,
-    queryFn: () => {
-      if (!client) throw new Error('API client not initialized')
+    queryFn: async (): Promise<DataResponseSchema<ProviderKey[]>> => {
+      if (!client) {
+        throw new Error('API client not connected. Please check your connection to the Promptliano server.')
+      }
       return client.keys.listKeys()
     },
-    staleTime: 5 * 60 * 1000 // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: (failureCount: number, error: Error) => {
+      // Don't retry if client is null/disconnected
+      if (error.message.includes('not connected')) {
+        return false
+      }
+      return failureCount < 3
+    }
   })
 }
 
 // Get single provider key
 export function useGetProviderKey(keyId: number | null) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
+  
   return useQuery({
     queryKey: providerKeys.detail(keyId!),
-    queryFn: () => {
-      if (!client) throw new Error('API client not initialized')
-      return client.keys.getKey(keyId!)
+    queryFn: async (): Promise<DataResponseSchema<ProviderKey>> => {
+      if (!client) {
+        throw new Error('API client not connected. Please check your connection to the Promptliano server.')
+      }
+      if (!keyId) {
+        throw new Error('Provider key ID is required')
+      }
+      return client.keys.getKey(keyId)
     },
     enabled: !!client && !!keyId,
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
+    retry: (failureCount: number, error: Error) => {
+      // Don't retry if client is null/disconnected or key ID is invalid
+      if (error.message.includes('not connected') || error.message.includes('is required')) {
+        return false
+      }
+      return failureCount < 3
+    }
   })
 }
 
 // Get providers health status
 export function useGetProvidersHealth(refresh = false) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
+  
   return useQuery({
     queryKey: providerKeys.health(),
     enabled: !!client,
-    queryFn: () => {
-      if (!client) throw new Error('API client not initialized')
+    queryFn: async (): Promise<DataResponseSchema<ProviderHealthStatus[]>> => {
+      if (!client) {
+        throw new Error('API client not connected. Please check your connection to the Promptliano server.')
+      }
       return client.keys.getProvidersHealth(refresh)
     },
-    staleTime: refresh ? 0 : 2 * 60 * 1000 // 2 minutes if not refreshing
+    staleTime: refresh ? 0 : 2 * 60 * 1000, // 2 minutes if not refreshing
+    retry: (failureCount: number, error: Error) => {
+      // Don't retry if client is null/disconnected
+      if (error.message.includes('not connected')) {
+        return false
+      }
+      return failureCount < 3
+    }
   })
 }
 
@@ -72,16 +105,19 @@ export function useCreateProviderKey() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: CreateProviderKeyBody) => {
-      if (!client) throw new Error('API client not initialized')
+    mutationFn: async (data: CreateProviderKeyBody): Promise<DataResponseSchema<ProviderKey>> => {
+      if (!client) {
+        throw new Error('API client not connected. Please check your connection to the Promptliano server.')
+      }
       return client.keys.createKey(data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key created successfully')
     },
-    onError: (error: any) => {
-      toast.error(error?.message || 'Failed to create provider key')
+    onError: (error: Error) => {
+      const message = error?.message || 'Failed to create provider key'
+      toast.error(message)
     }
   })
 }
@@ -90,19 +126,21 @@ export function useCreateProviderKey() {
 export function useUpdateProviderKey() {
   const queryClient = useQueryClient()
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useMutation({
-    mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) => {
-      if (!client) throw new Error('API client not initialized')
+    mutationFn: async ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }): Promise<DataResponseSchema<ProviderKey>> => {
+      if (!client) {
+        throw new Error('API client not connected. Please check your connection to the Promptliano server.')
+      }
       return client.keys.updateKey(keyId, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key updated successfully')
     },
-    onError: (error: any) => {
-      toast.error(error?.message || 'Failed to update provider key')
+    onError: (error: Error) => {
+      const message = error?.message || 'Failed to update provider key'
+      toast.error(message)
     }
   })
 }
@@ -113,18 +151,38 @@ export function useDeleteProviderKey() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (keyId: number) => {
-      if (!client) throw new Error('API client not initialized')
+    mutationFn: async (keyId: number): Promise<boolean> => {
+      if (!client) {
+        throw new Error('API client not connected. Please check your connection to the Promptliano server.')
+      }
       return client.keys.deleteKey(keyId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: providerKeys.all })
       toast.success('Provider key deleted successfully')
     },
-    onError: (error: any) => {
-      toast.error(error?.message || 'Failed to delete provider key')
+    onError: (error: Error) => {
+      const message = error?.message || 'Failed to delete provider key'
+      toast.error(message)
     }
   })
+}
+
+// Type guard for test provider response
+const isValidTestProviderResponse = (response: unknown): response is DataResponseSchema<TestProviderResponse> => {
+  if (typeof response !== 'object' || response === null) {
+    return false
+  }
+  
+  const responseObj = response as Record<string, unknown>
+  
+  return (
+    'data' in responseObj &&
+    typeof responseObj.data === 'object' &&
+    responseObj.data !== null &&
+    'success' in responseObj.data &&
+    typeof (responseObj.data as Record<string, unknown>).success === 'boolean'
+  )
 }
 
 // Test single provider
@@ -133,22 +191,48 @@ export function useTestProvider() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: TestProviderRequest) => {
-      if (!client) throw new Error('API client not initialized')
+    mutationFn: async (data: TestProviderRequest): Promise<DataResponseSchema<TestProviderResponse>> => {
+      if (!client) {
+        throw new Error('API client not connected. Please check your connection to the Promptliano server.')
+      }
       return client.keys.testProvider(data)
     },
-    onSuccess: (response) => {
-      if (response.data.success) {
+    onSuccess: (response: DataResponseSchema<TestProviderResponse>) => {
+      if (!isValidTestProviderResponse(response)) {
+        toast.error('Invalid response format from provider test')
+        return
+      }
+      
+      const testData = response.data
+      if (testData.success) {
         toast.success(`Provider connected successfully`)
         queryClient.invalidateQueries({ queryKey: providerKeys.health() })
       } else {
-        toast.error(`Provider test failed: ${response.data.error}`)
+        toast.error(`Provider test failed: ${testData.error || 'Unknown error'}`)
       }
     },
-    onError: (error: any) => {
-      toast.error(error?.message || 'Failed to test provider')
+    onError: (error: Error) => {
+      const message = error?.message || 'Failed to test provider'
+      toast.error(message)
     }
   })
+}
+
+// Type guard for batch test provider response
+const isValidBatchTestProviderResponse = (response: unknown): response is DataResponseSchema<BatchTestProviderResponse> => {
+  if (typeof response !== 'object' || response === null) {
+    return false
+  }
+  
+  const responseObj = response as Record<string, unknown>
+  
+  return (
+    'data' in responseObj &&
+    typeof responseObj.data === 'object' &&
+    responseObj.data !== null &&
+    'results' in responseObj.data &&
+    Array.isArray((responseObj.data as Record<string, unknown>).results)
+  )
 }
 
 // Batch test providers
@@ -157,14 +241,22 @@ export function useBatchTestProviders() {
   const client = useApiClient()
 
   return useMutation({
-    mutationFn: (data: BatchTestProviderRequest) => {
-      if (!client) throw new Error('API client not initialized')
+    mutationFn: async (data: BatchTestProviderRequest): Promise<DataResponseSchema<BatchTestProviderResponse>> => {
+      if (!client) {
+        throw new Error('API client not connected. Please check your connection to the Promptliano server.')
+      }
       return client.keys.batchTestProviders(data)
     },
-    onSuccess: (response) => {
-      const results = response.data.results
-      const successCount = results.filter((r) => r.success).length
-      const failCount = results.filter((r) => !r.success).length
+    onSuccess: (response: DataResponseSchema<BatchTestProviderResponse>) => {
+      if (!isValidBatchTestProviderResponse(response)) {
+        toast.error('Invalid response format from batch provider test')
+        return
+      }
+      
+      const testData = response.data
+      const results = testData.results
+      const successCount = results.filter((r: TestProviderResponse) => r.success).length
+      const failCount = results.filter((r: TestProviderResponse) => !r.success).length
 
       if (successCount > 0 && failCount === 0) {
         toast.success(`All ${successCount} providers tested successfully`)
@@ -176,8 +268,9 @@ export function useBatchTestProviders() {
 
       queryClient.invalidateQueries({ queryKey: providerKeys.health() })
     },
-    onError: (error: any) => {
-      toast.error(error?.message || 'Failed to test providers')
+    onError: (error: Error) => {
+      const message = error?.message || 'Failed to test providers'
+      toast.error(message)
     }
   })
 }

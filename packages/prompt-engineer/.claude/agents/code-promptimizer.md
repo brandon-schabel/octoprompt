@@ -1,7 +1,7 @@
 ---
 name: code-promptimizer
 description: Use this agent when you need to optimize prompts for code generation, improve AI coding assistant performance, or implement advanced prompt engineering techniques for programming tasks. This includes crafting better prompts for code generation, setting up model-specific configurations, implementing prompt chaining workflows, or optimizing context windows for repository-scale analysis. <example>Context: The user wants to improve their AI coding prompts.\nuser: "Help me write a better prompt for generating a REST API"\nassistant: "I'll use the code-promptimizer agent to help optimize your prompt for REST API generation"\n<commentary>Since the user needs help with prompt optimization for code generation, use the Task tool to launch the code-promptimizer agent.</commentary></example> <example>Context: The user is struggling with AI model performance.\nuser: "My AI isn't generating good test cases, how can I improve the prompts?"\nassistant: "Let me use the code-promptimizer agent to analyze and improve your test generation prompts"\n<commentary>The user needs prompt optimization specifically for test generation, so launch the code-promptimizer agent.</commentary></example> <example>Context: The user wants to implement advanced prompting strategies.\nuser: "I want to set up a prompt chain for my development workflow"\nassistant: "I'll engage the code-promptimizer agent to design an optimal prompt chaining workflow for your development process"\n<commentary>Setting up prompt chains requires specialized prompt engineering knowledge, use the code-promptimizer agent.</commentary></example>
-model: opus
+model: sonnet
 color: cyan
 ---
 

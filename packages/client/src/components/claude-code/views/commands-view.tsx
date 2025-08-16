@@ -41,7 +41,7 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
 
   const commands = commandsResponse?.data || []
 
-  const filteredCommands = commands.filter((command) => {
+  const filteredCommands = commands.filter((command: any) => {
     const searchLower = searchQuery.toLowerCase()
     return (
       command.name.toLowerCase().includes(searchLower) ||
@@ -115,7 +115,7 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
 
   // Group commands by namespace
   const commandsByNamespace = filteredCommands.reduce(
-    (acc, command) => {
+    (acc: any, command: any) => {
       const namespace = command.namespace || 'root'
       if (!acc[namespace]) {
         acc[namespace] = []
@@ -187,7 +187,7 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
       {/* Commands Grid */}
       {!isLoading && !error && (
         <div className='space-y-6'>
-          {Object.entries(commandsByNamespace).map(([namespace, namespaceCommands]) => (
+          {Object.entries(commandsByNamespace).map(([namespace, namespaceCommands]: [string, any]) => (
             <div key={namespace}>
               {namespace !== 'root' && (
                 <div className='flex items-center gap-2 mb-3'>
@@ -196,7 +196,7 @@ export function CommandsView({ projectId, projectName }: CommandsViewProps) {
                 </div>
               )}
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                {namespaceCommands.map((command) => (
+                {namespaceCommands.map((command: any) => (
                   <Card
                     key={`${command.scope}:${command.namespace || 'root'}:${command.name}`}
                     className={cn(

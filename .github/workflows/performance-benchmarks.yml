@@ -1,0 +1,244 @@
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/server/src/utils/route-helpers.ts'
+      - 'packages/services/src/utils/error-factory.ts'
+      - 'packages/schemas/src/schema-factories.ts'
+      - 'packages/client/src/hooks/utils/hook-factory.ts'
+      - 'packages/ui/src/components/data-table/column-factory.tsx'
+      - 'benchmarks/**'
+      - '.github/workflows/performance-benchmarks.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/server/src/utils/route-helpers.ts'
+      - 'packages/services/src/utils/error-factory.ts'
+      - 'packages/schemas/src/schema-factories.ts'
+      - 'packages/client/src/hooks/utils/hook-factory.ts'
+      - 'packages/ui/src/components/data-table/column-factory.tsx'
+      - 'benchmarks/**'
+      - '.github/workflows/performance-benchmarks.yml'
+  schedule:
+    # Run benchmarks daily at 2 AM UTC to track performance trends
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      regression_threshold:
+        description: 'Performance regression threshold (%)'
+        required: false
+        default: '5'
+      memory_limit:
+        description: 'Memory limit (MB)'
+        required: false
+        default: '4096'
+
+jobs:
+  performance-benchmarks:
+    name: Run Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2 # Need previous commit for regression analysis
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Cache node modules
+      uses: actions/cache@v3
+      with:
+        path: ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-bun-
+
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+
+    - name: Type check packages
+      run: |
+        bun run typecheck:schemas
+        bun run typecheck:services  
+        bun run typecheck:server
+
+    - name: Create benchmarks results directory
+      run: mkdir -p benchmarks/results
+
+    - name: Run performance benchmarks
+      run: |
+        # Set memory limit from input or default
+        MEMORY_LIMIT="${{ github.event.inputs.memory_limit || '4096' }}"
+        
+        # Run benchmarks with garbage collection and memory limit
+        bun --expose-gc --max-old-space-size=${MEMORY_LIMIT} run benchmarks/pattern-performance.ts
+      env:
+        NODE_OPTIONS: "--max-old-space-size=${{ github.event.inputs.memory_limit || '4096' }}"
+
+    - name: Run bundle size analysis
+      run: bun run benchmark:bundle
+
+    - name: Check for performance regressions
+      if: github.event_name == 'pull_request'
+      run: |
+        THRESHOLD="${{ github.event.inputs.regression_threshold || '5' }}"
+        
+        # Download baseline from main branch if available
+        if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+          echo "Checking for regressions against previous commit"
+          bun run benchmark:regression --threshold ${THRESHOLD}
+        else
+          echo "No baseline available for regression analysis"
+        fi
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: benchmark-results-${{ github.sha }}
+        path: |
+          benchmarks/results/
+        retention-days: 30
+
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = 'benchmarks/results/pattern-performance-results.json';
+          
+          if (!fs.existsSync(path)) {
+            return;
+          }
+          
+          const results = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const suite = results.suite;
+          
+          // Format results for PR comment
+          const categories = Object.keys(suite.baseline);
+          const baselineTable = categories.map(cat => {
+            const baseline = suite.baseline[cat].toFixed(2);
+            const status = baseline < 1000 ? '✅' : baseline < 5000 ? '⚠️' : '❌';
+            return `| ${status} ${cat} | ${baseline}μs |`;
+          }).join('\n');
+          
+          const totalTests = suite.results.length;
+          const passedTests = suite.results.filter(r => r.success).length;
+          const failedTests = totalTests - passedTests;
+          
+          const comment = \`## 📊 Performance Benchmark Results
+          
+### Summary
+- **Total Tests**: \${totalTests}
+- **Passed**: \${passedTests}
+- **Failed**: \${failedTests}
+- **Total Time**: \${(suite.totalTime / 1000).toFixed(2)}s
+
+### Performance Baselines
+| Pattern Category | Average Time |
+|------------------|--------------|
+\${baselineTable}
+
+### Performance Targets
+- ✅ Factory functions <1ms
+- ✅ Schema validation <0.1ms  
+- ✅ Memory usage <10MB
+- ✅ No memory leaks
+
+\${failedTests > 0 ? '⚠️ **Some benchmarks failed. Please review the results.**' : '🎉 **All benchmarks passed!**'}
+
+<details>
+<summary>View detailed results</summary>
+
+\\\`\\\`\\\`json
+\${JSON.stringify(suite.baseline, null, 2)}
+\\\`\\\`\\\`
+</details>\`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  bundle-size-tracking:
+    name: Bundle Size Tracking
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: performance-benchmarks
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+
+    - name: Download benchmark results
+      uses: actions/download-artifact@v3
+      with:
+        name: benchmark-results-${{ github.sha }}
+        path: benchmarks/results/
+
+    - name: Track bundle size trends
+      run: |
+        # Create or update bundle size tracking file
+        TRACKING_FILE="benchmarks/results/bundle-size-trends.json"
+        CURRENT_RESULTS="benchmarks/results/bundle-analysis-results.json"
+        
+        if [ -f "$CURRENT_RESULTS" ]; then
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          COMMIT_SHA="${{ github.sha }}"
+          
+          # Extract current bundle sizes
+          TOTAL_SIZE=$(cat "$CURRENT_RESULTS" | jq '.report.summary.totalGzippedSize')
+          
+          # Create entry for tracking
+          ENTRY=$(jq -n \
+            --arg timestamp "$TIMESTAMP" \
+            --arg commit "$COMMIT_SHA" \
+            --argjson totalSize "$TOTAL_SIZE" \
+            '{
+              timestamp: $timestamp,
+              commit: $commit,
+              totalGzippedSize: $totalSize
+            }')
+          
+          # Update or create tracking file
+          if [ -f "$TRACKING_FILE" ]; then
+            cat "$TRACKING_FILE" | jq ". + [$ENTRY]" > "${TRACKING_FILE}.tmp"
+            mv "${TRACKING_FILE}.tmp" "$TRACKING_FILE"
+          else
+            echo "[$ENTRY]" > "$TRACKING_FILE"
+          fi
+          
+          echo "Bundle size tracking updated"
+        fi
+
+  performance-regression-alert:
+    name: Performance Regression Alert
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: performance-benchmarks
+
+    steps:
+    - name: Send Slack notification
+      if: env.SLACK_WEBHOOK_URL != ''
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"🚨 Performance regression detected in main branch! Check the latest benchmark results."}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

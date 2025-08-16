@@ -21,7 +21,8 @@ import {
 import { FileUploadInput } from '@promptliano/ui'
 import { FileText, Upload, X, CheckCircle, AlertCircle, FileWarning, Loader2, Download } from 'lucide-react'
 import { toast } from 'sonner'
-import { useImportMarkdownPrompts, useValidateMarkdownFile } from '@/hooks/api/use-prompts-api'
+import { useImportMarkdownPrompts } from '@/hooks/api-hooks'
+import { useValidateMarkdownFile } from '@/hooks/api/use-prompts-api'
 import { cn } from '@promptliano/ui'
 
 interface FileValidationStatus {
@@ -107,7 +108,8 @@ export function MarkdownImportDialog({ open, onOpenChange, projectId, onSuccess 
         )
 
         try {
-          const validation = await validateMutation.mutateAsync(fileStatus.file)
+          const fileContent = await fileStatus.file.text()
+          const validation = await validateMutation.mutateAsync(fileContent)
 
           // Update with validation results
           setFiles((prev) =>

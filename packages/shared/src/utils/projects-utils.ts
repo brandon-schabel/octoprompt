@@ -76,10 +76,11 @@ export function calculateTotalTokens(
 export const buildFileTree = <T extends Pick<ProjectFile, 'path'>>(files: T[]): Record<string, any> => {
   const root: Record<string, any> = {}
   for (const f of files) {
-    const parts = f.path.split('/')
+    const parts = f.path.split('/').filter(Boolean) // Remove empty strings
     let current = root
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i]
+      if (!part) continue // Skip undefined or empty parts
       if (!current[part]) {
         current[part] = {}
       }

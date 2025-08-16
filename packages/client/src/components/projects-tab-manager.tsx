@@ -170,8 +170,8 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     const newTabId = createProjectTab({ selectedProjectId: currentProjectId, selectedFiles: [] })
 
     // Auto-generate name for the new tab
-    if (currentProjectId && projects?.data) {
-      const project = projects.data.find((p) => p.id === currentProjectId)
+    if (currentProjectId && projects) {
+      const project = projects.find((p) => p.id === currentProjectId)
       if (project) {
         try {
           const generatedName = await generateTabNameMutation.mutateAsync({
@@ -233,7 +233,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     const tabData = tabs?.[tabId]
     if (!tabData) return
 
-    const project = projects?.data.find((p) => p.id === tabData.selectedProjectId)
+    const project = projects?.find((p) => p.id === tabData.selectedProjectId)
     if (!project) return
 
     try {

@@ -47,7 +47,7 @@ export const taskManagerTool: MCPToolDefinition = {
       data: {
         type: 'object',
         description:
-          'Action-specific data. For create: { content: "Task description", description: "Detailed steps", suggestedFileIds: ["123"], estimatedHours: 4, tags: ["frontend"], agentId: "frontend-shadcn-expert" }. For update: { taskId: 789, done: true, content: "Updated text", description: "New description", agentId: "staff-engineer-code-reviewer" }. For filter: { projectId: 1754713756748, status: "pending", tags: ["backend"], query: "auth" }. For batch_create: { tasks: [{content: "Task 1"}, {content: "Task 2"}] }. For batch_update: { updates: [{ticketId: 456, taskId: 789, data: {done: true}}] }. For batch_delete: { deletes: [{ticketId: 456, taskId: 789}] }. For batch_move: { moves: [{taskId: 789, fromTicketId: 456, toTicketId: 123}] }'
+          'Action-specific data. For create: { content: "Task description", description: "Detailed steps", suggestedFileIds: ["123"], estimatedHours: 4, tags: ["frontend"], agentId: "promptliano-ui-architect" }. For update: { taskId: 789, done: true, content: "Updated text", description: "New description", agentId: "staff-engineer-code-reviewer" }. For filter: { projectId: 1754713756748, status: "pending", tags: ["backend"], query: "auth" }. For batch_create: { tasks: [{content: "Task 1"}, {content: "Task 2"}] }. For batch_update: { updates: [{ticketId: 456, taskId: 789, data: {done: true}}] }. For batch_delete: { deletes: [{ticketId: 456, taskId: 789}] }. For batch_move: { moves: [{taskId: 789, fromTicketId: 456, toTicketId: 123}] }'
       }
     },
     required: ['action', 'ticketId']
@@ -385,10 +385,10 @@ export const taskManagerTool: MCPToolDefinition = {
           error instanceof MCPError
             ? error
             : MCPError.fromError(error, {
-                tool: 'task_manager',
-                action: args.action,
-                ticketId: args.ticketId
-              })
+              tool: 'task_manager',
+              action: args.action,
+              ticketId: args.ticketId
+            })
 
         // Return formatted error response with recovery suggestions
         return await formatMCPErrorResponse(mcpError)

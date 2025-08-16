@@ -67,7 +67,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   // Collapsible state - default to true (collapsed) to save space
   const isCollapsed = projectTab?.promptsPanelCollapsed ?? true
 
-  const { data: promptData } = useGetProjectPrompts(selectedProjectId)
+  const { data: promptData, isLoading, error, isError } = useGetProjectPrompts(selectedProjectId)
 
   const deletePromptMutation = useDeletePrompt()
 
@@ -138,9 +138,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
 
   const handleDeletePrompt = async (promptId: number) => {
     if (!selectedProjectId) return
-    await deletePromptMutation.mutateAsync({
-      promptId
-    })
+    await deletePromptMutation.mutateAsync(promptId)
     toast.success('Prompt deleted successfully')
   }
 
@@ -228,6 +226,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   //   }),
   //   [prompts]
   // )
+
 
   return (
     <>

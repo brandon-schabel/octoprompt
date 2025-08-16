@@ -7,9 +7,10 @@ import {
   ApiErrorResponseSchema,
   BrowseDirectoryRequestSchema,
   BrowseDirectoryResponseSchema,
-  DirectoryEntry
+  type DirectoryEntry
 } from '@promptliano/schemas'
 import { ApiError } from '@promptliano/shared'
+import { createStandardResponses, successResponse } from '../utils/route-helpers'
 
 const browseDirectoryRoute = createRoute({
   method: 'post',
@@ -21,20 +22,7 @@ const browseDirectoryRoute = createRoute({
       content: { 'application/json': { schema: BrowseDirectoryRequestSchema } }
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: BrowseDirectoryResponseSchema } },
-      description: 'Successfully browsed directory'
-    },
-    400: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Invalid path or permission denied'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error'
-    }
-  }
+  responses: createStandardResponses(BrowseDirectoryResponseSchema)
 })
 
 export const browseDirectoryRoutes = new OpenAPIHono().openapi(browseDirectoryRoute, async (c) => {
@@ -90,16 +78,11 @@ export const browseDirectoryRoutes = new OpenAPIHono().openapi(browseDirectoryRo
     // Determine parent path
     const parentPath = targetPath === homeDir ? null : dirname(targetPath)
 
-    const response: z.infer<typeof BrowseDirectoryResponseSchema> = {
-      success: true,
-      data: {
-        currentPath: targetPath,
-        parentPath,
-        entries: directoryEntries
-      }
-    }
-
-    return c.json(response, 200)
+    return c.json(successResponse({
+      currentPath: targetPath,
+      parentPath,
+      entries: directoryEntries
+    }))
   } catch (error: any) {
     if (error instanceof ApiError) {
       throw error

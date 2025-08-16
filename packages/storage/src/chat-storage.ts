@@ -1,479 +1,251 @@
-// Chat storage layer using proper database columns instead of JSON
+// Chat storage layer using BaseStorage pattern - split into Chat and ChatMessage
 import { z } from 'zod'
-import { ChatSchema, ChatMessageSchema, type Chat, type ChatMessage } from '@promptliano/schemas'
-import { normalizeToUnixMs } from '@promptliano/shared/src/utils/parse-timestamp'
-import { DatabaseManager, getDb } from './database-manager'
-import { ApiError } from '@promptliano/shared'
-import {
-  toNumber,
-  toString,
-  toArray,
-  fromArray,
-  fromJson,
-  SqliteConverters
-} from '@promptliano/shared/src/utils/sqlite-converters'
+import { 
+  ChatSchema, 
+  ChatMessageSchema, 
+  type Chat, 
+  type ChatMessage 
+} from '@promptliano/schemas'
+import { BaseStorage } from './base-storage'
+import { 
+  createEntityConverter,
+  createStandardMappings,
+  getInsertColumnsFromMappings,
+  getInsertValuesFromEntity
+} from './utils/storage-helpers'
+import { SqliteConverters } from '@promptliano/shared/src/utils/sqlite-converters'
+import { ChatErrors } from '@promptliano/shared/src/error/entity-errors'
+import { withTransaction, replaceEntities } from './utils/transaction-helpers'
 
-// Table names for database storage
-const CHATS_TABLE = 'chats'
-const CHAT_MESSAGES_TABLE = 'chat_messages'
-
-// --- Schemas for Storage ---
-// Store all chats (metadata) as a map (Record) keyed by chatId
+// Storage schemas for validation
 export const ChatsStorageSchema = z.record(z.string(), ChatSchema)
 export type ChatsStorage = z.infer<typeof ChatsStorageSchema>
 
-// Store messages within a specific chat as a map (Record) keyed by messageId
 export const ChatMessagesStorageSchema = z.record(z.string(), ChatMessageSchema)
 export type ChatMessagesStorage = z.infer<typeof ChatMessagesStorageSchema>
 
-// --- Database Helper Functions ---
+/**
+ * Chat storage implementation using BaseStorage
+ * Part 1: Chat entity management
+ */
+class ChatStorageClass extends BaseStorage<Chat, ChatsStorage> {
+  protected readonly tableName = 'chats'
+  protected readonly entitySchema = ChatSchema
+  protected readonly storageSchema = ChatsStorageSchema
+
+  private readonly fieldMappings = {
+    id: { dbColumn: 'id', converter: (v: any) => SqliteConverters.toNumber(v) },
+    title: { dbColumn: 'title', converter: (v: any) => SqliteConverters.toString(v) },
+    projectId: { dbColumn: 'project_id', converter: (v: any) => v != null ? SqliteConverters.toNumber(v) : undefined },
+    created: { dbColumn: 'created_at', converter: (v: any) => SqliteConverters.toTimestamp(v) },
+    updated: { dbColumn: 'updated_at', converter: (v: any) => SqliteConverters.toTimestamp(v) }
+  }
+
+  private readonly converter = createEntityConverter(
+    this.entitySchema,
+    this.fieldMappings
+  )
+
+  protected rowToEntity(row: any): Chat {
+    return this.converter(row)
+  }
+
+  protected getSelectColumns(): string[] {
+    return [
+      'id', 'project_id', 'title', 'created_at', 'updated_at'
+    ]
+  }
+
+  protected getInsertColumns(): string[] {
+    return getInsertColumnsFromMappings(this.fieldMappings)
+  }
+
+  protected getInsertValues(entity: Chat): any[] {
+    return getInsertValuesFromEntity(entity, this.fieldMappings)
+  }
+
+  // === Custom Methods ===
+
+  async readChats(): Promise<ChatsStorage> {
+    return this.readAll()
+  }
+
+  async writeChats(chats: ChatsStorage): Promise<ChatsStorage> {
+    return this.writeAll(chats)
+  }
+
+  async getChatById(chatId: number): Promise<Chat | null> {
+    return this.getById(chatId)
+  }
+
+  async findChatsByDateRange(startTime: number, endTime: number): Promise<Chat[]> {
+    const db = this.getDb()
+    const database = db.getDatabase()
+
+    const query = database.prepare(`
+      SELECT ${this.getSelectColumns().join(', ')}
+      FROM ${this.tableName}
+      WHERE created_at >= ? AND created_at <= ?
+      ORDER BY created_at DESC
+    `)
+
+    const rows = query.all(startTime, endTime) as any[]
+    return rows.map(row => this.rowToEntity(row))
+  }
+
+  async deleteChatData(chatId: number): Promise<void> {
+    const db = this.getDb()
+    const database = db.getDatabase()
+
+    withTransaction(database, () => {
+      // Delete all messages for this chat
+      database.prepare(`DELETE FROM chat_messages WHERE chat_id = ?`).run(chatId)
+      // Delete the chat itself
+      database.prepare(`DELETE FROM chats WHERE id = ?`).run(chatId)
+    })
+  }
+}
 
 /**
- * Validates data against a schema and returns the validated data.
+ * ChatMessage storage implementation using BaseStorage
+ * Part 2: Message entity management
  */
-async function validateData<T>(data: unknown, schema: z.ZodSchema<T>, context: string): Promise<T> {
-  const validationResult = await schema.safeParseAsync(data)
-  if (!validationResult.success) {
-    console.error(`Zod validation failed for ${context}:`, validationResult.error.errors)
-    throw new ApiError(
-      400,
-      `Validation failed for ${context}`,
-      fromJson(validationResult.error.errors) ?? 'VALIDATION_ERROR'
-    )
-  }
-  return validationResult.data
-}
+class ChatMessageStorageClass extends BaseStorage<ChatMessage, ChatMessagesStorage> {
+  protected readonly tableName = 'chat_messages'
+  protected readonly entitySchema = ChatMessageSchema
+  protected readonly storageSchema = ChatMessagesStorageSchema
 
-// Note: Now using centralized SqliteConverters instead of local helper functions
-// The toArray function from SqliteConverters provides consistent JSON array parsing
+  private readonly fieldMappings = createStandardMappings<ChatMessage>({
+    chatId: { dbColumn: 'chat_id', converter: (v) => SqliteConverters.toNumber(v) },
+    role: 'role',
+    content: 'content',
+    type: { dbColumn: 'type', converter: (v) => v || undefined },
+    attachments: { dbColumn: 'attachments', converter: (v) => v ? JSON.parse(v as string) : [] }
+  })
 
-// --- Specific Data Accessors ---
+  private readonly converter = createEntityConverter(
+    this.entitySchema,
+    this.fieldMappings
+  )
 
-class ChatStorage {
-  /**
-   * Get database instance lazily. Always get fresh instance to avoid closed db issues.
-   */
-  private getDb(): DatabaseManager {
-    return getDb()
+  protected rowToEntity(row: any): ChatMessage {
+    return this.converter(row)
   }
 
-  /** Reads all chats from the database. */
-  async readChats(): Promise<ChatsStorage> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
+  protected getSelectColumns(): string[] {
+    return [
+      'id', 'chat_id', 'role', 'content', 'type', 'attachments',
+      'created_at', 'updated_at'
+    ]
+  }
 
-      // Query chats directly from columns
-      const query = database.prepare(`
-        SELECT 
-          id, title, project_id, created_at, updated_at
-        FROM ${CHATS_TABLE}
-        ORDER BY created_at DESC
-      `)
+  protected getInsertColumns(): string[] {
+    return getInsertColumnsFromMappings(this.fieldMappings)
+  }
 
-      const rows = query.all() as any[]
-
-      // Convert rows to ChatsStorage
-      const chats: ChatsStorage = {}
-      for (const row of rows) {
-        const chat: Chat = {
-          id: row.id,
-          title: row.title,
-          projectId: row.project_id || undefined,
-          created: toNumber(row.created_at),
-          updated: toNumber(row.updated_at)
-        }
-
-        // Validate each chat
-        const validatedChat = (await validateData(chat, ChatSchema, `chat ${chat.id}`)) as Chat
-        chats[String(validatedChat.id)] = validatedChat
-      }
-
-      return chats
-    } catch (error: any) {
-      console.error('Error reading chats from database:', error)
-      throw new ApiError(500, 'Failed to read chats', error)
+  protected getInsertValues(entity: ChatMessage): any[] {
+    const values = getInsertValuesFromEntity(entity, this.fieldMappings)
+    // Handle attachments serialization
+    const attachmentsIndex = this.getInsertColumns().indexOf('attachments')
+    if (attachmentsIndex !== -1 && entity.attachments) {
+      values[attachmentsIndex] = JSON.stringify(entity.attachments)
     }
+    return values
   }
 
-  /** Writes all chats to the database. */
-  async writeChats(chats: ChatsStorage): Promise<ChatsStorage> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
+  // === Custom Methods ===
 
-      // Validate the entire storage structure
-      const validatedChats = (await validateData(chats, ChatsStorageSchema, 'chats storage')) as ChatsStorage
-
-      // Clear and write all chats atomically
-      database.transaction(() => {
-        // Clear existing chats
-        database.exec(`DELETE FROM ${CHATS_TABLE}`)
-
-        // Prepare insert statement
-        const insertQuery = database.prepare(`
-          INSERT INTO ${CHATS_TABLE} (id, title, project_id, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?)
-        `)
-
-        // Write all chats
-        for (const [chatId, chat] of Object.entries(validatedChats)) {
-          insertQuery.run(chat.id, chat.title, chat.projectId || null, chat.created, chat.updated)
-        }
-      })()
-
-      return validatedChats
-    } catch (error: any) {
-      console.error('Error writing chats to database:', error)
-      throw new ApiError(500, 'Failed to write chats', error)
-    }
-  }
-
-  /** Gets a specific chat by ID. */
-  async getChatById(chatId: number): Promise<Chat | null> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      const query = database.prepare(`
-        SELECT 
-          id, title, project_id, created_at, updated_at
-        FROM ${CHATS_TABLE}
-        WHERE id = ?
-      `)
-
-      const row = query.get(chatId) as any
-
-      if (!row) {
-        return null
-      }
-
-      const chat: Chat = {
-        id: row.id,
-        title: row.title,
-        projectId: row.project_id || undefined,
-        created: row.created_at,
-        updated: row.updated_at
-      }
-
-      // Validate the chat data
-      return (await validateData(chat, ChatSchema, `chat ${chatId}`)) as Chat
-    } catch (error: any) {
-      console.error(`Error reading chat ${chatId} from database:`, error)
-      throw new ApiError(500, `Failed to read chat ${chatId}`, error)
-    }
-  }
-
-  /** Reads all messages for a specific chat. */
   async readChatMessages(chatId: number): Promise<ChatMessagesStorage> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      // Query messages directly from columns
-      const query = database.prepare(`
-        SELECT 
-          id, chat_id, role, content, type, attachments, created_at, updated_at
-        FROM ${CHAT_MESSAGES_TABLE}
-        WHERE chat_id = ?
-        ORDER BY created_at ASC
-      `)
-
-      const rows = query.all(chatId) as any[]
-
-      // Convert array to ChatMessagesStorage (Record keyed by messageId)
-      const messagesStorage: ChatMessagesStorage = {}
-      for (const row of rows) {
-        const message: ChatMessage = {
-          id: row.id,
-          chatId: row.chat_id,
-          role: row.role,
-          content: row.content,
-          type: row.type || undefined,
-          attachments: toArray(row.attachments, [], 'message.attachments'),
-          created: toNumber(row.created_at),
-          updated: toNumber(row.updated_at)
-        }
-
-        // Validate each message
-        const validatedMessage = (await validateData(
-          message,
-          ChatMessageSchema,
-          `message ${message.id} in chat ${chatId}`
-        )) as ChatMessage
-        messagesStorage[String(validatedMessage.id)] = validatedMessage
-      }
-
-      return messagesStorage
-    } catch (error: any) {
-      console.error(`Error reading messages for chat ${chatId} from database:`, error)
-      throw new ApiError(500, `Failed to read messages for chat ${chatId}`, error)
-    }
+    return this.readAll('chat_id = ?', [chatId])
   }
 
-  /** Writes messages for a specific chat. */
   async writeChatMessages(chatId: number, messages: ChatMessagesStorage): Promise<ChatMessagesStorage> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
+    const db = this.getDb()
+    const database = db.getDatabase()
 
-      // Validate the messages storage structure
-      const validatedMessages = (await validateData(
-        messages,
-        ChatMessagesStorageSchema,
-        `messages for chat ${chatId}`
-      )) as ChatMessagesStorage
-
-      // Use raw database transaction for atomic updates
-      database.transaction(() => {
-        // First, delete all existing messages for this chat
-        const deleteQuery = database.prepare(`
-          DELETE FROM ${CHAT_MESSAGES_TABLE}
-          WHERE chat_id = ?
-        `)
-        deleteQuery.run(chatId)
-
-        // Prepare insert statement
-        const insertQuery = database.prepare(`
-          INSERT INTO ${CHAT_MESSAGES_TABLE} 
-          (id, chat_id, role, content, type, attachments, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `)
-
-        // Write all new messages
-        for (const [messageId, message] of Object.entries(validatedMessages)) {
-          insertQuery.run(
-            message.id,
-            message.chatId,
-            message.role,
-            message.content,
-            message.type || null,
-            fromArray(message.attachments),
-            message.created,
-            message.updated
-          )
-        }
-      })()
-
-      return validatedMessages
-    } catch (error: any) {
-      console.error(`Error writing messages for chat ${chatId} to database:`, error)
-      throw new ApiError(500, `Failed to write messages for chat ${chatId}`, error)
+    // Ensure all messages have the correct chatId
+    const messagesWithChatId: ChatMessagesStorage = {}
+    for (const [id, message] of Object.entries(messages)) {
+      messagesWithChatId[id] = { ...message, chatId }
     }
-  }
 
-  /** Deletes a chat and all its messages. */
-  async deleteChatData(chatId: number): Promise<void> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      database.transaction(() => {
-        // Delete the chat (messages will be deleted by CASCADE)
-        const chatDeleteQuery = database.prepare(`DELETE FROM ${CHATS_TABLE} WHERE id = ?`)
-        const chatResult = chatDeleteQuery.run(chatId)
-
-        if (chatResult.changes === 0) {
-          console.warn(`Chat ${chatId} not found, nothing to delete`)
-        } else {
-          console.log(`Deleted chat ${chatId} and associated messages`)
-        }
-      })()
-    } catch (error: any) {
-      console.error(`Error deleting chat ${chatId} from database:`, error)
-      throw new ApiError(500, `Failed to delete chat ${chatId}`, error)
-    }
-  }
-
-  /** Generates a unique ID. */
-  generateId(): number {
-    return normalizeToUnixMs(new Date())
-  }
-
-  /**
-   * Additional utility methods leveraging database capabilities
-   */
-
-  /** Find chats created within a date range. */
-  async findChatsByDateRange(startTime: number, endTime: number): Promise<Chat[]> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      const query = database.prepare(`
-        SELECT 
-          id, title, project_id, created_at, updated_at
-        FROM ${CHATS_TABLE}
-        WHERE created_at >= ? AND created_at <= ?
-        ORDER BY created_at DESC
-      `)
-
-      const rows = query.all(startTime, endTime) as any[]
-
-      // Convert and validate each chat
-      const validatedChats: Chat[] = []
-      for (const row of rows) {
-        const chat: Chat = {
-          id: row.id,
-          title: row.title,
-          projectId: row.project_id || undefined,
-          created: toNumber(row.created_at),
-          updated: toNumber(row.updated_at)
-        }
-        const validated = (await validateData(chat, ChatSchema, `chat ${chat.id}`)) as Chat
-        validatedChats.push(validated)
+    return withTransaction(database, () => {
+      // Delete existing messages for this chat
+      database.prepare(`DELETE FROM ${this.tableName} WHERE chat_id = ?`).run(chatId)
+      
+      // Insert new messages
+      for (const message of Object.values(messagesWithChatId)) {
+        this.add(message)
       }
-
-      return validatedChats
-    } catch (error: any) {
-      console.error('Error finding chats by date range:', error)
-      throw new ApiError(500, 'Failed to find chats by date range', error)
-    }
+      
+      return messagesWithChatId
+    })
   }
 
-  /** Count messages for a specific chat. */
-  async countMessagesForChat(chatId: number): Promise<number> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      const query = database.prepare(`
-        SELECT COUNT(*) as count 
-        FROM ${CHAT_MESSAGES_TABLE}
-        WHERE chat_id = ?
-      `)
-
-      const result = query.get(chatId) as { count: number }
-      return result.count
-    } catch (error: any) {
-      console.error(`Error counting messages for chat ${chatId}:`, error)
-      throw new ApiError(500, `Failed to count messages for chat ${chatId}`, error)
-    }
-  }
-
-  /** Get a single message by ID. */
   async getMessageById(messageId: number): Promise<ChatMessage | null> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      const query = database.prepare(`
-        SELECT 
-          id, chat_id, role, content, type, attachments, created_at, updated_at
-        FROM ${CHAT_MESSAGES_TABLE}
-        WHERE id = ?
-      `)
-
-      const row = query.get(messageId) as any
-
-      if (!row) {
-        return null
-      }
-
-      const message: ChatMessage = {
-        id: row.id,
-        chatId: row.chat_id,
-        role: row.role,
-        content: row.content,
-        type: row.type || undefined,
-        attachments: toArray(row.attachments, [], 'message.attachments'),
-        created: row.created_at,
-        updated: row.updated_at
-      }
-
-      // Validate the message data
-      return (await validateData(message, ChatMessageSchema, `message ${messageId}`)) as ChatMessage
-    } catch (error: any) {
-      console.error(`Error reading message ${messageId} from database:`, error)
-      throw new ApiError(500, `Failed to read message ${messageId}`, error)
-    }
+    return this.getById(messageId)
   }
 
-  /** Add a single message to a chat. */
+  async countMessagesForChat(chatId: number): Promise<number> {
+    return this.count('chat_id = ?', [chatId])
+  }
+
   async addMessage(message: ChatMessage): Promise<ChatMessage> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      // Validate the message
-      const validatedMessage = (await validateData(message, ChatMessageSchema, `message ${message.id}`)) as ChatMessage
-
-      // Insert the message
-      const insertQuery = database.prepare(`
-        INSERT INTO ${CHAT_MESSAGES_TABLE} 
-        (id, chat_id, role, content, type, attachments, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-
-      insertQuery.run(
-        validatedMessage.id,
-        validatedMessage.chatId,
-        validatedMessage.role,
-        validatedMessage.content,
-        validatedMessage.type || null,
-        fromArray(validatedMessage.attachments),
-        validatedMessage.created,
-        validatedMessage.updated
-      )
-
-      return validatedMessage
-    } catch (error: any) {
-      console.error(`Error adding message to chat ${message.chatId}:`, error)
-      throw new ApiError(500, `Failed to add message to chat ${message.chatId}`, error)
-    }
+    return this.add(message)
   }
 
-  /** Update a single message. */
   async updateMessage(messageId: number, message: ChatMessage): Promise<boolean> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
-
-      // Validate the message
-      const validatedMessage = (await validateData(message, ChatMessageSchema, `message ${messageId}`)) as ChatMessage
-
-      // Update the message
-      const updateQuery = database.prepare(`
-        UPDATE ${CHAT_MESSAGES_TABLE}
-        SET role = ?, content = ?, type = ?, attachments = ?, updated_at = ?
-        WHERE id = ?
-      `)
-
-      const result = updateQuery.run(
-        validatedMessage.role,
-        validatedMessage.content,
-        validatedMessage.type || null,
-        fromArray(validatedMessage.attachments),
-        validatedMessage.updated,
-        messageId
-      )
-
-      return result.changes > 0
-    } catch (error: any) {
-      console.error(`Error updating message ${messageId}:`, error)
-      throw new ApiError(500, `Failed to update message ${messageId}`, error)
-    }
+    const result = await this.update(messageId, message)
+    return result !== null
   }
 
-  /** Delete a single message. */
   async deleteMessage(messageId: number): Promise<boolean> {
-    try {
-      const db = this.getDb()
-      const database = db.getDatabase()
+    return this.delete(messageId)
+  }
 
-      const deleteQuery = database.prepare(`
-        DELETE FROM ${CHAT_MESSAGES_TABLE}
-        WHERE id = ?
-      `)
+  async getLatestMessagesForChat(chatId: number, limit: number = 50): Promise<ChatMessage[]> {
+    const db = this.getDb()
+    const database = db.getDatabase()
 
-      const result = deleteQuery.run(messageId)
-      return result.changes > 0
-    } catch (error: any) {
-      console.error(`Error deleting message ${messageId}:`, error)
-      throw new ApiError(500, `Failed to delete message ${messageId}`, error)
-    }
+    const query = database.prepare(`
+      SELECT ${this.getSelectColumns().join(', ')}
+      FROM ${this.tableName}
+      WHERE chat_id = ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `)
+
+    const rows = query.all(chatId, limit) as any[]
+    return rows.map(row => this.rowToEntity(row)).reverse() // Reverse to get chronological order
   }
 }
 
-// Export singleton instance
-export const chatStorage = new ChatStorage()
+// Create singleton instances
+const chatStorageInstance = new ChatStorageClass()
+const chatMessageStorageInstance = new ChatMessageStorageClass()
+
+// Export the combined storage object for backward compatibility
+export const chatStorage = {
+  // Chat methods
+  readChats: () => chatStorageInstance.readChats(),
+  writeChats: (chats: ChatsStorage) => chatStorageInstance.writeChats(chats),
+  getChatById: (chatId: number) => chatStorageInstance.getChatById(chatId),
+  findChatsByDateRange: (startTime: number, endTime: number) => 
+    chatStorageInstance.findChatsByDateRange(startTime, endTime),
+  deleteChatData: (chatId: number) => chatStorageInstance.deleteChatData(chatId),
+  
+  // ChatMessage methods
+  readChatMessages: (chatId: number) => chatMessageStorageInstance.readChatMessages(chatId),
+  writeChatMessages: (chatId: number, messages: ChatMessagesStorage) => 
+    chatMessageStorageInstance.writeChatMessages(chatId, messages),
+  getMessageById: (messageId: number) => chatMessageStorageInstance.getMessageById(messageId),
+  countMessagesForChat: (chatId: number) => chatMessageStorageInstance.countMessagesForChat(chatId),
+  addMessage: (message: ChatMessage) => chatMessageStorageInstance.addMessage(message),
+  updateMessage: (messageId: number, message: ChatMessage) => 
+    chatMessageStorageInstance.updateMessage(messageId, message),
+  deleteMessage: (messageId: number) => chatMessageStorageInstance.deleteMessage(messageId),
+  
+  // Utility methods
+  generateId: () => chatStorageInstance.generateId(),
+  generateMessageId: () => chatMessageStorageInstance.generateId()
+}

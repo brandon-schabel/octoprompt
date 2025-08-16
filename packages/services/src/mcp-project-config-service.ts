@@ -10,7 +10,7 @@ import { z } from 'zod'
 import { createLogger } from './utils/logger'
 import { EventEmitter } from 'events'
 import { getProjectById } from './project-service'
-import { toPosixPath, toOSPath, joinPosix } from './utils/path-utils'
+import { toPosixPath, toOSPath, joinPosix } from '@promptliano/shared'
 
 const logger = createLogger('MCPProjectConfigService')
 
@@ -83,75 +83,100 @@ export class MCPProjectConfigService extends EventEmitter {
    * Get all possible config file locations for a project
    */
   async getConfigLocations(projectId: number): Promise<MCPConfigLocation[]> {
-    const project = await getProjectById(projectId)
-    const projectPath = project.path
+    try {
+      const project = await getProjectById(projectId)
+      
+      if (!project) {
+        throw new Error(`Project with ID ${projectId} not found`)
+      }
+      
+      const projectPath = project.path
 
-    if (!projectPath) {
-      throw new Error(`Project ${projectId} has no path defined`)
+      if (!projectPath) {
+        throw new Error(`Project ${projectId} has no path defined`)
+      }
+
+      const locations: MCPConfigLocation[] = []
+
+      for (let i = 0; i < CONFIG_FILE_NAMES.length; i++) {
+        const configFileName = CONFIG_FILE_NAMES[i]
+        if (!configFileName) continue
+
+        const configPath = path.join(projectPath, configFileName)
+        const exists = await this.fileExists(configPath)
+
+        locations.push({
+          path: configPath,
+          exists,
+          priority: CONFIG_FILE_NAMES.length - i // Higher number = higher priority
+        })
+      }
+
+      return locations
+    } catch (error: any) {
+      logger.error('Error getting config locations:', { projectId, error: error.message })
+      throw error
     }
-
-    const locations: MCPConfigLocation[] = []
-
-    for (let i = 0; i < CONFIG_FILE_NAMES.length; i++) {
-      const configFileName = CONFIG_FILE_NAMES[i]
-      if (!configFileName) continue
-
-      const configPath = path.join(projectPath, configFileName)
-      const exists = await this.fileExists(configPath)
-
-      locations.push({
-        path: configPath,
-        exists,
-        priority: CONFIG_FILE_NAMES.length - i // Higher number = higher priority
-      })
-    }
-
-    return locations
   }
 
   /**
    * Load project-level MCP configuration
    */
   async loadProjectConfig(projectId: number): Promise<ResolvedMCPConfig | null> {
-    // Check cache first
-    if (this.configCache.has(projectId)) {
-      return this.configCache.get(projectId)!
-    }
-
-    const project = await getProjectById(projectId)
-    const projectPath = project.path
-    const locations = await this.getConfigLocations(projectId)
-
-    // Find the first existing config file (highest priority)
-    const existingConfig = locations.sort((a, b) => b.priority - a.priority).find((loc) => loc.exists)
-
-    if (!existingConfig) {
-      logger.debug(`No MCP config found for project ${projectId}`)
-      return null
-    }
-
     try {
-      const content = await fs.readFile(existingConfig.path, 'utf-8')
-      const rawConfig = JSON.parse(content)
-      const config = ProjectMCPConfigSchema.parse(rawConfig)
-
-      const resolved: ResolvedMCPConfig = {
-        config,
-        source: existingConfig.path,
-        projectPath
+      // Check cache first
+      if (this.configCache.has(projectId)) {
+        return this.configCache.get(projectId)!
       }
 
-      // Cache the result
-      this.configCache.set(projectId, resolved)
+      const project = await getProjectById(projectId)
+      
+      if (!project) {
+        throw new Error(`Project with ID ${projectId} not found`)
+      }
+      
+      const projectPath = project.path
+      
+      if (!projectPath) {
+        throw new Error(`Project ${projectId} has no path defined`)
+      }
+      
+      const locations = await this.getConfigLocations(projectId)
 
-      // Set up file watcher
-      this.watchConfigFile(projectId, existingConfig.path)
+      // Find the first existing config file (highest priority)
+      const existingConfig = locations.sort((a, b) => b.priority - a.priority).find((loc) => loc.exists)
 
-      logger.info(`Loaded MCP config for project ${projectId} from ${existingConfig.path}`)
-      return resolved
-    } catch (error) {
-      logger.error(`Failed to load MCP config from ${existingConfig.path}:`, error)
-      throw new Error(`Invalid MCP configuration: ${error instanceof Error ? error.message : String(error)}`)
+      if (!existingConfig) {
+        logger.debug(`No MCP config found for project ${projectId}`)
+        return null
+      }
+
+      try {
+        const content = await fs.readFile(existingConfig.path, 'utf-8')
+        const rawConfig = JSON.parse(content)
+        const config = ProjectMCPConfigSchema.parse(rawConfig)
+
+        const resolved: ResolvedMCPConfig = {
+          config,
+          source: existingConfig.path,
+          projectPath
+        }
+
+        // Cache the result
+        this.configCache.set(projectId, resolved)
+
+        // Set up file watcher
+        this.watchConfigFile(projectId, existingConfig.path)
+
+        logger.info(`Loaded MCP config for project ${projectId} from ${existingConfig.path}`)
+        return resolved
+      } catch (fileError) {
+        logger.error(`Failed to load MCP config from ${existingConfig.path}:`, fileError)
+        throw new Error(`Invalid MCP configuration: ${fileError instanceof Error ? fileError.message : String(fileError)}`)
+      }
+    } catch (error: any) {
+      logger.error('Error loading project config:', { projectId, error: error.message })
+      throw error
     }
   }
 
@@ -225,6 +250,14 @@ export class MCPProjectConfigService extends EventEmitter {
    */
   async expandVariables(config: ProjectMCPConfig, projectId: number): Promise<ProjectMCPConfig> {
     const project = await getProjectById(projectId)
+    
+    if (!project) {
+      throw new Error(`Project with ID ${projectId} not found`)
+    }
+    
+    if (!project.path) {
+      throw new Error(`Project ${projectId} has no path defined`)
+    }
 
     const variables: Record<string, string> = {
       workspaceFolder: toPosixPath(project.path),

@@ -6,18 +6,16 @@ import {
   entityIdArraySchema,
   entityIdCoercibleSchema
 } from './schema-utils'
+import { createEntitySchemas, createResponseSchemas } from './schema-factories'
 
-// Base schema - Represents the API structure
-export const ProjectSchema = z
-  .object({
-    id: entityIdSchema,
-    name: z.string(),
-    description: z.string(),
-    path: z.string(),
-    created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec
-  })
-  .openapi('Project')
+// Project schemas using factory pattern
+const projectSchemas = createEntitySchemas('Project', {
+  name: z.string(),
+  description: z.string(),
+  path: z.string()
+})
+
+export const ProjectSchema = projectSchemas.base
 
 // Import and Export info schemas
 export const ImportInfoSchema = z
@@ -75,25 +73,20 @@ export const ProjectIdParamsSchema = z
   })
   .openapi('ProjectIdParams')
 
-// Request Body Schemas
-export const CreateProjectBodySchema = z
-  .object({
-    name: z.string().min(1).openapi({ example: 'My Awesome Project' }),
-    path: z.string().min(1).openapi({ example: '/path/to/project' }),
-    description: z.string().optional().openapi({ example: 'Optional project description' })
-  })
-  .openapi('CreateProjectRequestBody')
+// Request Body Schemas - customized from factory base
+export const CreateProjectBodySchema = projectSchemas.create.extend({
+  name: z.string().min(1).openapi({ example: 'My Awesome Project' }),
+  path: z.string().min(1).openapi({ example: '/path/to/project' }),
+  description: z.string().optional().openapi({ example: 'Optional project description' })
+}).openapi('CreateProjectRequestBody')
 
-export const UpdateProjectBodySchema = z
-  .object({
-    name: z.string().min(1).optional().openapi({ example: 'Updated Project Name' }),
-    path: z.string().min(1).optional().openapi({ example: '/new/path/to/project' }),
-    description: z.string().optional().openapi({ example: 'Updated description' })
-  })
-  .refine((data) => data.name || data.path || data.description, {
-    message: 'At least one field (name, path, description) must be provided for update'
-  })
-  .openapi('UpdateProjectRequestBody')
+export const UpdateProjectBodySchema = projectSchemas.update.extend({
+  name: z.string().min(1).optional().openapi({ example: 'Updated Project Name' }),
+  path: z.string().min(1).optional().openapi({ example: '/new/path/to/project' }),
+  description: z.string().optional().openapi({ example: 'Updated description' })
+}).refine((data) => data.name || data.path || data.description, {
+  message: 'At least one field (name, path, description) must be provided for update'
+}).openapi('UpdateProjectRequestBody')
 
 export const SummarizeFilesBodySchema = z
   .object({
@@ -133,25 +126,16 @@ export const RefreshQuerySchema = z
   })
   .openapi('RefreshQuery')
 
-// Response Schemas
-export const ProjectResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: ProjectSchema
-  })
-  .openapi('ProjectResponse')
+// Response Schemas using factory pattern
+const projectResponses = createResponseSchemas(ProjectSchema, 'Project')
+
+export const ProjectResponseSchema = projectResponses.single
+export const ProjectListResponseSchema = projectResponses.list
 
 export const ProjectResponseMultiStatusSchema = ProjectResponseSchema.extend({
   warning: z.string().optional(),
   error: z.string().optional()
 }).openapi('ProjectResponseMultiStatus')
-
-export const ProjectListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: z.array(ProjectSchema)
-  })
-  .openapi('ProjectListResponse')
 
 export const FileListResponseSchema = z
   .object({

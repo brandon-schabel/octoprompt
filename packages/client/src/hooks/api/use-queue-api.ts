@@ -11,7 +11,6 @@ import {
   BatchEnqueueBody
 } from '@promptliano/schemas'
 import { useApiClient } from './use-api-client'
-import { DataResponseSchema } from '@promptliano/api-client'
 import { toast } from 'sonner'
 
 // Query keys
@@ -30,10 +29,8 @@ export const queueKeys = {
 }
 
 // Hooks for queues
-
 export function useGetQueues(projectId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: queueKeys.list(projectId),
@@ -48,7 +45,6 @@ export function useGetQueues(projectId: number) {
 
 export function useGetQueue(queueId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: queueKeys.detail(queueId),
@@ -63,7 +59,6 @@ export function useGetQueue(queueId: number) {
 
 export function useCreateQueue(projectId: number) {
   const client = useApiClient()
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -85,7 +80,6 @@ export function useCreateQueue(projectId: number) {
 
 export function useUpdateQueue(queueId: number) {
   const client = useApiClient()
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -108,8 +102,6 @@ export function useUpdateQueue(queueId: number) {
 
 export function useDeleteQueue() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -130,10 +122,8 @@ export function useDeleteQueue() {
 }
 
 // Hooks for queue items
-
 export function useGetQueueItems(queueId: number, status?: string) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: queueKeys.itemList(queueId, status),
@@ -148,7 +138,6 @@ export function useGetQueueItems(queueId: number, status?: string) {
 
 export function useEnqueueItem(queueId: number) {
   const client = useApiClient()
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -170,8 +159,6 @@ export function useEnqueueItem(queueId: number) {
 
 export function useEnqueueTicket(queueId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -193,7 +180,6 @@ export function useEnqueueTicket(queueId: number) {
 
 export function useBatchEnqueueItems(queueId: number) {
   const client = useApiClient()
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -213,67 +199,54 @@ export function useBatchEnqueueItems(queueId: number) {
   })
 }
 
-// DEPRECATED: useUpdateQueueItem - Queue items are now managed through their parent tickets/tasks
-// Use ticket/task update methods instead to modify queue fields
+// DEPRECATED hooks - kept for backward compatibility
 export function useUpdateQueueItem() {
   return useMutation({
     mutationFn: async () => {
       throw new Error('Queue item updates are no longer supported. Use ticket/task update methods instead.')
     },
-    onError: (error: any) => {
+    onError: () => {
       toast.error('Queue item updates are no longer supported. Use ticket/task update methods instead.')
     }
   })
 }
 
-// DEPRECATED: useBatchUpdateQueueItems - Queue items are now managed through their parent tickets/tasks
-// Use ticket/task batch update methods instead
 export function useBatchUpdateQueueItems() {
   return useMutation({
     mutationFn: async () => {
       throw new Error('Batch queue item updates are no longer supported. Use ticket/task batch update methods instead.')
     },
-    onError: (error: any) => {
+    onError: () => {
       toast.error('Batch queue item updates are no longer supported. Use ticket/task batch update methods instead.')
     }
   })
 }
 
-// DEPRECATED: useDeleteQueueItem - Queue items are now managed through their parent tickets/tasks
-// Use flow service dequeue methods instead
 export function useDeleteQueueItem() {
   return useMutation({
     mutationFn: async () => {
       throw new Error('Queue item deletion is no longer supported. Use flow service dequeue methods instead.')
     },
-    onError: (error: any) => {
+    onError: () => {
       toast.error('Queue item deletion is no longer supported. Use flow service dequeue methods instead.')
     }
   })
 }
 
-// DEPRECATED: useClearQueue - Queue items are now managed through their parent tickets/tasks
-// Use flow service dequeue methods for individual items instead
-export function useClearQueue(queueId: number) {
+export function useClearQueue() {
   return useMutation({
     mutationFn: async () => {
-      throw new Error(
-        'Queue clearing is no longer supported. Use flow service dequeue methods for individual items instead.'
-      )
+      throw new Error('Queue clearing is no longer supported. Use flow service dequeue methods for individual items instead.')
     },
-    onError: (error: any) => {
-      toast.error(
-        'Queue clearing is no longer supported. Use flow service dequeue methods for individual items instead.'
-      )
+    onError: () => {
+      toast.error('Queue clearing is no longer supported. Use flow service dequeue methods for individual items instead.')
     }
   })
 }
 
 // Hooks for queue statistics
-
 export function useGetQueueStats(queueId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: queueKeys.stat(queueId),
@@ -289,7 +262,6 @@ export function useGetQueueStats(queueId: number) {
 
 export function useGetQueuesWithStats(projectId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: queueKeys.allStats(projectId),
@@ -305,7 +277,6 @@ export function useGetQueuesWithStats(projectId: number) {
 
 export function useGetQueueWithStats(queueId: number, options?: { enabled?: boolean }) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: [...queueKeys.detail(queueId), 'with-stats'],
@@ -317,7 +288,10 @@ export function useGetQueueWithStats(queueId: number, options?: { enabled?: bool
       const statsResponse = await client.queues.getQueueStats(queueId)
 
       const result: QueueWithStats = {
-        queue: queueResponse.data,
+        queue: {
+          ...queueResponse.data,
+          status: queueResponse.data.status ?? 'active' // Ensure status has a default value
+        },
         stats: statsResponse.data
       }
 
@@ -329,11 +303,8 @@ export function useGetQueueWithStats(queueId: number, options?: { enabled?: bool
 }
 
 // Hook for agents to get next task
-
 export function useGetNextTask() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -357,8 +328,6 @@ export function useGetNextTask() {
 // Bulk move items - now uses FlowService
 export function useBulkMoveItems() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -370,7 +339,7 @@ export function useBulkMoveItems() {
       })
       return response
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       // Invalidate all queue-related queries
       queryClient.invalidateQueries({ queryKey: queueKeys.all })
       queryClient.invalidateQueries({ queryKey: ['unqueued-items'] })
@@ -387,8 +356,6 @@ export function useBulkMoveItems() {
 // Reorder queue items - now uses FlowService
 export function useReorderQueueItems() {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
-
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -396,7 +363,7 @@ export function useReorderQueueItems() {
       if (!client) throw new Error('API client not initialized')
       const response = await client.flow.reorderQueueItems({
         queueId,
-        items: itemIds.map((id, index) => ({ itemType: 'task' as const, itemId: id, ticketId: undefined }))
+        items: itemIds.map((id) => ({ itemType: 'task' as const, itemId: id, ticketId: undefined }))
       })
       return response
     },
@@ -416,7 +383,6 @@ export function useReorderQueueItems() {
 // Get queue timeline
 export function useGetQueueTimeline(queueId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: [...queueKeys.detail(queueId), 'timeline'],
@@ -432,7 +398,6 @@ export function useGetQueueTimeline(queueId: number) {
 // Get unqueued items
 export function useGetUnqueuedItems(projectId: number) {
   const client = useApiClient()
-  // Client null check removed - handled by React Query
 
   return useQuery({
     queryKey: ['unqueued-items', projectId],

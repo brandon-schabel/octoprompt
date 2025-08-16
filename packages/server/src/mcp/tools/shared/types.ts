@@ -219,21 +219,6 @@ export const TabManagerSchema = z.object({
   data: z.any().optional()
 })
 
-// Job Manager Types (already migrated but included for completeness)
-export enum JobManagerAction {
-  LIST = 'list',
-  GET = 'get',
-  CREATE = 'create',
-  CANCEL = 'cancel',
-  RETRY = 'retry',
-  CLEANUP = 'cleanup'
-}
-
-export const JobManagerSchema = z.object({
-  action: z.nativeEnum(JobManagerAction),
-  projectId: z.number().optional(),
-  data: z.any().optional()
-})
 
 // Markdown Prompt Manager Types
 export enum MarkdownPromptManagerAction {

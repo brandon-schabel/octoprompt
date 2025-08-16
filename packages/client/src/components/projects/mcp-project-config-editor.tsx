@@ -34,6 +34,12 @@ interface MCPProjectConfigEditorProps {
   projectId: number
 }
 
+interface ConfigLocation {
+  path: string
+  exists: boolean
+  priority: number
+}
+
 interface MCPConfigLocation {
   path: string
   exists: boolean
@@ -48,16 +54,33 @@ interface MCPServerConfig {
   timeout?: number
 }
 
+type ProjectMCPConfigInput = 
+  | {
+      type: 'promptString'
+      id: string
+      description: string
+      default?: string
+      password?: boolean
+    }
+  | {
+      type: 'promptNumber'
+      id: string
+      description: string
+      default?: number
+      password?: boolean
+    }
+  | {
+      type: 'promptBoolean'
+      id: string
+      description: string
+      default?: boolean
+      password?: boolean
+    }
+
 interface ProjectMCPConfig {
   mcpServers?: Record<string, MCPServerConfig>
   servers?: Record<string, MCPServerConfig>
-  inputs?: Array<{
-    type: 'promptString' | 'promptNumber' | 'promptBoolean'
-    id: string
-    description: string
-    default?: any
-    password?: boolean
-  }>
+  inputs?: ProjectMCPConfigInput[]
   extends?: string | string[]
 }
 
@@ -291,7 +314,7 @@ export function MCPProjectConfigEditor({ projectId }: MCPProjectConfigEditorProp
         <div className='space-y-2'>
           <h4 className='text-sm font-medium'>Configuration Locations</h4>
           <div className='space-y-1'>
-            {locations.map((location, index) => {
+            {locations.map((location: ConfigLocation, index: number) => {
               const editorInfo = getEditorInfoFromPath(location.path)
               const EditorIcon = editorInfo?.icon ?? null
 

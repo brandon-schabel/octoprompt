@@ -14,6 +14,7 @@ import { structuredDataSchemas } from '@promptliano/schemas'
 
 import { ApiError } from '@promptliano/shared'
 import { mapProviderErrorToApiError } from './error-mappers'
+import { ErrorFactory, assertExists } from './utils/error-factory'
 import { retryOperation } from './utils/bulk-operations'
 import { getProviderUrl } from './provider-settings-service'
 import { LMStudioProvider } from './providers/lmstudio-provider'
@@ -223,11 +224,7 @@ async function getProviderLanguageModelInterface(
   const modelId = finalOptions.model || LOW_MODEL_CONFIG.model || ''
 
   if (!modelId) {
-    throw new ApiError(
-      400,
-      `Model ID must be specified for provider ${provider} either in options or defaults.`,
-      'MODEL_ID_MISSING'
-    )
+    throw ErrorFactory.missingRequired('Model ID', `provider ${provider}`)
   }
 
   if (debug) {
@@ -242,14 +239,14 @@ async function getProviderLanguageModelInterface(
       const providerKeyService = createProviderKeyService()
       const customKey = await providerKeyService.getKeyById(keyId)
       if (!customKey || customKey.provider !== 'custom' || !customKey.baseUrl) {
-        throw new ApiError(400, 'Custom provider configuration not found', 'CUSTOM_PROVIDER_NOT_CONFIGURED')
+        throw ErrorFactory.notFound('Custom provider configuration', keyId || 'default')
       }
       
       const baseURL = customKey.baseUrl
       const apiKey = customKey.key
       
       if (!apiKey) {
-        throw new ApiError(400, 'API key required for custom provider', 'CUSTOM_PROVIDER_KEY_MISSING')
+        throw ErrorFactory.missingRequired('API key', 'custom provider')
       }
       
       // Ensure URL is properly formatted for OpenAI compatibility
@@ -280,32 +277,32 @@ async function getProviderLanguageModelInterface(
     case 'anthropic': {
       const apiKey = await getKey('anthropic', debug)
       if (!apiKey && !process.env.ANTHROPIC_API_KEY)
-        throw new ApiError(400, 'Anthropic API Key not found in DB or environment.', 'ANTHROPIC_KEY_MISSING')
+        throw ErrorFactory.missingRequired('Anthropic API Key', 'database or environment')
       return createAnthropic({ apiKey })(modelId)
     }
     case 'google_gemini': {
       const apiKey = await getKey('google_gemini', debug)
       if (!apiKey && !process.env.GOOGLE_GENERATIVE_AI_API_KEY)
-        throw new ApiError(400, 'Google Gemini API Key not found in DB or environment.', 'GOOGLE_KEY_MISSING')
+        throw ErrorFactory.missingRequired('Google Gemini API Key', 'database or environment')
       return createGoogleGenerativeAI({ apiKey })(modelId)
     }
     case 'groq': {
       const apiKey = await getKey('groq', debug)
       if (!apiKey && !process.env.GROQ_API_KEY)
-        throw new ApiError(400, 'Groq API Key not found in DB or environment.', 'GROQ_KEY_MISSING')
+        throw ErrorFactory.missingRequired('Groq API Key', 'database or environment')
       return createGroq({ apiKey })(modelId)
     }
     case 'openrouter': {
       const apiKey = await getKey('openrouter', debug)
       if (!apiKey && !process.env.OPENROUTER_API_KEY)
-        throw new ApiError(400, 'OpenRouter API Key not found in DB or environment.', 'OPENROUTER_KEY_MISSING')
+        throw ErrorFactory.missingRequired('OpenRouter API Key', 'database or environment')
       return createOpenRouter({ apiKey })(modelId)
     }
     // --- OpenAI Compatible Providers ---
     case 'lmstudio': {
       // Priority: options > provider settings > config
       let lmStudioUrl = options.lmstudioUrl || getProviderUrl('lmstudio') || providersConfig.lmstudio.baseURL
-      if (!lmStudioUrl) throw new ApiError(500, 'LMStudio Base URL not configured.', 'LMSTUDIO_URL_MISSING')
+      if (!lmStudioUrl) throw ErrorFactory.missingRequired('LMStudio Base URL', 'configuration')
 
       // Log when custom URL is detected
       if (options.lmstudioUrl || getProviderUrl('lmstudio')) {
@@ -328,12 +325,12 @@ async function getProviderLanguageModelInterface(
     }
     case 'xai': {
       const apiKey = await getKey('xai', debug)
-      if (!apiKey) throw new ApiError(400, 'XAI API Key not found in DB.', 'XAI_KEY_MISSING')
+      if (!apiKey) throw ErrorFactory.missingRequired('XAI API Key', 'database')
       return createOpenAI({ baseURL: 'https://api.x.ai/v1', apiKey })(modelId)
     }
     case 'together': {
       const apiKey = await getKey('together', debug)
-      if (!apiKey) throw new ApiError(400, 'Together API Key not found in DB.', 'TOGETHER_KEY_MISSING')
+      if (!apiKey) throw ErrorFactory.missingRequired('Together API Key', 'database')
       return createOpenAI({ baseURL: 'https://api.together.xyz/v1', apiKey })(modelId)
     }
     // --- Custom OpenAI-Compatible Provider ---
@@ -341,17 +338,17 @@ async function getProviderLanguageModelInterface(
       // Get the provider key to access custom configuration
       const customKey = await getProviderKeyById(provider, debug)
       if (!customKey) {
-        throw new ApiError(400, 'Custom provider configuration not found', 'CUSTOM_PROVIDER_NOT_CONFIGURED')
+        throw ErrorFactory.notFound('Custom provider configuration', 'default')
       }
       
-      const baseURL = customKey.baseUrl || options.baseUrl
+      const baseURL = customKey.baseUrl
       if (!baseURL) {
-        throw new ApiError(400, 'Base URL required for custom provider', 'CUSTOM_PROVIDER_URL_MISSING')
+        throw ErrorFactory.missingRequired('Base URL', 'custom provider')
       }
       
       const apiKey = await getKey('custom', debug)
       if (!apiKey) {
-        throw new ApiError(400, 'API key required for custom provider', 'CUSTOM_PROVIDER_KEY_MISSING')
+        throw ErrorFactory.missingRequired('API key', 'custom provider')
       }
       
       // Ensure URL is properly formatted for OpenAI compatibility
@@ -384,7 +381,7 @@ async function getProviderLanguageModelInterface(
     case 'ollama': {
       // Priority: options > provider settings > config
       const ollamaUrl = options.ollamaUrl || getProviderUrl('ollama') || providersConfig.ollama.baseURL
-      if (!ollamaUrl) throw new ApiError(500, 'Ollama Base URL not configured.', 'OLLAMA_URL_MISSING')
+      if (!ollamaUrl) throw ErrorFactory.missingRequired('Ollama Base URL', 'configuration')
 
       // Log when custom URL is detected
       if (options.ollamaUrl || getProviderUrl('ollama')) {
@@ -405,11 +402,9 @@ async function getProviderLanguageModelInterface(
         const fallbackModel = LOW_MODEL_CONFIG.model ?? 'gpt-4o'
         return createOpenAI({ apiKey: fallbackApiKey })(fallbackModel)
       } catch (fallbackError: any) {
-        throw new ApiError(
-          500,
-          `Unsupported provider: ${provider} and fallback to OpenAI also failed.`,
-          'UNSUPPORTED_PROVIDER_AND_FALLBACK_FAILED',
-          { originalProvider: provider, fallbackError: fallbackError.message }
+        throw ErrorFactory.operationFailed(
+          `provider ${provider} with OpenAI fallback`,
+          `Both provider and fallback failed. Fallback error: ${fallbackError.message}`
         )
       }
   }
@@ -432,11 +427,7 @@ export async function generateSingleText({
   const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
   const provider = finalOptions.provider as APIProviders
   if (!prompt && (!messages || messages.length === 0)) {
-    throw new ApiError(
-      400,
-      "Either 'prompt' or 'messages' must be provided for generateSingleText.",
-      'MISSING_PROMPT_OR_MESSAGES'
-    )
+    throw ErrorFactory.missingRequired('prompt or messages', 'generateSingleText')
   }
 
   try {
@@ -524,7 +515,7 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
   const model = finalOptions.model
 
   if (!prompt) {
-    throw new ApiError(400, "'prompt' must be provided for generateStructuredData.", 'MISSING_PROMPT_FOR_STRUCTURED')
+    throw ErrorFactory.missingRequired('prompt', 'generateStructuredData')
   }
 
   // Check if provider supports structured output
@@ -685,19 +676,15 @@ Start your response with { and end with }`
 
         // For local models, provide a more helpful error message
         if (provider === 'lmstudio' || provider === 'ollama') {
-          throw new ApiError(
-            400,
-            `The model did not return valid JSON. This may happen with smaller models (< 7B parameters). Try using a larger model or a different provider.`,
-            'PROVIDER_JSON_PARSE_ERROR',
-            { provider, response: jsonStr, suggestion: 'Use a model with 7B+ parameters for better JSON generation' }
+          throw ErrorFactory.operationFailed(
+            `${provider} JSON generation`,
+            'Model did not return valid JSON. This may happen with smaller models (< 7B parameters). Try using a larger model or a different provider.'
           )
         }
 
-        throw new ApiError(
-          400,
-          `Failed to parse JSON response from ${provider}. The model did not return valid JSON.`,
-          'PROVIDER_JSON_PARSE_ERROR',
-          { provider, response: jsonStr }
+        throw ErrorFactory.operationFailed(
+          `${provider} JSON generation`,
+          'Model did not return valid JSON response.'
         )
       }
 
@@ -795,11 +782,7 @@ export async function genTextStream({
   const provider = finalOptions.provider as APIProviders
 
   if (!prompt && (!messages || messages.length === 0)) {
-    throw new ApiError(
-      400,
-      "Either 'prompt' or 'messages' must be provided for genTextStream.",
-      'MISSING_PROMPT_OR_MESSAGES_STREAM'
-    )
+    throw ErrorFactory.missingRequired('prompt or messages', 'genTextStream')
   }
 
   try {

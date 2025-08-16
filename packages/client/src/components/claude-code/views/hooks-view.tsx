@@ -51,7 +51,7 @@ export function HooksView({ projectId, projectName }: HooksViewProps) {
 
   // Get project path for API calls
   const { data: project, isLoading: isProjectLoading, error: projectError } = useGetProject(projectId)
-  const projectPath = project?.data?.path || ''
+  const projectPath = project?.path || ''
 
   // Get hooks from API - only enable when we have a project path
   const { data: hooksData, isLoading: isHooksLoading, error: hooksError } = useGetProjectHooks(projectPath)
@@ -68,7 +68,7 @@ export function HooksView({ projectId, projectName }: HooksViewProps) {
   const deleteHookMutation = useDeleteHook(projectPath)
 
   const filteredHooks = hooks.filter(
-    (hook) =>
+    (hook: any) =>
       hook.event.toLowerCase().includes(searchQuery.toLowerCase()) ||
       hook.matcher.toLowerCase().includes(searchQuery.toLowerCase()) ||
       hook.command.toLowerCase().includes(searchQuery.toLowerCase())
@@ -76,7 +76,7 @@ export function HooksView({ projectId, projectName }: HooksViewProps) {
 
   // Group hooks by event type for better organization
   const groupedHooks = filteredHooks.reduce(
-    (acc, hook) => {
+    (acc: any, hook: any) => {
       if (!acc[hook.event]) {
         acc[hook.event] = []
       }
@@ -206,7 +206,7 @@ export function HooksView({ projectId, projectName }: HooksViewProps) {
       {/* Hooks List - Organized by Event Type */}
       {!isLoading && !error && !projectError && (
         <div className='space-y-6'>
-          {Object.entries(groupedHooks).map(([event, eventHooks]) => (
+          {Object.entries(groupedHooks).map(([event, eventHooks]: [string, any]) => (
             <div key={event} className='space-y-4'>
               <div className='flex items-center gap-2'>
                 <Badge className={cn('px-3 py-1', eventColorClasses[event as HookEvent])}>{event}</Badge>
@@ -216,7 +216,7 @@ export function HooksView({ projectId, projectName }: HooksViewProps) {
               </div>
 
               <div className='grid grid-cols-1 gap-4'>
-                {eventHooks.map((hook) => (
+                {eventHooks.map((hook: any) => (
                   <Card
                     key={`${hook.event}_${hook.matcherIndex}`}
                     className={cn(
@@ -331,7 +331,7 @@ export function HooksView({ projectId, projectName }: HooksViewProps) {
           if (!editingHookId) return undefined
           const [eventName, matcherIndexStr] = editingHookId.split('_')
           const matcherIndex = parseInt(matcherIndexStr, 10)
-          const hook = hooks.find((h) => h.event === eventName && h.matcherIndex === matcherIndex)
+          const hook = hooks.find((h: any) => h.event === eventName && h.matcherIndex === matcherIndex)
           if (!hook) return undefined
 
           return {

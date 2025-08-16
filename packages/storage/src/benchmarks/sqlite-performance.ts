@@ -69,7 +69,7 @@ class PerformanceBenchmark {
       id: Date.now() + i,
       name: `Test Record ${i}`,
       description: `This is a test record with index ${i}. It contains some meaningful description.`,
-      category: categories[i % categories.length],
+      category: categories[i % categories.length] ?? 'normal',
       priority: i % 10,
       created: Date.now(),
       updated: Date.now()
@@ -103,7 +103,8 @@ class PerformanceBenchmark {
     })
 
     // Read single
-    const randomId = testData[Math.floor(Math.random() * testData.length)].id
+    const randomRecord = testData[Math.floor(Math.random() * testData.length)]
+    const randomId = randomRecord?.id ?? testData[0]?.id ?? 1
     const readResult = await this.measureOperation(async () => {
       const content = await fs.readFile(filePath, 'utf-8')
       const data = JSON.parse(content)
@@ -125,8 +126,10 @@ class PerformanceBenchmark {
       const updateCount = Math.floor(testData.length * 0.1)
       for (let i = 0; i < updateCount; i++) {
         const record = testData[i]
-        data[record.id].priority = 99
-        data[record.id].updated = Date.now()
+        if (record && data[record.id]) {
+          data[record.id].priority = 99
+          data[record.id].updated = Date.now()
+        }
       }
 
       await fs.writeFile(filePath, JSON.stringify(data, null, 2))
@@ -140,7 +143,10 @@ class PerformanceBenchmark {
       // Delete 10% of records
       const deleteCount = Math.floor(testData.length * 0.1)
       for (let i = 0; i < deleteCount; i++) {
-        delete data[testData[i].id]
+        const record = testData[i]
+        if (record) {
+          delete data[record.id]
+        }
       }
 
       await fs.writeFile(filePath, JSON.stringify(data, null, 2))
@@ -192,9 +198,10 @@ class PerformanceBenchmark {
     })
 
     // Read single
-    const randomId = testData[Math.floor(Math.random() * testData.length)].id
+    const randomRecord2 = testData[Math.floor(Math.random() * testData.length)]
+    const randomId2 = randomRecord2?.id ?? testData[0]?.id ?? 1
     const readResult = await this.measureOperation(async () => {
-      const row = readStmt.get(randomId) as { data: string }
+      const row = readStmt.get(randomId2) as { data: string }
       return JSON.parse(row.data)
     })
 
@@ -220,8 +227,11 @@ class PerformanceBenchmark {
       const updateCount = Math.floor(testData.length * 0.1)
       const updates = []
       for (let i = 0; i < updateCount; i++) {
-        const record = { ...testData[i], priority: 99, updated: Date.now() }
-        updates.push({ id: record.id, data: record })
+        const originalRecord = testData[i]
+        if (originalRecord) {
+          const record = { ...originalRecord, priority: 99, updated: Date.now() }
+          updates.push({ id: record.id, data: record })
+        }
       }
 
       updateBatch(updates)

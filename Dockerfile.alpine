@@ -1,0 +1,48 @@
+# Alpine-based minimal Docker image with security best practices
+FROM alpine:3.19
+
+# Build arguments for flexibility
+ARG VERSION=*
+ARG ARCH=linux-x64
+
+# Install runtime dependencies and create non-root user
+RUN apk add --no-cache \
+    gcompat \
+    libstdc++ \
+    ca-certificates \
+    curl \
+    && addgroup -g 1001 -S promptliano \
+    && adduser -u 1001 -S promptliano -G promptliano
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app /data \
+    && chown -R promptliano:promptliano /app /data
+
+WORKDIR /app
+
+# Copy the Linux binary and client assets with proper ownership
+# Uses build args for version and architecture flexibility
+COPY --chown=promptliano:promptliano dist/promptliano-${VERSION}-${ARCH}/promptliano /app/
+COPY --chown=promptliano:promptliano dist/promptliano-${VERSION}-${ARCH}/client-dist /app/client-dist/
+
+# Make binary executable
+RUN chmod +x /app/promptliano
+
+# Set environment variables
+ENV NODE_ENV=production \
+    SERVER_PORT=3147 \
+    DATABASE_PATH=/data/promptliano.db \
+    PROMPTLIANO_DATA_DIR=/data
+
+# Switch to non-root user
+USER promptliano
+
+# Expose port
+EXPOSE 3147
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3147/api/health || exit 1
+
+# Run the application
+CMD ["/app/promptliano"]

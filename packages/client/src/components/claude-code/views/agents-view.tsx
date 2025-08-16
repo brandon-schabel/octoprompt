@@ -5,7 +5,7 @@ import { Input } from '@promptliano/ui'
 import { Badge } from '@promptliano/ui'
 import { Plus, Search, Edit, Trash2, FileText, Calendar, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useGetProjectAgents, useDeleteAgent } from '@/hooks/api-hooks'
+import { useGetProjectAgents, useDeleteAgent } from '@/hooks/api/use-agents-api'
 import { Skeleton } from '@promptliano/ui'
 import {
   AlertDialog,
@@ -51,7 +51,7 @@ export function AgentsView({ projectId, projectName }: AgentsViewProps) {
   const agents = agentsResponse?.data || []
 
   const filteredAgents = agents.filter(
-    (agent) =>
+    (agent: any) =>
       agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       agent.description.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -138,7 +138,7 @@ export function AgentsView({ projectId, projectName }: AgentsViewProps) {
       {/* Agents Grid */}
       {!isLoading && !error && (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-          {filteredAgents.map((agent) => (
+          {filteredAgents.map((agent: any) => (
             <Card
               key={agent.id}
               className={cn('cursor-pointer transition-colors', selectedAgent === agent.id && 'ring-2 ring-primary')}

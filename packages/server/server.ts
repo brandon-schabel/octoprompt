@@ -4,11 +4,9 @@ import { join } from 'node:path'
 import { statSync } from 'node:fs'
 import { app } from './src/app'
 
-import { listProjects, getJobQueue, createLogger } from '@promptliano/services'
+import { listProjects, createLogger } from '@promptliano/services'
 import { getServerConfig } from '@promptliano/config'
 import { watchersManager, createCleanupService } from '@promptliano/services'
-import { gitWorktreeHandlers } from '@promptliano/services/src/job-handlers/git-worktree-handlers'
-import { getWebSocketManager } from './src/services/websocket-manager'
 
 interface WebSocketData {
   clientId: string
@@ -41,11 +39,11 @@ export async function instantiateServer({
 }: ServerConfig = {}): Promise<Server> {
   logger.info(`Starting server initialization on port ${port}...`)
   const server = serve({
-    // idleTimeout of 255 seconds (4.25 minutes) to support long-running operations
+    // idleTimeout of 255 seconds (4.25 minutes) to support long-running operations  
     // like asset generation which can take up to 3 minutes
     idleTimeout: 255,
     port,
-    async fetch(req: Request): Promise<Response | undefined> {
+    fetch: async (req: Request): Promise<Response> => {
       const url = new URL(req.url)
 
       if (url.pathname === '/') {
@@ -55,7 +53,11 @@ export async function instantiateServer({
       if (url.pathname === '/ws') {
         const clientId = crypto.randomUUID()
         const upgraded: boolean = server.upgrade(req, { data: { clientId } })
-        return upgraded ? undefined : new Response('WebSocket upgrade failed', { status: 400 })
+        if (upgraded) {
+          // Return a dummy response that won't be used since the connection is upgraded
+          return new Response(null, { status: 101 })
+        }
+        return new Response('WebSocket upgrade failed', { status: 400 })
       }
 
       // FIXED: Always return API responses for API routes, regardless of status code
@@ -85,25 +87,19 @@ export async function instantiateServer({
       return serveStatic('index.html')
     },
 
-    websocket: {
-      async open(ws: ServerWebSocket<WebSocketData>) {
-        const wsManager = getWebSocketManager()
-        wsManager.addClient(ws)
-      },
-      close(ws: ServerWebSocket<WebSocketData>) {
-        const wsManager = getWebSocketManager()
-        wsManager.removeClient(ws.data.clientId)
-      },
-      async message(ws: ServerWebSocket<WebSocketData>, rawMessage: string | Buffer) {
-        try {
-          const wsManager = getWebSocketManager()
-          const message = typeof rawMessage === 'string' ? rawMessage : rawMessage.toString()
-          wsManager.handleMessage(ws, message)
-        } catch (err) {
-          logger.error('Error handling WS message', err)
-        }
-      }
-    }
+    // WebSocket functionality temporarily disabled after job queue removal
+    // TODO: Implement WebSocket management without job queue dependency
+    // websocket: {
+    //   async open(ws: ServerWebSocket<WebSocketData>) {
+    //     // TODO: Implement WebSocket client management
+    //   },
+    //   close(ws: ServerWebSocket<WebSocketData>) {
+    //     // TODO: Implement WebSocket cleanup
+    //   },
+    //   async message(ws: ServerWebSocket<WebSocketData>, rawMessage: string | Buffer) {
+    //     // TODO: Implement WebSocket message handling
+    //   }
+    // }
   })
 
   // Start watchers for existing projects
@@ -123,31 +119,13 @@ export async function instantiateServer({
 
     cleanupService.start()
 
-    // Initialize job queue
-    logger.info('Initializing job queue...')
-    const jobQueue = getJobQueue()
-
-    // Register git worktree handlers
-    for (const handler of gitWorktreeHandlers) {
-      jobQueue.registerHandler(handler)
-    }
-
-    // Connect job events to WebSocket
-    const wsManager = getWebSocketManager()
-    jobQueue.on('job-event', (event) => {
-      wsManager.sendJobEvent(event)
-    })
-
-    // Start job processing
-    jobQueue.startProcessing()
-    logger.info('Job queue started')
   })()
 
-  logger.info(`Server running at http://localhost:${server.port}`)
-  logger.info(`Server swagger at http://localhost:${server.port}/swagger`)
-  logger.info(`Server docs at http://localhost:${server.port}/doc`)
+  logger.info(`Server running at http://${serverConfig.host}:${server.port}`)
+  logger.info(`Server swagger at http://${serverConfig.host}:${server.port}/swagger`)
+  logger.info(`Server docs at http://${serverConfig.host}:${server.port}/doc`)
 
-  // Flush stdout to ensure Tauri can read the output
+  // Flush stdout to ensure output is visible
   if (process.stdout.isTTY) {
     process.stdout.write('')
   }
@@ -184,7 +162,7 @@ if (import.meta.main) {
       return
     }
 
-    let port = serverConfig.serverPort
+    let port = serverConfig.port
 
     // Look for --port argument
     const portIndex = args.indexOf('--port')
@@ -198,13 +176,12 @@ if (import.meta.main) {
     // Start normal HTTP server
     logger.info('Starting server...')
     try {
-      const server = await instantiateServer({ port: Number(port) })
+      const server = await instantiateServer({ port })
       logger.info('Server instantiated successfully')
 
       function handleShutdown() {
         logger.info('Received kill signal. Shutting down gracefully...')
         watchersManager.stopAllWatchers?.()
-        getJobQueue().stopProcessing()
         server.stop()
         process.exit(0)
       }

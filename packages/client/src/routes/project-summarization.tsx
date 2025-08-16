@@ -99,7 +99,7 @@ export function ProjectSummarizationSettingsPage() {
   const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? -1)
 
   // Memoize project files to prevent unnecessary recalculations
-  const projectFiles = useMemo(() => (data?.data || []) as ProjectFile[], [data?.data])
+  const projectFiles = useMemo(() => (data || []) as ProjectFile[], [data])
 
   // Memoize summaries map creation
   const summariesMap = useMemo(() => {

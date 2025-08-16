@@ -5,9 +5,33 @@ import {
   gitTagSchema,
   gitStashSchema,
   gitPushRequestSchema,
-  gitResetRequestSchema
+  gitResetRequestSchema,
+  ApiErrorResponseSchema
 } from '@promptliano/schemas'
 import * as gitService from '@promptliano/services'
+import { createStandardResponses, successResponse, operationSuccessResponse } from '../utils/route-helpers'
+
+// Define reusable response schemas
+const RemotesResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.array(gitRemoteSchema)
+  })
+  .openapi('RemotesResponse')
+
+const TagsResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.array(gitTagSchema)
+  })
+  .openapi('TagsResponse')
+
+const StashListResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.array(gitStashSchema)
+  })
+  .openapi('StashListResponse')
 
 export const gitAdvancedRoutes = new OpenAPIHono()
 
@@ -24,68 +48,15 @@ const getRemotesRoute = createRoute({
       projectId: z.string().transform((val) => parseInt(val, 10))
     })
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.array(gitRemoteSchema).optional(),
-            message: z.string().optional()
-          })
-        }
-      },
-      description: 'List of remotes retrieved successfully'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Project not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
+  responses: createStandardResponses(RemotesResponseSchema),
   tags: ['Git'],
   description: 'Get all configured remotes for a git repository'
 })
 
 gitAdvancedRoutes.openapi(getRemotesRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const remotes = await gitService.getRemotes(projectId)
-
-    return c.json({
-      success: true,
-      data: remotes
-    })
-  } catch (error) {
-    console.error('[GetRemotes] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to get remotes'
-      },
-      500
-    )
-  }
+  const { projectId } = c.req.valid('param')
+  const remotes = await gitService.getRemotes(projectId)
+  return c.json(successResponse(remotes))
 })
 
 // Push route
@@ -104,74 +75,20 @@ const pushRoute = createRoute({
       }
     }
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Changes pushed successfully'
-    },
-    400: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Bad request'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Project not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
+  responses: createStandardResponses(gitOperationResponseSchema),
   tags: ['Git'],
   description: 'Push changes to a remote repository'
 })
 
 gitAdvancedRoutes.openapi(pushRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const { remote, branch, force, setUpstream } = c.req.valid('json')
+  const { projectId } = c.req.valid('param')
+  const { remote, branch, force, setUpstream } = c.req.valid('json')
 
-    await gitService.push(projectId, remote || 'origin', branch, { force, setUpstream })
+  await gitService.push(projectId, remote || 'origin', branch, { force, setUpstream })
 
-    return c.json({
-      success: true,
-      message: `Successfully pushed to ${remote || 'origin'}${branch ? `/${branch}` : ''}`
-    })
-  } catch (error) {
-    console.error('[Push] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to push changes'
-      },
-      500
-    )
-  }
+  return c.json(operationSuccessResponse(
+    `Successfully pushed to ${remote || 'origin'}${branch ? `/${branch}` : ''}`
+  ))
 })
 
 // Fetch route
@@ -366,68 +283,15 @@ const getTagsRoute = createRoute({
       projectId: z.string().transform((val) => parseInt(val, 10))
     })
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.array(gitTagSchema).optional(),
-            message: z.string().optional()
-          })
-        }
-      },
-      description: 'List of tags retrieved successfully'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Project not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
+  responses: createStandardResponses(TagsResponseSchema),
   tags: ['Git'],
   description: 'Get all tags for a git repository'
 })
 
 gitAdvancedRoutes.openapi(getTagsRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const tags = await gitService.getTags(projectId)
-
-    return c.json({
-      success: true,
-      data: tags
-    })
-  } catch (error) {
-    console.error('[GetTags] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to get tags'
-      },
-      500
-    )
-  }
+  const { projectId } = c.req.valid('param')
+  const tags = await gitService.getTags(projectId)
+  return c.json(successResponse(tags))
 })
 
 // Create tag route
@@ -621,68 +485,15 @@ const getStashListRoute = createRoute({
       projectId: z.string().transform((val) => parseInt(val, 10))
     })
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.array(gitStashSchema).optional(),
-            message: z.string().optional()
-          })
-        }
-      },
-      description: 'Stash list retrieved successfully'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Project not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
+  responses: createStandardResponses(StashListResponseSchema),
   tags: ['Git'],
   description: 'Get list of all stashes'
 })
 
 gitAdvancedRoutes.openapi(getStashListRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const stashes = await gitService.stashList(projectId)
-
-    return c.json({
-      success: true,
-      data: stashes
-    })
-  } catch (error) {
-    console.error('[GetStashList] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to get stash list'
-      },
-      500
-    )
-  }
+  const { projectId } = c.req.valid('param')
+  const stashes = await gitService.stashList(projectId)
+  return c.json(successResponse(stashes))
 })
 
 // Apply stash route

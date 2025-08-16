@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas'
-import { LOW_MODEL_CONFIG } from '@promptliano/config'
+import { DEFAULT_MODEL_EXAMPLES } from './model-defaults'
 
 import {
   unixTSArraySchemaSpec,
@@ -10,6 +10,7 @@ import {
   entityIdCoercibleSchema
 } from './schema-utils'
 import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'
+import { createEntitySchemas, createResponseSchemas } from './schema-factories'
 
 export type MessageRole = z.infer<typeof MessageRoleEnum> // Export the type if needed elsewhere
 
@@ -26,45 +27,37 @@ const baseModelOptionsSchema = z.object({
 
 export type ModelOptions = z.infer<typeof baseModelOptionsSchema>
 
-// Base schemas for chat entities
-export const ChatSchema = z
-  .object({
-    id: entityIdSchema,
-    title: z.string(),
-    projectId: entityIdOptionalSchema,
-    // unix timestamp in milliseconds
-    created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec
-  })
-  .openapi('Chat')
+// Chat schemas using factory pattern
+const chatSchemas = createEntitySchemas('Chat', {
+  title: z.string(),
+  projectId: entityIdOptionalSchema
+})
 
-// Schema for chat message attachments
-export const ChatMessageAttachmentSchema = z
-  .object({
-    id: entityIdSchema.describe('Unique ID for the attachment itself.'),
-    fileName: z.string().openapi({ description: 'Original name of the uploaded file.' }),
-    mimeType: z.string().openapi({ description: 'MIME type of the file.' }),
-    size: z.number().int().positive().openapi({ description: 'File size in bytes.' }),
-    url: z.string().url().openapi({ description: 'URL to access/download the attachment.' }),
-    created: unixTSSchemaSpec
-  })
-  .openapi('ChatMessageAttachment')
+export const ChatSchema = chatSchemas.base
 
-export const ChatMessageSchema = z
-  .object({
-    id: entityIdSchema,
-    chatId: entityIdSchema,
-    role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
-    content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
-    type: z.string().optional().openapi({ description: 'Message type for categorization' }),
-    created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec,
-    attachments: z
-      .array(ChatMessageAttachmentSchema)
-      .optional()
-      .openapi({ description: 'Optional list of attachments for the message.' })
-  })
-  .openapi('ChatMessage')
+// Chat message attachment schemas using factory pattern
+const attachmentSchemas = createEntitySchemas('ChatMessageAttachment', {
+  fileName: z.string().openapi({ description: 'Original name of the uploaded file.' }),
+  mimeType: z.string().openapi({ description: 'MIME type of the file.' }),
+  size: z.number().int().positive().openapi({ description: 'File size in bytes.' }),
+  url: z.string().url().openapi({ description: 'URL to access/download the attachment.' })
+})
+
+export const ChatMessageAttachmentSchema = attachmentSchemas.base
+
+// Chat message schemas using factory pattern
+const messageSchemas = createEntitySchemas('ChatMessage', {
+  chatId: entityIdSchema,
+  role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
+  content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
+  type: z.string().optional().openapi({ description: 'Message type for categorization' }),
+  attachments: z
+    .array(ChatMessageAttachmentSchema)
+    .optional()
+    .openapi({ description: 'Optional list of attachments for the message.' })
+})
+
+export const ChatMessageSchema = messageSchemas.base
 
 // Request Parameter Schemas
 export const ChatIdParamsSchema = z
@@ -73,20 +66,16 @@ export const ChatIdParamsSchema = z
   })
   .openapi('ChatIdParams')
 
-// Request Body Schemas
-export const CreateChatBodySchema = z
-  .object({
-    title: z.string().min(1).openapi({ example: 'New Chat Session' }),
-    copyExisting: z.boolean().optional().openapi({ description: 'Copy messages from currentChatId if true' }),
-    currentChatId: unixTSSchemaSpec.optional()
-  })
-  .openapi('CreateChatRequestBody')
+// Request Body Schemas using factory pattern
+export const CreateChatBodySchema = chatSchemas.create.extend({
+  title: z.string().min(1).openapi({ example: 'New Chat Session' }),
+  copyExisting: z.boolean().optional().openapi({ description: 'Copy messages from currentChatId if true' }),
+  currentChatId: unixTSSchemaSpec.optional()
+}).openapi('CreateChatRequestBody')
 
-export const UpdateChatBodySchema = z
-  .object({
-    title: z.string().min(1).openapi({ example: 'Updated Chat Title' })
-  })
-  .openapi('UpdateChatRequestBody')
+export const UpdateChatBodySchema = chatSchemas.update.extend({
+  title: z.string().min(1).openapi({ example: 'Updated Chat Title' })
+}).openapi('UpdateChatRequestBody')
 
 export const CreateChatMessageBodySchema = z
   .object({
@@ -109,41 +98,15 @@ export const FileUploadResponseSchema = z
   })
   .openapi('FileUploadResponse')
 
-// Response Schemas
-export const ChatResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: ChatSchema
-  })
-  .openapi('ChatResponse')
+// Response Schemas using factory pattern
+const chatResponses = createResponseSchemas(ChatSchema, 'Chat')
+const messageResponses = createResponseSchemas(ChatMessageSchema, 'ChatMessage')
 
-export const ChatListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: z.array(ChatSchema)
-  })
-  .openapi('ChatListResponse')
-
-export const ChatMessageResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: ChatMessageSchema
-  })
-  .openapi('ChatMessageResponse')
-
-export const ChatMessagesListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: z.array(ChatMessageSchema)
-  })
-  .openapi('ChatMessagesListResponse')
-
-export const MessageListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: z.array(ChatMessageSchema)
-  })
-  .openapi('MessageListResponse')
+export const ChatResponseSchema = chatResponses.single
+export const ChatListResponseSchema = chatResponses.list
+export const ChatMessageResponseSchema = messageResponses.single
+export const ChatMessagesListResponseSchema = messageResponses.list
+export const MessageListResponseSchema = messageResponses.list // Alias for backward compatibility
 
 export const ModelListResponseSchema = z
   .object({
@@ -207,7 +170,7 @@ export const ModelsQuerySchema = z
   .object({
     provider: z.string().openapi({
       description: 'The provider to filter models by',
-      example: LOW_MODEL_CONFIG.provider
+      example: DEFAULT_MODEL_EXAMPLES.provider
     })
   })
   .openapi('ModelsQuery')

@@ -313,7 +313,7 @@ describe('unix-ts-utils', () => {
       expect(result.success).toBe(false)
       if (!result.success) {
         const issue = result.error.issues[0]
-        expect(issue.message).toContain('2050')
+        expect(issue?.message).toContain('2050')
       }
     })
   })

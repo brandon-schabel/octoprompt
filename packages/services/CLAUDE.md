@@ -46,7 +46,7 @@ When working in this package, these agents MUST be used:
    - Use `promptliano-service-architect` for business logic implementation
    - Use `zod-schema-architect` for data validation and transformation
    - Use `simple-git-integration-expert` for Git-related services
-   - Use `sqlite-json-migration-expert` when services require database changes
+   - Use `promptliano-sqlite-expert` when services require database changes
 
 ### Proactive Usage
 
@@ -313,46 +313,233 @@ export async function createTicketWithTasks(
 }
 ```
 
-## Error Handling Strategy
+## Error Handling Strategy ⭐ **UPDATED WITH ERRORFACTORY**
 
-### 1. Error Boundary Pattern
+### 1. ErrorFactory Pattern **NEW STANDARD**
 
-All services use consistent error handling:
-
-```typescript
-// Wrap service methods
-export const ticketService = {
-  create: withErrorHandling(createTicket, 'Ticket', 'creating'),
-  update: withErrorHandling(updateTicket, 'Ticket', 'updating'),
-  delete: withErrorHandling(deleteTicket, 'Ticket', 'deleting')
-}
-```
-
-### 2. Safe Async Operations
+All services now use the standardized ErrorFactory for consistent error handling:
 
 ```typescript
-// Safe operation with context
-async function updateProject(id: number, data: UpdateProjectBody): Promise<Project> {
-  return safeAsync(() => projectStorage.update(id, data), {
-    entityName: 'Project',
-    action: 'updating',
-    details: { id, data }
-  })
-}
-```
+import { 
+  ErrorFactory, 
+  assertExists, 
+  assertUpdateSucceeded, 
+  assertDeleteSucceeded,
+  assertDatabaseOperation,
+  handleZodError 
+} from './utils/error-factory'
 
-### 3. Validation Error Mapping
+// Standard error patterns
+export class TicketService {
+  async updateTicket(id: number, data: UpdateTicketBody): Promise<Ticket> {
+    // Validate entity exists (throws standardized 404)
+    const existingTicket = await this.getByIdOrThrow(id)
+    
+    try {
+      const result = await ticketStorage.update(id, data)
+      
+      // Assert operation succeeded (throws standardized error if failed)
+      assertUpdateSucceeded(result, 'Ticket', id)
+      
+      return result
+    } catch (error: any) {
+      // Handle Zod validation errors consistently
+      if (error.name === 'ZodError') {
+        handleZodError(error, 'Ticket', 'updating')
+      }
+      
+      // Handle database errors
+      throw ErrorFactory.operationFailed('update ticket', error.message)
+    }
+  }
 
-```typescript
-// Automatic Zod error mapping
-try {
-  const validated = ProjectSchema.parse(data)
-} catch (error) {
-  if (error instanceof ZodError) {
-    handleValidationError(error, 'Project', 'creating')
+  async deleteTicket(id: number): Promise<boolean> {
+    // Ensure entity exists before deletion
+    await this.validateExists(id)
+    
+    const result = await ticketStorage.delete(id)
+    assertDeleteSucceeded(result, 'Ticket', id)
+    
+    return true
+  }
+
+  async createTicketWithValidation(data: CreateTicketBody): Promise<Ticket> {
+    try {
+      // Validation happens automatically via Zod, but we can catch issues
+      const ticket = await ticketStorage.create(data)
+      return ticket
+    } catch (error: any) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        throw ErrorFactory.conflict('Ticket', 'name', data.title)
+      }
+      throw ErrorFactory.createFailed('Ticket', error.message)
+    }
   }
 }
 ```
+
+### 2. ErrorFactory Methods Available
+
+**Core Error Types:**
+
+```typescript
+// Entity not found errors
+ErrorFactory.notFound(entityType: string, id: number | string): ApiError
+
+// Validation errors  
+ErrorFactory.validation(field: string, details: any): ApiError
+ErrorFactory.internalValidation(entity: string, operation: string, details?: any): ApiError
+
+// Database operation errors
+ErrorFactory.databaseError(operation: string, details?: string): ApiError
+ErrorFactory.operationFailed(operation: string, details?: any): ApiError
+
+// CRUD operation failures
+ErrorFactory.createFailed(entity: string, reason?: string): ApiError
+ErrorFactory.updateFailed(entity: string, id: number | string, reason?: string): ApiError
+ErrorFactory.deleteFailed(entity: string, id: number | string, reason?: string): ApiError
+
+// File system errors
+ErrorFactory.fileSystemError(operation: string, path: string, details?: string): ApiError
+
+// Relationship validation
+ErrorFactory.invalidRelationship(childEntity: string, childId: number | string, parentEntity: string, parentId: number | string): ApiError
+
+// Conflict errors (duplicate keys, etc.)
+ErrorFactory.conflict(entity: string, field: string, value: any): ApiError
+```
+
+**Helper Functions:**
+
+```typescript
+// Assertion helpers that throw standardized errors
+assertExists<T>(entity: T | null | undefined, entityType: string, id: number | string): asserts entity is T
+assertUpdateSucceeded(result: boolean | number, entityType: string, id: number | string): void
+assertDeleteSucceeded(result: boolean | number, entityType: string, id: number | string): void
+assertDatabaseOperation<T>(result: T | null | undefined, operation: string, details?: string): asserts result is T
+
+// Zod error handler
+handleZodError(error: any, entity: string, operation: string): never
+```
+
+### 3. Migration from Old Error Patterns
+
+**Before (Old Pattern):**
+
+```typescript
+// Manual error creation - inconsistent messages and codes
+if (!project) {
+  throw new ApiError(404, `Project with ID ${id} not found`, 'PROJECT_NOT_FOUND')
+}
+
+if (updateResult.changes === 0) {
+  throw new ApiError(400, `Failed to update project ${id}`, 'UPDATE_FAILED') 
+}
+
+try {
+  const data = schema.parse(input)
+} catch (error) {
+  throw new ApiError(400, `Validation failed: ${error.message}`, 'VALIDATION_ERROR')
+}
+```
+
+**After (ErrorFactory Pattern):**
+
+```typescript
+// Standardized error creation - consistent messages, codes, and structure
+const project = await projectStorage.getById(id)
+assertExists(project, 'Project', id)
+
+const updateResult = await projectStorage.update(id, data)  
+assertUpdateSucceeded(updateResult, 'Project', id)
+
+try {
+  const data = schema.parse(input)
+} catch (error) {
+  handleZodError(error, 'Project', 'creating')
+}
+```
+
+### 4. Service-Specific Error Patterns
+
+**Project Service Patterns:**
+
+```typescript
+// File system operations
+try {
+  const files = await fs.readdir(projectPath)
+} catch (error: any) {
+  throw ErrorFactory.fileSystemError('read directory', projectPath, error.message)
+}
+
+// AI provider integration
+try {
+  const summary = await generateSummary(content)
+} catch (error: any) {
+  throw ErrorFactory.operationFailed('generate project summary', error.message)
+}
+```
+
+**Queue Service Patterns:**
+
+```typescript
+// Queue state validation
+if (queue.status !== 'active') {
+  throw ErrorFactory.operationFailed('enqueue item', `Queue ${queueId} is not active`)
+}
+
+// Task relationship validation  
+const task = await taskStorage.getById(taskId)
+assertExists(task, 'Task', taskId)
+
+if (task.ticketId !== ticketId) {
+  throw ErrorFactory.invalidRelationship('Task', taskId, 'Ticket', ticketId)
+}
+```
+
+### 5. Error Boundary Pattern (Enhanced)
+
+```typescript
+// Enhanced error boundary with ErrorFactory
+export function withErrorHandling<T extends any[], R>(
+  operation: (...args: T) => Promise<R>,
+  entityName: string,
+  action: string
+) {
+  return async (...args: T): Promise<R> => {
+    try {
+      return await operation(...args)
+    } catch (error) {
+      // ErrorFactory errors are already well-formed - re-throw
+      if (error instanceof ApiError) {
+        throw error
+      }
+      
+      // Wrap unexpected errors consistently
+      throw ErrorFactory.operationFailed(`${action} ${entityName}`, error instanceof Error ? error.message : String(error))
+    }
+  }
+}
+```
+
+### 6. Validation Error Mapping (Enhanced)
+
+```typescript
+// Enhanced Zod error mapping with context
+export function handleZodError(error: any, entity: string, operation: string): never {
+  if (error.name === 'ZodError') {
+    const details = error.errors.map((err: any) => ({
+      path: err.path.join('.'),
+      message: err.message,
+      code: err.code
+    }))
+    
+    throw ErrorFactory.internalValidation(entity, operation, details)
+  }
+  
+  // Fallback for non-Zod validation errors
+  throw ErrorFactory.validation(entity, error.message || 'Unknown validation error')
+}
 
 ## Service Integration Patterns
 

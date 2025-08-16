@@ -52,7 +52,7 @@ function GlobalCommandPalette() {
     navigate({ to: '/assets' })
   })
 
-  const filteredProjects = (projectsData?.data ?? [])
+  const filteredProjects = (projectsData ?? [])
     .filter((project) => {
       const searchLower = debouncedSearch.toLowerCase()
       return (
@@ -73,7 +73,7 @@ function GlobalCommandPalette() {
         {filteredProjects.length > 0 && (
           <>
             <CommandGroup heading='Projects'>
-              {filteredProjects.map((project) => (
+              {filteredProjects.map((project: any) => (
                 <CommandItem
                   key={project.id}
                   onSelect={() => {

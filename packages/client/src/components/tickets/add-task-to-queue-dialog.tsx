@@ -143,7 +143,7 @@ export function AddTaskToQueueDialog({
                                     )}
                                     <div className='flex items-center gap-3 text-xs'>
                                       <Badge variant='secondary' className='text-xs'>
-                                        {getQueueStatusIcon(queueData.queue.status)}
+                                        {getQueueStatusIcon(queueData.queue.status ?? 'inactive')}
                                         <span className='ml-1'>{queueData.queue.status}</span>
                                       </Badge>
                                       <span className='text-muted-foreground'>

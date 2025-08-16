@@ -648,19 +648,19 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
                             {task.estimatedHours}h estimated
                           </span>
                         )} */}
-                        {task.tags.length > 0 && (
+                        {task.tags && task.tags.length > 0 && (
                           <Popover>
                             <PopoverTrigger asChild>
                               <span className='flex items-center gap-1 cursor-pointer hover:text-primary transition-colors'>
                                 <Hash className='h-3 w-3' />
-                                {task.tags.length} tags
+                                {task.tags?.length} tags
                               </span>
                             </PopoverTrigger>
                             <PopoverContent className='w-64' align='start'>
                               <div className='space-y-2'>
                                 <div className='font-medium text-sm'>Tags</div>
                                 <div className='flex flex-wrap gap-1'>
-                                  {task.tags.map((tag, index) => (
+                                  {task.tags?.map((tag, index) => (
                                     <Badge key={index} variant='secondary' className='text-xs'>
                                       {tag}
                                     </Badge>
@@ -670,12 +670,12 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
                             </PopoverContent>
                           </Popover>
                         )}
-                        {task.suggestedFileIds.length > 0 && (
+                        {task.suggestedFileIds && task.suggestedFileIds.length > 0 && (
                           <Popover>
                             <PopoverTrigger asChild>
                               <span className='flex items-center gap-1 cursor-pointer hover:text-primary transition-colors'>
                                 <FileText className='h-3 w-3' />
-                                {task.suggestedFileIds.length} files
+                                {task.suggestedFileIds?.length} files
                               </span>
                             </PopoverTrigger>
                             <PopoverContent className='w-96' align='start'>
@@ -683,7 +683,7 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
                                 <div className='font-medium text-sm'>Associated Files</div>
                                 <ScrollArea className='h-[200px]'>
                                   <div className='space-y-1'>
-                                    {task.suggestedFileIds.map((fileId, index) => (
+                                    {task.suggestedFileIds?.map((fileId, index) => (
                                       <FileDisplayItem
                                         key={index}
                                         fileId={fileId}
@@ -745,10 +745,10 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
                           triggerClassName='text-xs'
                           placeholder='Select prompts'
                         />
-                        {task.dependencies.length > 0 && (
+                        {task.dependencies && task.dependencies.length > 0 && (
                           <span className='flex items-center gap-1'>
                             <Link2 className='h-3 w-3' />
-                            {task.dependencies.length} dependencies
+                            {task.dependencies?.length} dependencies
                           </span>
                         )}
                         {task.queueId ? (
@@ -808,7 +808,7 @@ export function TicketDetailView({ ticket, projectId, onTicketUpdate }: TicketDe
                 <dt className='font-medium text-muted-foreground'>Associated Files</dt>
                 <dd className='flex items-center gap-1 mt-1'>
                   <FileText className='h-3 w-3' />
-                  {ticket.ticket.suggestedFileIds.length} files
+                  {ticket.ticket.suggestedFileIds?.length || 0} files
                 </dd>
               </div>
               <div>

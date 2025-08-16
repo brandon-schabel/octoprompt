@@ -163,22 +163,6 @@ Then, run the executable:
 **Frontend:** React, Vite, TanStack Router/Query, shadcn/ui, Tailwind CSS  
 **Documentation:** OpenAPI/Swagger
 
-## Desktop App
-
-Promptliano now includes a native desktop app built with Tauri for better performance and OS integration.
-
-Promptliano includes a native desktop app built with Tauri. Download pre-built binaries from the [releases page](https://github.com/brandon-schabel/promptliano/releases) or build from source:
-
-```bash
-# Development build
-./scripts/release-tauri.sh --skip-signing
-
-# Production build (requires code signing)
-./scripts/release-tauri.sh --universal --notarize
-```
-
-For detailed build instructions, see [docs/TAURI_BUILD_GUIDE.md](./docs/TAURI_BUILD_GUIDE.md).
-
 ## Building from Source
 
 To create platform-specific binaries:

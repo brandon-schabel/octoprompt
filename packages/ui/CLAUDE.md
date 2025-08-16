@@ -59,12 +59,12 @@ When working in this package, these agents MUST be used:
    - Focus on component composition and separation of concerns
 
 3. **Package-Specific Agents**
-   - Use `frontend-shadcn-expert` for shadcn/ui patterns and best practices
+   - Use `promptliano-ui-architect` for shadcn/ui patterns and best practices
    - Use `react-component-architect` for component architecture
    - Use `accessibility-expert` for WCAG compliance
    - Use `css-tailwind-expert` for styling patterns
    - Use `storybook-expert` if implementing component documentation
-   - Use `promptliano-ui-builder` for Promptliano-specific patterns
+   - Use `promptliano-ui-architect` for Promptliano-specific patterns
 
 ### Proactive Usage
 

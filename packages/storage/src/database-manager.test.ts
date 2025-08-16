@@ -96,9 +96,9 @@ describe('DatabaseManager', () => {
     const projectArray = Array.from(allProjects.entries())
 
     // Should be in descending order (newest first)
-    expect(projectArray[0][0]).toBe('project-3')
-    expect(projectArray[1][0]).toBe('project-2')
-    expect(projectArray[2][0]).toBe('project-1')
+    expect(projectArray[0]?.[0]).toBe('project-3')
+    expect(projectArray[1]?.[0]).toBe('project-2')
+    expect(projectArray[2]?.[0]).toBe('project-1')
   })
 
   test('findByJsonField queries JSON data correctly', async () => {

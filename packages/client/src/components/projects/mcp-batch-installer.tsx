@@ -14,6 +14,41 @@ interface MCPBatchInstallerProps {
   projectName: string
 }
 
+interface MCPToolInfo {
+  tool: string
+  name: string
+  installed: boolean
+  configPath?: string
+  configExists?: boolean
+  hasPromptliano?: boolean
+}
+
+interface BatchInstallResult {
+  tool: string
+  success: boolean
+  message: string
+  configPath?: string
+  backedUp?: boolean
+  backupPath?: string
+}
+
+interface BatchInstallSummary {
+  total: number
+  succeeded: number
+  failed: number
+}
+
+interface BatchInstallResponse {
+  results: BatchInstallResult[]
+  summary: BatchInstallSummary
+}
+
+interface InstalledToolInfo {
+  tool: string
+  name: string
+  configPath: string
+}
+
 export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerProps) {
   const client = useApiClient()
   const [selectedTools, setSelectedTools] = useState<string[]>([])
@@ -61,7 +96,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
       }
 
       // Show individual results
-      data?.data?.results?.forEach((result) => {
+      data?.data?.results?.forEach((result: BatchInstallResult) => {
         if (!result.success) {
           toast.error(`${result.tool} failed: ${result.message}`)
         }
@@ -81,7 +116,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
   const tools = detectionData?.tools || []
   const installedTools = statusData?.projectConfig?.installedTools || []
 
-  const availableTools = tools.filter((tool) => tool.installed && !installedTools.some((t) => t.tool === tool.tool))
+  const availableTools = tools.filter((tool: MCPToolInfo) => tool.installed && !installedTools.some((t: InstalledToolInfo) => t.tool === tool.tool))
 
   const handleToggleTool = (toolId: string) => {
     setSelectedTools((prev) => (prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId]))
@@ -91,7 +126,7 @@ export function MCPBatchInstaller({ projectId, projectName }: MCPBatchInstallerP
     if (selectedTools.length === availableTools.length) {
       setSelectedTools([])
     } else {
-      setSelectedTools(availableTools.map((t) => t.tool))
+      setSelectedTools(availableTools.map((t: MCPToolInfo) => t.tool))
     }
   }
 

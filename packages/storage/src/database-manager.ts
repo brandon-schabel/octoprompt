@@ -1,30 +1,13 @@
 import { Database } from 'bun:sqlite'
 import path from 'node:path'
 import fs from 'node:fs'
-import os from 'node:os'
+import { getDatabaseConfig } from '@promptliano/config'
 
 export interface TableSchema {
   name: string
   indexes?: string[]
 }
 
-// Get platform-appropriate data directory
-function getDataDirectory(): string {
-  const platform = os.platform()
-  const homeDir = os.homedir()
-
-  switch (platform) {
-    case 'darwin': // macOS
-      return path.join(homeDir, 'Library', 'Application Support', 'Promptliano')
-    case 'win32': // Windows
-      return path.join(process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming'), 'Promptliano')
-    case 'linux': // Linux
-      return path.join(process.env.XDG_DATA_HOME || path.join(homeDir, '.local', 'share'), 'promptliano')
-    default:
-      // Fallback to home directory
-      return path.join(homeDir, '.promptliano')
-  }
-}
 
 export class DatabaseManager {
   private static instance: DatabaseManager | null = null
@@ -66,14 +49,23 @@ export class DatabaseManager {
   ]
 
   private constructor() {
+    const dbConfig = getDatabaseConfig()
     const isTest = process.env.NODE_ENV === 'test'
 
     if (isTest) {
-      // Use in-memory database for tests
-      this.db = new Database(':memory:')
-      console.error('Promptliano database initialized in memory for testing')
+      // Check for specific test database path
+      const testDbPath = process.env.TEST_DB_PATH
+      if (testDbPath) {
+        this.ensureDataDirectory(testDbPath)
+        this.db = new Database(testDbPath)
+        console.error(`Promptliano test database initialized at: ${testDbPath}`)
+      } else {
+        // Use in-memory database for tests by default
+        this.db = new Database(':memory:')
+        console.error('Promptliano database initialized in memory for testing')
+      }
     } else {
-      // Use platform-appropriate data directory for production
+      // Use configuration-based database path
       this.db = this.createProductionDatabase()
     }
 
@@ -81,8 +73,8 @@ export class DatabaseManager {
   }
 
   private createProductionDatabase(): Database {
-    const dataDir = getDataDirectory()
-    const dbPath = path.join(dataDir, 'promptliano.db')
+    const dbConfig = getDatabaseConfig()
+    const dbPath = dbConfig.path
 
     try {
       this.ensureDataDirectory(dbPath)
@@ -103,23 +95,7 @@ export class DatabaseManager {
         return db
       } catch (fallbackError) {
         console.error('Failed to create fallback database:', fallbackError)
-
-        // Last resort: use temp directory
-        const tempDir = os.tmpdir()
-        const tempDbPath = path.join(tempDir, 'promptliano', 'promptliano.db')
-        const tempDbDir = path.dirname(tempDbPath)
-
-        try {
-          if (!fs.existsSync(tempDbDir)) {
-            fs.mkdirSync(tempDbDir, { recursive: true })
-          }
-          const db = new Database(tempDbPath)
-          console.error(`Using temporary database path: ${tempDbPath}`)
-          return db
-        } catch (tempError) {
-          console.error('Failed to create temp database:', tempError)
-          throw new Error('Unable to create database in any location')
-        }
+        throw new Error('Unable to create database in any location')
       }
     }
   }
@@ -131,21 +107,6 @@ export class DatabaseManager {
     return DatabaseManager.instance
   }
 
-  /**
-   * Reset the singleton instance - used for test isolation
-   * This ensures each test suite gets a fresh database instance
-   */
-  static resetInstance(): void {
-    if (DatabaseManager.instance) {
-      // Close the current database connection if it exists
-      try {
-        DatabaseManager.instance.db.close()
-      } catch (error) {
-        // Ignore errors during close (database might already be closed)
-      }
-      DatabaseManager.instance = null
-    }
-  }
 
   private ensureDataDirectory(dbPath: string): void {
     const dir = path.dirname(dbPath)
@@ -170,12 +131,16 @@ export class DatabaseManager {
   }
 
   private initializeDatabase(): void {
-    // Enable performance optimizations
-    this.db.exec('PRAGMA journal_mode = WAL')
+    const dbConfig = getDatabaseConfig()
+    
+    // Enable performance optimizations based on configuration
+    if (dbConfig.walMode) {
+      this.db.exec('PRAGMA journal_mode = WAL')
+    }
     this.db.exec('PRAGMA synchronous = NORMAL')
-    this.db.exec('PRAGMA cache_size = -64000') // 64MB cache
-    this.db.exec('PRAGMA temp_store = MEMORY')
-    this.db.exec('PRAGMA mmap_size = 268435456') // 256MB memory-mapped I/O
+    this.db.exec(`PRAGMA cache_size = -${dbConfig.cacheSize * 1000}`) // Convert MB to KB
+    this.db.exec(`PRAGMA temp_store = ${dbConfig.tempStore.toUpperCase()}`)
+    this.db.exec(`PRAGMA mmap_size = ${dbConfig.mmapSize}`) // bytes
 
     // Create tables
     this.createTables()
@@ -558,9 +523,6 @@ export class DatabaseManager {
 
   // --- Development Utilities ---
 
-  async vacuum(): Promise<void> {
-    this.db.exec('VACUUM')
-  }
 
   async analyze(): Promise<void> {
     this.db.exec('ANALYZE')
@@ -584,6 +546,53 @@ export class DatabaseManager {
       pageSize: pageSize.page_size,
       cacheHits: cacheStats[0]?.cache_hits || 0,
       cacheMisses: cacheStats[0]?.cache_misses || 0
+    }
+  }
+
+  /**
+   * Optimize database by running VACUUM
+   */
+  vacuum(): void {
+    try {
+      console.log('Running database VACUUM...')
+      this.db.exec('VACUUM')
+      console.log('Database VACUUM completed successfully')
+    } catch (error) {
+      console.error('Failed to vacuum database:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get database file size information
+   */
+  getDatabaseSize(): { sizeBytes: number; sizeMB: number } {
+    try {
+      const result = this.db.prepare(`
+        SELECT page_count * page_size as size_bytes
+        FROM pragma_page_count(), pragma_page_size()
+      `).get() as { size_bytes: number }
+
+      const sizeBytes = result.size_bytes || 0
+      const sizeMB = Math.round(sizeBytes / (1024 * 1024) * 100) / 100
+
+      return { sizeBytes, sizeMB }
+    } catch (error) {
+      console.error('Failed to get database size:', error)
+      return { sizeBytes: 0, sizeMB: 0 }
+    }
+  }
+
+  /**
+   * Reset instance for testing (DANGEROUS - only use in tests)
+   */
+  static resetInstance(): void {
+    if (process.env.NODE_ENV !== 'test') {
+      throw new Error('resetInstance can only be called in test environment')
+    }
+    if (DatabaseManager.instance) {
+      DatabaseManager.instance.db.close()
+      DatabaseManager.instance = null
     }
   }
 }

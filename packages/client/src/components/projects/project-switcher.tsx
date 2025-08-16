@@ -33,7 +33,7 @@ export function ProjectSwitcher({ currentProject, className, onManageProjects }:
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const { data: projectsData, isLoading } = useGetProjects()
-  const projects = projectsData?.data ?? []
+  const projects = projectsData ?? []
   const updateActiveProjectTab = useUpdateActiveProjectTab()
   const { recentProjects, addRecentProject } = useRecentProjects()
   const { branch: currentBranch } = useGitCurrentBranch(currentProject?.id)

@@ -7,56 +7,54 @@ import {
   entityIdNullableOptionalSchema,
   entityIdArraySchema
 } from './schema-utils'
+import { createEntitySchemas } from './schema-factories'
 
-// Base ticket schema with Promptliano patterns
-export const TicketSchema = z
-  .object({
-    id: entityIdSchema,
-    projectId: entityIdSchema,
-    title: z.string().min(1),
-    overview: z.string().default(''),
-    status: z.enum(['open', 'in_progress', 'closed']).default('open'),
-    priority: z.enum(['low', 'normal', 'high']).default('normal'),
-    suggestedFileIds: z.array(z.string()).default([]),
-    suggestedAgentIds: z.array(z.string()).default([]),
-    suggestedPromptIds: z.array(entityIdSchema).default([]),
-    // Queue integration fields (unified flow system)
-    queueId: entityIdNullableOptionalSchema,
-    queuePosition: z.number().nullable().optional(),
-    queueStatus: z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled']).nullable().optional(),
-    queuePriority: z.number().default(0).optional(),
-    queuedAt: unixTSOptionalSchemaSpec,
-    queueStartedAt: unixTSOptionalSchemaSpec,
-    queueCompletedAt: unixTSOptionalSchemaSpec,
-    queueAgentId: z.string().nullable().optional(),
-    queueErrorMessage: z.string().nullable().optional(),
-    estimatedProcessingTime: z.number().nullable().optional(),
-    actualProcessingTime: z.number().nullable().optional(),
-    created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec
-  })
-  .openapi('Ticket')
+// Ticket schemas using factory pattern
+const ticketSchemas = createEntitySchemas('Ticket', {
+  projectId: entityIdSchema,
+  title: z.string().min(1),
+  overview: z.string().optional(),
+  status: z.enum(['open', 'in_progress', 'closed']).optional(),
+  priority: z.enum(['low', 'normal', 'high']).optional(),
+  suggestedFileIds: z.array(z.string()).optional(),
+  suggestedAgentIds: z.array(z.string()).optional(),
+  suggestedPromptIds: z.array(entityIdSchema).optional(),
+  // Queue integration fields (unified flow system)
+  queueId: entityIdNullableOptionalSchema,
+  queuePosition: z.number().nullable().optional(),
+  queueStatus: z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled']).nullable().optional(),
+  queuePriority: z.number().optional(),
+  queuedAt: unixTSOptionalSchemaSpec,
+  queueStartedAt: unixTSOptionalSchemaSpec,
+  queueCompletedAt: unixTSOptionalSchemaSpec,
+  queueAgentId: z.string().nullable().optional(),
+  queueErrorMessage: z.string().nullable().optional(),
+  estimatedProcessingTime: z.number().nullable().optional(),
+  actualProcessingTime: z.number().nullable().optional()
+})
 
-// Enhanced Task schema
+export const TicketSchema = ticketSchemas.base
+
+// Enhanced Task schema - keeping original definition to maintain compatibility
 export const TicketTaskSchema = z
   .object({
     id: entityIdSchema,
     ticketId: entityIdSchema,
     content: z.string().min(1), // Keep as task title/summary
-    description: z.string().default(''), // NEW: Detailed task breakdown
-    suggestedFileIds: z.array(z.string()).default([]), // NEW: File associations
+    description: z.string().optional(), // NEW: Detailed task breakdown
+    suggestedFileIds: z.array(z.string()).optional(), // NEW: File associations
     done: z.boolean().default(false),
     orderIndex: z.number().min(0),
     estimatedHours: z.number().nullable().optional(), // NEW: Time estimation
-    dependencies: z.array(entityIdSchema).default([]), // NEW: Task dependencies
-    tags: z.array(z.string()).default([]), // NEW: Tags for categorization
+    dependencies: z.array(entityIdSchema).optional(), // NEW: Task dependencies
+    tags: z.array(z.string()).optional(), // NEW: Tags for categorization
     agentId: z.string().nullable().optional(), // NEW: Assigned agent for this task
-    suggestedPromptIds: z.array(entityIdSchema).default([]), // NEW: Suggested prompts
+    suggestedPromptIds: z.array(entityIdSchema).optional(), // NEW: Suggested prompts
     // Queue integration fields (unified flow system)
     queueId: entityIdNullableOptionalSchema,
     queuePosition: z.number().nullable().optional(),
     queueStatus: z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled']).nullable().optional(),
-    queuePriority: z.number().default(0).optional(),
+    queuePriority: z.number().optional(),
     queuedAt: unixTSOptionalSchemaSpec,
     queueStartedAt: unixTSOptionalSchemaSpec,
     queueCompletedAt: unixTSOptionalSchemaSpec,
@@ -69,7 +67,7 @@ export const TicketTaskSchema = z
   })
   .openapi('TicketTask')
 
-// Create schemas (exclude computed fields)
+// Create schemas - manually define to avoid complex omit operations
 export const CreateTicketBodySchema = z
   .object({
     projectId: entityIdSchema,

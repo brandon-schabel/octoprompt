@@ -64,7 +64,7 @@ export function gatherAliasesFromTsconfigs(allFiles: ProjectFile[], projectRoot:
     const { paths } = tsconfig.compilerOptions
     if (paths) {
       for (const key of Object.keys(paths)) {
-        aliasMap[key] = paths[key]
+        aliasMap[key] = paths[key] ?? []
       }
     }
   }
@@ -114,7 +114,7 @@ export function buildTsconfigAliasMap(allFiles: ProjectFile[]): TsconfigCache {
     const dir = file.path.slice(0, file.path.lastIndexOf('/'))
     const aliasMap: AliasMap = {}
     for (const key of Object.keys(tsconfig.compilerOptions.paths)) {
-      aliasMap[key] = tsconfig.compilerOptions.paths[key]
+      aliasMap[key] = tsconfig.compilerOptions.paths[key] ?? []
     }
     cache.set(dir, aliasMap)
   }
@@ -145,6 +145,7 @@ function resolveAliasImport(importPath: string, currentFilePath: string, tsconfi
     if (importPath === prefix || importPath.startsWith(prefix + '/')) {
       const remainder = importPath.slice(prefix.length).replace(/^\//, '')
       const targetPatterns = aliases[aliasKey]
+      if (!targetPatterns) continue
       const resolvedPaths: string[] = []
       for (const pattern of targetPatterns) {
         const basePattern = pattern.replace(/\/\*$/, '')

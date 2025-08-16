@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas'
-import { LOW_MODEL_CONFIG } from '@promptliano/config'
+import { DEFAULT_MODEL_EXAMPLES } from './model-defaults'
 
 // --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const AiMessageSchema = z
@@ -32,7 +32,7 @@ export const AiSdkOptionsSchema = z
       .openapi({
         description:
           'Controls the randomness of the output. Lower values (e.g., 0.2) make the output more focused, deterministic, and suitable for factual tasks. Higher values (e.g., 0.8) increase randomness and creativity, useful for brainstorming or creative writing. A value of 0 typically means greedy decoding (always picking the most likely token).',
-        example: LOW_MODEL_CONFIG.temperature ?? 0.7 // A common default balancing creativity and coherence
+        example: DEFAULT_MODEL_EXAMPLES.temperature // A common default balancing creativity and coherence
       }),
     maxTokens: z
       .number()
@@ -42,7 +42,7 @@ export const AiSdkOptionsSchema = z
       .openapi({
         description:
           'The maximum number of tokens (words or parts of words) the model is allowed to generate in the response. This limits the output length and can affect cost. Note: This limit usually applies only to the *generated* tokens, not the input prompt tokens.',
-        example: LOW_MODEL_CONFIG.maxTokens ?? 100000 // Example: Limit response to roughly 1024 tokens
+        example: DEFAULT_MODEL_EXAMPLES.maxTokens // Example: Limit response to roughly 4000 tokens
       }),
     topP: z
       .number()
@@ -52,7 +52,7 @@ export const AiSdkOptionsSchema = z
       .openapi({
         description:
           "Controls diversity via nucleus sampling. It defines a probability threshold (e.g., 0.9). The model considers only the smallest set of most probable tokens whose cumulative probability exceeds this threshold for the next token selection. Lower values (e.g., 0.5) restrict choices more, leading to less random outputs. A value of 1 considers all tokens. It's often recommended to alter *either* `temperature` *or* `topP`, not both.",
-        example: LOW_MODEL_CONFIG.topP ?? 0.9 // Example: Consider top 90% probable tokens
+        example: DEFAULT_MODEL_EXAMPLES.topP // Example: Consider top 90% probable tokens
       }),
     frequencyPenalty: z
       .number()
@@ -63,7 +63,7 @@ export const AiSdkOptionsSchema = z
         // Added typical range
         description:
           'Applies a penalty to tokens based on how frequently they have already appeared in the generated text *and* the prompt. Positive values (e.g., 0.5) decrease the likelihood of the model repeating the same words or phrases verbatim, making the output less repetitive. Negative values encourage repetition.',
-        example: LOW_MODEL_CONFIG.frequencyPenalty ?? 0.2 // Example: Slightly discourage repeating words
+        example: DEFAULT_MODEL_EXAMPLES.frequencyPenalty // Example: Slightly discourage repeating words
       }),
     presencePenalty: z
       .number()
@@ -74,7 +74,7 @@ export const AiSdkOptionsSchema = z
         // Added typical range
         description:
           'Applies a penalty to tokens based on whether they have appeared *at all* in the generated text *and* the prompt so far (regardless of frequency). Positive values (e.g., 0.5) encourage the model to introduce new concepts and topics, reducing the likelihood of repeating *any* previously mentioned word. Negative values encourage staying on topic.',
-        example: LOW_MODEL_CONFIG.presencePenalty ?? 0.1 // Example: Slightly encourage introducing new concepts
+        example: DEFAULT_MODEL_EXAMPLES.presencePenalty // Example: Slightly encourage introducing new concepts
       }),
     topK: z
       .number()
@@ -84,7 +84,7 @@ export const AiSdkOptionsSchema = z
       .openapi({
         description:
           "Restricts the model's choices for the next token to the `k` most likely candidates. For example, if `topK` is 40, the model will only consider the top 40 most probable tokens at each step. A lower value restricts choices more. Setting `topK` to 1 is equivalent to greedy decoding (same as `temperature: 0`). Less commonly used than `topP`.",
-        example: LOW_MODEL_CONFIG.topK ?? 40 // Example: Consider only the 40 most likely next tokens
+        example: DEFAULT_MODEL_EXAMPLES.topK // Example: Consider only the 40 most likely next tokens
       }),
     stop: z
       .union([z.string(), z.array(z.string())])
@@ -108,11 +108,11 @@ export const AiSdkOptionsSchema = z
     // unless you have a specific use case for passing them this way.
     provider: z.string().optional().openapi({
       description: 'The provider to use for the AI request.',
-      example: LOW_MODEL_CONFIG.provider
+      example: DEFAULT_MODEL_EXAMPLES.provider
     }),
     model: z.string().optional().openapi({
       description: 'The model to use for the AI request.',
-      example: LOW_MODEL_CONFIG.model
+      example: DEFAULT_MODEL_EXAMPLES.model
     })
   })
   .partial()
@@ -121,9 +121,9 @@ export const AiSdkOptionsSchema = z
 // --- Schema for Available Models ---
 const UnifiedModelSchema = z
   .object({
-    id: z.string().openapi({ example: LOW_MODEL_CONFIG.model ?? 'gpt-4o-mini', description: 'Model identifier' }),
+    id: z.string().openapi({ example: DEFAULT_MODEL_EXAMPLES.model, description: 'Model identifier' }),
     name: z.string().openapi({ example: 'GPT-4o Mini', description: 'User-friendly model name' }),
-    provider: z.string().openapi({ example: LOW_MODEL_CONFIG.provider ?? 'openrouter', description: 'Provider ID' }),
+    provider: z.string().openapi({ example: DEFAULT_MODEL_EXAMPLES.provider, description: 'Provider ID' }),
     context_length: z.number().optional().openapi({ example: 128000, description: 'Context window size in tokens' })
     // Add other relevant fields like 'description', 'capabilities', etc.
   })
@@ -415,8 +415,8 @@ export const structuredDataSchemas = {
     systemPrompt:
       'You are an expert programmer specializing in clear code organization and naming conventions. Provide concise filename suggestions.',
     // modelSettings: {
-    //     model: LOW_MODEL_CONFIG.model,
-    //     temperature: LOW_MODEL_CONFIG.temperature,
+    //     model: DEFAULT_MODEL_EXAMPLES.model,
+    //     temperature: DEFAULT_MODEL_EXAMPLES.temperature,
     // },
     // This field is part of the interface, but not the base Zod schema
     schema: FilenameSuggestionSchema // The actual Zod schema instance
@@ -427,7 +427,7 @@ export const structuredDataSchemas = {
     description: 'Generates a short summary of the input text.',
     promptTemplate: 'Summarize the following text concisely: {userInput}',
     systemPrompt: 'You are a summarization expert.',
-    // modelSettings: { model: LOW_MODEL_CONFIG.model, temperature: LOW_MODEL_CONFIG.temperature, maxTokens: LOW_MODEL_CONFIG.max_tokens },
+    // modelSettings: { model: DEFAULT_MODEL_EXAMPLES.model, temperature: DEFAULT_MODEL_EXAMPLES.temperature, maxTokens: DEFAULT_MODEL_EXAMPLES.maxTokens },
     schema: z
       .object({
         // Define the schema directly here

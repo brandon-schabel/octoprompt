@@ -49,7 +49,7 @@ export function useModelSelection(options: UseModelSelectionOptions = {}): UseMo
   const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider, urlOptions)
 
   const availableModels =
-    modelsData?.data.map((m) => ({
+    modelsData?.data.map((m: any) => ({
       id: m.id,
       name: m.name
     })) ?? []
@@ -57,7 +57,7 @@ export function useModelSelection(options: UseModelSelectionOptions = {}): UseMo
   // Auto-select first model when provider changes
   useEffect(() => {
     if (availableModels.length > 0) {
-      const isCurrentModelValid = availableModels.some((m) => m.id === model)
+      const isCurrentModelValid = availableModels.some((m: any) => m.id === model)
       if (!model || !isCurrentModelValid) {
         const firstModelId = availableModels[0].id
         setModelInternal(firstModelId)

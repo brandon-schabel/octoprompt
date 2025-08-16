@@ -1,3 +1,9 @@
+// Export base-storage first as other storage classes depend on it
+export * from './src/base-storage'
+export * from './src/utils/storage-helpers'
+export * from './src/utils/transaction-helpers'
+
+// Export storage implementations
 export * from './src/chat-storage'
 export * from './src/project-storage'
 export * from './src/prompt-storage'
@@ -29,21 +35,6 @@ export { ticketStorage } from './src/ticket-storage'
 // Export missing types for ChatMessagesStorage and ParserRegistry
 export type { ChatMessagesStorage } from './src/chat-storage'
 export { ParserRegistry } from './src/parser-registry'
-
-// Define missing BaseStorage and BaseEntity types that services expect
-export interface BaseEntity {
-  id: number | string
-  created: number
-  updated: number
-}
-
-export interface BaseStorage<TEntity extends BaseEntity, TCreate> {
-  create(data: TCreate): Promise<TEntity>
-  getById(id: number | string): Promise<TEntity | null>
-  list(): Promise<TEntity[]>
-  update(id: number | string, data: Partial<TCreate>): Promise<TEntity | null>
-  delete(id: number | string): Promise<boolean>
-}
 
 // Export everything from storage-v2 except MigrationConfig
 export { StorageV2, FileAdapter, MemoryAdapter } from './src/storage-v2'

@@ -5,10 +5,10 @@ import {
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
-  Tool,
-  Resource,
-  CallToolResult,
-  ReadResourceResult
+  type Tool,
+  type Resource,
+  type CallToolResult,
+  type ReadResourceResult
 } from '@modelcontextprotocol/sdk/types.js'
 import { listProjects, getProjectCompactSummary } from '@promptliano/services'
 import { CONSOLIDATED_TOOLS } from './consolidated-tools'
@@ -60,28 +60,31 @@ function registerTools(server: Server) {
   })
 
   // Handle tool execution
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     const { name, arguments: args } = request.params
 
     try {
       // Find and execute consolidated tool
       const consolidatedTool = CONSOLIDATED_TOOLS.find((tool) => tool.name === name)
       if (consolidatedTool) {
-        return await consolidatedTool.handler(args as any)
+        const result = await consolidatedTool.handler(args as any)
+        // Return the result as-is since it should already match CallToolResult
+        return result as any
       }
 
       throw new Error(`Unknown tool: ${name}`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
+      // Return proper CallToolResult format
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Error: ${errorMessage}`
           }
         ],
         isError: true
-      } as CallToolResult
+      } as any
     }
   })
 }

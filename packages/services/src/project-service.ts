@@ -20,6 +20,8 @@ import {
 } from '@promptliano/config'
 import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@promptliano/config'
 import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@promptliano/shared'
+import { ProjectErrors, FileErrors } from '@promptliano/shared/src/error/entity-errors'
+import { ErrorFactory, assertExists, handleZodError, assertUpdateSucceeded, assertDeleteSucceeded } from './utils/error-factory'
 import { mapProviderErrorToApiError } from './error-mappers'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@promptliano/storage'
 import z, { ZodError } from 'zod'
@@ -27,7 +29,7 @@ import { syncProject } from './file-services/file-sync-service-unified'
 import { generateStructuredData, generateSingleText } from './gen-ai-services'
 import { getProviderUrl } from './provider-settings-service'
 import { getFullProjectSummary, invalidateProjectSummaryCache } from './utils/project-summary-service'
-import { resolvePath } from './utils/path-utils'
+import { resolvePath } from '@promptliano/shared'
 import { fileRelevanceService } from './file-relevance-service'
 import { CompactFileFormatter } from './utils/compact-file-formatter'
 import path from 'node:path'
@@ -100,18 +102,9 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed creating project: ${error.message}`,
-        'PROJECT_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      handleZodError(error, 'Project', 'create')
     }
-    throw new ApiError(
-      500,
-      `Failed to create project ${data.name}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_CREATION_FAILED'
-    )
+    ErrorFactory.createFailed('Project', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -120,16 +113,12 @@ export async function getProjectById(projectId: number): Promise<Project> {
     const projects = await projectStorage.readProjects()
     const project = projects[String(projectId)]
     if (!project) {
-      throw new ApiError(404, `Project not found with ID ${projectId}.`, 'PROJECT_NOT_FOUND')
+      throw ProjectErrors.notFound(projectId)
     }
     return project
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Error getting project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_GET_FAILED_STORAGE'
-    )
+    ErrorFactory.databaseError('get project', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -148,11 +137,7 @@ export async function listProjects(): Promise<Project[]> {
     return projectList
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to list projects. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_LIST_FAILED'
-    )
+    ErrorFactory.databaseError('list projects', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -178,18 +163,9 @@ export async function updateProject(projectId: number, data: UpdateProjectBody):
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed updating project ${projectId}: ${error.message}`,
-        'PROJECT_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      handleZodError(error, 'Project', 'update')
     }
-    throw new ApiError(
-      500,
-      `Failed to update project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_UPDATE_FAILED'
-    )
+    ErrorFactory.updateFailed('Project', projectId, error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -197,7 +173,7 @@ export async function deleteProject(projectId: number): Promise<boolean> {
   try {
     const projects = await projectStorage.readProjects()
     if (!projects[String(projectId)]) {
-      throw new ApiError(404, `Project not found with ID ${projectId} for deletion.`, 'PROJECT_NOT_FOUND')
+      throw ProjectErrors.notFound(projectId)
     }
 
     delete projects[String(projectId)]
@@ -211,11 +187,7 @@ export async function deleteProject(projectId: number): Promise<boolean> {
     return true
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to delete project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_DELETE_FAILED'
-    )
+    ErrorFactory.deleteFailed('Project', projectId, error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -239,11 +211,7 @@ export async function getProjectFiles(
       return null // Maintain original behavior of returning null for not found project
     }
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get files for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILES_GET_FAILED'
-    )
+    ErrorFactory.operationFailed('get files for project ${projectid}', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -258,11 +226,7 @@ export async function updateFileContent(
     const existingFile = files[fileId]
 
     if (!existingFile) {
-      throw new ApiError(
-        404,
-        `File not found with ID ${fileId} in project ${projectId} during content update.`,
-        'FILE_NOT_FOUND'
-      )
+      ErrorFactory.notFound("File", fileId)
     }
 
     const newUpdatedAt = options?.updated?.getTime() ?? Date.now()
@@ -287,18 +251,9 @@ export async function updateFileContent(
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed for file content ${fileId}: ${error.message}`,
-        'FILE_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      handleZodError(error, 'File content', 'update')
     }
-    throw new ApiError(
-      500,
-      `Failed to update file content for ${fileId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_CONTENT_UPDATE_FAILED'
-    )
+    ErrorFactory.operationFailed('update file content for ${fileid}', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -321,11 +276,7 @@ export async function resummarizeAllFiles(projectId: number): Promise<void> {
     logger.info(`Completed resummarizeAllFiles and saved updates for project ${projectId}`)
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed during resummarization process for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'RESUMMARIZE_ALL_FAILED'
-    )
+    ErrorFactory.operationFailed('resummarization process', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -374,18 +325,9 @@ export async function removeSummariesFromFiles(
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed removing summaries for project ${projectId}: ${error.message}`,
-        'PROJECT_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      handleZodError(error, 'Project', 'remove summaries')
     }
-    throw new ApiError(
-      500,
-      `Error removing summaries: ${error instanceof Error ? error.message : String(error)}`,
-      'REMOVE_SUMMARIES_FAILED'
-    )
+    ErrorFactory.operationFailed('removing summaries', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -445,18 +387,9 @@ export async function createProjectFileRecord(
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed creating file record for ${filePath}: ${error.message}`,
-        'FILE_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      handleZodError(error, 'File record', 'create')
     }
-    throw new ApiError(
-      500,
-      `Failed to create file record for ${filePath}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILE_CREATE_FAILED'
-    )
+    ErrorFactory.operationFailed('create file record for ${filepath}', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -548,18 +481,9 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation of project files map failed during bulk create for project ${projectId}: ${error.message}`,
-        'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      handleZodError(error, 'Project files map', 'bulk create')
     }
-    throw new ApiError(
-      500,
-      `Bulk file creation failed for project ${projectId}. Some files might be created. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_BULK_CREATE_FAILED'
-    )
+    ErrorFactory.operationFailed('bulk file creation', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -623,18 +547,9 @@ export async function bulkUpdateProjectFiles(
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation of project files map failed during bulk update for project ${projectId}: ${error.message}`,
-        'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      handleZodError(error, 'Project files map', 'bulk update')
     }
-    throw new ApiError(
-      500,
-      `Bulk file update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_BULK_UPDATE_FAILED'
-    )
+    ErrorFactory.operationFailed('bulk file update', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -684,18 +599,9 @@ export async function bulkDeleteProjectFiles(
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation of project files map failed during bulk delete for project ${projectId}: ${error.message}`,
-        'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      handleZodError(error, 'Project files map', 'bulk delete')
     }
-    throw new ApiError(
-      500,
-      `Bulk file deletion failed for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_BULK_DELETE_FAILED'
-    )
+    ErrorFactory.operationFailed('bulk file deletion', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -719,11 +625,7 @@ export async function getProjectFilesByIds(projectId: number, fileIds: number[])
     return resultFiles
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to fetch files by IDs for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILES_GET_BY_IDS_FAILED'
-    )
+    ErrorFactory.operationFailed('fetch files by ids for project ${projectid}', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -749,11 +651,7 @@ export async function getProjectFilesByPaths(projectId: number, paths: string[])
     return resultFiles
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to fetch files by paths for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILES_GET_BY_PATHS_FAILED'
-    )
+    ErrorFactory.operationFailed('fetch files by paths for project ${projectid}', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -890,12 +788,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   if (!modelId) {
     logger.error(`Model not configured for summarize-file task for file ${file.path}.`)
-    throw new ApiError(
-      500,
-      `AI Model not configured for summarize-file task (file ${file.path}).`,
-      'AI_MODEL_NOT_CONFIGURED',
-      { projectId: file.projectId, fileId: file.id }
-    )
+    ErrorFactory.operationFailed('AI Model configuration', `Model not configured for summarize-file task (file ${file.path})`)
   }
 
   try {
@@ -990,12 +883,7 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
     return updatedFile
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to summarize file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_SUMMARIZE_FAILED',
-      { originalError: error, projectId: file.projectId, fileId: file.id }
-    )
+    ErrorFactory.operationFailed('file summarization', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -1018,12 +906,7 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
 
   if (!modelId) {
     logger.error(`Model not configured for summarize-file task for file ${file.path}.`)
-    throw new ApiError(
-      500,
-      `AI Model not configured for summarize-file task (file ${file.path}).`,
-      'AI_MODEL_NOT_CONFIGURED',
-      { projectId: file.projectId, fileId: file.id }
-    )
+    ErrorFactory.operationFailed('AI Model configuration', `Model not configured for summarize-file task (file ${file.path})`)
   }
 
   try {
@@ -1081,12 +964,7 @@ async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: strin
     return updatedFile
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to summarize truncated file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_SUMMARIZE_FAILED',
-      { originalError: error, projectId: file.projectId, fileId: file.id }
-    )
+    ErrorFactory.operationFailed('truncated file summarization', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -1209,12 +1087,7 @@ ${promptsMap.contemplativePrompt}
     if (error instanceof ApiError) {
       throw error
     }
-    throw new ApiError(
-      500,
-      `Failed to optimize prompt: ${error.message || 'AI provider error'}`,
-      'PROMPT_OPTIMIZE_ERROR',
-      { originalError: error }
-    )
+    ErrorFactory.operationFailed('prompt optimization', error.message || 'AI provider error')
   }
 }
 
@@ -1280,21 +1153,17 @@ Select the ${limit} most relevant file IDs from the above list.`
     const recommendedFiles = allFiles?.filter((file) => refinedFileIds.includes(file.id)) || []
 
     // Log performance metrics
-    const oldFormatSize = allFiles.length * 500 // Estimate old XML format size
+    const oldFormatSize = (allFiles?.length || 0) * 500 // Estimate old XML format size
     const newFormatSize = compactSummary.length
     const tokensSaved = Math.round((oldFormatSize - newFormatSize) / 4)
     logger.debug(
-      `Strategy: ${strategy}, Files analyzed: ${candidateFiles.length}/${allFiles.length}, Tokens saved: ~${tokensSaved.toLocaleString()}`
+      `Strategy: ${strategy}, Files analyzed: ${candidateFiles.length}/${allFiles?.length || 0}, Tokens saved: ~${tokensSaved.toLocaleString()}`
     )
 
     return recommendedFiles
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to suggest files for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
-      'AI_SUGGESTION_ERROR'
-    )
+    ErrorFactory.operationFailed('file suggestion', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -1309,11 +1178,7 @@ export async function getProjectCompactSummary(projectId: number): Promise<strin
     return await getCompactProjectSummary(projectId)
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get compact project summary for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_COMPACT_SUMMARY_FAILED'
-    )
+    ErrorFactory.operationFailed('compact project summary', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -1360,11 +1225,7 @@ export async function getProjectFileTree(projectId: number): Promise<string> {
     return lines.join('\n')
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get project file tree for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILE_TREE_FAILED'
-    )
+    ErrorFactory.operationFailed('project file tree', error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -1423,7 +1284,7 @@ export async function getProjectOverview(projectId: number): Promise<string> {
       if (tabMeta.selectedFiles && tabMeta.selectedFiles.length > 0) {
         lines.push(`Selected Files: ${tabMeta.selectedFiles.length} (showing top 5)`)
         const files = await getProjectFiles(projectId)
-        const selectedFiles = files?.filter((f) => tabMeta.selectedFiles.includes(f.id)) || []
+        const selectedFiles = files?.filter((f) => tabMeta.selectedFiles!.includes(f.id)) || []
         selectedFiles.slice(0, 5).forEach((file) => {
           const size = file.size ? `${(file.size / 1024).toFixed(1)}KB` : 'unknown'
           lines.push(`  - ${file.path} (${size})`)
@@ -1461,7 +1322,7 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     lines.push('')
 
     // Tickets section
-    let openTickets = []
+    let openTickets: Array<typeof ticketsWithTaskCount[0]> = []
     try {
       openTickets = ticketsWithTaskCount.filter((t) => t && t.status && t.status !== 'closed')
     } catch (error) {
@@ -1584,11 +1445,7 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     return lines.join('\n')
   } catch (error) {
     if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get project overview for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_OVERVIEW_FAILED'
-    )
+    ErrorFactory.operationFailed('project overview', error instanceof Error ? error.message : String(error))
   }
 }
 

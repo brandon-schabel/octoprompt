@@ -1,24 +1,46 @@
 {
   "name": "@promptliano/api-client",
   "version": "0.9.2",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run build",
     "publish:dry": "npm publish --dry-run",
+    
     "test": "bun src/tests/run-functional-tests.ts",
     "test:all": "bun src/tests/run-functional-tests.ts",
+    "test:legacy": "bun src/tests/run-functional-tests.ts",
+    
+    "test:isolated": "bun test src/tests/projects-api.test.ts src/tests/chat-api.test.ts src/tests/prompt-api.test.ts src/tests/provider-key-api.test.ts src/tests/tickets-api.test.ts src/tests/queues-api.test.ts --timeout 90000",
+    "test:isolated:parallel": "bun test src/tests/*.test.ts --timeout 120000",
+    
+    "test:ai": "bun test src/tests/ai-endpoints.test.ts --timeout 60000",
+    "test:ai:local": "LMSTUDIO_BASE_URL=http://192.168.1.38:1234 bun test src/tests/ai-endpoints.test.ts --timeout 60000",
+    "test:ai:skip": "SKIP_AI_TESTS=true bun test src/tests/ai-endpoints.test.ts --timeout 60000",
+    
     "test:projects": "bun test src/tests/projects-api.test.ts --timeout 30000",
     "test:chat": "bun test src/tests/chat-api.test.ts --timeout 30000",
     "test:prompt": "bun test src/tests/prompt-api.test.ts --timeout 30000",
     "test:provider-key": "bun test src/tests/provider-key-api.test.ts --timeout 30000",
-    "docs:generate": "typedoc",
-    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api-markdown",
-    "docs:watch": "typedoc --watch",
-    "docs:serve": "npx serve docs/api",
-    "docs:clean": "rm -rf docs/api docs/api-markdown"
+    
+    "test:tickets": "bun test src/tests/tickets-api.test.ts --timeout 60000",
+    "test:queues": "bun test src/tests/queues-api.test.ts --timeout 60000", 
+    "test:flow": "bun test src/tests/flow-integration.test.ts --timeout 90000",
+    "test:flow:ai": "AI_TEST_MODE=true LMSTUDIO_BASE_URL=http://192.168.1.38:1234 bun test src/tests/flow-integration.test.ts --timeout 120000",
+    "test:flow:no-ai": "AI_TEST_MODE=false bun test src/tests/flow-integration.test.ts --timeout 60000",
+    
+    "test:flow-system": "bun test src/tests/tickets-api.test.ts src/tests/queues-api.test.ts --timeout 90000",
+    "test:flow-system:parallel": "bun test src/tests/tickets-api.test.ts src/tests/queues-api.test.ts --timeout 90000 --concurrent",
+    "test:flow-complete": "bun test src/tests/tickets-api.test.ts src/tests/queues-api.test.ts src/tests/flow-integration.test.ts --timeout 120000",
+    
+    "test:config:print": "bun -e \"import { printTestConfig } from './src/tests/test-config.ts'; printTestConfig()\"",
+    "test:env:check": "bun -e \"import { checkLMStudioAvailability, getDefaultTestConfig } from './src/tests/test-environment.ts'; const config = getDefaultTestConfig(); checkLMStudioAvailability(config.ai.lmstudio).then(status => console.log('LMStudio Status:', status.message))\"",
+    
+    "test:memory": "TEST_USE_MEMORY_DB=true bun run test:isolated",
+    "test:external": "TEST_USE_EXTERNAL_SERVER=true bun run test:isolated",
+    "test:debug": "TEST_DEBUG=true TEST_LOG_LEVEL=debug bun run test:isolated"
   },
   "devDependencies": {
     "@types/bun": "latest"

@@ -6,15 +6,7 @@ import { Label } from '@promptliano/ui'
 import { Badge } from '@promptliano/ui'
 import { Skeleton } from '@promptliano/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@promptliano/ui'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@promptliano/ui'
-import { DataTable } from '@promptliano/ui'
-import type { ColumnDef } from '@tanstack/react-table'
+import { ConfiguredDataTable, createDataTableColumns, type DataTableColumnsConfig } from '@promptliano/ui'
 import { QueueItem, ItemQueueStatus } from '@promptliano/schemas'
 import { toast } from 'sonner'
 import { useGetQueuesWithStats, useGetQueueItems } from '@/hooks/api/use-queue-api'
@@ -59,9 +51,6 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
   )
   const { data: ticketsWithTasks } = useGetTicketsWithTasks(projectId)
 
-  // Note: Direct queue item operations are no longer supported.
-  // Items are now managed through their parent tickets/tasks via the flow service.
-
   // Find selected queue
   const selectedQueue = queuesWithStats?.find((q) => q.queue.id === selectedQueueId)
 
@@ -73,16 +62,10 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
     const query = searchQuery.toLowerCase()
     return safeItems.filter((itemWithRelations: any) => {
       const item = itemWithRelations.queueItem
-      // Search in ticket/task IDs
       if (item.ticketId && item.ticketId.toString().includes(query)) return true
       if (item.taskId && item.taskId.toString().includes(query)) return true
-
-      // Search in agent ID
       if (item.agentId?.toLowerCase().includes(query)) return true
-
-      // Search in error message
       if (item.errorMessage?.toLowerCase().includes(query)) return true
-
       return false
     })
   }, [items, searchQuery])
@@ -90,205 +73,210 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
   // Get task details for an item
   const getTaskDetails = (item: QueueItem) => {
     if (!item.ticketId || !item.taskId || !ticketsWithTasks) return null
-
     const ticket = ticketsWithTasks.find((t) => t.ticket.id === item.ticketId)
     if (!ticket) return null
-
     const task = ticket.tasks.find((t) => t.id === item.taskId)
     return task ? { ticket: ticket.ticket, task } : null
   }
 
   const handleStatusChange = async (item: QueueItem, status: ItemQueueStatus) => {
-    // Direct queue item status changes are no longer supported
-    // Status should be managed through their parent ticket/task
     toast.error('Direct item status changes are no longer supported. Please use the ticket/task management interface.')
   }
 
   const handleDelete = async (item: QueueItem) => {
-    // Direct queue item deletion is no longer supported
-    // Items should be dequeued through their parent ticket/task
     toast.error('Direct item deletion is no longer supported. Please use the ticket/task management interface.')
   }
 
   const handleRetry = async (item: QueueItem) => {
-    // Direct queue item retry is no longer supported
-    // Retry should be managed through their parent ticket/task
     toast.error('Direct item retry is no longer supported. Please use the ticket/task management interface.')
   }
 
+  // Status configuration for badges
   const statusConfig = {
-    queued: { icon: AlertCircle, color: 'text-muted-foreground', bgColor: 'bg-muted' },
-    in_progress: { icon: Clock, color: 'text-blue-600', bgColor: 'bg-blue-100' },
-    completed: { icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-100' },
-    failed: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100' },
-    cancelled: { icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' },
-    timeout: { icon: Clock, color: 'text-orange-600', bgColor: 'bg-orange-100' }
+    queued: { icon: AlertCircle, color: 'text-muted-foreground', variant: 'secondary' as const },
+    in_progress: { icon: Clock, color: 'text-blue-600', variant: 'default' as const },
+    completed: { icon: CheckCircle2, color: 'text-green-600', variant: 'default' as const },
+    failed: { icon: XCircle, color: 'text-red-600', variant: 'destructive' as const },
+    cancelled: { icon: XCircle, color: 'text-gray-600', variant: 'secondary' as const },
+    timeout: { icon: Clock, color: 'text-orange-600', variant: 'secondary' as const }
   }
 
-  const columns: ColumnDef<QueueItem>[] = [
-    {
-      header: 'Status',
-      accessorFn: (item: QueueItem) => item.status,
-      cell: ({ row }) => {
-        const item = row.original
-        // Ensure status has a value, default to 'queued' if undefined
-        const status = item.status || 'queued'
-        const config = statusConfig[status] || statusConfig.queued
-        const Icon = config.icon
-        return (
-          <div className={cn('flex items-center gap-2', config.color)}>
-            <Icon className='h-4 w-4' />
-            <span className='capitalize'>{status.replace('_', ' ')}</span>
-          </div>
-        )
-      }
-    },
-    {
-      header: 'Task',
-      accessorFn: (item: QueueItem) => item.ticketId || item.taskId || item.id,
-      cell: ({ row }) => {
-        const item = row.original
-        const details = getTaskDetails(item)
-        if (!details) {
-          return (
-            <div className='text-muted-foreground'>{item.ticketId ? `Ticket #${item.ticketId}` : 'Unknown task'}</div>
-          )
-        }
-
-        return (
-          <div className='space-y-1'>
-            <div className='flex items-center gap-2'>
-              <ListTodo className='h-3 w-3 text-muted-foreground' />
-              <span className='font-medium'>{details.ticket.title}</span>
-            </div>
-            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-              <FileText className='h-3 w-3' />
-              <span className='truncate max-w-[300px]'>{details.task.content}</span>
-            </div>
-            {details.task.suggestedFileIds && details.task.suggestedFileIds.length > 0 && (
-              <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                <FileIcon className='h-3 w-3' />
-                <span>{details.task.suggestedFileIds.length} suggested files</span>
+  // Column configuration using the factory pattern
+  const columnsConfig: DataTableColumnsConfig<QueueItem> = {
+    selectable: false,
+    columns: [
+      {
+        type: 'custom',
+        column: {
+          header: 'Status',
+          accessorFn: (item: QueueItem) => item.status,
+          cell: ({ row }) => {
+            const item = row.original
+            const status = item.status || 'queued'
+            const config = statusConfig[status] || statusConfig.queued
+            const Icon = config.icon
+            return (
+              <div className={cn('flex items-center gap-2', config.color)}>
+                <Icon className='h-4 w-4' />
+                <span className='capitalize'>{status.replace('_', ' ')}</span>
               </div>
-            )}
-          </div>
-        )
+            )
+          },
+          enableSorting: true,
+                  }
+      },
+      {
+        type: 'custom',
+        column: {
+          header: 'Task',
+          accessorFn: (item: QueueItem) => item.ticketId || item.taskId || item.id,
+          cell: ({ row }) => {
+            const item = row.original
+            const details = getTaskDetails(item)
+            if (!details) {
+              return (
+                <div className='text-muted-foreground'>{item.ticketId ? `Ticket #${item.ticketId}` : 'Unknown task'}</div>
+              )
+            }
+
+            return (
+              <div className='space-y-1'>
+                <div className='flex items-center gap-2'>
+                  <ListTodo className='h-3 w-3 text-muted-foreground' />
+                  <span className='font-medium'>{details.ticket.title}</span>
+                </div>
+                <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                  <FileText className='h-3 w-3' />
+                  <span className='truncate max-w-[300px]'>{details.task.content}</span>
+                </div>
+                {details.task.suggestedFileIds && details.task.suggestedFileIds.length > 0 && (
+                  <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                    <FileIcon className='h-3 w-3' />
+                    <span>{details.task.suggestedFileIds.length} suggested files</span>
+                  </div>
+                )}
+              </div>
+            )
+          },
+          enableSorting: true,
+                  }
+      },
+      {
+        type: 'custom',
+        column: {
+          header: 'Priority',
+          accessorFn: (item: QueueItem) => item.priority,
+          cell: ({ row }) => {
+            const item = row.original
+            return (
+              <Badge variant='outline' className='text-xs'>
+                Priority {item.priority}
+              </Badge>
+            )
+          },
+          enableSorting: true,
+                  }
+      },
+      {
+        type: 'custom',
+        column: {
+          header: 'Agent',
+          accessorFn: (item: QueueItem) => item.agentId || 'unassigned',
+          cell: ({ row }) => {
+            const item = row.original
+            if (!item.agentId) {
+              return <span className='text-muted-foreground'>Unassigned</span>
+            }
+            return (
+              <div className='flex items-center gap-2'>
+                <Bot className='h-3 w-3' />
+                <span className='text-sm'>{item.agentId}</span>
+              </div>
+            )
+          },
+          enableSorting: true,
+                  }
+      },
+      {
+        type: 'custom',
+        column: {
+          header: 'Time',
+          accessorFn: (item: QueueItem) => item.created,
+          cell: ({ row }) => {
+            const item = row.original
+            if (item.completedAt && item.completedAt > 0) {
+              const startTime = item.startedAt && item.startedAt > 0 ? item.startedAt : item.created
+              const duration = item.completedAt - startTime
+              return <span>{Math.round(duration / 1000)}s</span>
+            }
+            if (item.startedAt && item.startedAt > 0) {
+              try {
+                return <span>Started {formatDistanceToNow(new Date(item.startedAt * 1000))} ago</span>
+              } catch (e) {
+                return <span>Started recently</span>
+              }
+            }
+            if (item.created && item.created > 0) {
+              try {
+                return <span>Added {safeFormatDate(item.created)}</span>
+              } catch (e) {
+                return <span>Added recently</span>
+              }
+            }
+            return <span>-</span>
+          },
+          enableSorting: true,
+                  }
       }
-    },
-    {
-      header: 'Priority',
-      accessorFn: (item: QueueItem) => item.priority,
-      cell: ({ row }) => {
-        const item = row.original
-        return (
-          <Badge variant='outline' className='text-xs'>
-            Priority {item.priority}
-          </Badge>
-        )
-      }
-    },
-    {
-      header: 'Agent',
-      accessorFn: (item: QueueItem) => item.agentId || 'unassigned',
-      cell: ({ row }) => {
-        const item = row.original
-        if (!item.agentId) {
-          return <span className='text-muted-foreground'>Unassigned</span>
+    ],
+    actions: {
+      actions: [
+        {
+          label: 'View Details',
+          icon: ChevronRight,
+          onClick: (item) => setSelectedItem(item)
+        },
+        {
+          label: 'Start Processing',
+          icon: Play,
+          onClick: (item) => handleStatusChange(item, 'in_progress'),
+          show: (item) => item.status === 'queued'
+        },
+        {
+          label: 'Mark Complete',
+          icon: CheckCircle2,
+          onClick: (item) => handleStatusChange(item, 'completed'),
+          show: (item) => item.status === 'in_progress'
+        },
+        {
+          label: 'Mark Failed',
+          icon: XCircle,
+          onClick: (item) => handleStatusChange(item, 'failed'),
+          show: (item) => item.status === 'in_progress'
+        },
+        {
+          label: 'Cancel',
+          icon: XCircle,
+          onClick: (item) => handleStatusChange(item, 'cancelled'),
+          show: (item) => item.status === 'queued'
+        },
+        {
+          label: 'Retry',
+          icon: RefreshCw,
+          onClick: (item) => handleRetry(item),
+          show: (item) => item.status === 'failed' || item.status === 'cancelled'
+        },
+        {
+          label: 'Delete',
+          icon: Trash2,
+          onClick: (item) => handleDelete(item),
+          variant: 'destructive'
         }
-        return (
-          <div className='flex items-center gap-2'>
-            <Bot className='h-3 w-3' />
-            <span className='text-sm'>{item.agentId}</span>
-          </div>
-        )
-      }
-    },
-    {
-      header: 'Time',
-      accessorFn: (item: QueueItem) => item.created,
-      cell: ({ row }) => {
-        const item = row.original
-        if (item.completedAt && item.completedAt > 0) {
-          const startTime = item.startedAt && item.startedAt > 0 ? item.startedAt : item.created
-          const duration = item.completedAt - startTime
-          return <span>{Math.round(duration / 1000)}s</span>
-        }
-        if (item.startedAt && item.startedAt > 0) {
-          try {
-            return <span>Started {formatDistanceToNow(new Date(item.startedAt * 1000))} ago</span>
-          } catch (e) {
-            return <span>Started recently</span>
-          }
-        }
-        if (item.created && item.created > 0) {
-          try {
-            return <span>Added {safeFormatDate(item.created)}</span>
-          } catch (e) {
-            return <span>Added recently</span>
-          }
-        }
-        return <span>-</span>
-      }
-    },
-    {
-      header: 'Actions',
-      accessorFn: (item: QueueItem) => item.id,
-      cell: ({ row }) => {
-        const item = row.original
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant='ghost' size='icon' className='h-8 w-8'>
-                <MoreHorizontal className='h-4 w-4' />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuItem onClick={() => setSelectedItem(item)}>
-                <ChevronRight className='mr-2 h-4 w-4' />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {item.status === 'queued' && (
-                <>
-                  <DropdownMenuItem onClick={() => handleStatusChange(item, 'in_progress')}>
-                    <Play className='mr-2 h-4 w-4' />
-                    Start Processing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(item, 'cancelled')}>
-                    <XCircle className='mr-2 h-4 w-4' />
-                    Cancel
-                  </DropdownMenuItem>
-                </>
-              )}
-              {item.status === 'in_progress' && (
-                <>
-                  <DropdownMenuItem onClick={() => handleStatusChange(item, 'completed')}>
-                    <CheckCircle2 className='mr-2 h-4 w-4' />
-                    Mark Complete
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleStatusChange(item, 'failed')}>
-                    <XCircle className='mr-2 h-4 w-4' />
-                    Mark Failed
-                  </DropdownMenuItem>
-                </>
-              )}
-              {(item.status === 'failed' || item.status === 'cancelled') && (
-                <DropdownMenuItem onClick={() => handleRetry(item)}>
-                  <RefreshCw className='mr-2 h-4 w-4' />
-                  Retry
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleDelete(item)} className='text-destructive'>
-                <Trash2 className='mr-2 h-4 w-4' />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      }
+      ]
     }
-  ]
+  }
+
+  const columns = createDataTableColumns(columnsConfig)
 
   return (
     <div className='flex flex-col h-full'>
@@ -374,10 +362,19 @@ export function QueueItemsView({ projectId, selectedQueueId, onQueueSelect }: Qu
             </p>
           </div>
         ) : (
-          <DataTable
-            data={filteredItems.map((item: any) => item.queueItem)}
+          <ConfiguredDataTable
             columns={columns}
+            data={filteredItems.map((item: any) => item.queueItem)}
+            isLoading={isLoading}
+            pagination={{ enabled: true, pageSize: 10 }}
+            sorting={{ enabled: true }}
+            filtering={{ enabled: true }}
+            selection={{ enabled: false }}
+            getRowId={(item) => item.id.toString()}
+            emptyMessage='No queue items found'
             className='border rounded-lg'
+            showToolbar={true}
+            showPagination={true}
           />
         )}
       </div>

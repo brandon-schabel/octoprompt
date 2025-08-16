@@ -54,7 +54,7 @@ export const queueProcessorTool: MCPToolDefinition = {
       data: {
         type: 'object',
         description:
-          'Action-specific data. For get_next_task: { agentId: "frontend-shadcn-expert" }. For update_status: { itemType: "ticket" | "task", itemId: 123, status: "in_progress", ticketId: 456 (required for tasks) }. For complete_task: { itemType: "ticket" | "task", itemId: 123, ticketId: 456 (required for tasks), completionNotes: "optional notes" }. For fail_task: { itemType: "ticket" | "task", itemId: 123, errorMessage: "Error details", ticketId: 456 (required for tasks) }'
+          'Action-specific data. For get_next_task: { agentId: "promptliano-ui-architect" }. For update_status: { itemType: "ticket" | "task", itemId: 123, status: "in_progress", ticketId: 456 (required for tasks) }. For complete_task: { itemType: "ticket" | "task", itemId: 123, ticketId: 456 (required for tasks), completionNotes: "optional notes" }. For fail_task: { itemType: "ticket" | "task", itemId: 123, errorMessage: "Error details", ticketId: 456 (required for tasks) }'
       }
     },
     required: ['action']

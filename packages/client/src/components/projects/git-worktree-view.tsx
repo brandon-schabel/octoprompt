@@ -33,7 +33,6 @@ import { cn } from '@/lib/utils'
 import type { GitWorktree } from '@promptliano/schemas'
 import { toast } from 'sonner'
 import { Checkbox } from '@promptliano/ui'
-import { JobMonitor } from '@/components/jobs/job-monitor'
 
 interface GitWorktreeViewProps {
   projectId: number
@@ -272,7 +271,6 @@ export function GitWorktreeView({ projectId, className }: GitWorktreeViewProps) 
         <div className='flex items-center justify-between p-4 pb-0'>
           <h2 className='text-lg font-semibold'>Worktrees</h2>
           <div className='flex items-center gap-2'>
-            <JobMonitor projectId={projectId} />
             <Button onClick={() => setPruneDialogOpen(true)} size='sm' variant='outline'>
               <Sparkles className='h-4 w-4 mr-1' />
               Prune
@@ -293,7 +291,7 @@ export function GitWorktreeView({ projectId, className }: GitWorktreeViewProps) 
                 </CardContent>
               </Card>
             ) : (
-              worktrees.map((worktree) => <WorktreeCard key={worktree.path} worktree={worktree} />)
+              worktrees.map((worktree: GitWorktree) => <WorktreeCard key={worktree.path} worktree={worktree} />)
             )}
           </div>
         </ScrollArea>

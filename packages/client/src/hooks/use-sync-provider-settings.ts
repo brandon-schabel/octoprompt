@@ -15,7 +15,7 @@ export function useSyncProviderSettings() {
     // Only sync if there are custom URLs configured and client is connected
     const hasCustomUrls = appSettings.ollamaGlobalUrl || appSettings.lmStudioGlobalUrl
 
-    if (hasCustomUrls && client) {
+    if (hasCustomUrls && client && client.keys) {
       // Sync the provider settings with the server
       client.keys
         .updateProviderSettings({
@@ -34,6 +34,8 @@ export function useSyncProviderSettings() {
             console.error('[ProviderSettings] Failed to sync provider settings:', error)
           }
         })
+    } else if (hasCustomUrls && client && !client.keys) {
+      console.warn('[ProviderSettings] Keys service not available in modular API client. Provider settings sync disabled.')
     }
   }, [appSettings.ollamaGlobalUrl, appSettings.lmStudioGlobalUrl, client])
 }

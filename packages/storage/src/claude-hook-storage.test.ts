@@ -129,8 +129,8 @@ describe('ClaudeHookStorage', () => {
     const hooks = await storage.readHooks('project', projectPath)
     expect(hooks.hooks.PreToolUse).toBeDefined()
     expect(hooks.hooks.PreToolUse).toHaveLength(1)
-    expect(hooks.hooks.PreToolUse[0].matcher).toBe('Edit|Write')
-    expect(hooks.hooks.PreToolUse[0].hooks[0]).toEqual(hookConfig)
+    expect(hooks.hooks.PreToolUse?.[0]?.matcher).toBe('Edit|Write')
+    expect(hooks.hooks.PreToolUse?.[0]?.hooks?.[0]).toEqual(hookConfig)
   })
 
   test('should delete a hook', async () => {
@@ -179,7 +179,7 @@ describe('ClaudeHookStorage', () => {
 
     // Verify the update
     const hooks = await storage.readHooks('project', projectPath)
-    expect(hooks.hooks.PreToolUse[0].hooks[0]).toEqual(updatedHookConfig)
+    expect(hooks.hooks.PreToolUse?.[0]?.hooks?.[0]).toEqual(updatedHookConfig)
   })
 
   test('should check if hooks exist', async () => {

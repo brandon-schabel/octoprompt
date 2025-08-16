@@ -179,24 +179,6 @@ function DownloadsPage() {
           </GlassCard>
         </AnimateOnScroll>
 
-        {/* Tauri Coming Soon Notice */}
-        <AnimateOnScroll>
-          <GlassCard className='p-6 mb-8 max-w-4xl mx-auto bg-primary/5 border-primary/20'>
-            <div className='flex items-start gap-4'>
-              <div className='p-2 rounded-lg bg-primary/10'>
-                <MonitorSmartphone className='h-5 w-5 text-primary' />
-              </div>
-              <div>
-                <h3 className='font-semibold mb-1'>Native Desktop Apps Coming Soon!</h3>
-                <p className='text-sm text-muted-foreground'>
-                  We're working on native Tauri desktop applications for a more integrated experience. These will
-                  include auto-updates, system tray integration, and better OS integration. For now, the binaries below
-                  provide full functionality.
-                </p>
-              </div>
-            </div>
-          </GlassCard>
-        </AnimateOnScroll>
 
         {/* Quick Start Info */}
         <AnimateOnScroll>

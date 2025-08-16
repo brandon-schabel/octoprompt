@@ -57,7 +57,7 @@ export function HookDialog({ open, onOpenChange, hookId, projectId, initialData 
 
   // API hooks
   const { data: project } = useGetProject(projectId)
-  const projectPath = project?.data?.path || ''
+  const projectPath = project?.path || ''
   const createHook = useCreateHook(projectPath)
   const updateHook = useUpdateHook(projectPath)
   const generateHook = useGenerateHook(projectPath)

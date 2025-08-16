@@ -1,0 +1,79 @@
+# Production Dockerfile with 4-stage build pattern
+# Following Docker best practices for Bun applications
+
+# Stage 1: Dependencies - Install production and dev dependencies
+FROM oven/bun:1-slim AS deps
+WORKDIR /app
+
+# Copy package files for dependency resolution
+COPY package.json bun.lock* ./
+COPY packages/*/package.json ./packages/*/
+
+# Install all dependencies (needed for build)
+RUN bun install --frozen-lockfile
+
+# Install production dependencies separately for smaller final image
+FROM oven/bun:1-slim AS prod-deps
+WORKDIR /app
+
+COPY package.json bun.lock* ./
+COPY packages/*/package.json ./packages/*/
+RUN bun install --frozen-lockfile --production
+
+# Stage 2: Builder - Build the application
+FROM oven/bun:1-slim AS builder
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/*/node_modules ./packages/*/node_modules
+
+# Copy source code
+COPY . .
+
+# Build all packages
+RUN bun run build:all:bun || bun run build:all
+
+# Stage 3: Compiler - Create standalone binary
+FROM oven/bun:1-slim AS compiler
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app ./
+
+# Compile to standalone binary with Bun runtime included
+RUN bun build ./packages/server/server.ts \
+    --compile \
+    --target=bun-linux-x64-modern \
+    --outfile promptliano
+
+# Stage 4: Runtime - Minimal production image
+FROM gcr.io/distroless/base-debian12:nonroot
+
+# Copy the compiled binary
+COPY --from=compiler --chown=nonroot:nonroot /app/promptliano /app/promptliano
+
+# Copy client assets
+COPY --from=builder --chown=nonroot:nonroot /app/packages/server/client-dist /app/client-dist
+
+# Create data directory (distroless doesn't have mkdir)
+# We use a volume mount instead in production
+
+# Set environment variables
+ENV NODE_ENV=production \
+    SERVER_PORT=3147 \
+    DATABASE_PATH=/data/promptliano.db \
+    PROMPTLIANO_DATA_DIR=/data \
+    CLIENT_PATH=/app/client-dist
+
+# Use non-root user (already set in distroless:nonroot)
+USER nonroot
+
+# Expose port
+EXPOSE 3147
+
+# No HEALTHCHECK in distroless (use orchestrator health checks)
+# Health endpoint: http://localhost:3147/api/health
+
+# Run the binary
+ENTRYPOINT ["/app/promptliano"]

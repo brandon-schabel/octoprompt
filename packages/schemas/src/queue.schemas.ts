@@ -6,6 +6,7 @@ import {
   entityIdOptionalSchema,
   entityIdNullableOptionalSchema
 } from './schema-utils'
+import { createEntitySchemas } from './schema-factories'
 
 // Queue status enum
 export const QueueStatusEnum = z.enum(['active', 'paused', 'inactive'])
@@ -15,44 +16,51 @@ export type QueueStatus = z.infer<typeof QueueStatusEnum>
 export const ItemQueueStatusEnum = z.enum(['queued', 'in_progress', 'completed', 'failed', 'cancelled', 'timeout'])
 export type ItemQueueStatus = z.infer<typeof ItemQueueStatusEnum>
 
-// Task queue schema
-export const TaskQueueSchema = z
-  .object({
-    id: entityIdSchema,
-    projectId: entityIdSchema,
-    name: z.string().min(1).max(100),
-    description: z.string().default(''),
-    status: QueueStatusEnum.default('active'),
-    maxParallelItems: z.number().min(1).max(10).default(1),
-    averageProcessingTime: z.number().nullable().optional(), // in milliseconds
-    totalCompletedItems: z.number().default(0),
-    created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec
-  })
-  .openapi('TaskQueue')
+// Task queue schemas using factory pattern
+const queueSchemas = createEntitySchemas('TaskQueue', {
+  projectId: entityIdSchema,
+  name: z.string().min(1).max(100),
+  description: z.string().default(''),
+  status: QueueStatusEnum.default('active'),
+  maxParallelItems: z.number().min(1).max(10).default(1),
+  averageProcessingTime: z.number().nullable().optional(), // in milliseconds
+  totalCompletedItems: z.number().default(0)
+}, {
+  // Don't exclude status from updates - we want it to remain required
+  updateExcludes: []
+})
 
-// Queue item schema
-export const QueueItemSchema = z
-  .object({
-    id: entityIdSchema,
-    queueId: entityIdSchema,
-    ticketId: entityIdNullableOptionalSchema,
-    taskId: entityIdNullableOptionalSchema,
-    status: ItemQueueStatusEnum.default('queued'),
-    priority: z.number().default(0),
-    position: z.number().nullable().optional(),
-    estimatedProcessingTime: z.number().nullable().optional(), // in milliseconds
-    actualProcessingTime: z.number().nullable().optional(), // in milliseconds
-    agentId: z.string().nullable().optional(),
-    errorMessage: z.string().nullable().optional(),
-    retryCount: z.number().default(0).optional(),
-    maxRetries: z.number().default(3).optional(),
-    timeoutAt: z.number().nullable().optional(), // Unix timestamp for timeout
-    startedAt: unixTSOptionalSchemaSpec,
-    completedAt: unixTSOptionalSchemaSpec,
-    created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec
-  })
+// Create a custom update schema that keeps status required while making other fields optional
+export const UpdateTaskQueueSchema = queueSchemas.base
+  .omit({ id: true, created: true, updated: true })
+  .partial()
+  .merge(z.object({
+    status: QueueStatusEnum // Keep status required
+  }))
+  .openapi('UpdateTaskQueue')
+
+export const TaskQueueSchema = queueSchemas.base
+
+// Queue item schemas using factory pattern
+const queueItemSchemas = createEntitySchemas('QueueItem', {
+  queueId: entityIdSchema,
+  ticketId: entityIdNullableOptionalSchema,
+  taskId: entityIdNullableOptionalSchema,
+  status: ItemQueueStatusEnum.default('queued'),
+  priority: z.number().default(0),
+  position: z.number().nullable().optional(),
+  estimatedProcessingTime: z.number().nullable().optional(), // in milliseconds
+  actualProcessingTime: z.number().nullable().optional(), // in milliseconds
+  agentId: z.string().nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+  retryCount: z.number().default(0).optional(),
+  maxRetries: z.number().default(3).optional(),
+  timeoutAt: z.number().nullable().optional(), // Unix timestamp for timeout
+  startedAt: unixTSOptionalSchemaSpec,
+  completedAt: unixTSOptionalSchemaSpec
+})
+
+export const QueueItemSchema = queueItemSchemas.base
   .refine(
     (data) => {
       // Ensure either ticketId or taskId is set, but not both
@@ -86,7 +94,7 @@ export const QueueStatsSchema = z
   })
   .openapi('QueueStats')
 
-// Create queue body schema
+// Create and update schemas - manually define to avoid complex omit operations
 export const CreateQueueBodySchema = z
   .object({
     projectId: entityIdSchema,
@@ -96,7 +104,6 @@ export const CreateQueueBodySchema = z
   })
   .openapi('CreateQueueBody')
 
-// Update queue body schema
 export const UpdateQueueBodySchema = z
   .object({
     name: z.string().min(1).max(100).optional(),
@@ -160,6 +167,7 @@ export const QueueWithStatsSchema = z
 
 // Type exports
 export type TaskQueue = z.infer<typeof TaskQueueSchema>
+export type UpdateTaskQueue = z.infer<typeof UpdateTaskQueueSchema>
 export type QueueItem = z.infer<typeof QueueItemSchema>
 export type QueueStats = z.infer<typeof QueueStatsSchema>
 export type CreateQueueBody = z.infer<typeof CreateQueueBodySchema>

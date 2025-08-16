@@ -65,9 +65,10 @@ function analyzePythonImportsExports(content: string, filename: string): CodeAna
     // Top-level defs/classes for "exports" (must start at column 0, no indentation)
     const exportRegex = /^(def|class)\s+(\w+)\s*(?:\(|:)/gm
     while ((match = exportRegex.exec(content)) !== null) {
+      const exportName = match[2] ?? ''
       exports.push({
         type: 'named',
-        specifiers: [{ exported: match[2], local: match[2] }]
+        specifiers: [{ exported: exportName, local: exportName }]
       })
     }
 

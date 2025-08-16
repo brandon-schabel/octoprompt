@@ -998,7 +998,7 @@ function ChatPage() {
   })
 
   const selectedModelName = useMemo(() => {
-    return modelsData?.data?.find((m) => m.id === model)?.name ?? model ?? '...'
+    return modelsData?.data?.find((m: any) => m.id === model)?.name ?? model ?? '...'
   }, [modelsData, model])
 
   const handleToggleExclude = useCallback((messageId: number) => {

@@ -106,6 +106,7 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton
 } from './components/core/select'
+export { Calendar } from './components/core/calendar'
 
 // Brand components
 export { Logo, type LogoProps } from './components/brand/logo'
@@ -127,6 +128,27 @@ export { Progress, type ProgressProps, type ProgressVariant } from './components
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './components/data/accordion'
 export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './components/data/collapsible'
 export { ScrollArea, ScrollBar } from './components/data/scroll-area'
+export {
+  StatusBadge,
+  PriorityBadge,
+  getStatusColor,
+  getStatusBgColor,
+  type StatusBadgeProps,
+  type PriorityBadgeProps,
+  type StatusType,
+  type Priority,
+  type StatusConfig
+} from './components/data/status-badge'
+export {
+  StatsCard,
+  MetricCard,
+  ComparisonStats,
+  type StatsCardProps,
+  type StatItem,
+  type MetricCardProps,
+  type ComparisonStatsProps
+} from './components/data/stats-card'
+export { MetadataDisplay, type MetadataDisplayProps, type MetadataItem } from './components/data/metadata-display'
 
 // Interaction components
 export { Slider } from './components/interaction/slider'
@@ -141,10 +163,77 @@ export {
   BreadcrumbSeparator,
   BreadcrumbEllipsis
 } from './components/interaction/breadcrumb'
+export {
+  SidebarNav,
+  SectionedSidebarNav,
+  type SidebarNavProps,
+  type SidebarNavItem,
+  type SectionedSidebarNavProps,
+  type SidebarNavSection
+} from './components/navigation/sidebar-nav'
 export { DownloadButton, DownloadButtonCompact, DownloadButtonDropdown } from './components/interaction/download-button'
 export type { DownloadPlatform } from './components/interaction/download-button'
+export {
+  InteractiveCard,
+  SelectableCard,
+  ActionCard,
+  StatusCard,
+  type InteractiveCardProps,
+  type SelectableCardProps,
+  type ActionCardProps,
+  type StatusCardProps,
+  type CardVariant,
+  type CardSize,
+  type CardAction,
+  type CardMenuItem
+} from './components/interaction/interactive-card'
+export { SearchInput, type SearchInputProps } from './components/interaction/search-input'
+export { FilterBar, type FilterBarProps, type FilterDefinition, type FilterOption, type FilterValue } from './components/interaction/filter-bar'
+export { CharacterLimitInput, type CharacterLimitInputProps } from './components/interaction/character-limit-input'
 
 // Overlay components
+export {
+  DialogBase,
+  FormDialog,
+  ConfirmationDialog,
+  type DialogBaseProps,
+  type FormDialogProps,
+  type ConfirmationDialogProps,
+  type DialogAction
+} from './components/overlay/dialog-base'
+
+// Modal Factory components
+export {
+  useModalState,
+  createCrudModal,
+  createSearchModal,
+  createWorkflowModal,
+  createUploadModal,
+  type BaseModalConfig,
+  type CrudModalConfig,
+  type FormModalConfig,
+  type SearchModalConfig,
+  type WorkflowModalConfig,
+  type UploadModalConfig,
+  type WorkflowStep,
+  type ModalState,
+  type ModalActions,
+  type ModalSize,
+  type ModalVariant
+} from './components/modals/modal-factory'
+
+export {
+  createEnhancedCrudModal,
+  createModalSuite,
+  createEntityFormConfig,
+  useModalManager,
+  commonFormatters,
+  commonValidators,
+  modalPresets,
+  type EnhancedCrudModalOptions,
+  type ModalManager,
+  type ModalSuite
+} from './components/modals/modal-factory-utils'
 export {
   ContextMenu,
   ContextMenuTrigger,
@@ -198,6 +287,15 @@ export { Toaster } from './components/utility/sonner'
 export { CopyableText, CopyableCode, CopyableInline, CopyableBlock } from './components/utility/copyable-text'
 export { Icons } from './components/utility/icons'
 export { TokenUsageTooltip, TokenBadge, type TokenUsageData } from './components/utility/token-usage-tooltip'
+export { 
+  CopyButton, 
+  InlineCopyButton,
+  CopyBlock,
+  type CopyButtonProps,
+  type InlineCopyButtonProps,
+  type CopyBlockProps,
+  type CopyFormat
+} from './components/utility/copy-button'
 
 // Layout components
 export {
@@ -230,6 +328,20 @@ export { ResponsiveContainer } from './components/layout/responsive-container'
 export { useIsMobile } from './components/layout/use-mobile'
 export { useClickAway } from './components/layout/use-click-away'
 export { useLocalStorage, createTypedLocalStorage } from './components/layout/use-local-storage'
+export {
+  SidebarLayout,
+  ResizableSidebarLayout,
+  SplitPaneLayout,
+  type SidebarLayoutProps,
+  type ResizableSidebarLayoutProps,
+  type SplitPaneLayoutProps
+} from './components/layout/sidebar-layout'
+export {
+  TabsWithSidebar,
+  type TabsWithSidebarProps,
+  type TabItem,
+  type TabSection
+} from './components/layout/tabs-with-sidebar'
 
 // Resizable components
 export {
@@ -270,6 +382,129 @@ export { DataTableFacetedFilter } from './components/data-table/data-table-facet
 export { DataTableViewOptions } from './components/data-table/data-table-view-options'
 export type * from './components/data-table/types'
 
+// Data Table column factory and configuration
+export {
+  createTextColumn,
+  createDateColumn,
+  createStatusColumn,
+  createActionsColumn,
+  createSelectionColumn,
+  createDataTableColumns,
+  type ColumnFactoryConfig,
+  type TextColumnConfig,
+  type DateColumnConfig,
+  type StatusColumnConfig,
+  type ActionsColumnConfig,
+  type DataTableColumnsConfig
+} from './components/data-table/column-factory'
+
+export {
+  ConfiguredDataTable,
+  dataTablePresets,
+  useDataTableState,
+  type DataTableConfig
+} from './components/data-table/data-table-config'
+
+// Form Factory components
+export {
+  FormFactory,
+  createFormSchema,
+  createFormComponent,
+  createTextField,
+  createTextareaField,
+  createNumberField,
+  createPasswordField,
+  createEmailField,
+  createSelectField,
+  createCheckboxField,
+  createRadioField,
+  createSwitchField,
+  createDateField,
+  createTagsField,
+  createFieldGroup,
+  commonFormPatterns,
+  formValidation,
+  type FormConfig,
+  type FormFactoryProps,
+  type FieldConfig,
+  type TextFieldConfig,
+  type NumberFieldConfig,
+  type PasswordFieldConfig,
+  type EmailFieldConfig,
+  type SelectFieldConfig,
+  type CheckboxFieldConfig,
+  type RadioFieldConfig,
+  type SwitchFieldConfig,
+  type DateFieldConfig,
+  type TagsFieldConfig,
+  type FieldGroupConfig,
+  type BaseFieldConfig
+} from './components/forms/form-factory'
+
+// TanStack Form components (Advanced Forms)
+export {
+  TanStackForm,
+  TanStackField,
+  TanStackFormFactory,
+  TanStackDynamicArrayField,
+  TanStackMultiStepForm,
+  useTanStackFormContext,
+  useTanStackFormState,
+  
+  // TanStack Field Creators
+  createTanStackTextField,
+  createTanStackTextareaField,
+  createTanStackSelectField,
+  createTanStackCheckboxField,
+  createTanStackSwitchField,
+  createTanStackRadioField,
+  createTanStackDateField,
+  createTanStackTagsField,
+  createTanStackFileField,
+  createTanStackCustomField,
+  createTanStackEmailField,
+  createTanStackPasswordField,
+  createTanStackNumberField,
+  createTanStackFieldGroup,
+  
+  // TanStack Validation System
+  tanstackValidation,
+  tanstackPatterns,
+  tanstackDynamicValidation,
+  tanstackSchemaUtils,
+  tanstackErrorUtils,
+  
+  // TanStack Types
+  type TanStackFormProps,
+  type TanStackFormFactoryConfig,
+  type FieldProps as TanStackFieldProps,
+  type FieldType,
+  type BaseFieldProps as TanStackBaseFieldProps,
+  type TextFieldProps as TanStackTextFieldProps,
+  type TextareaFieldProps as TanStackTextareaFieldProps,
+  type SelectFieldProps as TanStackSelectFieldProps,
+  type CheckboxFieldProps as TanStackCheckboxFieldProps,
+  type SwitchFieldProps as TanStackSwitchFieldProps,
+  type RadioFieldProps as TanStackRadioFieldProps,
+  type DateFieldProps as TanStackDateFieldProps,
+  type TagsFieldProps as TanStackTagsFieldProps,
+  type FileFieldProps as TanStackFileFieldProps,
+  type CustomFieldProps as TanStackCustomFieldProps,
+  type FieldGroup as TanStackFieldGroup,
+  type DynamicArrayFieldProps,
+  type MultiStepFormProps,
+  type FormState as TanStackFormState
+} from './components/forms/tanstack'
+
+// Hybrid Form System (Intelligent Selection)
+export {
+  HybridFormFactory,
+  generateMigrationGuide,
+  getFormImplementationDecision,
+  type HybridFormConfig,
+  type MigrationGuide
+} from './components/forms/hybrid-form-factory'
+
 // Chart components
 export {
   ChartContainer,
@@ -293,6 +528,36 @@ export {
 
 // Feedback components
 export { LoadingDots, LoadingSpinner, LoadingOverlay, LoadingSkeleton } from './components/feedback/loading'
+export { 
+  LoadingState,
+  ListLoading,
+  TableLoading,
+  CardLoading,
+  InlineLoading,
+  ButtonLoading,
+  PageLoading,
+  type LoadingStateProps,
+  type LoadingVariant,
+  type LoadingSize
+} from './components/feedback/loading-state'
+export {
+  EmptyState,
+  ListEmptyState,
+  SearchEmptyState,
+  ErrorEmptyState,
+  type EmptyStateProps
+} from './components/feedback/empty-state'
+export { 
+  StatusIndicator, 
+  ConnectionStatus,
+  type StatusIndicatorProps,
+  type ConnectionStatusProps,
+  type StatusIndicatorStatus
+} from './components/feedback/status-indicator'
+export { 
+  ProgressIndicator,
+  type ProgressIndicatorProps
+} from './components/feedback/progress-indicator'
 
 // Code components
 export { CodeBlock, CodeTerminal, codeBlockVariants } from './components/code/code-block'
