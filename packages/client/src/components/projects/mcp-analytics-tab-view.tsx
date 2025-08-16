@@ -31,13 +31,21 @@ import {
   useGetMCPErrorPatterns
 } from '@/hooks/api/use-mcp-analytics-api'
 import { useGlobalMCPManager } from '@/hooks/api/use-mcp-global-api'
-import type { MCPAnalyticsRequest, MCPExecutionQuery } from '@promptliano/schemas'
+import type { MCPAnalyticsRequest, MCPExecutionQuery, MCPToolSummary, MCPToolExecution } from '@promptliano/schemas'
 import { formatDistanceToNow } from 'date-fns'
 import { MCPExecutionsTable } from './mcp-analytics/mcp-executions-table'
 import { toast } from 'sonner'
 
 interface MCPAnalyticsTabViewProps {
   projectId: number
+}
+
+interface ToolStatus {
+  tool: string
+  name: string
+  installed: boolean
+  hasGlobalPromptliano: boolean
+  configPath?: string
 }
 
 // Helper function to extract action from input params
@@ -91,7 +99,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
   const handleInstallUniversalMCP = async () => {
     try {
       // Find tools that don't have Promptliano installed
-      const uninstalledTools = toolStatuses?.filter((tool) => tool.installed && !tool.hasGlobalPromptliano) || []
+      const uninstalledTools = toolStatuses?.filter((tool: ToolStatus) => tool.installed && !tool.hasGlobalPromptliano) || []
 
       if (uninstalledTools.length === 0) {
         toast.info('All installed tools already have Promptliano MCP configured')
@@ -100,7 +108,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
 
       // Install for each tool
       for (const tool of uninstalledTools) {
-        await installGlobal({ tool: tool.tool as any })
+        await installGlobal({ tool: tool.tool })
         toast.success(`Installed Promptliano MCP for ${tool.name}`)
       }
 
@@ -173,7 +181,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
                   </Tooltip>
                 ) : (
                   <div className='flex items-center gap-2'>
-                    {toolStatuses && toolStatuses.some((t) => t.installed && !t.hasGlobalPromptliano) ? (
+                    {toolStatuses && toolStatuses.some((t: ToolStatus) => t.installed && !t.hasGlobalPromptliano) ? (
                       <Button size='sm' variant='outline' onClick={handleInstallUniversalMCP} disabled={isInstalling}>
                         <Download className='h-4 w-4 mr-1' />
                         Update Universal MCP
@@ -203,7 +211,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
               </div>
             )}
 
-            <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
+            <Select value={timeRange} onValueChange={(value: 'hour' | 'day' | 'week' | 'month') => setTimeRange(value)}>
               <SelectTrigger className='w-[140px]'>
                 <SelectValue />
               </SelectTrigger>
@@ -312,7 +320,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
                         <p className='text-sm mt-1'>Try selecting a different time range</p>
                       </div>
                     ) : (
-                      topToolsData.map((tool: any) => (
+                      topToolsData.map((tool: MCPToolSummary) => (
                         <div key={tool.toolName} className='p-3 border rounded-lg space-y-2'>
                           <div className='flex items-center justify-between'>
                             <h4 className='font-medium'>{tool.toolName}</h4>
@@ -401,7 +409,7 @@ export function MCPAnalyticsTabView({ projectId }: MCPAnalyticsTabViewProps) {
                         <p>No errors in the selected period</p>
                       </div>
                     ) : (
-                      overviewData.recentErrors.map((error: any) => (
+                      overviewData.recentErrors.map((error: MCPToolExecution) => (
                         <div
                           key={error.id}
                           className='p-3 border border-red-200 rounded-lg bg-red-50 dark:bg-red-950/20'

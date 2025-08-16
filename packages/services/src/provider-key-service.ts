@@ -436,7 +436,7 @@ export function createProviderKeyService() {
     const { provider, apiKey, url } = request
     
     // Use provider-specific timeout, or fallback to request timeout if specified
-    const providerTimeout = getProviderTimeout(provider, 'validation')
+    const providerTimeout = getProviderTimeout(provider as any, 'validation')
     const timeout = request.timeout || providerTimeout
 
     // Create fetch with timeout
@@ -464,9 +464,9 @@ export function createProviderKeyService() {
           if (!response.ok) {
             throw ErrorFactory.operationFailed('OpenAI API request', `${response.status}: ${response.statusText}`)
           }
-          const openaiData = await response.json()
+          const openaiData = await response.json() as { data?: Array<{ id: string }> }
           models =
-            openaiData.data?.map((model: any) => ({
+            openaiData.data?.map((model) => ({
               id: model.id,
               name: model.id,
               description: `OpenAI model: ${model.id}`
@@ -514,9 +514,9 @@ export function createProviderKeyService() {
           if (!response.ok) {
             throw ErrorFactory.operationFailed('Ollama connection', `${response.status}: ${response.statusText}`)
           }
-          const ollamaData = await response.json()
+          const ollamaData = await response.json() as { models?: Array<{ name: string }> }
           models =
-            ollamaData.models?.map((model: any) => ({
+            ollamaData.models?.map((model) => ({
               id: model.name,
               name: model.name,
               description: `Ollama model: ${model.name}`
@@ -546,9 +546,9 @@ export function createProviderKeyService() {
             throw ErrorFactory.operationFailed('custom provider API request', `${response.status}: ${response.statusText}`)
           }
           
-          const customData = await response.json()
+          const customData = await response.json() as { data?: Array<{ id?: string; name?: string }> }
           models =
-            customData.data?.map((model: any) => ({
+            customData.data?.map((model) => ({
               id: model.id,
               name: model.id || model.name,
               description: `Custom provider model: ${model.id || model.name}`
@@ -564,9 +564,9 @@ export function createProviderKeyService() {
           if (!response.ok) {
             throw ErrorFactory.operationFailed('LMStudio connection', `${response.status}: ${response.statusText}`)
           }
-          const lmstudioData = await response.json()
+          const lmstudioData = await response.json() as { data?: Array<{ id: string }> }
           models =
-            lmstudioData.data?.map((model: any) => ({
+            lmstudioData.data?.map((model) => ({
               id: model.id,
               name: model.id,
               description: `LMStudio model: ${model.id}`

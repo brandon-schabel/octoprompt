@@ -28,13 +28,13 @@ import {
   BatchEnqueueBodySchema,
   QueueTimelineSchema
 } from '@promptliano/schemas'
+import type {
+  QueueWithStats as SchemaQueueWithStats
+} from '@promptliano/schemas'
 
 // Additional types for queue operations
 type TaskQueue = Queue
-type QueueWithStats = {
-  queue: TaskQueue
-  stats: QueueStats
-}
+type QueueWithStats = SchemaQueueWithStats
 
 /**
  * Queue API client for managing task queues, items, and workflow processing

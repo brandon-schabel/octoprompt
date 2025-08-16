@@ -247,6 +247,18 @@ export const mcpExecutionTimelineSchema = z.object({
 
 export type MCPExecutionTimeline = z.infer<typeof mcpExecutionTimelineSchema>
 
+/**
+ * Schema for paginated execution results
+ */
+export const mcpExecutionListResponseSchema = z.object({
+  executions: z.array(mcpToolExecutionSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number()
+})
+
+export type MCPExecutionListResponse = z.infer<typeof mcpExecutionListResponseSchema>
+
 // --- Export all schemas ---
 
 export const mcpTrackingSchemas = {
@@ -267,6 +279,7 @@ export const mcpTrackingSchemas = {
   mcpToolSummary: mcpToolSummarySchema,
   mcpAnalyticsOverview: mcpAnalyticsOverviewSchema,
   mcpExecutionTimeline: mcpExecutionTimelineSchema,
+  mcpExecutionListResponse: mcpExecutionListResponseSchema,
 
   // Enums
   mcpExecutionStatus: mcpExecutionStatusSchema,

@@ -158,7 +158,7 @@ export function AppSidebar() {
               <span className='text-lg font-semibold group-data-[collapsible=icon]:hidden'>Promptliano</span>
             </div>
           </SidebarHeader>
-          <SidebarContent className='p-2'>
+          <SidebarContent className='p-2 group-data-[collapsible=icon]:p-1'>
             <SectionedSidebarNav
               activeItem={matches.find((match) => 
                 navigationSections.some(section => 

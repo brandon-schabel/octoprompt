@@ -135,7 +135,7 @@ export async function addPromptToProject(promptId: number, projectId: number): P
   }
 
   promptProjects.push(newLink)
-  await promptStorage.writePromptProjects(promptProjects)
+  await promptStorage.writePromptProjectAssociations(promptProjects)
 }
 
 export async function removePromptFromProject(promptId: number, projectId: number): Promise<void> {
@@ -157,7 +157,7 @@ export async function removePromptFromProject(promptId: number, projectId: numbe
     )
   }
 
-  await promptStorage.writePromptProjects(promptProjects)
+  await promptStorage.writePromptProjectAssociations(promptProjects)
 }
 
 export async function getPromptById(promptId: number): Promise<Prompt> {
@@ -246,7 +246,7 @@ export async function deletePrompt(promptId: number): Promise<boolean> {
   promptProjects = promptProjects.filter((link) => link.promptId !== promptId)
 
   if (promptProjects.length < initialLinkCount) {
-    await promptStorage.writePromptProjects(promptProjects)
+    await promptStorage.writePromptProjectAssociations(promptProjects)
   }
 
   return true

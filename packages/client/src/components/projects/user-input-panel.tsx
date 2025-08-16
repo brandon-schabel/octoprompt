@@ -173,8 +173,10 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
     findSuggestedPromptsMutation.mutate(
       {
         projectId: activeProjectTabState?.selectedProjectId ?? -1,
-        userInput: localUserPrompt,
-        limit: 5
+        params: {
+          userInput: localUserPrompt,
+          limit: 5
+        }
       },
       {
         onSuccess: (recommendedPrompts) => {

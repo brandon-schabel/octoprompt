@@ -1153,11 +1153,11 @@ Select the ${limit} most relevant file IDs from the above list.`
     const recommendedFiles = allFiles?.filter((file) => refinedFileIds.includes(file.id)) || []
 
     // Log performance metrics
-    const oldFormatSize = allFiles.length * 500 // Estimate old XML format size
+    const oldFormatSize = (allFiles?.length || 0) * 500 // Estimate old XML format size
     const newFormatSize = compactSummary.length
     const tokensSaved = Math.round((oldFormatSize - newFormatSize) / 4)
     logger.debug(
-      `Strategy: ${strategy}, Files analyzed: ${candidateFiles.length}/${allFiles.length}, Tokens saved: ~${tokensSaved.toLocaleString()}`
+      `Strategy: ${strategy}, Files analyzed: ${candidateFiles.length}/${allFiles?.length || 0}, Tokens saved: ~${tokensSaved.toLocaleString()}`
     )
 
     return recommendedFiles
@@ -1284,7 +1284,7 @@ export async function getProjectOverview(projectId: number): Promise<string> {
       if (tabMeta.selectedFiles && tabMeta.selectedFiles.length > 0) {
         lines.push(`Selected Files: ${tabMeta.selectedFiles.length} (showing top 5)`)
         const files = await getProjectFiles(projectId)
-        const selectedFiles = files?.filter((f) => tabMeta.selectedFiles.includes(f.id)) || []
+        const selectedFiles = files?.filter((f) => tabMeta.selectedFiles!.includes(f.id)) || []
         selectedFiles.slice(0, 5).forEach((file) => {
           const size = file.size ? `${(file.size / 1024).toFixed(1)}KB` : 'unknown'
           lines.push(`  - ${file.path} (${size})`)
@@ -1322,7 +1322,7 @@ export async function getProjectOverview(projectId: number): Promise<string> {
     lines.push('')
 
     // Tickets section
-    let openTickets = []
+    let openTickets: Array<typeof ticketsWithTaskCount[0]> = []
     try {
       openTickets = ticketsWithTaskCount.filter((t) => t && t.status && t.status !== 'closed')
     } catch (error) {

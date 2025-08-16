@@ -288,7 +288,10 @@ export function useGetQueueWithStats(queueId: number, options?: { enabled?: bool
       const statsResponse = await client.queues.getQueueStats(queueId)
 
       const result: QueueWithStats = {
-        queue: queueResponse.data,
+        queue: {
+          ...queueResponse.data,
+          status: queueResponse.data.status ?? 'active' // Ensure status has a default value
+        },
         stats: statsResponse.data
       }
 

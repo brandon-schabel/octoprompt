@@ -128,54 +128,40 @@ const dropStashRoute = createRoute({
 
 // Export routes with simplified handlers
 export const gitStashRoutes = new OpenAPIHono()
-  .openapi(
-    getStashListRoute,
-    createRouteHandler<{ projectId: number }>(async ({ params }) => {
-      const stashes = await gitService.stashList(params!.projectId)
-      return successResponse(stashes)
-    })
-  )
-  .openapi(
-    createStashRoute,
-    createRouteHandler<{ projectId: number }, void, typeof CreateStashBodySchema._type>(
-      async ({ params, body }) => {
-        await gitService.stash(params!.projectId, body?.message)
-        gitService.clearGitStatusCache(params!.projectId)
-        return operationSuccessResponse('Stash created successfully')
-      }
-    )
-  )
-  .openapi(
-    applyStashRoute,
-    createRouteHandler<{ projectId: number }, void, typeof ApplyStashBodySchema._type>(
-      async ({ params, body }) => {
-        const stashRef = body?.stashRef || 'stash@{0}'
-        await gitService.stashApply(params!.projectId, stashRef)
-        gitService.clearGitStatusCache(params!.projectId)
-        return operationSuccessResponse('Stash applied successfully')
-      }
-    )
-  )
-  .openapi(
-    popStashRoute,
-    createRouteHandler<{ projectId: number }, void, typeof PopStashBodySchema._type>(
-      async ({ params, body }) => {
-        const stashRef = body?.stashRef || 'stash@{0}'
-        await gitService.stashPop(params!.projectId, stashRef)
-        gitService.clearGitStatusCache(params!.projectId)
-        return operationSuccessResponse('Stash popped successfully')
-      }
-    )
-  )
-  .openapi(
-    dropStashRoute,
-    createRouteHandler<{ projectId: number }, void, typeof DropStashBodySchema._type>(
-      async ({ params, body }) => {
-        const stashRef = body?.stashRef || 'stash@{0}'
-        await gitService.stashDrop(params!.projectId, stashRef)
-        return operationSuccessResponse('Stash dropped successfully')
-      }
-    )
-  )
+  .openapi(getStashListRoute, async (c) => {
+    const projectId = parseInt(c.req.param('projectId')!, 10)
+    const stashes = await gitService.stashList(projectId)
+    return c.json(successResponse(stashes))
+  })
+  .openapi(createStashRoute, async (c) => {
+    const projectId = parseInt(c.req.param('projectId')!, 10)
+    const body = await c.req.json().catch(() => ({}))
+    await gitService.stash(projectId, body?.message)
+    gitService.clearGitStatusCache(projectId)
+    return c.json(operationSuccessResponse('Stash created successfully'))
+  })
+  .openapi(applyStashRoute, async (c) => {
+    const projectId = parseInt(c.req.param('projectId')!, 10)
+    const body = await c.req.json().catch(() => ({}))
+    const stashRef = body?.stashRef || 'stash@{0}'
+    await gitService.stashApply(projectId, stashRef)
+    gitService.clearGitStatusCache(projectId)
+    return c.json(operationSuccessResponse('Stash applied successfully'))
+  })
+  .openapi(popStashRoute, async (c) => {
+    const projectId = parseInt(c.req.param('projectId')!, 10)
+    const body = await c.req.json().catch(() => ({}))
+    const stashRef = body?.stashRef || 'stash@{0}'
+    await gitService.stashPop(projectId, stashRef)
+    gitService.clearGitStatusCache(projectId)
+    return c.json(operationSuccessResponse('Stash popped successfully'))
+  })
+  .openapi(dropStashRoute, async (c) => {
+    const projectId = parseInt(c.req.param('projectId')!, 10)
+    const body = await c.req.json().catch(() => ({}))
+    const stashRef = body?.stashRef || 'stash@{0}'
+    await gitService.stashDrop(projectId, stashRef)
+    return c.json(operationSuccessResponse('Stash dropped successfully'))
+  })
 
 export type GitStashRouteTypes = typeof gitStashRoutes

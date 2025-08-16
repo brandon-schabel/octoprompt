@@ -199,6 +199,7 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
 
       {/* Queue Activity Comparison */}
       <ComparisonStats
+        title="Weekly Processing"
         current={{
           label: 'This Week',
           value: stats.completedItems
@@ -207,9 +208,10 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
           label: 'Last Week',
           value: Math.floor(stats.completedItems * 0.75)
         }}
-        title="Weekly Processing"
-        showPercentage
-        showTrend
+        change={{
+          value: Math.round(((stats.completedItems - Math.floor(stats.completedItems * 0.75)) / Math.floor(stats.completedItems * 0.75)) * 100),
+          trend: stats.completedItems > Math.floor(stats.completedItems * 0.75) ? 'up' : 'down'
+        }}
       />
 
       {/* Progress Overview */}
@@ -240,25 +242,24 @@ export function QueueDashboard({ queueId, projectId, onClose }: QueueDashboardPr
           label='Queued' 
           value={stats.queuedItems} 
           icon={Package} 
-          variant='default' 
         />
         <MetricCard
           label='In Progress'
           value={stats.inProgressItems}
           icon={Activity}
-          variant='warning'
+          color='orange'
         />
         <MetricCard
           label='Completed'
           value={stats.completedItems}
           icon={CheckCircle2}
-          variant='success'
+          color='green'
         />
         <MetricCard
           label='Failed'
           value={stats.failedItems}
           icon={XCircle}
-          variant='destructive'
+          color='red'
         />
       </div>
 

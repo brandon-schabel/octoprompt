@@ -112,7 +112,7 @@ export function TicketDataTable({
       selection={{
         enabled: false
       }}
-      onRowClick={(ticket) => onSelectTicket(ticket)}
+      onRowClick={(row) => onSelectTicket(row.original)}
       getRowId={(ticket) => ticket.id.toString()}
       emptyMessage='No tickets found. Create a ticket to track your work.'
       className='h-full'

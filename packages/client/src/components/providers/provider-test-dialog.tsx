@@ -33,7 +33,8 @@ import {
   TrendingUp
 } from 'lucide-react'
 import { useTestProvider } from '@/hooks/api/use-providers-api'
-import type { ProviderKey } from '@promptliano/schemas'
+import type { ProviderKey, TestProviderResponse } from '@promptliano/schemas'
+import type { DataResponseSchema } from '@promptliano/api-client'
 import { toast } from 'sonner'
 
 interface TestPhase {
@@ -103,6 +104,19 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
     }
   }, [open])
 
+  // Type guard to check if the result is a valid test response
+  const isValidTestResponse = (result: unknown): result is DataResponseSchema<TestProviderResponse> => {
+    return (
+      typeof result === 'object' &&
+      result !== null &&
+      'data' in result &&
+      typeof (result as any).data === 'object' &&
+      (result as any).data !== null &&
+      'success' in (result as any).data &&
+      typeof (result as any).data.success === 'boolean'
+    )
+  }
+
   const runTest = async () => {
     const startTime = Date.now()
 
@@ -119,7 +133,7 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
       if (i === phases.length - 1) {
         // Last phase - actually run the test
         try {
-          const result = await testMutation.mutateAsync({
+          const result: unknown = await testMutation.mutateAsync({
             provider: provider.provider,
             timeout: 30000
           })
@@ -127,7 +141,14 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
           const phaseTime = Date.now() - startTime
           setResponseTime(phaseTime)
 
-          if (result.data.success) {
+          // Type guard to ensure we have a valid response
+          if (!isValidTestResponse(result)) {
+            throw new Error('Invalid response format from provider test')
+          }
+
+          const testData = result.data
+
+          if (testData.success) {
             // Update last phase with success
             setPhases((prev) =>
               prev.map((p, idx) =>
@@ -135,7 +156,7 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
                   ? {
                       ...p,
                       status: 'success',
-                      message: `Found ${result.data.models?.length || 0} models`,
+                      message: `Found ${testData.models?.length || 0} models`,
                       responseTime: phaseTime
                     }
                   : idx < i
@@ -143,13 +164,13 @@ export function ProviderTestDialog({ provider, open, onOpenChange }: ProviderTes
                     : p
               )
             )
-            setModelCount(result.data.models?.length || 0)
+            setModelCount(testData.models?.length || 0)
             setTestComplete(true)
 
             // Show success toast
             toast.success('Provider connected successfully!')
           } else {
-            throw new Error(result.data.error || 'Test failed')
+            throw new Error(testData.error || 'Test failed')
           }
         } catch (error: any) {
           // Update phase with error

@@ -138,9 +138,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
 
   const handleDeletePrompt = async (promptId: number) => {
     if (!selectedProjectId) return
-    await deletePromptMutation.mutateAsync({
-      promptId
-    })
+    await deletePromptMutation.mutateAsync(promptId)
     toast.success('Prompt deleted successfully')
   }
 

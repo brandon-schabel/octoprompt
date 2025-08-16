@@ -292,6 +292,9 @@ export class MCPTrackingStorage {
   }
 
   async getStatistics(request: MCPAnalyticsRequest): Promise<MCPToolStatistics[]> {
+    // Build query and parameters dynamically to avoid parameter binding issues
+    let query = `SELECT * FROM mcp_tool_statistics`
+    
     const conditions: string[] = []
     const values: any[] = []
 
@@ -317,14 +320,15 @@ export class MCPTrackingStorage {
       values.push(request.endDate)
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    // Add WHERE clause if there are conditions
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`
+    }
 
-    const stmt = this.db.prepare(`
-      SELECT * FROM mcp_tool_statistics
-      ${whereClause}
-      ORDER BY period_start DESC
-    `)
+    // Add ORDER BY
+    query += ` ORDER BY period_start DESC`
 
+    const stmt = this.db.prepare(query)
     const rows = stmt.all(...values) as any[]
     return rows.map((row) => this.rowToStatistics(row))
   }
@@ -332,29 +336,39 @@ export class MCPTrackingStorage {
   // --- Analytics Aggregations ---
 
   async getToolSummaries(projectId?: number, limit: number = 10): Promise<MCPToolSummary[]> {
-    const projectCondition = projectId !== undefined ? 'WHERE project_id = ?' : ''
-    const values = projectId !== undefined ? [projectId] : []
-
-    const stmt = this.db.prepare(`
+    // Build query and parameters dynamically to avoid parameter binding issues
+    let query = `
       SELECT 
         tool_name,
         COUNT(*) as total_executions,
         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_count,
         SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count,
         SUM(CASE WHEN status = 'timeout' THEN 1 ELSE 0 END) as timeout_count,
-        AVG(duration_ms) as avg_duration_ms,
+        COALESCE(AVG(duration_ms), 0) as avg_duration_ms,
         MIN(duration_ms) as min_duration_ms,
         MAX(duration_ms) as max_duration_ms,
-        SUM(output_size) as total_output_size,
+        COALESCE(SUM(output_size), 0) as total_output_size,
         MAX(completed_at) as last_executed_at
-      FROM mcp_tool_executions_v2
-      ${projectCondition}
+      FROM mcp_tool_executions_v2`
+    
+    const values: any[] = []
+    
+    // Add WHERE clause if projectId is provided
+    if (projectId !== undefined) {
+      query += ' WHERE project_id = ?'
+      values.push(projectId)
+    }
+    
+    // Add GROUP BY, ORDER BY, and LIMIT
+    query += `
       GROUP BY tool_name
       ORDER BY total_executions DESC
-      LIMIT ?
-    `)
+      LIMIT ?`
+    
+    values.push(limit)
 
-    const rows = stmt.all(...values, limit) as any[]
+    const stmt = this.db.prepare(query)
+    const rows = stmt.all(...values) as any[]
 
     return rows.map((row) => ({
       toolName: row.tool_name,
@@ -384,8 +398,22 @@ export class MCPTrackingStorage {
       month: 2592000000 // 30 days in ms
     }[period]
 
+    // Build query and parameters dynamically to avoid parameter binding issues
+    let query = `
+      SELECT 
+        (started_at / ?) * ? as time_bucket,
+        tool_name,
+        COUNT(*) as count,
+        COALESCE(AVG(duration_ms), 0) as avg_duration,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_count,
+        SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count
+      FROM mcp_tool_executions_v2`
+
     const conditions: string[] = []
     const values: any[] = []
+
+    // Add bucket size parameters first (for the SELECT clause placeholders)
+    values.push(bucketSize, bucketSize)
 
     if (projectId !== undefined) {
       conditions.push('project_id = ?')
@@ -400,23 +428,18 @@ export class MCPTrackingStorage {
       values.push(endDate)
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    // Add WHERE clause if there are conditions
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`
+    }
 
-    const stmt = this.db.prepare(`
-      SELECT 
-        (started_at / ?) * ? as time_bucket,
-        tool_name,
-        COUNT(*) as count,
-        AVG(duration_ms) as avg_duration,
-        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_count,
-        SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count
-      FROM mcp_tool_executions_v2
-      ${whereClause}
+    // Add GROUP BY and ORDER BY
+    query += `
       GROUP BY time_bucket, tool_name
-      ORDER BY time_bucket DESC
-    `)
+      ORDER BY time_bucket DESC`
 
-    const rows = stmt.all(bucketSize, bucketSize, ...values) as any[]
+    const stmt = this.db.prepare(query)
+    const rows = stmt.all(...values) as any[]
 
     // Group by time bucket
     const timelineMap = new Map<number, MCPExecutionTimeline>()
@@ -580,6 +603,11 @@ export class MCPTrackingStorage {
     patternType?: 'sequence' | 'frequency' | 'error',
     limit: number = 10
   ): Promise<Array<{ pattern: any; count: number; lastSeen: number }>> {
+    // Build query and parameters dynamically to avoid parameter binding issues
+    let query = `
+      SELECT pattern_data, occurrence_count, last_seen
+      FROM mcp_tool_patterns`
+    
     const conditions: string[] = []
     const values: any[] = []
 
@@ -592,17 +620,20 @@ export class MCPTrackingStorage {
       values.push(patternType)
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    // Add WHERE clause if there are conditions
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`
+    }
 
-    const stmt = this.db.prepare(`
-      SELECT pattern_data, occurrence_count, last_seen
-      FROM mcp_tool_patterns
-      ${whereClause}
+    // Add ORDER BY and LIMIT
+    query += `
       ORDER BY occurrence_count DESC
-      LIMIT ?
-    `)
+      LIMIT ?`
+    
+    values.push(limit)
 
-    const rows = stmt.all(...values, limit) as any[]
+    const stmt = this.db.prepare(query)
+    const rows = stmt.all(...values) as any[]
 
     return rows.map((row) => ({
       pattern: JSON.parse(row.pattern_data),

@@ -52,13 +52,7 @@ const stageFilesRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Files staged successfully'
-    },
-    ...createStandardResponses(OperationSuccessResponseSchema)
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 // Unstage files
@@ -75,13 +69,7 @@ const unstageFilesRoute = createRoute({
       required: true
     }
   },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Files unstaged successfully'
-    },
-    ...createStandardResponses(OperationSuccessResponseSchema)
-  }
+  responses: createStandardResponses(OperationSuccessResponseSchema)
 })
 
 // Stage all changes

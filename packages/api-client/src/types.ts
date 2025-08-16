@@ -110,17 +110,8 @@ import type {
 // Define Task alias for backwards compatibility
 export type Task = TicketTask
 
-export type Queue = {
-  id: number
-  name: string
-  description?: string
-  projectId: number
-  status?: 'active' | 'paused' | 'inactive'
-  maxParallelItems?: number
-  totalCompletedItems: number
-  created: number
-  updated: number
-}
+// Use the schema-derived TaskQueue type instead of redefining
+export type { TaskQueue as Queue } from '@promptliano/schemas'
 
 // Missing types needed by queue client
 export type CompleteTaskBody = {
@@ -153,7 +144,15 @@ export type {
   MCPTool,
   MCPResource,
   CreateMCPServerConfigBody,
-  UpdateMCPServerConfigBody
+  UpdateMCPServerConfigBody,
+  MCPAnalyticsOverview,
+  MCPAnalyticsRequest,
+  MCPExecutionQuery,
+  MCPExecutionTimeline,
+  MCPToolStatistics,
+  MCPToolPattern,
+  MCPToolExecution,
+  MCPExecutionListResponse
 } from '@promptliano/schemas'
 
 

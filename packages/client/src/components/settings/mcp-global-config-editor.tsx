@@ -34,6 +34,21 @@ interface ToolInfo {
   color: string
 }
 
+interface ToolStatus {
+  tool: string
+  installed: boolean
+  hasGlobalPromptliano: boolean
+  configPath?: string
+  configExists?: boolean
+}
+
+interface Installation {
+  tool: string
+  version: string
+  installedAt: string | number
+  location?: string
+}
+
 const SUPPORTED_TOOLS: Record<string, ToolInfo> = {
   'claude-desktop': {
     id: 'claude-desktop',
@@ -219,7 +234,7 @@ export function MCPGlobalConfigEditor() {
             {Object.values(SUPPORTED_TOOLS).map((tool) => {
               const installation = getInstallation(tool.id)
               // Find the tool status from the API response
-              const toolStatus = toolStatuses?.find((t) => t.tool === tool.id)
+              const toolStatus = toolStatuses?.find((t: ToolStatus) => t.tool === tool.id)
               const isInstalled = toolStatus?.installed || false
               const hasGlobalPromptliano = toolStatus?.hasGlobalPromptliano || false
               const Icon = tool.icon
@@ -397,7 +412,7 @@ export function MCPGlobalConfigEditor() {
             <TabsContent value='installations' className='space-y-4'>
               {installations?.installations && installations.installations.length > 0 ? (
                 <div className='space-y-3'>
-                  {installations.installations.map((installation) => (
+                  {installations.installations.map((installation: Installation) => (
                     <div key={installation.tool} className='p-4 bg-muted rounded-md space-y-2'>
                       <div className='flex items-center justify-between'>
                         <h5 className='font-medium'>{SUPPORTED_TOOLS[installation.tool]?.name || installation.tool}</h5>

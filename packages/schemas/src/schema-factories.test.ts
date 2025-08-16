@@ -79,7 +79,7 @@ describe('schema-factories', () => {
       const result = listSchema.parse(validData)
       expect(result.success).toBe(true)
       expect(result.data).toHaveLength(2)
-      expect(result.data[0].id).toBe(1)
+      expect(result.data[0]?.id).toBe(1)
     })
 
     test('accepts empty array', () => {
@@ -521,7 +521,7 @@ describe('schema-factories', () => {
       const createData = { name: 'John' }
       const result = schemas.create.parse(createData)
       
-      expect(result.name).toBe('John')
+      expect((result as any).name).toBe('John')
       expect(result).not.toHaveProperty('id')
       expect(result).not.toHaveProperty('created')
       expect(result).not.toHaveProperty('updated')
@@ -708,7 +708,7 @@ describe('schema-factories', () => {
       })
       
       expect(error.error.validationErrors).toHaveLength(1)
-      expect(error.error.validationErrors![0].field).toBe('email')
+      expect(error.error.validationErrors![0]?.field).toBe('email')
     })
 
     test('enforces success literal false', () => {

@@ -12,6 +12,9 @@ export { MCPClient } from './clients/mcp-client'
 export { PromptClient } from './clients/prompt-client'
 export { MarkdownClient } from './clients/markdown-client'
 export { FlowClient } from './clients/flow-client'
+export { GenAiClient } from './clients/gen-ai-client'
+export { KeysClient } from './clients/keys-client'
+export { MCPAnalyticsClient } from './clients/mcp-analytics-client'
 
 // Import all clients for composition
 import { ProjectClient } from './clients/project-client'
@@ -23,6 +26,9 @@ import { MCPClient } from './clients/mcp-client'
 import { PromptClient } from './clients/prompt-client'
 import { MarkdownClient } from './clients/markdown-client'
 import { FlowClient } from './clients/flow-client'
+import { GenAiClient } from './clients/gen-ai-client'
+import { KeysClient } from './clients/keys-client'
+import { MCPAnalyticsClient } from './clients/mcp-analytics-client'
 
 import type { ApiConfig } from './base-client'
 
@@ -43,21 +49,21 @@ export class PromptlianoClient {
   public readonly prompts: PromptClient
   public readonly markdown: MarkdownClient
   public readonly flow: FlowClient
+  public readonly genAi: GenAiClient
+  public readonly keys: KeysClient
+  public readonly mcpAnalytics: MCPAnalyticsClient
 
   // Backwards compatibility aliases - not yet implemented
   public readonly agents: any
   public readonly commands: any
   public readonly claudeCode: any
   public readonly claudeHooks: any
-  public readonly keys: any
-  public readonly genAi: any
   public readonly system: any
-  public readonly mcpAnalytics: any
   public readonly agentFiles: any
   public readonly mcpInstallation: any
   public readonly mcpProjectConfig: any
   public readonly mcpGlobalConfig: any
-  // Flow service is now properly implemented above
+  // GenAi and Flow services are now properly implemented above
 
   constructor(config: ApiConfig) {
     // Initialize the main service clients
@@ -70,9 +76,11 @@ export class PromptlianoClient {
     this.prompts = new PromptClient(config)
     this.markdown = new MarkdownClient(config)
     this.flow = new FlowClient(config)
+    this.genAi = new GenAiClient(config)
+    this.keys = new KeysClient(config)
+    this.mcpAnalytics = new MCPAnalyticsClient(config)
 
     // For backwards compatibility, map MCP sub-services
-    this.mcpAnalytics = this.mcp
     this.mcpInstallation = this.mcp
     this.mcpProjectConfig = this.mcp
     this.mcpGlobalConfig = this.mcp
@@ -83,11 +91,10 @@ export class PromptlianoClient {
     this.commands = null
     this.claudeCode = null
     this.claudeHooks = null
-    this.keys = null
-    this.genAi = null
+    // this.keys is now properly implemented above
     this.system = null
     this.agentFiles = null
-    // Flow service is now properly implemented above
+    // GenAi, Flow, and Keys services are now properly implemented above
 
     // Log a warning about incomplete modularization
     if (typeof console !== 'undefined') {
@@ -123,9 +130,11 @@ export const MCPService = MCPClient
 export const PromptService = PromptClient
 export const MarkdownService = MarkdownClient
 export const FlowService = FlowClient
+export const GenAiService = GenAiClient
+export const KeysService = KeysClient
 
 // Additional legacy aliases that might be used
-export const MCPAnalyticsService = MCPClient
+export const MCPAnalyticsService = MCPAnalyticsClient
 export const MCPInstallationService = MCPClient
 export const MCPProjectConfigService = MCPClient
 export const MCPGlobalConfigService = MCPClient

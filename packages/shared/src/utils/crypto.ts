@@ -1,7 +1,17 @@
 import { Buffer } from 'buffer'
 
-// Define BufferSource type for compatibility
-type BufferSource = ArrayBufferView | ArrayBuffer
+// Helper function to convert Buffer to ArrayBuffer for Web Crypto API compatibility
+function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
+  // If buffer.buffer is already an ArrayBuffer, use it directly
+  if (buffer.buffer instanceof ArrayBuffer) {
+    return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+  }
+  // Otherwise, copy the data to a new ArrayBuffer
+  const arrayBuffer = new ArrayBuffer(buffer.length)
+  const view = new Uint8Array(arrayBuffer)
+  view.set(new Uint8Array(buffer))
+  return arrayBuffer
+}
 
 // Environment detection
 const isServerEnvironment = typeof process !== 'undefined' && process.env && (
@@ -88,7 +98,7 @@ async function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
   const derivedBits = await crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt: salt as BufferSource, // Type assertion for crypto.subtle compatibility
+      salt: bufferToArrayBuffer(salt),
       iterations: 100000,
       hash: 'SHA-256'
     },
@@ -114,12 +124,12 @@ export async function encryptKey(plaintext: string): Promise<EncryptedData> {
   const derivedKey = await deriveKey(envKey, Buffer.from(salt))
 
   // Use Web Crypto API for encryption
-  const cryptoKey = await crypto.subtle.importKey('raw', derivedKey as BufferSource, { name: 'AES-GCM' }, false, ['encrypt'])
+  const cryptoKey = await crypto.subtle.importKey('raw', bufferToArrayBuffer(derivedKey), { name: 'AES-GCM' }, false, ['encrypt'])
 
   const encrypted = await crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
-      iv: iv as BufferSource
+      iv: iv
     },
     cryptoKey,
     data
@@ -157,12 +167,12 @@ export async function decryptKey(encryptedData: EncryptedData): Promise<string> 
   combined.set(ciphertext)
   combined.set(tag, ciphertext.length)
 
-  const cryptoKey = await crypto.subtle.importKey('raw', derivedKey as BufferSource, { name: 'AES-GCM' }, false, ['decrypt'])
+  const cryptoKey = await crypto.subtle.importKey('raw', bufferToArrayBuffer(derivedKey), { name: 'AES-GCM' }, false, ['decrypt'])
 
   const decrypted = await crypto.subtle.decrypt(
     {
       name: 'AES-GCM',
-      iv: iv as BufferSource
+      iv: bufferToArrayBuffer(iv)
     },
     cryptoKey,
     combined

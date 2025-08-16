@@ -8,7 +8,7 @@ import {
   ApiErrorResponseSchema,
   OperationSuccessResponseSchema
 } from '@promptliano/schemas'
-import { getMCPAnalyticsOverview, getMCPToolStatistics } from '@promptliano/services'
+import { getMCPAnalyticsOverview, getMCPToolStatistics, getMCPExecutionTimeline, getMCPToolExecutions, getTopErrorPatterns } from '@promptliano/services'
 import { createStandardResponses, successResponse } from '../../utils/route-helpers'
 
 // Get MCP analytics
@@ -213,6 +213,124 @@ const getPerformanceMetricsRoute = createRoute({
   }))
 })
 
+// Project-specific MCP analytics routes
+const getProjectMCPOverviewRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/analytics/overview',
+  tags: ['MCP', 'Analytics', 'Projects'],
+  summary: 'Get MCP analytics overview for a project',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    query: z.object({
+      period: z.enum(['hour', 'day', 'week', 'month']).optional(),
+      toolNames: z.string().optional()
+    })
+  },
+  responses: createStandardResponses(z.object({
+    success: z.literal(true),
+    data: z.object({
+      totalExecutions: z.number(),
+      uniqueTools: z.number(),
+      overallSuccessRate: z.number(),
+      avgExecutionTime: z.number(),
+      topTools: z.array(z.any()),
+      recentErrors: z.array(z.any()),
+      executionTrend: z.array(z.any())
+    })
+  }))
+})
+
+const getProjectMCPStatisticsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/analytics/statistics',
+  tags: ['MCP', 'Analytics', 'Projects'],
+  summary: 'Get MCP tool statistics for a project',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    query: z.object({
+      period: z.enum(['hour', 'day', 'week', 'month']).optional(),
+      toolNames: z.string().optional()
+    })
+  },
+  responses: createStandardResponses(z.object({
+    success: z.literal(true),
+    data: z.array(z.any())
+  }))
+})
+
+const getProjectMCPTimelineRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/analytics/timeline',
+  tags: ['MCP', 'Analytics', 'Projects'],
+  summary: 'Get MCP execution timeline for a project',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    query: z.object({
+      period: z.enum(['hour', 'day', 'week', 'month']).optional(),
+      toolNames: z.string().optional()
+    })
+  },
+  responses: createStandardResponses(z.object({
+    success: z.literal(true),
+    data: z.array(z.any())
+  }))
+})
+
+const getProjectMCPErrorPatternsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/analytics/error-patterns',
+  tags: ['MCP', 'Analytics', 'Projects'],
+  summary: 'Get MCP error patterns for a project',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    query: z.object({
+      period: z.enum(['hour', 'day', 'week', 'month']).optional(),
+      toolNames: z.string().optional()
+    })
+  },
+  responses: createStandardResponses(z.object({
+    success: z.literal(true),
+    data: z.array(z.any())
+  }))
+})
+
+const getProjectMCPExecutionsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/analytics/executions',
+  tags: ['MCP', 'Analytics', 'Projects'],
+  summary: 'Get MCP tool executions for a project',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    query: z.object({
+      toolName: z.string().optional(),
+      status: z.string().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      limit: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
+      offset: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined)
+    })
+  },
+  responses: createStandardResponses(z.object({
+    success: z.literal(true),
+    data: z.object({
+      executions: z.array(z.any()),
+      total: z.number(),
+      page: z.number(),
+      pageSize: z.number()
+    })
+  }))
+})
+
 // Export routes
 export const mcpAnalyticsRoutes = new OpenAPIHono()
   .openapi(getMCPAnalyticsRoute, async (c) => {
@@ -304,6 +422,84 @@ export const mcpAnalyticsRoutes = new OpenAPIHono()
       }
     }
     return c.json(successResponse(metrics))
+  })
+  // Add new project-specific routes
+  .openapi(getProjectMCPOverviewRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const query = c.req.valid('query')
+    
+    try {
+      const request = {
+        projectId,
+        period: query.period,
+        toolNames: query.toolNames?.split(',')
+      }
+      const overview = await getMCPAnalyticsOverview(request)
+      return c.json(successResponse(overview))
+    } catch (error) {
+      throw error
+    }
+  })
+  .openapi(getProjectMCPStatisticsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const query = c.req.valid('query')
+    
+    try {
+      const request = {
+        projectId,
+        period: query.period,
+        toolNames: query.toolNames?.split(',')
+      }
+      const statistics = await getMCPToolStatistics(request)
+      return c.json(successResponse(statistics))
+    } catch (error) {
+      throw error
+    }
+  })
+  .openapi(getProjectMCPTimelineRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const query = c.req.valid('query')
+    
+    try {
+      const timeline = await getMCPExecutionTimeline(
+        projectId,
+        query.period || 'day'
+      )
+      return c.json(successResponse(timeline))
+    } catch (error) {
+      throw error
+    }
+  })
+  .openapi(getProjectMCPErrorPatternsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const query = c.req.valid('query')
+    
+    try {
+      const errorPatterns = await getTopErrorPatterns(projectId, 10)
+      return c.json(successResponse(errorPatterns))
+    } catch (error) {
+      throw error
+    }
+  })
+  .openapi(getProjectMCPExecutionsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const query = c.req.valid('query')
+    
+    try {
+      const executionQuery = {
+        projectId,
+        toolName: query.toolName,
+        status: query.status,
+        startDate: query.startDate,
+        endDate: query.endDate,
+        limit: query.limit,
+        offset: query.offset
+      }
+      const result = await getMCPToolExecutions(executionQuery)
+      return c.json(successResponse(result))
+    } catch (error) {
+      throw error
+    }
   })
 
 export type MCPAnalyticsRouteTypes = typeof mcpAnalyticsRoutes

@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
-import { createPromptlianoClient, PromptlianoError } from '../../api-client' // Adjusted path
-import type { PromptlianoClient } from '../../api-client' // Adjusted path
+import { createPromptlianoClient, PromptlianoError } from '../index'
+import type { PromptlianoClient } from '../index'
 
 import { ProviderKeySchema, type ProviderKey } from '@promptliano/schemas' // Path kept as is from original (note: this was different from others)
 import { TEST_API_URL } from './test-config'

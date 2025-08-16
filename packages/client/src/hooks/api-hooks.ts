@@ -808,7 +808,7 @@ export function useOptimizeUserInput() {
   return useMutation({
     mutationFn: (data: OptimizePromptRequest) => {
       if (!client) throw new Error('API client not initialized')
-      return client.prompts.optimizeUserInput(data)
+      return client.prompts.optimizeUserInput(data.projectId, { userContext: data.userContext })
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to optimize user input')

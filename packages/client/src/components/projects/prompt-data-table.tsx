@@ -181,7 +181,7 @@ export function PromptDataTable({
           multiple: true,
           onSelectionChange: handleSelectionChange
         }}
-        onRowClick={(prompt) => onViewPrompt(prompt)}
+        onRowClick={(row) => onViewPrompt(row.original)}
         getRowId={(prompt) => prompt.id.toString()}
         emptyMessage='No prompts yet. Create your first prompt to get started.'
         className={className}

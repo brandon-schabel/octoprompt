@@ -33,10 +33,13 @@ class ChatStorageClass extends BaseStorage<Chat, ChatsStorage> {
   protected readonly entitySchema = ChatSchema
   protected readonly storageSchema = ChatsStorageSchema
 
-  private readonly fieldMappings = createStandardMappings<Chat>({
-    projectId: { dbColumn: 'project_id', converter: (v) => v != null ? SqliteConverters.toNumber(v) : undefined },
-    title: 'title'
-  })
+  private readonly fieldMappings = {
+    id: { dbColumn: 'id', converter: (v: any) => SqliteConverters.toNumber(v) },
+    title: { dbColumn: 'title', converter: (v: any) => SqliteConverters.toString(v) },
+    projectId: { dbColumn: 'project_id', converter: (v: any) => v != null ? SqliteConverters.toNumber(v) : undefined },
+    created: { dbColumn: 'created_at', converter: (v: any) => SqliteConverters.toTimestamp(v) },
+    updated: { dbColumn: 'updated_at', converter: (v: any) => SqliteConverters.toTimestamp(v) }
+  }
 
   private readonly converter = createEntityConverter(
     this.entitySchema,
@@ -54,8 +57,7 @@ class ChatStorageClass extends BaseStorage<Chat, ChatsStorage> {
   }
 
   protected getInsertColumns(): string[] {
-    // Exclude 'name' since chats use 'title' instead
-    return getInsertColumnsFromMappings(this.fieldMappings, ['name'])
+    return getInsertColumnsFromMappings(this.fieldMappings)
   }
 
   protected getInsertValues(entity: Chat): any[] {

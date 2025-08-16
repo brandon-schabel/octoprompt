@@ -387,7 +387,7 @@ export async function reorderTasks(
     }
 
     if (existingTask.ticketId !== ticketId) {
-      throw TaskErrors.invalidRelationship('Task', taskId, 'Ticket', ticketId)
+      throw TaskErrors.invalidRelationship(taskId, 'Ticket', ticketId)
     }
 
     const updatedTask: TicketTask = {

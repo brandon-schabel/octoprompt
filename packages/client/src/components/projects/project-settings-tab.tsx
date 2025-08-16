@@ -44,8 +44,7 @@ export function ProjectSettingsTab() {
   const { data: preferredEditor } = useProjectTabField('preferredEditor')
   const { data: projectId } = useProjectTabField('selectedProjectId')
   const { data: claudeCodeEnabled } = useProjectTabField('claudeCodeEnabled')
-  // const { data: assetsEnabled } = useProjectTabField('assetsEnabled') // TODO: Add to schema when ready
-  const assetsEnabled = false // Temporary default value
+  const { data: assetsEnabled } = useProjectTabField('assetsEnabled')
   const { data: autoIncludeClaudeMd } = useProjectTabField('autoIncludeClaudeMd')
   const { data: instructionFileSettings } = useProjectTabField('instructionFileSettings')
 
@@ -101,8 +100,10 @@ export function ProjectSettingsTab() {
   }
 
   const setAssetsEnabled = (value: boolean) => {
-    // TODO: Implement when assetsEnabled is added to schema
-    console.log('Assets enabled setting:', value)
+    updateActiveProjectTab((prev) => ({
+      ...prev,
+      assetsEnabled: value
+    }))
   }
 
   const setAutoIncludeClaudeMd = (value: boolean) => {

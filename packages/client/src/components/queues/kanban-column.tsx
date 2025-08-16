@@ -46,7 +46,7 @@ export function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id })
 
   const title = isUnqueued ? 'Unqueued Items' : queue?.queue.name || 'Queue'
-  const isActive = queue?.queue.status === 'active'
+  const isActive = (queue?.queue.status ?? 'active') === 'active'
   const stats = queue?.stats
 
   // Calculate estimated time

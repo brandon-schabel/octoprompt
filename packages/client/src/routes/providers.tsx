@@ -83,7 +83,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import type { ProviderKey, CreateProviderKeyBody } from '@promptliano/schemas'
+import type { ProviderKey, CreateProviderKeyBody, ProviderHealthStatus } from '@promptliano/schemas'
 import { LocalProviderSection } from '@/components/providers/local-provider-section'
 import { ProviderCard } from '@/components/providers/provider-card'
 import { ProviderTestDialog } from '@/components/providers/provider-test-dialog'
@@ -136,15 +136,15 @@ function ProvidersPage() {
 
     // Filter by tab
     if (activeTab === 'api') {
-      filtered = filtered.filter((p) => !PROVIDERS.find((prov) => prov.id === p.provider)?.isLocal)
+      filtered = filtered.filter((p: ProviderKey) => !PROVIDERS.find((prov) => prov.id === p.provider)?.isLocal)
     } else if (activeTab === 'local') {
-      filtered = filtered.filter((p) => PROVIDERS.find((prov) => prov.id === p.provider)?.isLocal)
+      filtered = filtered.filter((p: ProviderKey) => PROVIDERS.find((prov) => prov.id === p.provider)?.isLocal)
     }
 
     // Filter by search
     if (searchQuery) {
       filtered = filtered.filter(
-        (p) =>
+        (p: ProviderKey) =>
           p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           p.provider.toLowerCase().includes(searchQuery.toLowerCase())
       )
@@ -220,16 +220,16 @@ function ProvidersPage() {
 
   // Get health status for a provider
   const getHealthStatus = (providerId: string) => {
-    return healthStatuses.find((h) => h.provider === providerId)
+    return healthStatuses.find((h: ProviderHealthStatus) => h.provider === providerId)
   }
 
   // Get stats
   const stats = useMemo(() => {
     // Database providers (cloud APIs that have been configured)
-    const dbProviders = providers.filter((p) => !getProviderMeta(p.provider)?.isLocal)
+    const dbProviders = providers.filter((p: ProviderKey) => !getProviderMeta(p.provider)?.isLocal)
 
     // Count of healthy database providers
-    const dbConnectedCount = healthStatuses.filter((h) => h.status === 'healthy').length
+    const dbConnectedCount = healthStatuses.filter((h: ProviderHealthStatus) => h.status === 'healthy').length
 
     // Local providers are always 2 (Ollama and LMStudio are built-in)
     const localProviderCount = 2
@@ -270,7 +270,7 @@ function ProvidersPage() {
 
   // Handle test all connections
   const handleTestAllConnections = async () => {
-    const providerRequests = providers.map((p) => ({
+    const providerRequests = providers.map((p: ProviderKey) => ({
       provider: p.provider,
       timeout: 30000
     }))
@@ -447,7 +447,7 @@ function ProvidersPage() {
                       {/* Local Providers Section */}
                       <LocalProviderSection
                         providers={providers.filter(
-                          (p) =>
+                          (p: ProviderKey) =>
                             PROVIDERS.find((prov) => prov.id === p.provider)?.isLocal &&
                             (searchQuery
                               ? p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -471,7 +471,7 @@ function ProvidersPage() {
                       {/* API Providers Section */}
                       {renderApiProviders(
                         providers.filter(
-                          (p) =>
+                          (p: ProviderKey) =>
                             !PROVIDERS.find((prov) => prov.id === p.provider)?.isLocal &&
                             (searchQuery
                               ? p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

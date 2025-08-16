@@ -27,8 +27,10 @@ export interface ApiConfig {
 
 /**
  * Generic data response wrapper
+ * Matches the server's standard response format
  */
 export type DataResponseSchema<T> = {
+  success: true
   data: T
 }
 

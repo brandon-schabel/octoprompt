@@ -341,7 +341,7 @@ async function getProviderLanguageModelInterface(
         throw ErrorFactory.notFound('Custom provider configuration', 'default')
       }
       
-      const baseURL = customKey.baseUrl || options.baseUrl
+      const baseURL = customKey.baseUrl
       if (!baseURL) {
         throw ErrorFactory.missingRequired('Base URL', 'custom provider')
       }

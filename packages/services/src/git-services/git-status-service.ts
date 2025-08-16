@@ -270,7 +270,7 @@ export class GitStatusService extends BaseGitService {
       if (options?.force) cleanOptions.push('-f')
       if (options?.dryRun) cleanOptions.push('-n')
 
-      const result = await git.clean(cleanOptions.join(''))
+      const result = await git.clean(cleanOptions.join('')) as string | { paths?: string[]; files?: string[]; folders?: string[] }
 
       // Handle both string and CleanSummary results
       if (typeof result === 'string') {

@@ -140,7 +140,7 @@ export function createEnumField<T extends readonly [string, ...string[]]>(
   defaultValue: T[number],
   description?: string
 ) {
-  return z.enum(values).default(defaultValue).describe(description || `One of: ${values.join(', ')}`)
+  return z.enum(values).default(defaultValue as T[number]).describe(description || `One of: ${values.join(', ')}`)
 }
 
 /**

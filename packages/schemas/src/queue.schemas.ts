@@ -25,7 +25,19 @@ const queueSchemas = createEntitySchemas('TaskQueue', {
   maxParallelItems: z.number().min(1).max(10).default(1),
   averageProcessingTime: z.number().nullable().optional(), // in milliseconds
   totalCompletedItems: z.number().default(0)
+}, {
+  // Don't exclude status from updates - we want it to remain required
+  updateExcludes: []
 })
+
+// Create a custom update schema that keeps status required while making other fields optional
+export const UpdateTaskQueueSchema = queueSchemas.base
+  .omit({ id: true, created: true, updated: true })
+  .partial()
+  .merge(z.object({
+    status: QueueStatusEnum // Keep status required
+  }))
+  .openapi('UpdateTaskQueue')
 
 export const TaskQueueSchema = queueSchemas.base
 
@@ -155,6 +167,7 @@ export const QueueWithStatsSchema = z
 
 // Type exports
 export type TaskQueue = z.infer<typeof TaskQueueSchema>
+export type UpdateTaskQueue = z.infer<typeof UpdateTaskQueueSchema>
 export type QueueItem = z.infer<typeof QueueItemSchema>
 export type QueueStats = z.infer<typeof QueueStatsSchema>
 export type CreateQueueBody = z.infer<typeof CreateQueueBodySchema>

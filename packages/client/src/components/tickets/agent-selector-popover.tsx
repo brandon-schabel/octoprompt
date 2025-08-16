@@ -48,7 +48,7 @@ export function AgentSelectorPopover({
   // Find current agent details
   const currentAgent = useMemo(() => {
     if (!currentAgentId || !agents.length) return null
-    return agents.find((agent) => agent.id === currentAgentId)
+    return agents.find((agent: any) => agent.id === currentAgentId)
   }, [currentAgentId, agents])
 
   const handleSelect = (agentId: string | null) => {
@@ -125,7 +125,7 @@ export function AgentSelectorPopover({
                 )}
 
                 <CommandGroup heading='Available Agents'>
-                  {agents.map((agent) => (
+                  {agents.map((agent: any) => (
                     <CommandItem
                       key={agent.id}
                       value={agent.id}

@@ -637,16 +637,16 @@ export async function getQueueItems(queueId: number, status?: string): Promise<A
   task?: TicketTask;
 }>> {
   try {
-    // Validate queue exists
-    await getQueueById(queueId)
+    // Validate queue exists and get projectId
+    const queue = await getQueueById(queueId)
 
     // Get all tickets in this queue
-    const tickets = await ticketStorage.readTickets()
+    const tickets = await ticketStorage.readTickets(queue.projectId)
     const ticketsInQueue = Object.values(tickets)
       .filter(ticket => ticket.queueId === queueId && (!status || ticket.queueStatus === status))
 
     // Get all tasks in this queue  
-    const tasks = await ticketStorage.readTasks()
+    const tasks = await ticketStorage.readTasks(queue.projectId)
     const tasksInQueue = Object.values(tasks)
       .filter(task => task.queueId === queueId && (!status || task.queueStatus === status))
 
