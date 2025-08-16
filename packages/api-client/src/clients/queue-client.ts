@@ -9,7 +9,9 @@ import type {
   EnqueueItemBody,
   CompleteTaskBody,
   FailTaskBody,
-  DataResponseSchema
+  DataResponseSchema,
+  GetNextTaskResponse,
+  QueueTimeline
 } from '../types'
 
 // Import schemas
@@ -32,25 +34,11 @@ type QueueWithStats = {
   queue: TaskQueue
   stats: QueueStats
 }
-type GetNextTaskResponse = {
-  item: QueueItem | null
-  position: number | null
-  estimatedWaitTime: number | null
-}
 type BatchEnqueueBody = {
   items: Array<{
     type: 'ticket' | 'task'
     id: number
     priority?: number
-  }>
-}
-type QueueTimeline = {
-  events: Array<{
-    type: string
-    timestamp: number
-    itemType: 'ticket' | 'task'
-    itemId: number
-    details?: Record<string, any>
   }>
 }
 
@@ -63,40 +51,21 @@ export class QueueClient extends BaseApiClient {
    */
   async createQueue(projectId: number, data: Omit<CreateQueueBody, 'projectId'>): Promise<DataResponseSchema<TaskQueue>> {
     const validatedData = this.validateBody(CreateQueueBodySchema.omit({ projectId: true }), data)
-    const result = await this.request('POST', `/projects/${projectId}/queues`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: TaskQueueSchema
-      })
-    })
-    return result as DataResponseSchema<TaskQueue>
+    return this.post(`/projects/${projectId}/queues`, validatedData)
   }
 
   /**
    * List all queues for a project
    */
   async listQueues(projectId: number): Promise<DataResponseSchema<TaskQueue[]>> {
-    const result = await this.request('GET', `/projects/${projectId}/queues`, {
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.array(TaskQueueSchema)
-      })
-    })
-    return result as DataResponseSchema<TaskQueue[]>
+    return this.get(`/projects/${projectId}/queues`)
   }
 
   /**
    * Get a queue by ID
    */
   async getQueue(queueId: number): Promise<DataResponseSchema<TaskQueue>> {
-    const result = await this.request('GET', `/queues/${queueId}`, {
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: TaskQueueSchema
-      })
-    })
-    return result as DataResponseSchema<TaskQueue>
+    return this.get(`/queues/${queueId}`)
   }
 
   /**
@@ -104,27 +73,14 @@ export class QueueClient extends BaseApiClient {
    */
   async updateQueue(queueId: number, data: UpdateQueueBody): Promise<DataResponseSchema<TaskQueue>> {
     const validatedData = this.validateBody(UpdateQueueBodySchema, data)
-    const result = await this.request('PATCH', `/queues/${queueId}`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: TaskQueueSchema
-      })
-    })
-    return result as DataResponseSchema<TaskQueue>
+    return this.patch(`/queues/${queueId}`, validatedData)
   }
 
   /**
    * Delete a queue
    */
   async deleteQueue(queueId: number): Promise<DataResponseSchema<{ deleted: boolean }>> {
-    const result = await this.request('DELETE', `/queues/${queueId}`, {
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.object({ deleted: z.boolean() })
-      })
-    })
-    return result as DataResponseSchema<{ deleted: boolean }>
+    return this.delete(`/queues/${queueId}`)
   }
 
   /**
@@ -132,28 +88,14 @@ export class QueueClient extends BaseApiClient {
    */
   async enqueueItem(queueId: number, data: EnqueueItemBody): Promise<DataResponseSchema<QueueItem>> {
     const validatedData = this.validateBody(EnqueueItemBodySchema, data)
-    const result = await this.request('POST', `/queues/${queueId}/items`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: QueueItemSchema
-      })
-    })
-    return result as DataResponseSchema<QueueItem>
+    return this.post(`/queues/${queueId}/items`, validatedData)
   }
 
   /**
    * Add a ticket and all its tasks to a queue
    */
   async enqueueTicket(queueId: number, ticketId: number, priority?: number): Promise<DataResponseSchema<QueueItem[]>> {
-    const result = await this.request('POST', `/queues/${queueId}/enqueue-ticket`, {
-      body: { ticketId, priority },
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.array(QueueItemSchema)
-      })
-    })
-    return result as DataResponseSchema<QueueItem[]>
+    return this.post(`/queues/${queueId}/enqueue-ticket`, { ticketId, priority })
   }
 
   /**

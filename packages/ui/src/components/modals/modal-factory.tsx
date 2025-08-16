@@ -261,7 +261,7 @@ export function createCrudModal<T extends { id?: number }>(config: CrudModalConf
         iconClassName="text-green-600"
       >
         <FormFactory
-          formConfig={formConfig}
+          {...formConfig}
           onSubmit={handleSubmit}
           defaultValues={initialData}
         />
@@ -322,7 +322,7 @@ export function createCrudModal<T extends { id?: number }>(config: CrudModalConf
         iconClassName="text-blue-600"
       >
         <FormFactory
-          formConfig={formConfig}
+          {...formConfig}
           onSubmit={handleSubmit}
           defaultValues={item}
         />

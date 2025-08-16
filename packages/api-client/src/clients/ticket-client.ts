@@ -6,8 +6,9 @@ import type {
   CreateTaskBody,
   UpdateTaskBody,
   Ticket,
-  Task,
+  TicketTask,
   TicketWithTasks,
+  TicketWithTaskCount,
   DataResponseSchema
 } from '../types'
 
@@ -28,18 +29,6 @@ import {
 } from '@promptliano/schemas'
 
 // Additional types for ticket operations
-type TicketTask = Task
-type TicketWithTaskCount = {
-  id: number
-  title: string
-  description: string
-  status: string
-  priority: number
-  projectId: number
-  createdAt: number
-  updatedAt: number
-  taskCount: number
-}
 
 type ReorderTasksBody = {
   taskIds: number[]

@@ -14,6 +14,12 @@ import { updateTicket as serviceUpdateTicket } from './ticket-service'
 import { ApiError } from '@promptliano/shared'
 import { ErrorFactory, assertExists, assertUpdateSucceeded } from './utils/error-factory'
 import { QueueErrors, TicketErrors, TaskErrors } from '@promptliano/shared/src/error/entity-errors'
+import { 
+  clearQueueFields,
+  createStartProcessingUpdate,
+  createCompleteProcessingUpdate,
+  createEnqueueUpdate
+} from '@promptliano/shared/src/utils/queue-field-utils'
 
 // === Queue Management ===
 
@@ -122,13 +128,8 @@ export async function enqueueTicket(ticketId: number, queueId: number, priority:
       throw TicketErrors.notFound(ticketId)
     }
 
-    // Update ticket queue fields
-    const updatedTicket = await ticketStorage.updateTicket(ticketId, {
-      queueId: queueId,
-      queueStatus: 'queued',
-      queuePriority: priority,
-      queuedAt: Date.now()
-    })
+    // Update ticket queue fields using type-safe helper
+    const updatedTicket = await ticketStorage.updateTicket(ticketId, createEnqueueUpdate(queueId, priority))
 
     return updatedTicket
   } catch (error) {
@@ -158,13 +159,8 @@ export async function enqueueTask(
       throw TaskErrors.notFound(taskId)
     }
 
-    // Update task queue fields
-    const updatedTask = await ticketStorage.updateTask(ticketId, taskId, {
-      queueId: queueId,
-      queueStatus: 'queued',
-      queuePriority: priority,
-      queuedAt: Date.now()
-    })
+    // Update task queue fields using type-safe helper
+    const updatedTask = await ticketStorage.updateTask(ticketId, taskId, createEnqueueUpdate(queueId, priority))
 
     return updatedTask
   } catch (error) {
@@ -223,20 +219,15 @@ export async function dequeueTicket(ticketId: number): Promise<Ticket> {
       throw TicketErrors.notFound(ticketId)
     }
 
-    // Clear queue fields on the ticket
-    const updatedTicket = await ticketStorage.updateTicket(ticketId, {
-      queueId: null,
-      queueStatus: null,
-      queuePriority: 0,
-      queuedAt: null
-    })
+    // Clear queue fields on the ticket using type-safe helper
+    const updatedTicket = await ticketStorage.updateTicket(ticketId, clearQueueFields())
 
     // Also dequeue all tasks associated with this ticket
     const tasks = await ticketStorage.readTasks(ticketId)
     const taskList = Object.values(tasks).filter((task) => task.queueId !== null)
 
     for (const task of taskList) {
-      await ticketStorage.dequeueTask(task.id)
+      await ticketStorage.updateTask(ticketId, task.id, clearQueueFields())
     }
 
     return updatedTicket
@@ -258,13 +249,8 @@ export async function dequeueTask(ticketId: number, taskId: number): Promise<Tic
       throw TaskErrors.notFound(taskId)
     }
 
-    // Clear queue fields
-    const updatedTask = await ticketStorage.updateTask(ticketId, taskId, {
-      queueId: null,
-      queueStatus: null,
-      queuePriority: 0,
-      queuedAt: null
-    })
+    // Clear queue fields using type-safe helper
+    const updatedTask = await ticketStorage.updateTask(ticketId, taskId, clearQueueFields())
 
     return updatedTask
   } catch (error) {
@@ -359,12 +345,8 @@ export async function getNextTaskFromQueue(
         return { type: 'none', item: null, message: 'No valid tickets available' }
       }
 
-      // Update ticket status to in_progress
-      const updatedTicket = await ticketStorage.updateTicket(ticket.id, {
-        queueStatus: 'in_progress',
-        queueStartedAt: Date.now(),
-        queueAgentId: agentId
-      })
+      // Update ticket status to in_progress using type-safe helper
+      const updatedTicket = await ticketStorage.updateTicket(ticket.id, createStartProcessingUpdate(agentId))
 
       return { type: 'ticket', item: updatedTicket }
     }
@@ -390,12 +372,8 @@ export async function getNextTaskFromQueue(
           continue
         }
 
-        // Update task status to in_progress
-        const updatedTask = await ticketStorage.updateTask(ticket.id, task.id, {
-          queueStatus: 'in_progress',
-          queueStartedAt: Date.now(),
-          queueAgentId: agentId
-        })
+        // Update task status to in_progress using type-safe helper
+        const updatedTask = await ticketStorage.updateTask(ticket.id, task.id, createStartProcessingUpdate(agentId))
 
         // Reflect progress on parent ticket
         try {
@@ -528,21 +506,21 @@ export async function completeQueueItem(itemType: 'ticket' | 'task', itemId: num
         ErrorFactory.notFound("Ticket", itemId)
       }
 
-      await ticketStorage.updateTicket(itemId, {
-        queueStatus: 'completed',
-        queueCompletedAt: Date.now(),
-        actualProcessingTime: ticket.queueStartedAt ? Date.now() - ticket.queueStartedAt : undefined
-      })
+      const completionUpdate = createCompleteProcessingUpdate(true)
+      if (ticket.queueStartedAt) {
+        completionUpdate.actualProcessingTime = Date.now() - ticket.queueStartedAt
+      }
+      await ticketStorage.updateTicket(itemId, completionUpdate)
 
       // Also mark all tasks as completed
       const tasks = await ticketStorage.readTasks(itemId)
       for (const task of Object.values(tasks)) {
         if (task.queueId === ticket.queueId) {
-          await ticketStorage.updateTask(itemId, task.id, {
-            queueStatus: 'completed',
-            queueCompletedAt: Date.now(),
+          const taskCompletionUpdate = {
+            ...createCompleteProcessingUpdate(true),
             done: true
-          })
+          }
+          await ticketStorage.updateTask(itemId, task.id, taskCompletionUpdate)
         }
       }
     } else {
@@ -555,12 +533,14 @@ export async function completeQueueItem(itemType: 'ticket' | 'task', itemId: num
         ErrorFactory.notFound("Task", itemId)
       }
 
-      await ticketStorage.updateTask(ticketId, itemId, {
-        queueStatus: 'completed',
-        queueCompletedAt: Date.now(),
-        actualProcessingTime: task.queueStartedAt ? Date.now() - task.queueStartedAt : undefined,
+      const taskCompletionUpdate = {
+        ...createCompleteProcessingUpdate(true),
         done: true
-      })
+      }
+      if (task.queueStartedAt) {
+        taskCompletionUpdate.actualProcessingTime = Date.now() - task.queueStartedAt
+      }
+      await ticketStorage.updateTask(ticketId, itemId, taskCompletionUpdate)
 
       // If all tasks are done, mark parent ticket completed/closed
       try {
@@ -587,22 +567,16 @@ export async function failQueueItem(
   ticketId?: number
 ): Promise<void> {
   try {
+    const failureUpdate = createCompleteProcessingUpdate(false, errorMessage)
+    
     if (itemType === 'ticket') {
-      await ticketStorage.updateTicket(itemId, {
-        queueStatus: 'failed',
-        queueErrorMessage: errorMessage,
-        queueCompletedAt: Date.now()
-      })
+      await ticketStorage.updateTicket(itemId, failureUpdate)
     } else {
       if (!ticketId) {
         throw TaskErrors.missingRequired('ticketId')
       }
 
-      await ticketStorage.updateTask(ticketId, itemId, {
-        queueStatus: 'failed',
-        queueErrorMessage: errorMessage,
-        queueCompletedAt: Date.now()
-      })
+      await ticketStorage.updateTask(ticketId, itemId, failureUpdate)
     }
   } catch (error) {
     if (error instanceof ApiError) throw error

@@ -15,7 +15,7 @@ export interface DialogAction {
   label: string
   onClick: () => void | Promise<void>
   variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive'
-  icon?: LucideIcon
+  icon?: LucideIcon | React.ComponentType<{ className?: string }>
   disabled?: boolean
   loading?: boolean
   loadingText?: string
@@ -25,7 +25,7 @@ export interface DialogAction {
 export interface DialogBaseProps {
   title: string
   description?: string
-  icon?: LucideIcon
+  icon?: LucideIcon | React.ComponentType<{ className?: string }>
   iconClassName?: string
   isOpen: boolean
   onClose: () => void

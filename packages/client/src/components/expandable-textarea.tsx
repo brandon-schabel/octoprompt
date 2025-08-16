@@ -42,7 +42,7 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
         return
       }
       optimizeUserInput.mutate(
-        { userContext: expandedValue, projectId: projectId ?? -1 },
+        { projectId: projectId ?? -1, data: { userContext: expandedValue } },
         {
           onSuccess: (resp) => {
             if (resp.success && resp.data?.optimizedPrompt) {

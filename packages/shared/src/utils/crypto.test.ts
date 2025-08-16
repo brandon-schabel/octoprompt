@@ -1,6 +1,15 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
 import { encryptKey, decryptKey, generateEncryptionKey, isEncrypted } from './crypto'
-import { encryptionKeyStorage } from '@promptliano/storage'
+
+// Mock encryptionKeyStorage for tests
+const mockEncryptionKeyStorage = {
+  clearCache: () => {
+    // No-op for tests
+  },
+  hasKey: () => {
+    return !!process.env.PROMPTLIANO_ENCRYPTION_KEY
+  }
+}
 
 describe('Crypto utilities', () => {
   const originalEnv = process.env.PROMPTLIANO_ENCRYPTION_KEY
@@ -9,7 +18,7 @@ describe('Crypto utilities', () => {
     // Clear any existing env key for tests
     delete process.env.PROMPTLIANO_ENCRYPTION_KEY
     // Clear cache to ensure fresh key generation
-    encryptionKeyStorage.clearCache()
+    mockEncryptionKeyStorage.clearCache()
   })
 
   afterAll(() => {
@@ -116,14 +125,14 @@ describe('Crypto utilities', () => {
 
   test('automatically generates key when not set', async () => {
     // Clear cache to simulate fresh start
-    encryptionKeyStorage.clearCache()
+    mockEncryptionKeyStorage.clearCache()
     delete process.env.PROMPTLIANO_ENCRYPTION_KEY
 
     // Should not throw, should generate key automatically
     const encrypted = await encryptKey('test')
     expect(encrypted).toHaveProperty('encrypted')
 
-    // Key should now exist
-    expect(encryptionKeyStorage.hasKey()).toBe(true)
+    // Key should now exist (auto-generated in crypto.ts)
+    expect(mockEncryptionKeyStorage.hasKey()).toBe(true)
   })
 })

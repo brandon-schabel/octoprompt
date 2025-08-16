@@ -1,8 +1,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { generateEncryptionKey } from '@promptliano/shared/src/utils/crypto'
 import { ensureString } from '@promptliano/shared/src/utils/sqlite-converters'
+
+// Generate encryption key directly to avoid circular dependency
+function generateEncryptionKey(): string {
+  const key = crypto.getRandomValues(new Uint8Array(32)) // 256 bits
+  return Buffer.from(key).toString('base64')
+}
 
 // Get platform-appropriate data directory (same as database)
 function getDataDirectory(): string {

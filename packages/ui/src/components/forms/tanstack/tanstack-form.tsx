@@ -137,9 +137,18 @@ export function TanStackForm<T extends Record<string, any>>({
   const form = useForm({
     defaultValues,
     validators: {
-      onChange: validationMode === 'onChange' ? zodValidator(schema) : undefined,
-      onBlur: validationMode === 'onBlur' ? zodValidator(schema) : undefined,
-      onSubmit: zodValidator(schema)
+      onChange: validationMode === 'onChange' ? ({ value }) => {
+        const result = schema.safeParse(value)
+        return result.success ? undefined : result.error.errors.map(err => err.message).join(', ')
+      } : undefined,
+      onBlur: validationMode === 'onBlur' ? ({ value }) => {
+        const result = schema.safeParse(value)
+        return result.success ? undefined : result.error.errors.map(err => err.message).join(', ')
+      } : undefined,
+      onSubmit: ({ value }) => {
+        const result = schema.safeParse(value)
+        return result.success ? undefined : result.error.errors.map(err => err.message).join(', ')
+      }
     },
     onSubmit: async ({ value, formApi }) => {
       try {
@@ -189,8 +198,11 @@ export function TanStackForm<T extends Record<string, any>>({
     isDirty: form.state.isDirty,
     submitCount: 0, // submitAttempts doesn't exist in TanStack Form
     errors: {},
-    touchedFields: new Set(Object.keys(form.state.fieldMeta).filter(
-      key => form.state.fieldMeta[key]?.isTouched
+    touchedFields: new Set(Object.keys(form.state.fieldMeta || {}).filter(
+      key => {
+        const fieldMeta = form.state.fieldMeta?.[key as keyof typeof form.state.fieldMeta]
+        return fieldMeta && 'isTouched' in fieldMeta && fieldMeta.isTouched
+      }
     ))
   }
 

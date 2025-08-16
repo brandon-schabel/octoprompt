@@ -123,6 +123,8 @@ export type {
 // COMPREHENSIVE EXAMPLES
 // =============================================
 
+// TODO: Create examples directory
+/*
 export {
   // Simple Forms Examples
   SimpleContactForm,
@@ -142,12 +144,13 @@ export {
   DecisionTreeHelper,
   HybridFormsShowcase
 } from './examples'
+*/
 
 // =============================================
 // LEGACY DEMO (For Backward Compatibility)
 // =============================================
 
-export { ContactFormDemo, ProjectSetupDemo, FormFactoryDemo } from './demo'
+// export { ContactFormDemo, ProjectSetupDemo, FormFactoryDemo } from './demo' // TODO: Create demo directory
 
 // =============================================
 // DEFAULT EXPORTS

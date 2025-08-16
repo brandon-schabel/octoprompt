@@ -55,11 +55,11 @@ export const modalPresets = {
 // FORM CONFIG BUILDERS
 // =============================================
 
-export function createEntityFormConfig<T extends Record<string, any>>(
-  schema: z.ZodSchema<T>,
+export function createEntityFormConfig<T extends z.ZodSchema<any>>(
+  schema: T,
   options: {
-    excludeFields?: (keyof T)[]
-    fieldOverrides?: Partial<Record<keyof T, any>>
+    excludeFields?: (keyof z.infer<T>)[]
+    fieldOverrides?: Partial<Record<keyof z.infer<T>, any>>
     layout?: 'single' | 'two-column' | 'grouped'
   } = {}
 ): FormConfig<T> {
@@ -67,10 +67,12 @@ export function createEntityFormConfig<T extends Record<string, any>>(
   
   const shape = (schema as any)._def.shape()
   const fields = Object.keys(shape)
-    .filter(key => !excludeFields.includes(key))
+    .filter(key => !excludeFields.includes(key as keyof z.infer<T>))
     .map(key => {
       const zodField = shape[key]
-      const override = fieldOverrides[key as keyof T]
+      const override = (fieldOverrides && key in fieldOverrides) 
+        ? (fieldOverrides as any)[key] 
+        : undefined
       
       return {
         name: key,
@@ -82,13 +84,10 @@ export function createEntityFormConfig<T extends Record<string, any>>(
     })
 
   return {
+    schema,
     fields,
-    layout: layout === 'two-column' ? { columns: 2 } : undefined,
-    validation: {
-      schema,
-      mode: 'onBlur'
-    }
-  }
+    layout: layout === 'two-column' ? { columns: 2 } : undefined
+  } as FormConfig<T>
 }
 
 function inferFieldType(zodField: any): string {
@@ -116,12 +115,12 @@ function inferFieldType(zodField: any): string {
 // ENHANCED CRUD MODAL FACTORY
 // =============================================
 
-export interface EnhancedCrudModalOptions<T> extends Omit<CrudModalConfig<T>, 'formConfig'> {
+export interface EnhancedCrudModalOptions<T extends Record<string, any>> extends Omit<CrudModalConfig<T>, 'formConfig'> {
   schema?: z.ZodSchema<T>
-  formConfig?: FormConfig<any>
+  formConfig?: FormConfig<z.ZodSchema<T>>
   fields?: {
-    create?: FormConfig<any>
-    edit?: FormConfig<any>
+    create?: FormConfig<z.ZodSchema<T>>
+    edit?: FormConfig<z.ZodSchema<T>>
     view?: {
       fields: (keyof T)[]
       formatters?: Partial<Record<keyof T, (value: any) => React.ReactNode>>
@@ -153,11 +152,11 @@ export function createEnhancedCrudModal<T extends { id?: number }>(
 
   // Auto-generate form config if schema is provided
   const createFormConfig = fields?.create || formConfig || (schema ? createEntityFormConfig(schema, {
-    excludeFields: ['id', 'created', 'updated']
+    excludeFields: ['id' as keyof T, 'created' as keyof T, 'updated' as keyof T]
   }) : undefined)
 
   const editFormConfig = fields?.edit || formConfig || (schema ? createEntityFormConfig(schema, {
-    excludeFields: ['id', 'created']
+    excludeFields: ['id' as keyof T, 'created' as keyof T]
   }) : undefined)
 
   const crudModals = createCrudModal<T>(baseConfig)
@@ -376,7 +375,7 @@ export function useModalManager<T = any>(initialData?: T): ModalManager<T> {
 // MODAL COMPOSITION HELPERS
 // =============================================
 
-export interface ModalSuite<T> {
+export interface ModalSuite<T extends { id?: number }> {
   modals: ReturnType<typeof createEnhancedCrudModal<T>>
   manager: ModalManager<T>
   renderModals: () => React.ReactNode
@@ -450,26 +449,20 @@ export function createModalSuite<T extends { id?: number }>(
           item={item}
         />
         
-        {searchModal && (
-          <searchModal
-            isOpen={state.isOpen && currentModal === 'search'}
-            onClose={closeAll}
-          />
-        )}
+        {searchModal && React.createElement(searchModal, {
+          isOpen: state.isOpen && currentModal === 'search',
+          onClose: closeAll
+        })}
         
-        {workflowModal && (
-          <workflowModal
-            isOpen={state.isOpen && currentModal === 'workflow'}
-            onClose={closeAll}
-          />
-        )}
+        {workflowModal && React.createElement(workflowModal, {
+          isOpen: state.isOpen && currentModal === 'workflow',
+          onClose: closeAll
+        })}
         
-        {uploadModal && (
-          <uploadModal
-            isOpen={state.isOpen && currentModal === 'upload'}
-            onClose={closeAll}
-          />
-        )}
+        {uploadModal && React.createElement(uploadModal, {
+          isOpen: state.isOpen && currentModal === 'upload',
+          onClose: closeAll
+        })}
       </>
     )
   }, [manager, modals, searchModal, workflowModal, uploadModal])

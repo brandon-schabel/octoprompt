@@ -53,12 +53,12 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const { data: fileDataResponse, isLoading: filesLoading } = useGetProjectFiles(
     activeProjectTabState?.selectedProjectId || -1
   )
-  const fileDataArray = useMemo(() => fileDataResponse?.data || [], [fileDataResponse])
+  const fileDataArray = useMemo(() => fileDataResponse || [], [fileDataResponse])
 
   const { data: projectDataResponse } = useGetProject(activeProjectTabState?.selectedProjectId || -1)
 
-  const projectFiles = useMemo(() => fileDataResponse?.data || [], [fileDataResponse])
-  const project = useMemo(() => projectDataResponse?.data, [projectDataResponse])
+  const projectFiles = useMemo(() => fileDataResponse || [], [fileDataResponse])
+  const project = useMemo(() => projectDataResponse, [projectDataResponse])
 
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
   const [openInEditMode, setOpenInEditMode] = useState(false)
@@ -260,10 +260,10 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
             </DropdownMenuItem>
 
             {/* Git options - only show if git is available */}
-            {gitStatus?.success &&
-              gitStatus.data.files.length > 0 &&
+            {gitStatus &&
+              gitStatus.files.length > 0 &&
               (() => {
-                const changedFiles = gitStatus.data.files.filter(
+                const changedFiles = gitStatus.files.filter(
                   (file) => file.status !== 'unchanged' && file.status !== 'ignored'
                 )
                 const stagedFiles = changedFiles.filter((file) => file.staged)
@@ -448,8 +448,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                   onViewFile={(file) => {
                     // Check if file has git changes and show diff by default
                     const gitFileStatus =
-                      gitStatus?.success && gitStatus.data
-                        ? gitStatus.data.files.find((f) => f.path === file?.path)
+                      gitStatus
+                        ? gitStatus.files.find((f) => f.path === file?.path)
                         : null
                     const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged' ? true : false
                     handleViewFile(file as ProjectFile, false, hasChanges)
@@ -473,8 +473,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                 onViewFile={(file) => {
                   // Check if file has git changes and show diff by default
                   const gitFileStatus =
-                    gitStatus?.success && gitStatus.data
-                      ? gitStatus.data.files.find((f) => f.path === file?.path)
+                    gitStatus
+                      ? gitStatus.files.find((f) => f.path === file?.path)
                       : null
                   const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged' ? true : false
                   handleViewFile(file as ProjectFile, false, hasChanges)

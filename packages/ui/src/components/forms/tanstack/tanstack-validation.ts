@@ -328,9 +328,9 @@ export const tanstackSchemaUtils = {
           stepShape[fieldName] = schema.shape[fieldName]
         }
       })
-      return z.object(stepShape).partial()
+      return z.object(stepShape).partial() as unknown as z.ZodSchema<Partial<T>>
     }
-    return z.object({}).partial()
+    return z.object({}).partial() as unknown as z.ZodSchema<Partial<T>>
   },
   
   // Merge multiple schemas

@@ -51,7 +51,7 @@ class QueueStorage extends BaseStorage<TaskQueue, TaskQueuesStorage> {
   )
 
   protected rowToEntity(row: any): TaskQueue {
-    return this.converter(row)
+    return this.converter(row) as TaskQueue
   }
 
   protected getSelectColumns(): string[] {

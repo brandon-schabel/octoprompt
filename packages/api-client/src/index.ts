@@ -9,7 +9,6 @@ export { TicketClient } from './clients/ticket-client'
 export { QueueClient } from './clients/queue-client'
 export { GitClient } from './clients/git-client'
 export { MCPClient } from './clients/mcp-client'
-export { JobClient } from './clients/job-client'
 
 // Import all clients for composition
 import { ProjectClient } from './clients/project-client'
@@ -18,7 +17,6 @@ import { TicketClient } from './clients/ticket-client'
 import { QueueClient } from './clients/queue-client'
 import { GitClient } from './clients/git-client'
 import { MCPClient } from './clients/mcp-client'
-import { JobClient } from './clients/job-client'
 
 import type { ApiConfig } from './base-client'
 
@@ -36,7 +34,6 @@ export class PromptlianoClient {
   public readonly queues: QueueClient
   public readonly git: GitClient
   public readonly mcp: MCPClient
-  public readonly jobs: JobClient
 
   // Backwards compatibility aliases
   public readonly prompts: any // Will need to implement these separately
@@ -63,7 +60,6 @@ export class PromptlianoClient {
     this.queues = new QueueClient(config)
     this.git = new GitClient(config)
     this.mcp = new MCPClient(config)
-    this.jobs = new JobClient(config)
 
     // For backwards compatibility, map MCP sub-services
     this.mcpAnalytics = this.mcp
@@ -116,7 +112,6 @@ export const TicketService = TicketClient
 export const QueueService = QueueClient
 export const GitService = GitClient
 export const MCPService = MCPClient
-export const JobService = JobClient
 
 // Additional legacy aliases that might be used
 export const MCPAnalyticsService = MCPClient

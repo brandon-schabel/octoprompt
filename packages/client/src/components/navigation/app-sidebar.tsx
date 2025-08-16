@@ -157,6 +157,11 @@ export function AppSidebar() {
           </SidebarHeader>
           <SidebarContent className='p-2'>
             <SectionedSidebarNav
+              activeItem={matches.find((match) => 
+                navigationSections.some(section => 
+                  section.items.some(item => item.routeIds.includes(match.routeId))
+                )
+              )?.routeId || ''}
               sections={navigationSections.map(section => ({
                 ...section,
                 items: section.items.map(item => ({

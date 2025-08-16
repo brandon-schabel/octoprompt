@@ -1,6 +1,6 @@
 import React from 'react'
 import { DataTable } from './data-table'
-import { type ColumnDef, type PaginationState, type SortingState, type ColumnFiltersState } from '@tanstack/react-table'
+import { type ColumnDef, type PaginationState, type SortingState, type ColumnFiltersState, type OnChangeFn, type Updater, type Row } from '@tanstack/react-table'
 
 // Configuration for simplified DataTable usage
 export interface DataTableConfig<TData> {
@@ -43,7 +43,7 @@ export interface DataTableConfig<TData> {
   }
   
   // Row actions
-  onRowClick?: (row: TData) => void
+  onRowClick?: (row: Row<TData>) => void
   getRowId?: (row: TData) => string
   
   // UI config
@@ -56,10 +56,10 @@ export interface DataTableConfig<TData> {
 
 interface ConfiguredDataTableProps<TData> extends DataTableConfig<TData> {
   // Additional props for controlled state if needed
-  onPaginationChange?: (pagination: PaginationState) => void
-  onSortingChange?: (sorting: SortingState) => void  
-  onFiltersChange?: (filters: ColumnFiltersState) => void
-  onGlobalFilterChange?: (filter: string) => void
+  onPaginationChange?: OnChangeFn<PaginationState>
+  onSortingChange?: OnChangeFn<SortingState>
+  onFiltersChange?: OnChangeFn<ColumnFiltersState>
+  onGlobalFilterChange?: OnChangeFn<string>
 }
 
 export function ConfiguredDataTable<TData>({
@@ -123,20 +123,44 @@ export function ConfiguredDataTable<TData>({
       // Pagination
       pageCount={pageCount}
       pagination={internalPagination}
-      onPaginationChange={onPaginationChange || setInternalPagination}
+      onPaginationChange={onPaginationChange || ((updaterOrValue: Updater<PaginationState>) => {
+        if (typeof updaterOrValue === 'function') {
+          setInternalPagination(prev => updaterOrValue(prev))
+        } else {
+          setInternalPagination(updaterOrValue)
+        }
+      })}
       manualPagination={pagination.serverSide}
       showPagination={pagination.enabled !== false && showPagination}
       
       // Sorting
       sorting={internalSorting}
-      onSortingChange={onSortingChange || setInternalSorting}
+      onSortingChange={onSortingChange || ((updaterOrValue: Updater<SortingState>) => {
+        if (typeof updaterOrValue === 'function') {
+          setInternalSorting(prev => updaterOrValue(prev))
+        } else {
+          setInternalSorting(updaterOrValue)
+        }
+      })}
       manualSorting={sorting.serverSide}
       
       // Filtering
       columnFilters={internalFilters}
-      onColumnFiltersChange={onFiltersChange || setInternalFilters}
+      onColumnFiltersChange={onFiltersChange || ((updaterOrValue: Updater<ColumnFiltersState>) => {
+        if (typeof updaterOrValue === 'function') {
+          setInternalFilters(prev => updaterOrValue(prev))
+        } else {
+          setInternalFilters(updaterOrValue)
+        }
+      })}
       globalFilter={internalGlobalFilter}
-      onGlobalFilterChange={onGlobalFilterChange || setInternalGlobalFilter}
+      onGlobalFilterChange={onGlobalFilterChange || ((updaterOrValue: Updater<string>) => {
+        if (typeof updaterOrValue === 'function') {
+          setInternalGlobalFilter(prev => updaterOrValue(prev))
+        } else {
+          setInternalGlobalFilter(updaterOrValue)
+        }
+      })}
       manualFiltering={filtering.serverSide}
       
       // Selection
@@ -152,7 +176,6 @@ export function ConfiguredDataTable<TData>({
       emptyMessage={emptyMessage}
       className={className}
       showToolbar={filtering.enabled !== false && showToolbar}
-      showPagination={showPagination}
     >
       {toolbarActions}
     </DataTable>

@@ -20,7 +20,6 @@ export interface ColumnFactoryConfig<TData> {
   accessorFn?: (row: TData) => any
   header?: string
   enableSorting?: boolean
-  enableFiltering?: boolean
   align?: 'left' | 'center' | 'right'
   width?: string | number
   className?: string
@@ -59,7 +58,6 @@ export function createTextColumn<TData>(config: TextColumnConfig<TData>): Column
     accessorFn,
     header = 'Text',
     enableSorting = true,
-    enableFiltering = true,
     truncate = false,
     maxLength = 50,
     formatFn,
@@ -68,9 +66,15 @@ export function createTextColumn<TData>(config: TextColumnConfig<TData>): Column
     className
   } = config
 
+  // Ensure we have either accessorKey or accessorFn, or provide an id
+  const baseColumn: Partial<ColumnDef<TData>> = accessorFn 
+    ? { accessorFn }
+    : accessorKey 
+    ? { accessorKey: accessorKey as string }
+    : { id: header }
+
   return {
-    accessorKey: accessorKey as string,
-    accessorFn,
+    ...baseColumn,
     header: ({ column }) => <DataTableColumnHeader column={column} title={header} />,
     cell: ({ getValue }) => {
       let value = getValue()
@@ -92,13 +96,12 @@ export function createTextColumn<TData>(config: TextColumnConfig<TData>): Column
       )
     },
     enableSorting,
-    enableFiltering,
     meta: {
       align,
       width,
       className
     }
-  }
+  } as ColumnDef<TData>
 }
 
 export function createDateColumn<TData>(config: DateColumnConfig<TData>): ColumnDef<TData> {
@@ -109,15 +112,20 @@ export function createDateColumn<TData>(config: DateColumnConfig<TData>): Column
     format: dateDisplayFormat = 'relative',
     dateFormat = 'PPpp',
     enableSorting = true,
-    enableFiltering = false,
     align = 'left',
     width,
     className
   } = config
 
+  // Ensure we have either accessorKey or accessorFn, or provide an id
+  const baseColumn: Partial<ColumnDef<TData>> = accessorFn 
+    ? { accessorFn }
+    : accessorKey 
+    ? { accessorKey: accessorKey as string }
+    : { id: header }
+
   return {
-    accessorKey: accessorKey as string,
-    accessorFn,
+    ...baseColumn,
     header: ({ column }) => <DataTableColumnHeader column={column} title={header} />,
     cell: ({ getValue }) => {
       const value = getValue()
@@ -145,13 +153,12 @@ export function createDateColumn<TData>(config: DateColumnConfig<TData>): Column
       )
     },
     enableSorting,
-    enableFiltering,
     meta: {
       align,
       width,
       className
     }
-  }
+  } as ColumnDef<TData>
 }
 
 export function createStatusColumn<TData>(config: StatusColumnConfig<TData>): ColumnDef<TData> {
@@ -161,15 +168,20 @@ export function createStatusColumn<TData>(config: StatusColumnConfig<TData>): Co
     header = 'Status',
     statuses = {},
     enableSorting = true,
-    enableFiltering = true,
     align = 'left',
     width,
     className
   } = config
 
+  // Ensure we have either accessorKey or accessorFn, or provide an id
+  const baseColumn: Partial<ColumnDef<TData>> = accessorFn 
+    ? { accessorFn }
+    : accessorKey 
+    ? { accessorKey: accessorKey as string }
+    : { id: header }
+
   return {
-    accessorKey: accessorKey as string,
-    accessorFn,
+    ...baseColumn,
     header: ({ column }) => <DataTableColumnHeader column={column} title={header} />,
     cell: ({ getValue }) => {
       const value = String(getValue() || '')
@@ -185,7 +197,6 @@ export function createStatusColumn<TData>(config: StatusColumnConfig<TData>): Co
       )
     },
     enableSorting,
-    enableFiltering,
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },
@@ -194,7 +205,7 @@ export function createStatusColumn<TData>(config: StatusColumnConfig<TData>): Co
       width,
       className
     }
-  }
+  } as ColumnDef<TData>
 }
 
 export function createActionsColumn<TData>(config: ActionsColumnConfig<TData>): ColumnDef<TData> {
@@ -236,7 +247,6 @@ export function createActionsColumn<TData>(config: ActionsColumnConfig<TData>): 
       )
     },
     enableSorting: false,
-    enableFiltering: false,
     meta: {
       align,
       width: '50px'
@@ -265,7 +275,6 @@ export function createSelectionColumn<TData>(): ColumnDef<TData> {
       />
     ),
     enableSorting: false,
-    enableFiltering: false,
     meta: {
       width: '40px'
     }

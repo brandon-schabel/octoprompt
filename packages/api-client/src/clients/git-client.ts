@@ -12,7 +12,11 @@ import type {
   GitLogResponse,
   GitCompareCommitsResponse,
   GitDiffRequest,
-  DataResponseSchema
+  DataResponseSchema,
+  GitStatusResult,
+  GetProjectGitStatusResponse,
+  GitWorktreePruneResponse,
+  GitDiffResponse
 } from '../types'
 
 // Define missing types locally that don't exist in schemas
@@ -52,20 +56,19 @@ import {
 } from '@promptliano/schemas'
 
 // Additional Git types
-type GitStatusResult = GitStatus
-type GetProjectGitStatusResponse = DataResponseSchema<GitStatusResult>
+// GitStatusResult and GetProjectGitStatusResponse are now imported from types
 type GitOperationResponse = {
   success: boolean
   message: string
   data?: any
 }
-type GitDiffResponse = {
+
+type GitDataResponse<T> = {
   success: boolean
-  data: {
-    diff: string
-    files: GitDiffFile[]
-  }
+  data?: T
+  message?: string
 }
+// GitDiffResponse is imported from types/schemas
 type GitLogEntry = GitCommit
 type GitRemote = {
   name: string
@@ -127,10 +130,7 @@ type GitWorktreeLockRequest = {
 type GitWorktreePruneRequest = {
   dryRun?: boolean
 }
-type GitWorktreePruneResponse = DataResponseSchema<{
-  prunedWorktrees: string[]
-  dryRun: boolean
-}>
+// GitWorktreePruneResponse is imported from types/schemas
 
 /**
  * Git API client for managing Git operations, branches, commits, and worktrees
@@ -223,11 +223,11 @@ export class GitClient extends BaseApiClient {
   /**
    * Get all branches
    */
-  async getBranches(projectId: number): Promise<DataResponseSchema<GitBranch[]>> {
+  async getBranches(projectId: number): Promise<GitBranchListResponse> {
     const result = await this.request('GET', `/projects/${projectId}/git/branches`, {
       responseSchema: gitBranchListResponseSchema
     })
-    return result as DataResponseSchema<GitBranch[]>
+    return result as GitBranchListResponse
   }
 
   /**
@@ -353,7 +353,7 @@ export class GitClient extends BaseApiClient {
   /**
    * Get all tags
    */
-  async getTags(projectId: number): Promise<DataResponseSchema<GitTag[]>> {
+  async getTags(projectId: number): Promise<GitDataResponse<GitTag[]>> {
     const result = await this.request('GET', `/projects/${projectId}/git/tags`, {
       responseSchema: z.object({
         success: z.boolean(),
@@ -361,7 +361,7 @@ export class GitClient extends BaseApiClient {
         message: z.string().optional()
       })
     })
-    return result as unknown as DataResponseSchema<GitTag[]>
+    return result as GitDataResponse<GitTag[]>
   }
 
   /**
@@ -391,14 +391,14 @@ export class GitClient extends BaseApiClient {
   /**
    * Get stash list
    */
-  async getStashList(projectId: number): Promise<DataResponseSchema<GitStash[]>> {
+  async getStashList(projectId: number): Promise<GitDataResponse<GitStash[]>> {
     const result = await this.request('GET', `/projects/${projectId}/git/stash`, {
       responseSchema: z.object({
         success: z.literal(true),
         data: z.array(gitStashSchema)
       })
     })
-    return result as DataResponseSchema<GitStash[]>
+    return result as GitDataResponse<GitStash[]>
   }
 
   /**

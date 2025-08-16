@@ -207,4 +207,64 @@ export class BaseApiClient {
     const queryString = searchParams.toString()
     return queryString ? `?${queryString}` : ''
   }
+
+  /**
+   * HTTP GET request
+   */
+  protected async get<TResponse>(endpoint: string, options?: {
+    params?: Record<string, string | number | boolean>
+    responseSchema?: z.ZodType<TResponse>
+    skipValidation?: boolean
+    timeout?: number
+  }): Promise<TResponse> {
+    return this.request<TResponse>('GET', endpoint, options)
+  }
+
+  /**
+   * HTTP POST request
+   */
+  protected async post<TResponse>(endpoint: string, body?: unknown, options?: {
+    params?: Record<string, string | number | boolean>
+    responseSchema?: z.ZodType<TResponse>
+    skipValidation?: boolean
+    timeout?: number
+  }): Promise<TResponse> {
+    return this.request<TResponse>('POST', endpoint, { ...options, body })
+  }
+
+  /**
+   * HTTP PATCH request
+   */
+  protected async patch<TResponse>(endpoint: string, body?: unknown, options?: {
+    params?: Record<string, string | number | boolean>
+    responseSchema?: z.ZodType<TResponse>
+    skipValidation?: boolean
+    timeout?: number
+  }): Promise<TResponse> {
+    return this.request<TResponse>('PATCH', endpoint, { ...options, body })
+  }
+
+  /**
+   * HTTP PUT request
+   */
+  protected async put<TResponse>(endpoint: string, body?: unknown, options?: {
+    params?: Record<string, string | number | boolean>
+    responseSchema?: z.ZodType<TResponse>
+    skipValidation?: boolean
+    timeout?: number
+  }): Promise<TResponse> {
+    return this.request<TResponse>('PUT', endpoint, { ...options, body })
+  }
+
+  /**
+   * HTTP DELETE request
+   */
+  protected async delete<TResponse>(endpoint: string, options?: {
+    params?: Record<string, string | number | boolean>
+    responseSchema?: z.ZodType<TResponse>
+    skipValidation?: boolean
+    timeout?: number
+  }): Promise<TResponse> {
+    return this.request<TResponse>('DELETE', endpoint, options)
+  }
 }

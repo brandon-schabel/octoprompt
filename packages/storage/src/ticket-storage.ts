@@ -59,17 +59,17 @@ class TicketStorageClass extends BaseStorage<Ticket, TicketsStorage> {
     },
     
     // Queue fields (unified flow system)
-    queueId: { dbColumn: 'queue_id', converter: (v: any) => v ? SqliteConverters.toNumber(v) : null },
-    queuePosition: { dbColumn: 'queue_position', converter: (v: any) => v ? SqliteConverters.toNumber(v) : null },
-    queueStatus: { dbColumn: 'queue_status', converter: (v: any) => v },
+    queueId: { dbColumn: 'queue_id', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
+    queuePosition: { dbColumn: 'queue_position', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
+    queueStatus: { dbColumn: 'queue_status', converter: (v: any) => v || undefined },
     queuePriority: { dbColumn: 'queue_priority', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
     queuedAt: { dbColumn: 'queued_at', converter: (v: any) => v ? SqliteConverters.toTimestamp(v) : undefined },
     queueStartedAt: { dbColumn: 'queue_started_at', converter: (v: any) => v ? SqliteConverters.toTimestamp(v) : undefined },
     queueCompletedAt: { dbColumn: 'queue_completed_at', converter: (v: any) => v ? SqliteConverters.toTimestamp(v) : undefined },
-    queueAgentId: { dbColumn: 'queue_agent_id', converter: (v: any) => v },
-    queueErrorMessage: { dbColumn: 'queue_error_message', converter: (v: any) => v },
-    estimatedProcessingTime: { dbColumn: 'estimated_processing_time', converter: (v: any) => v ? SqliteConverters.toNumber(v) : null },
-    actualProcessingTime: { dbColumn: 'actual_processing_time', converter: (v: any) => v ? SqliteConverters.toNumber(v) : null },
+    queueAgentId: { dbColumn: 'queue_agent_id', converter: (v: any) => v || undefined },
+    queueErrorMessage: { dbColumn: 'queue_error_message', converter: (v: any) => v || undefined },
+    estimatedProcessingTime: { dbColumn: 'estimated_processing_time', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
+    actualProcessingTime: { dbColumn: 'actual_processing_time', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
     
     // Timestamps
     created: { dbColumn: 'created_at', converter: (v: any) => SqliteConverters.toTimestamp(v) },
@@ -228,17 +228,17 @@ class TaskStorageClass extends BaseStorage<TicketTask, TicketTasksStorage> {
     },
     
     // Queue fields (unified flow system)
-    queueId: { dbColumn: 'queue_id', converter: (v: any) => v ? SqliteConverters.toNumber(v) : null },
-    queuePosition: { dbColumn: 'queue_position', converter: (v: any) => v ? SqliteConverters.toNumber(v) : null },
-    queueStatus: { dbColumn: 'queue_status', converter: (v: any) => v },
+    queueId: { dbColumn: 'queue_id', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
+    queuePosition: { dbColumn: 'queue_position', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
+    queueStatus: { dbColumn: 'queue_status', converter: (v: any) => v || undefined },
     queuePriority: { dbColumn: 'queue_priority', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
     queuedAt: { dbColumn: 'queued_at', converter: (v: any) => v ? SqliteConverters.toTimestamp(v) : undefined },
     queueStartedAt: { dbColumn: 'queue_started_at', converter: (v: any) => v ? SqliteConverters.toTimestamp(v) : undefined },
     queueCompletedAt: { dbColumn: 'queue_completed_at', converter: (v: any) => v ? SqliteConverters.toTimestamp(v) : undefined },
-    queueAgentId: { dbColumn: 'queue_agent_id', converter: (v: any) => v },
-    queueErrorMessage: { dbColumn: 'queue_error_message', converter: (v: any) => v },
-    estimatedProcessingTime: { dbColumn: 'estimated_processing_time', converter: (v: any) => v ? SqliteConverters.toNumber(v) : null },
-    actualProcessingTime: { dbColumn: 'actual_processing_time', converter: (v: any) => v ? SqliteConverters.toNumber(v) : null },
+    queueAgentId: { dbColumn: 'queue_agent_id', converter: (v: any) => v || undefined },
+    queueErrorMessage: { dbColumn: 'queue_error_message', converter: (v: any) => v || undefined },
+    estimatedProcessingTime: { dbColumn: 'estimated_processing_time', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
+    actualProcessingTime: { dbColumn: 'actual_processing_time', converter: (v: any) => v ? SqliteConverters.toNumber(v) : undefined },
     
     // Timestamps
     created: { dbColumn: 'created_at', converter: (v: any) => SqliteConverters.toTimestamp(v) },

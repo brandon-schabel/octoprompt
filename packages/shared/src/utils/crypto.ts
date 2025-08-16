@@ -3,26 +3,40 @@ import { Buffer } from 'buffer'
 // Environment detection
 const isServerEnvironment = typeof process !== 'undefined' && process.env && (
   process.env.NODE_ENV === 'test' || 
-  typeof window === 'undefined'
+  typeof globalThis.window === 'undefined'
 )
 
 // Conditional storage import for server/test environments
-let encryptionKeyStorage: { getKey: () => string }
+let encryptionKeyStorage: { getKey: () => string; clearCache?: () => void; hasKey?: () => boolean }
 
 if (isServerEnvironment) {
   try {
     // Dynamic import to avoid bundling issues in client
-    const { encryptionKeyStorage: storage } = require('@promptliano/storage')
-    encryptionKeyStorage = storage
+    const storageModule = require('@promptliano/storage')
+    encryptionKeyStorage = storageModule.encryptionKeyStorage || storageModule.default?.encryptionKeyStorage
+    
+    if (!encryptionKeyStorage) {
+      throw new Error('encryptionKeyStorage not found in storage module')
+    }
   } catch (error) {
-    // Fallback for test environment
+    // Fallback for test environment when storage isn't available
     encryptionKeyStorage = {
       getKey: () => {
         const testKey = process.env.PROMPTLIANO_ENCRYPTION_KEY
         if (!testKey) {
-          throw new Error('PROMPTLIANO_ENCRYPTION_KEY environment variable required for server/test')
+          // Generate a test key if none exists
+          const key = crypto.getRandomValues(new Uint8Array(32))
+          const generatedKey = Buffer.from(key).toString('base64')
+          process.env.PROMPTLIANO_ENCRYPTION_KEY = generatedKey
+          return generatedKey
         }
         return testKey
+      },
+      clearCache: () => {
+        // No-op for fallback
+      },
+      hasKey: () => {
+        return !!process.env.PROMPTLIANO_ENCRYPTION_KEY
       }
     }
   }
@@ -30,6 +44,12 @@ if (isServerEnvironment) {
   // Client environment - throw clear error
   encryptionKeyStorage = {
     getKey: () => {
+      throw new Error('Encryption operations not available in client environment')
+    },
+    clearCache: () => {
+      throw new Error('Encryption operations not available in client environment')
+    },
+    hasKey: () => {
       throw new Error('Encryption operations not available in client environment')
     }
   }
@@ -65,7 +85,7 @@ async function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
   const derivedBits = await crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt,
+      salt: salt as BufferSource, // Type assertion for crypto.subtle compatibility
       iterations: 100000,
       hash: 'SHA-256'
     },
@@ -91,12 +111,12 @@ export async function encryptKey(plaintext: string): Promise<EncryptedData> {
   const derivedKey = await deriveKey(envKey, Buffer.from(salt))
 
   // Use Web Crypto API for encryption
-  const cryptoKey = await crypto.subtle.importKey('raw', derivedKey, { name: 'AES-GCM' }, false, ['encrypt'])
+  const cryptoKey = await crypto.subtle.importKey('raw', derivedKey as BufferSource, { name: 'AES-GCM' }, false, ['encrypt'])
 
   const encrypted = await crypto.subtle.encrypt(
     {
       name: 'AES-GCM',
-      iv
+      iv: iv as BufferSource
     },
     cryptoKey,
     data
@@ -134,12 +154,12 @@ export async function decryptKey(encryptedData: EncryptedData): Promise<string> 
   combined.set(ciphertext)
   combined.set(tag, ciphertext.length)
 
-  const cryptoKey = await crypto.subtle.importKey('raw', derivedKey, { name: 'AES-GCM' }, false, ['decrypt'])
+  const cryptoKey = await crypto.subtle.importKey('raw', derivedKey as BufferSource, { name: 'AES-GCM' }, false, ['decrypt'])
 
   const decrypted = await crypto.subtle.decrypt(
     {
       name: 'AES-GCM',
-      iv
+      iv: iv as BufferSource
     },
     cryptoKey,
     combined

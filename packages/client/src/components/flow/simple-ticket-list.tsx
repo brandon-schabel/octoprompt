@@ -65,7 +65,7 @@ export function SimpleTicketList({
           const tasks = ticketWithTasks.tasks || []
           const completedTasks = tasks.filter((t) => t.done).length
           const totalTasks = tasks.length
-          const StatusIcon = STATUS_ICONS[ticket.status] || AlertCircle
+          const StatusIcon = STATUS_ICONS[ticket.status || 'open'] || AlertCircle
           const isSelected = selectedTicket?.ticket.id === ticket.id
 
           return (
@@ -87,8 +87,8 @@ export function SimpleTicketList({
 
               <div className='flex items-center gap-2 flex-wrap'>
                 {ticket.queueId && <QueueBadge item={ticket} projectId={projectId} size='sm' clickable={false} />}
-                <Badge variant='secondary' className={cn('text-xs', STATUS_COLORS[ticket.status])}>
-                  {ticket.status.replace('_', ' ')}
+                <Badge variant='secondary' className={cn('text-xs', STATUS_COLORS[ticket.status || 'open'])}>
+                  {(ticket.status || 'open').replace('_', ' ')}
                 </Badge>
 
                 {ticket.priority && ticket.priority !== 'normal' && (

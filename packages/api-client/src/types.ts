@@ -66,14 +66,17 @@ export type {
   GitRemote,
   GitTag,
   GitBlame,
+  GitLogEntry,
   GitDiffResponse,
   GitOperationResponse,
+  GitStatusResult,
   GetProjectGitStatusResponse,
   GitBranchListResponse,
   GitLogResponse,
   GitCommitDetailResponse,
   GitWorktreeListResponse,
   GitWorktreePruneResponse,
+  GitLogEnhancedRequest,
   GitLogEnhancedResponse,
   GitBranchListEnhancedResponse,
   GitCompareCommitsResponse
@@ -91,43 +94,66 @@ export type {
   UpdateQueueBody,
   QueueItem,
   QueueStats,
-  EnqueueItemBody
+  EnqueueItemBody,
+  QueueWithStats,
+  TicketTask
+} from '@promptliano/schemas'
+
+// Import types that will be redefined locally to avoid conflicts
+import type {
+  GetNextTaskResponse as SchemaGetNextTaskResponse,
+  QueueTimeline as SchemaQueueTimeline,
+  TicketWithTaskCount as SchemaTicketWithTaskCount
 } from '@promptliano/schemas'
 
 // Define Task alias for backwards compatibility
-export type Task = {
+export type Task = TicketTask
+
+export type Queue = {
   id: number
-  title: string
+  name: string
   description?: string
-  status: 'pending' | 'in_progress' | 'completed' | 'failed'
-  priority: number
-  ticketId: number
-  assignedTo?: string
-  estimatedHours?: number
-  actualHours?: number
-  createdAt: number
-  updatedAt: number
+  projectId: number
+  status?: 'active' | 'paused' | 'inactive'
+  maxParallelItems?: number
+  created: number
+  updated: number
 }
+
+// Missing types needed by queue client
+export type CompleteTaskBody = {
+  itemType: 'ticket' | 'task'
+  itemId: number
+  ticketId?: number
+  completionNotes?: string
+}
+
+export type FailTaskBody = {
+  itemType: 'ticket' | 'task'
+  itemId: number
+  ticketId?: number
+  errorMessage: string
+}
+
+// Re-export types from schemas to avoid conflicts
+export type GetNextTaskResponse = SchemaGetNextTaskResponse
+export type QueueTimeline = SchemaQueueTimeline
+export type TicketWithTaskCount = SchemaTicketWithTaskCount
+
 
 // MCP types (using basic types from schemas, complex ones defined in client)
 export type {
   MCPServerConfig,
   MCPServerConfigResponse,
   MCPToolExecutionRequest,
-  MCPToolExecutionResult
+  MCPToolExecutionResult,
+  MCPServerState,
+  MCPTool,
+  MCPResource,
+  CreateMCPServerConfigBody,
+  UpdateMCPServerConfigBody
 } from '@promptliano/schemas'
 
-// Job types (from job client)
-export type {
-  Job,
-  JobHistory,
-  CreateJobRequest,
-  UpdateJobRequest,
-  ListJobsRequest,
-  RetryJobRequest,
-  CleanupJobsRequest,
-  JobStats
-} from './clients/job-client'
 
 // Additional types that will be defined in individual client modules
 // as needed rather than importing from schemas to avoid import errors
@@ -161,18 +187,6 @@ export type MCPProjectConfig = {
   customInstructions?: string
 }
 
-export type MCPServer = {
-  id: number
-  name: string
-  command: string
-  args: string[]
-  env?: Record<string, string>
-  workingDirectory?: string
-  autoStart?: boolean
-  projectId: number
-  createdAt: number
-  updatedAt: number
-}
 
 export type MCPInstallationStatus = {
   isInstalled: boolean
@@ -246,16 +260,8 @@ export type MCPProjectConfigResponse = {
   data: MCPProjectConfig
 }
 
-// Additional convenience types
-export type Queue = {
-  id: number
-  name: string
-  description?: string
-  projectId: number
-  maxParallelItems: number
-  createdAt: number
-  updatedAt: number
-}
+// Note: CreateMCPServerConfigBody and UpdateMCPServerConfigBody are already imported from schemas above
+
 
 // Git-related types that are missing from schemas
 export type GitDiffFile = {
